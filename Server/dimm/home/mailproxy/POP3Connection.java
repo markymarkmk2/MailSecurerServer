@@ -1,72 +1,31 @@
 package dimm.home.mailproxy;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
-import de.jocca.logger.MoreLogger;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 
-public class POP3Connection
+public class POP3Connection extends MailConnection
 {
-    // constants
-	/*
-     *  The socket timeout is given in miliseconds. It means the max answer time of a read request.
-     *  It begins with 0,4 seconds and if the read fails, it retries to read with 0,8 seconds and so on.
-     *  In this example the sum would be 0,4 + 0,8 = 1,2 seconds for a read request.
-     *  The sum of all 10 retries is 2 Minutes.
-     */
-    private static final int SOCKET_TIMEOUT[] = {800, 1200, 1800, 2500, 3000, 6000, 10000};
-    /*
-     * POP command RETR
-     */
-    private static final int POP_RETR = 1;
-    /*
-     * POP command LIST
-     */
-    private static final int POP_LIST = 2;
-    /*
-     * POP command QUIT
-     */
-    private static final int POP_QUIT = 3;
-    private static final int ERROR_TIMEOUT_EXCEEDED = 1;
-    private static final int ERROR_NO_ANSWER = 2;
-    private static final int ERROR_UNKNOWN = 3;
-    // variables    
-    private String m_host;							// host name or IP adsress
-    private int m_RemotePort = 110;					// port to connect
-/*    private BufferedReader serverReader;			// server reader
-    private BufferedReader clientReader;
-    private BufferedWriter clientWriter;
-    private BufferedWriter serverWriter;
- */
-    private BufferedInputStream serverReader;			// server reader
-    private BufferedInputStream clientReader;
-    private BufferedOutputStream clientWriter;
-    private BufferedOutputStream serverWriter;
     
-    private static int m_retries;					// numbers of retries to read a message from the socket
-    private int m_error;							// stores the last error
-    private Socket serverSocket;					// server socket
-    private int m_Command;							// actual POP command
-    //private MoreLogger logger; 						// class from log4j by Jocca Jocaf
-    private static boolean m_Stop;					// stop the thread
+    String multi_line_commands[] = {"LIST", "RETR", "UIDL", "TOP", "CAPA"};
+    String single_line_commands[] = {"QUIT", "USER", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
 
+    static int thread_count = 0;    
     
-    static int thread_count = 0;
-    
-    int this_thread_id = 0;
+    String[] get_single_line_commands()
+    {
+        return single_line_commands;
+    }
+    String[] get_multi_line_commands()
+    {
+        return multi_line_commands;
+    }
 
-    
-    private static final int MAX_THREADS = 50;
-    
+     
     /**
      *  Constructor
      * 
@@ -74,56 +33,18 @@ public class POP3Connection
      */
     POP3Connection(String host, int RemotePort)
     {
-      //  logger = new MoreLogger(POP3Connection.class);
-        m_host = host;
-        m_RemotePort = RemotePort;
+        super( host, RemotePort );
     }
 
-    public void handleConnection(final Socket clientSocket)
+   
+    public void runConnection(Socket _clientSocket)
     {
-        Thread sockThread;
-        
-        // runs the server
-        synchronized( this )
-        {
-            thread_count++;
-            this_thread_id = thread_count;
-        }
-        if (thread_count > MAX_THREADS)
-        {
-            runConnection( clientSocket );
-            synchronized( this )
-            {
-                thread_count--;
-            }
-            
-        }
-        else
-        {
-            sockThread = new Thread()
-            {
-
-                @Override
-                public void run()
-                {
-                    runConnection( clientSocket );
-
-                    synchronized( this )
-                    {
-                        thread_count--;
-                    }
-                }
-            };
-
-            sockThread.start();
-        }
-    }
-        
-    public void runConnection(Socket clientSocket)
-    {
+        boolean do_quit = false;
         m_Stop = false;
         m_error = -1;
         m_Command = -1;
+        
+        clientSocket = _clientSocket;
 
         try
         {
@@ -148,8 +69,10 @@ public class POP3Connection
             serverReader = new BufferedInputStream(serverSocket.getInputStream(), serverSocket.getReceiveBufferSize());
 
             String sData = "";
-            int commandCounter = 0;
 
+            // THE FIRST RESPONSE FROM SERVER IS SINGLE LINE
+            m_Command = POP_SINGLELINE;
+            
             while (true)
             {
 
@@ -188,7 +111,7 @@ public class POP3Connection
                 clientWriter.flush();
                 
                 // QUIT
-                if (m_Command == POP_QUIT)
+                if (do_quit)
                 {
                     break;
                 }
@@ -197,7 +120,7 @@ public class POP3Connection
                 m_Command = -1;
 
                 // read the POP command from the client
-                sData = getDataFromInputStream(clientReader).toString();
+                sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
 
                 // verify if the user stopped the thread
                 if (m_Stop)
@@ -221,7 +144,7 @@ public class POP3Connection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
-                    if (RETR() > 0)
+                    if (RETRBYTE() > 0)
                     {
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();                        
@@ -233,7 +156,7 @@ public class POP3Connection
                         break;
                     }
                     
-                    sData = getDataFromInputStream(clientReader).toString();
+                    sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
                     Main.debug_msg(1, "C: " + sData);
 
                     
@@ -247,14 +170,18 @@ public class POP3Connection
                 // write it to the POP server
                 serverWriter.write(sData.getBytes());
                 serverWriter.flush();
-
-                if (sData.toUpperCase().startsWith("LIST"))
+                
+                if (is_command_multiline( sData ))
                 {
-                    m_Command = POP_LIST;
-                } 
-                else if (sData.toUpperCase().startsWith("QUIT"))
+                    m_Command = POP_MULTILINE;
+                }
+                else if (is_command_singleline( sData ))
                 {
-                    m_Command = POP_QUIT;
+                    m_Command = POP_SINGLELINE;
+                }
+                if (is_command_quit( sData ))
+                {
+                    do_quit = true;
                 }                               
 
             }  // while
@@ -274,161 +201,18 @@ public class POP3Connection
         }
     }  // handleConnection
 
-    private void closeConnections()
-    {
-        // close the connections
-        Main.info_msg("Closing Connection...");
-        try
-        {
-            if (serverWriter != null)
-            {
-                serverWriter.close();
-                serverWriter = null;
-            }
 
-            if (serverReader != null)
-            {
-                serverReader.close();
-                serverReader = null;
-            }
-
-            if (clientWriter != null)
-            {
-                clientWriter.close();
-                clientWriter = null;
-            }
-
-            if (clientWriter != null)
-            {
-                clientWriter.close();
-                clientWriter = null;
-            }
-
-        } catch (IOException iex)
-        {
-            Main.err_log(iex.getMessage());
-        }
-
-    }
-
-    private StringBuffer getDataFromInputStream(BufferedInputStream reader)
-    {
-        int charRead = 0;									// char read
-        final int MAX_BUF = 8192;  						// buffer 8 Kb
-        byte buffer[] = new byte[MAX_BUF];			// buffer array
-        StringBuffer output = new StringBuffer("");		// output string
-
-        try
-        {
-            // we are retrying the read operation
-            // because the timeout was triggered.
-            // we increase slowly the timeout.
-            if (m_retries > 0)
-            {
-                serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-            }
-
-            // verify if the user stopped the thread
-            if (m_Stop)
-            {
-                return output;
-            }
-
-            // read the stream until EOF (-1)
-            while (charRead != -1)
-            {
-                // read the buffer
-                charRead = reader.read(buffer);
-                if (charRead > -1)
-                {
-                    // append to the output string
-                    output.append(new String(buffer, 0, charRead));
-                }
-            }
-
-            // no data returned
-            if (output.length() == 0)
-            {
-                m_error = ERROR_NO_ANSWER;
-            }
-
-        } catch (SocketTimeoutException ste)
-        {
-            /////////////////////
-            // timeout triggered
-            /////////////////////
-
-            // no data
-            if (output.length() == 0)
-            {
-                // the max quantity of retries was reached
-                // without answer
-                if (m_retries == SOCKET_TIMEOUT.length - 1)
-                {
-                    m_error = ERROR_TIMEOUT_EXCEEDED;
-                } else
-                {
-                    // we try again to read a message recursively
-                    m_retries++;
-                    Main.debug_msg(1, "timeout. Trying again [" + m_retries + "]");
-                    output = getDataFromInputStream(reader);
-                }
-            }
-
-        } catch (Exception e)
-        {
-            // reader failed
-            m_error = ERROR_UNKNOWN;
-            Main.err_log(e.getMessage());
-        }
-
-        // errors found
-        if (m_error < 0)
-        {
-            output = processMessage(output);
-        }
-
-        try
-        {
-            // return to the normal timeout (faster answer)
-            if (m_retries > 0)
-            {
-                m_retries = 0;
-                serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-            }
-        } catch (Exception ex)
-        {
-            Main.err_log(ex.getMessage());
-        }
-
-        return output;
-
-    }  // getDataFromInputStream
-
-    private String getErrorMessage()
-    {
-        switch (m_error)
-        {
-            case ERROR_TIMEOUT_EXCEEDED:
-                return "-ERR timeout exceeded";
-            case ERROR_NO_ANSWER:
-                return "-ERR no answer";
-            case ERROR_UNKNOWN:
-                return "-ERR unknown error";
-        }
-        return null;
-    }
-
-    private StringBuffer processMessage(StringBuffer sData)
+/*
+    StringBuffer processMessage(StringBuffer sData)
     {
         switch (m_Command)
         {            
-            case POP_LIST:
+            case POP_MULTILINE:
                 sData = ensureEndOfMessage(sData);
         }
 
         return sData;
-    }
+    }*/
 
     private StringBuffer ensureEndOfMessage(StringBuffer sData)
     {
@@ -455,7 +239,8 @@ public class POP3Connection
         return sData;
     }
 
-    private int RETR()
+
+    private int RETRBYTE()
     {
         // GET ACCEPT ANSWER FROM SERVER
 
@@ -478,6 +263,9 @@ public class POP3Connection
         }
         
         int rlen = 0;
+        final int MAX_BUF = 2048;  						// buffer 8 Kb
+        byte buffer[] = new byte[MAX_BUF];			// buffer array
+        
         
         
         while (!finished && m_error <= 0)
@@ -492,68 +280,52 @@ public class POP3Connection
                 if (m_Stop)	
                     return 1;
 
-                //Main.sleep(10);
-                int avail = clientReader.available();
                 
-                if (avail > buffer.length + 3)
+                int avail = serverReader.available();
+                
+                if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
-                    rlen = clientReader.read(buffer);
+                    rlen = serverReader.read(buffer);
                 }
                 else
                 {
-                    if (avail > 3)
+                    if (avail > END_OF_MULTILINE.length)
                     {
-                        rlen = clientReader.read(buffer, 0, avail -3);
-                    }
-                    else if (avail > 0)
-                    {
-                        rlen = clientReader.read(buffer, 0, avail);
+                        rlen = serverReader.read(buffer, 0, avail - END_OF_MULTILINE.length);
                     }
                     else
                     {
-                        rlen = clientReader.read(buffer, 0, 3);
+                        rlen = serverReader.read(buffer, 0, END_OF_MULTILINE.length);
                     }
                 }
 
-                if (rlen > 0 && rlen <= 3)
+                if (rlen == END_OF_MULTILINE.length)
                 {
-                    int last_idx = rlen-1;
-                    byte b = buffer[last_idx];
-                    if (b == '\n' || b == '\r')
+                    int i = 0;
+                    for (i = 0; i < END_OF_MULTILINE.length; i++)
                     {
-                        last_idx--;
-                        b = buffer[last_idx];
-                        if (b == '\n' || b == '\r')
-                        {
-                            last_idx--;
-                            b = buffer[last_idx];
-                        }
-                        if (b == '.')                    
-                            finished = true;
-                            
+                        if (buffer[i] != END_OF_MULTILINE[i])
+                            break;
                     }
+                    if ( i == END_OF_MULTILINE.length)
+                        finished = true;
                 }
                 
-//                String line = serverReader.readLine();
 
-                
-                if (line != null)
-                {
-                    clientWriter.write( line );
-                    clientWriter.write( "\r\n" );
-                    
-                    if (line.length() == 1 && line.charAt(0) == '.')
+                if (rlen > 0)
+                {                            
+                    clientWriter.write(buffer, 0, rlen);
+                                      
+                    if (finished)
                     {
                         clientWriter.flush();
-                        finished = true;
-                    }
+                    }                
                     
                     if (bos != null)
                     {
                         try
                         {
-                            bos.write(line.getBytes());
-                            bos.write("\r\n".getBytes());
+                            bos.write(buffer, 0, rlen);
                         }
                         catch (Exception exc)
                         {
@@ -666,6 +438,7 @@ public class POP3Connection
             // CLOSE STREAM
             try
             {
+                bos.flush();
                 bos.close();
                 
                 if (finished)
@@ -690,13 +463,34 @@ public class POP3Connection
         {
             return 0;
         }
-	    return m_error;
+        if (m_error > 0)
+            return m_error;
+        
+        return -1;
 
     }
 
-    public static void StopServer()
+ 
+    
+    
+   
+    @Override
+    void inc_thread_count()
     {
-        m_Stop = true;
+        thread_count++;
     }
+
+    @Override
+    int get_thread_count()
+    {
+        return thread_count;
+    }
+
+    @Override
+    void dec_thread_count()
+    {
+        thread_count--;
+    }
+
 }  // POP3connection
 
