@@ -28,8 +28,11 @@ import java.util.ArrayList;
 public class MailArchiver extends WorkerParent
 {
     public static final String NAME = "MailArchiver";
+    public static final String MA_SUFFIX = ".eml";
+    public static final String ERR_SUFFIX = ".err";
     
     ArrayList<File> file_list;
+    ArrayList<File> eml_file_list;
     
         
     
@@ -43,6 +46,8 @@ public class MailArchiver extends WorkerParent
     public boolean initialize()
     {
         file_list = new ArrayList<File>();
+        eml_file_list = new ArrayList<File>();
+        
         try
         {
             
@@ -65,6 +70,54 @@ public class MailArchiver extends WorkerParent
         }
         
         return true;
+    }
+
+    private boolean handle_archive_ex2mailarchiver()
+    {
+        String java_agent_opts = Main.get_prop(Preferences.MAIL_ARCHIVA_AGENT_OPTS, "");
+        
+        try
+        {
+            String cmd[] = {"ex2mailarchiva.sh", java_agent_opts, "-s", Main.RFC_PATH};
+          
+            CmdExecutor exe = new CmdExecutor(cmd);
+            int ret = exe.exec();
+
+            if (ret != 0)
+            {
+                this.setGoodState(false);
+                this.setStatusTxt(exe.get_err_text());
+                Main.err_log_fatal(" Archiving failed: " + exe.get_out_text() + " / " + exe.get_err_text() );
+            }
+            else
+            {
+                String result = exe.get_out_text();
+                Main.debug_msg(1, result);
+                
+                for (int i = 0; i < this.eml_file_list.size(); i++)
+                {
+                    String search_txt = "sent " + eml_file_list.get(i).getName() + " OK";
+                    if (result.indexOf(search_txt) < 0)
+                    {
+                        Main.err_log("Archival of message <" + eml_file_list.get(i).getName() + "> was not detected, setting to error" );
+                        String name = eml_file_list.get(i).getName();
+                        int suffix_idx = name.lastIndexOf(MA_SUFFIX);
+                        String new_name = name.substring(0, suffix_idx) + ERR_SUFFIX;
+                        eml_file_list.get(i).renameTo(new File( new_name ));                        
+                        ret = 2;
+                    }                                            
+                }
+                
+            }
+            return (ret == 0);
+        }
+        catch (Exception exc)
+        {
+            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+            Main.err_log_fatal("Cannot archive rfc dump files: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+        }
+        
+        return false;
     }
 
     private boolean handle_archive_push_agent(File rfc_dump)
@@ -168,7 +221,7 @@ public class MailArchiver extends WorkerParent
     
     
     
-    private void run_loop()
+    private void run_loop_single_file()
     {
         while (!isShutdown())
         {
@@ -222,6 +275,117 @@ public class MailArchiver extends WorkerParent
             }                       
         }                    
     }
+    private void run_loop_bulk()
+    {
+        while (!isShutdown())
+        {
+            Main.sleep(10000);
+            File rfc_dump = null;
+            eml_file_list.clear();
+            
+            synchronized (file_list)            
+            {
+                if (file_list.isEmpty())
+                    continue;
+
+                
+                try
+                {
+                    
+                    for (int i = 0; i < file_list.size(); i++)
+                    {            
+                        rfc_dump = file_list.get(i);
+                        if (!rfc_dump.exists())
+                        {
+                            Main.err_log_fatal("rfc dump <" + rfc_dump.getName() + " disappeared!");
+                            this.setGoodState(false);
+                            file_list.remove(i);
+                            i--;
+                            continue;
+                        }
+                        String name = rfc_dump.getAbsolutePath();
+                        int suffix_idx = name.lastIndexOf(".txt");
+                        int converted_suffix_idx = name.lastIndexOf(MA_SUFFIX);
+                        int err_suffix_idx = name.lastIndexOf(ERR_SUFFIX);
+                        if (suffix_idx <= 0 && converted_suffix_idx <= 0 && err_suffix_idx <= 0)
+                        {
+                            Main.err_log_warn("rfc dump <" + rfc_dump.getName() + " has wrong suffix, ignoring!");
+                            continue;
+                        }
+                        if (err_suffix_idx > 0)
+                        {
+                            // SKIP ERRORS
+                            continue;
+                        }
+                        if (converted_suffix_idx > 0)
+                        {
+                            // ALREADY CONVERTED, SKIP
+                            eml_file_list.add(rfc_dump);
+                            file_list.remove(rfc_dump);
+                            i--;
+                            continue;
+                        }
+                        String new_name = name.substring(0, suffix_idx) + MA_SUFFIX;
+                        rfc_dump.renameTo(new File( new_name ));
+                        eml_file_list.add( new File( new_name ));
+                        file_list.remove(rfc_dump);
+                        i--;                        
+                    }
+                }
+                
+                catch (Exception exc)
+                {
+                    Main.err_log_fatal("Failed to convert files in rfc_directory: " + exc.getMessage());
+                    Main.sleep(60);
+                    continue;
+                }                                    
+            }
+            
+            
+            // OK, ALL FILES ARE NOW .eml
+
+            this.setStatusTxt("Archiving " + file_list.size() + " file(s) from rfc directory...");
+            this.setGoodState(true);
+            Main.debug_msg(0, this.getStatusTxt());
+            
+            
+            if ( handle_archive_ex2mailarchiver( ))
+            {
+                synchronized (file_list)
+                {
+                    for (int i = 0; i < eml_file_list.size(); i++)
+                    {                                
+                        eml_file_list.get(i).delete();
+                    }
+                    
+                    eml_file_list.clear();
+                }
+                this.setGoodState(true);
+                this.setStatusTxt("");
+                
+            }
+            else
+            {
+                this.setGoodState(false);
+                this.setStatusTxt("Archiving failed");
+                Main.err_log( this.getStatusTxt() );
+
+                // REJOIN LIST ON ERROR
+                synchronized (file_list)
+                {
+                    file_list.addAll(eml_file_list);
+                    //file_list.clear();
+                    eml_file_list.clear();
+                }
+                
+                
+                // ON ERROR GET SLOWER
+                Main.sleep(60*1000);
+                
+             }                       
+        }                    
+    }
+
     
     public boolean start_run_loop()
     {       
@@ -232,7 +396,7 @@ public class MailArchiver extends WorkerParent
         {
             public Object construct()
             {
-                run_loop();
+                run_loop_bulk();
 
                 return null;
             }

@@ -19,7 +19,7 @@ import java.util.concurrent.Semaphore;
 public abstract class MailConnection 
 {
     
-    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000};
+    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000, 45000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
     final static byte END_OF_LINE[] = {'\r','\n'};
     
