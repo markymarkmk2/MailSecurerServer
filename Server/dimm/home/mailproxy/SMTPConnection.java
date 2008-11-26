@@ -20,8 +20,8 @@ import java.io.File;
 public class SMTPConnection extends MailConnection
 {
     // constants
-    String multi_line_commands[] = {"DATA"};
-    String single_line_commands[] = {"QUIT", "HELP", "MAIL", "RCPT", "RSET", "SEND", "SOML", "VRFY", "EXPN", "NOOP", "TURN"};
+    String multi_line_commands[] = {"EHLO"};
+    String single_line_commands[] = {"AUTH", "QUIT", "HELP", "MAIL", "RCPT", "RSET", "SEND", "SOML", "VRFY", "EXPN", "NOOP", "TURN"};
     
     String[] get_single_line_commands()
     {
@@ -41,9 +41,9 @@ public class SMTPConnection extends MailConnection
      * 
      * @param host Host name or IP address
      */
-    SMTPConnection(String host, int RemotePort)
+    SMTPConnection(ProxyEntry pe)
     {
-        super( host, RemotePort );
+        super( pe );
     }
 
    
@@ -59,7 +59,7 @@ public class SMTPConnection extends MailConnection
         try
         {
             // set the socket timeout
-            clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            //clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             // get the client output stream
             clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(),
                     clientSocket.getSendBufferSize());
@@ -68,7 +68,7 @@ public class SMTPConnection extends MailConnection
                     clientSocket.getReceiveBufferSize());
 
             // connect to the real POP3 server
-            serverSocket = new Socket(m_host, m_RemotePort);
+            serverSocket = new Socket(pe.getHost(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
@@ -122,7 +122,7 @@ public class SMTPConnection extends MailConnection
                         break;
                     }
 
-                    m_Command = -1;
+                    m_Command = SMTP_SINGLELINE;
                     continue;
                 }
 
@@ -147,7 +147,7 @@ public class SMTPConnection extends MailConnection
                 m_Command = -1;
 
                 // read the POP command from the client
-                sData = getDataFromInputStream(clientReader, SMTP_SINGLELINE).toString();
+                sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
                 // verify if the user stopped the thread
                 if (m_Stop)
@@ -173,10 +173,11 @@ public class SMTPConnection extends MailConnection
                 }
                 else
                 {
-                    if (is_command_multiline(sData))
-                        m_Command = SMTP_MULTILINE;
-                    else if (is_command_singleline(sData))
+                    if (is_command_singleline(sData))
                         m_Command = SMTP_SINGLELINE;
+                    else
+                        m_Command = SMTP_MULTILINE;
+                    
                 }
                 if (is_command_quit(sData))
                 {
@@ -191,8 +192,8 @@ public class SMTPConnection extends MailConnection
         }
         catch (UnknownHostException uhe)
         {
-            String msgerror = "Verify if you are connected to the internet or " + " if the POP server '" + m_host + "' exists.";
-            Common.showError(msgerror);
+            String msgerror = "Verify that you are connected to the internet or that the SMTP server '" + pe.getHost() + "' exists.";
+            //Common.showError(msgerror);
             Main.err_log(msgerror);
         }
         catch (Exception e)
@@ -380,6 +381,7 @@ public class SMTPConnection extends MailConnection
                     {
                         m_retries = 0;
                         clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
+                        
                     }
                 }
                 catch (Exception ex)
@@ -409,11 +411,12 @@ public class SMTPConnection extends MailConnection
                         try
                         {
                             clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
+                            serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
                         }
                         catch (Exception exc)
                         {
                         }
-                        Main.debug_msg(1, "timeout. Trying again [" + m_retries + "]");
+                        Main.debug_msg(1, "SMTP timeout. Trying again [" + m_retries + "]");
                     }
                 }
             }

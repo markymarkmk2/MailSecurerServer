@@ -48,6 +48,9 @@ public class Communicator extends WorkerParent
     ServerSocket tcp_s;
     boolean using_fallback = false;
     
+    int udp_listeners = 0;
+    int tcp_listeners = 0;
+    
     /** Creates a new instance of Communicator */
     public Communicator()
     {
@@ -213,6 +216,7 @@ public class Communicator extends WorkerParent
     void broadcast_listener()
     {
             
+        
         int recv_len = UDP_LEN;  // BIG ENOUGH FOR US
         
         udp_s = null;
@@ -222,8 +226,9 @@ public class Communicator extends WorkerParent
         {            
              try
              {
-                 this.setStatusTxt("");
-                 this.setGoodState( true );
+                 if (isGoodState())
+                     this.setStatusTxt("");
+    
                  try
                  {
 
@@ -235,13 +240,16 @@ public class Communicator extends WorkerParent
                          udp_s.setSoTimeout(0); // NO TIMEOUT
                          byte[] buffer = new byte[recv_len];
                          final DatagramPacket packet = new DatagramPacket( buffer, recv_len );
-                         this.setStatusTxt("waiting");
-                         setGoodState( true );
+                         
+                         
                          //System.out.println( "Packet erwartet" );
                          udp_s.receive( packet );
+                         udp_listeners++;
                          final DatagramSocket answer_sock = udp_s;
                          
-                         this.setStatusTxt("working");
+                         if (isGoodState())
+                             this.setStatusTxt("Connected to " + String.valueOf(udp_listeners + tcp_listeners) + " client(s)");
+                         
                          //System.out.println( "Packet gefunden" );
 
                          SwingWorker work = new SwingWorker()
@@ -254,7 +262,8 @@ public class Communicator extends WorkerParent
                                  {
                                     dispatch_udp_packet( answer_sock, packet );
                                     
-                                    setStatusTxt( "");
+                                    if (isGoodState())
+                                        setStatusTxt( "");
                                  }
                                  catch ( Exception exc )
                                  {
@@ -268,6 +277,7 @@ public class Communicator extends WorkerParent
                                      }
                                  }             
 
+                                udp_listeners--;
                                 answer_sock.close(); 
                                 return null;
                               }
@@ -312,13 +322,10 @@ public class Communicator extends WorkerParent
     void tcpip_listener()
     {
             
-        
         while (!isShutdown())
         {            
              try
              {
-                 this.setStatusTxt("");
-                 this.setGoodState( true );
                  tcp_s = new ServerSocket(TCP_SERVER_PORT);
                  tcp_s.setReuseAddress(true );                 
                  tcp_s.setReceiveBufferSize( 60000 );

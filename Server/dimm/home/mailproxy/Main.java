@@ -45,10 +45,11 @@ public class Main
     private static int startup_debug_level = 1;
     public static String work_dir;
     
-    public static boolean test_mode = false;
+    public static boolean trace_mode = false;
     
     static LogicControl control;
     
+    public static boolean create_licensefile = false;
     
     static void print_system_property( String key )
     {
@@ -101,8 +102,10 @@ public class Main
         for (int i = 0; i < args.length; i++)
         {
             if (args[i].compareTo("-t") == 0)
-                test_mode = true;
+                trace_mode = true;
             
+            if (args[i].compareTo("-L") == 0)
+                create_licensefile = true;            
         }            
         try
         {            

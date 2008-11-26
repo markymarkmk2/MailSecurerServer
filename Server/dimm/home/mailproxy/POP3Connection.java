@@ -1,5 +1,6 @@
 package dimm.home.mailproxy;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -7,6 +8,9 @@ import java.net.UnknownHostException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileWriter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class POP3Connection extends MailConnection
 {
@@ -31,9 +35,9 @@ public class POP3Connection extends MailConnection
      * 
      * @param host Host name or IP address
      */
-    POP3Connection(String host, int RemotePort)
+    POP3Connection( ProxyEntry pe)
     {
-        super( host, RemotePort );
+        super( pe );
     }
 
    
@@ -45,18 +49,34 @@ public class POP3Connection extends MailConnection
         m_Command = -1;
         
         clientSocket = _clientSocket;
+        
+        FileWriter trace_writer = null;
+        
+        if (Main.trace_mode)
+        {
+            try
+            {
+                trace_writer = new FileWriter(File.createTempFile("pop3", ".txt"));
+            }
+            catch (IOException ex)
+            {
+                Logger.getLogger(POP3Connection.class.getName()).log(Level.SEVERE, null, ex);
+                trace_writer = null;
+            }
+        }
+            
 
         try
         {
             // set the socket timeout
-            clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            //clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             // get the client output stream
             clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(), clientSocket.getSendBufferSize());
             // get the client input stream	
             clientReader = new BufferedInputStream(clientSocket.getInputStream(), clientSocket.getReceiveBufferSize());
 
             // connect to the real POP3 server
-            serverSocket = new Socket(m_host, m_RemotePort);
+            serverSocket = new Socket(pe.getHost(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
@@ -106,6 +126,9 @@ public class POP3Connection extends MailConnection
                 }
 
                 Main.debug_msg(1, "S: " + sData);
+                if (trace_writer != null)
+                    trace_writer.write(sData);
+                
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
@@ -135,6 +158,8 @@ public class POP3Connection extends MailConnection
                 }
 
                 Main.debug_msg(1, "C: " + sData);
+                if (trace_writer != null)
+                    trace_writer.write(sData);
                 
                 while (sData.toUpperCase().startsWith("RETR "))
                 {
@@ -144,7 +169,7 @@ public class POP3Connection extends MailConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
-                    if (RETRBYTE() > 0)
+                    if (RETRBYTE( trace_writer ) > 0)
                     {
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();                        
@@ -158,6 +183,8 @@ public class POP3Connection extends MailConnection
                     
                     sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
                     Main.debug_msg(1, "C: " + sData);
+                    if (trace_writer != null)
+                        trace_writer.write(sData);
 
                     
                     // verify if the user stopped the thread
@@ -192,8 +219,8 @@ public class POP3Connection extends MailConnection
 
         } catch (UnknownHostException uhe)
         {
-            String msgerror = "Verify if you are connected to the internet or " + " if the POP server '" + m_host + "' exists.";
-            Common.showError(msgerror);
+            String msgerror = "Verify that you are connected to the internet or that the POP server '" + pe.getHost() + "' exists.";
+            //Common.showError(msgerror);
             Main.err_log(msgerror);
         } catch (Exception e)
         {
@@ -240,7 +267,7 @@ public class POP3Connection extends MailConnection
     }
 
 
-    private int RETRBYTE()
+    private int RETRBYTE(FileWriter trace_writer)
     {
         // GET ACCEPT ANSWER FROM SERVER
 
@@ -313,7 +340,13 @@ public class POP3Connection extends MailConnection
                 
 
                 if (rlen > 0)
-                {                            
+                {     
+                    if (trace_writer != null)
+                    {
+                        String data = new String( buffer, 0, rlen );
+                        trace_writer.write(data, 0, rlen);
+                    }
+                    
                     clientWriter.write(buffer, 0, rlen);
                                       
                     if (finished)
@@ -421,7 +454,7 @@ public class POP3Connection extends MailConnection
                          }
                          catch (Exception exc)
                          {}
-                         Main.debug_msg(1, "timeout. Trying again [" + m_retries + "]");
+                         Main.debug_msg(1, "POP3 timeout. Trying again [" + m_retries + "]");
                      }
                 }
             }  

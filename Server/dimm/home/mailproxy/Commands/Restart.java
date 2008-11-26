@@ -30,7 +30,7 @@ public class Restart extends AbstractCommand
     public boolean do_command(String data)
     {
         answer = "";
-/*        
+        
         String opt = get_opts( data );
         ParseToken pt = new ParseToken(opt);
         
@@ -53,7 +53,7 @@ public class Restart extends AbstractCommand
 
         CmdExecutor exe = new CmdExecutor( cmd );
         if (exe.exec() == 0)
- */
+
         {
             // RESTART IS DONE IN SHELL-SCRIPT-LOOP
             System.exit( 0 );

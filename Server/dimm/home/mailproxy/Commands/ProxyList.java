@@ -9,26 +9,28 @@
 
 package dimm.home.mailproxy.Commands;
 
+import dimm.home.mailproxy.MailProxyServer;
 import java.io.File;
 import java.io.FileWriter;
 import dimm.home.mailproxy.Main;
 import dimm.home.mailproxy.Preferences;
+import dimm.home.mailproxy.ProxyEntry;
 import dimm.home.mailproxy.Utilities.CmdExecutor;
 import dimm.home.mailproxy.Utilities.ParseToken;
 import java.io.FileReader;
-import java.nio.CharBuffer;
+import java.util.ArrayList;
 
 /**
  *
  * @author Administrator
  */
-public class IPConfig extends AbstractCommand
+public class ProxyList extends AbstractCommand
 {
     
     /** Creates a new instance of HelloCommand */
-    public IPConfig()
+    public ProxyList()
     {
-        super("IPCONFIG");
+        super("PROXYLIST");
     }
 
     public boolean do_command(String data)
@@ -45,79 +47,53 @@ public class IPConfig extends AbstractCommand
             answer = MISS_ARGS;
             return false;
         }
+        StringBuffer sb = new StringBuffer();
         
         if ( command.compareTo("GET") == 0)
         {
-            int eth_nr = pt.GetLong("IF:").intValue();
-            String ip = Main.get_prop( Preferences.IP, eth_nr );
-            String mask = Main.get_prop( Preferences.MASK, eth_nr );
-            String dhcp = Main.get_prop( Preferences.DHCP, eth_nr );
-            String gw = Main.get_prop( Preferences.GW, eth_nr );
-            String dns = Main.get_prop( Preferences.DNS, eth_nr );
-            if (ip == null || dhcp == null || gw == null || dns == null)
+            try
+            {
+                ArrayList<ProxyEntry> p_list = MailProxyServer.read_proxy_list();
+                for (int i = 0; i < p_list.size(); i++)
+                {
+                    ProxyEntry pe = p_list.get(i);
+                    sb.append( pe.getConfigLine() );
+                }
+                answer = sb.toString();
+                return true;
+            }
+            catch (Exception exc)
             {
                 answer = WRONG_ARGS;
-                return false;                
+                return false;
             }
-            
-            String px_enable = Main.get_prop( Preferences.PXENABLE );
-            String px_server = Main.get_prop( Preferences.PXSERVER, "" );
-            String px_port = Main.get_prop( Preferences.PXPORT, "3128" );
-            String px_socksport = Main.get_prop( Preferences.PXSOCKSPORT, "1080" );
- 
-            answer = "IF:" + eth_nr + "IP:" + ip + " MASK:" + mask + " DHCP:" + dhcp + " GW:" + gw + " DNS:" + dns +
-                        " PXE:" + px_enable + " PXS:" + px_server + " PXP:" + px_port + " PXSP:" + px_socksport;             
-            return true;
         }
         
         if ( command.compareTo("SET") == 0)
         {
-            int eth_nr = pt.GetLong( "IF:" ).intValue();
-            String ip = pt.GetString( "IP:" );
-            String mask = pt.GetString( "MASK:" );
-            boolean dhcp = pt.GetBoolean( "DHCP:" );
-            String gw = pt.GetString( "GW:" );
-            String dns = pt.GetString( "DNS:" );
-            String px_enable = pt.GetString( "PXE:" );
-            String px_server = pt.GetString( "PXS:" );
-            String px_port = pt.GetString( "PXP:" );
-            String px_socksport = pt.GetString( "PXSP:" );
-            
-            
-            if (set_ipconfig( eth_nr, dhcp, ip, mask, gw, dns ))
+            int i = 0;
+            for ( i = 0; ; i++)
             {
-                // NICHT DIE NUMMER �BERNEHMEN, DAS IST ZU RISKANT
-                //Main.set_long_prop( Preferences.NETINTERFACE, eth_nr );
-                Main.set_prop( Preferences.IP, ip, eth_nr );
-                Main.set_prop( Preferences.MASK, mask, eth_nr );
-                Main.set_prop( Preferences.DHCP, dhcp? "1":"0", eth_nr );
-                Main.set_prop( Preferences.GW, gw, eth_nr );
-                Main.set_prop( Preferences.DNS, dns, eth_nr );
-
-                Main.set_prop( Preferences.PXENABLE, px_enable );
-                Main.set_prop( Preferences.PXSERVER, px_server );
-                Main.set_prop( Preferences.PXPORT, px_port );
-                Main.set_prop( Preferences.PXSOCKSPORT, px_socksport );
-                
-                if (Main.is_proxy_enabled() && Main.get_long_prop(Preferences.PXSOCKSPORT) > 0)
-                {
-                    System.setProperty("proxyPort",Main.get_prop(Preferences.PXSOCKSPORT));
-                    System.setProperty("proxyHost",Main.get_prop(Preferences.PXSERVER));        
-                }
-                else
-                {
-                    System.setProperty("proxyPort","");
-                    System.setProperty("proxyHost","");        
-                }
-                
-                SetStation set_station = new SetStation();
-                
-                // REWRITE VPN CONFIG
-                set_station.write_new_vpn_conf( Main.get_station_id() );
-                                                
-                if (Main.write_prefs())
-                    return true;
+                String line = pt.GetString("LINE" + i + ":");
+                if (line == null || line.length() == 0)
+                    break;
+                sb.append( line );
+                sb.append("\n");
             }
+            try
+            {
+                MailProxyServer.write_proxy_str(sb.toString());
+                
+                MailProxyServer.StopServer();
+                
+                return true;
+            }
+            catch (Exception exc)
+            {
+                answer = WRONG_ARGS;
+                return false;
+            }
+            
         }        
         if ( command.compareTo("REAL") == 0)
         {

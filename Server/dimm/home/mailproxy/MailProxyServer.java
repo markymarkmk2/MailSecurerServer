@@ -11,11 +11,12 @@ package dimm.home.mailproxy;
  *
  */
 import dimm.home.mailproxy.Utilities.SwingWorker;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -27,62 +28,6 @@ import java.util.StringTokenizer;
 
 
 
-class ProxyEntry
-{
-    public static final int POP3 = 1;
-    public static final int SMTP = 2;
-    public static final int IMAP = 3;
-    
-    private String host;
-    private int localPort;
-    private int remotePort;
-    private int protokoll;
-    
-    ProxyEntry( String _host, int l, int r, int p )
-    {
-        host = _host;
-        localPort = l;
-        remotePort = r;
-        protokoll = p;
-    }
-    
-    static public ProxyEntry create_pop3_entry( String _host, int l, int r )
-    {
-        return new ProxyEntry( _host, l, r, POP3 );
-    }
-    static public ProxyEntry create_smtp_entry( String _host, int l, int r )
-    {
-        return new ProxyEntry( _host, l, r, SMTP );
-    }
-
-    public
-
-    String getHost()
-    {
-        return host;
-    }
-
-    public int getLocalPort()
-    {
-        return localPort;
-    }
-
-    public int getRemotePort()
-    {
-        return remotePort;
-    }
-
-    public int getProtokoll()
-    {
-        return protokoll;
-    }
-/*    
-    static public ProxyEntry create_imap_entry( String _host, int l, int r )
-    {
-        return new ProxyEntry( _host, l, r, IMAP );
-    }
-  */          
-}
 public class MailProxyServer extends WorkerParent
 {
     public static final String NAME = "MailProxyServer";
@@ -92,6 +37,8 @@ public class MailProxyServer extends WorkerParent
     		// POP3Connection
     
     ArrayList<ProxyEntry> proxy_list;
+    
+    ArrayList<MailConnection> connection_list;
 
     /**
      * Constructor
@@ -104,16 +51,30 @@ public class MailProxyServer extends WorkerParent
         super(NAME);
         
         m_Stop = false;
+        connection_list = new ArrayList<MailConnection>();
         
         
 
     }
     
-    void read_proxy_list() throws Exception
+    static public void write_proxy_str(String txt) throws IOException
+    {
+        File f = new File( Main.PREFS_PATH + "proxy_list.txt" );
+        
+        FileWriter fw = new FileWriter( f );
+        
+        BufferedWriter bw = new BufferedWriter( fw );
+        
+        bw.write(txt + "\n");
+
+        bw.close();                        
+    }
+    
+    static public ArrayList<ProxyEntry> read_proxy_list() throws Exception
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         
-        proxy_list = new ArrayList<ProxyEntry>();
+        ArrayList<ProxyEntry> p_list = new ArrayList<ProxyEntry>();
         
         File f = new File( Main.PREFS_PATH + "proxy_list.txt" );
         
@@ -151,23 +112,28 @@ public class MailProxyServer extends WorkerParent
 
             if (protokoll.equals("pop3"))
             {
-                proxy_list.add( ProxyEntry.create_pop3_entry(host, local_port, remote_port));
+                p_list.add( ProxyEntry.create_pop3_entry(host, local_port, remote_port));
             }
             else if (protokoll.equals("smtp"))
             {
-                proxy_list.add( ProxyEntry.create_smtp_entry(host, local_port, remote_port));
+                p_list.add( ProxyEntry.create_smtp_entry(host, local_port, remote_port));
             }
             else
                 throw new Exception( "Unsupported protokoll " + protokoll);            
         }
         bis.close();
         
+        return p_list;
+        
     }
 
-    public void go_pop(String host, int LocalPort, int RemotePort)
+    void go_pop( ProxyEntry pe )
     {
         ServerSocket ss = null;
-
+        
+        String host = pe.getHost();
+        int LocalPort = pe.getLocalPort();
+        int RemotePort = pe.getRemotePort();
         try
         {
             ss = new ServerSocket(LocalPort);
@@ -181,10 +147,14 @@ public class MailProxyServer extends WorkerParent
             {
                 try
                 {
-                    POP3Connection m_POP3Connection = new POP3Connection(host, RemotePort);
+                    POP3Connection m_POP3Connection = new POP3Connection( pe );
                     Socket theSocket = ss.accept();
                     Main.info_msg("Connection accepted for the host '" + host + "'...");
                     
+                    synchronized(connection_list)
+                    {
+                        connection_list.add(m_POP3Connection);
+                    }
                     
                     m_POP3Connection.handleConnection(theSocket);
 
@@ -201,7 +171,10 @@ public class MailProxyServer extends WorkerParent
         {
             String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Verify if this port is being used by other" + " programs.";
             Main.err_log(errmsg);
-            Common.showError(errmsg);
+            this.setStatusTxt("Not listening, port in use");
+            this.setGoodState(false);
+            
+            //Common.showError(errmsg);
         } 
         catch (java.io.IOException ex)
         {
@@ -223,9 +196,12 @@ public class MailProxyServer extends WorkerParent
 
     }  // go	
 
-    public void go_smtp(String host, int LocalPort, int RemotePort)
+    void go_smtp(ProxyEntry pe)
     {
         ServerSocket ss = null;
+        String host = pe.getHost();
+        int LocalPort = pe.getLocalPort();
+        int RemotePort = pe.getRemotePort();
 
         try
         {
@@ -235,7 +211,7 @@ public class MailProxyServer extends WorkerParent
             Main.info_msg("JMailProxy is running for the host 'smtp://" + host +
                     ":" + RemotePort + "' on local port" + LocalPort);
 
-            SMTPConnection m_SMTPConnection = new SMTPConnection(host, RemotePort);
+            SMTPConnection m_SMTPConnection = new SMTPConnection( pe);
 
             while (!m_Stop)
             {
@@ -243,6 +219,13 @@ public class MailProxyServer extends WorkerParent
                 {
                     Socket theSocket = ss.accept();
                     Main.info_msg("Connection accepted for the host '" + host + "'...");
+                    
+                    synchronized(connection_list)
+                    {
+                        connection_list.add(m_SMTPConnection);
+                    }
+                    
+                    
                     m_SMTPConnection.handleConnection(theSocket);
 
                 } catch (SocketTimeoutException ste)
@@ -259,7 +242,10 @@ public class MailProxyServer extends WorkerParent
         {
             String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Verify if this port is being used by other" + " programs.";
             Main.err_log(errmsg);
-            Common.showError(errmsg);
+            this.setStatusTxt("Not listening, port in use");
+            this.setGoodState(false);
+            
+            //Common.showError(errmsg);
         } 
         catch (java.io.IOException ex)
         {
@@ -286,6 +272,7 @@ public class MailProxyServer extends WorkerParent
         m_Stop = true;
         POP3Connection.StopServer();
         SMTPConnection.StopServer();
+        LogicControl.sleep(2000);
     }
 
     @Override
@@ -299,7 +286,7 @@ public class MailProxyServer extends WorkerParent
     public boolean start_run_loop()
     {
         Main.debug_msg(1, "Starting " + proxy_list.size() + " proxy tasks" );
-        
+       
         for (int i = 0; i < proxy_list.size(); i++)
         {
             final ProxyEntry pe = proxy_list.get(i);
@@ -309,9 +296,9 @@ public class MailProxyServer extends WorkerParent
                 public Object construct()
                 {
                    if (pe.getProtokoll() == ProxyEntry.POP3)
-                       go_pop( pe.getHost(), pe.getLocalPort(), pe.getRemotePort() );
+                       go_pop( pe );
                    else if (pe.getProtokoll() == ProxyEntry.SMTP)
-                       go_smtp( pe.getHost(), pe.getLocalPort(), pe.getRemotePort() );
+                       go_smtp( pe );
 
 
                     return null;
@@ -320,8 +307,69 @@ public class MailProxyServer extends WorkerParent
 
             worker.start();
         }
-         
+
+        SwingWorker idle_worker = new SwingWorker()
+        {
+            public Object construct()
+            {
+                do_idle();
+
+                return null;
+            }
+        };
+
+        idle_worker.start();
+        
+       this.setStatusTxt("Running");
+       this.setGoodState(true);        
        return true;
+    }
+    
+    void do_idle()
+    {                
+        while (!this.isShutdown())
+        {
+            LogicControl.sleep(1000);
+            
+            // CLEAN UP LIST OF FINISHED CONNECTIONS
+            synchronized(connection_list)
+            {
+                for (int i = 0; i < connection_list.size(); i++)
+                {
+                    MailConnection m = connection_list.get(i);
+                    if (!m.is_connected())
+                    {
+                        connection_list.remove(m);
+                        i--;
+                    }
+                }
+                if (this.isGoodState())
+                {
+                    if (connection_list.size() > 0)
+                        this.setStatusTxt("Connected to " + connection_list.size() + " client(s)" );
+                    else
+                        this.setStatusTxt("");
+                }
+            }
+        }
+    }
+    
+    public String get_proxy_status_txt()
+    {
+        StringBuffer stb = new StringBuffer();
+        
+        // CLEAN UP LIST OF FINISHED CONNECTIONS
+        for (int i = 0; i < proxy_list.size(); i++)
+        {
+            ProxyEntry pe = proxy_list.get(i);
+            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokollStr());
+            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
+            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
+            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );            
+            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getHost() + "' " );
+        }
+        
+        return stb.toString();
     }
 
     @Override
@@ -329,11 +377,14 @@ public class MailProxyServer extends WorkerParent
     {
         try
         {
-            read_proxy_list();
+            proxy_list = read_proxy_list();
         }
         catch (Exception exc)
         {
             Main.err_log("Cannot read proxy list: " + exc.getMessage());
+            this.setStatusTxt("Proxylist is empty");
+            this.setGoodState(false);
+            
             return false;
         }
         return true;

@@ -12,8 +12,6 @@ package dimm.home.mailproxy;
 import dimm.home.mailproxy.Utilities.CmdExecutor;
 import dimm.home.mailproxy.Utilities.SwingWorker;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
@@ -68,17 +66,23 @@ public class MailArchiver extends WorkerParent
             
             return false;
         }
+        this.setStatusTxt("");
+        this.setGoodState(true);        
         
         return true;
     }
 
     private boolean handle_archive_ex2mailarchiver()
     {
+        String prog_name = "./ex2mailarchiva.sh";
+        if (System.getProperty("os.name").startsWith("Windows"))
+            prog_name = "./ex2mailarchiva.bat";
+        
         String java_agent_opts = Main.get_prop(Preferences.MAIL_ARCHIVA_AGENT_OPTS, "");
         
         try
         {
-            String cmd[] = {"ex2mailarchiva.sh", java_agent_opts, "-s", Main.RFC_PATH};
+            String cmd[] = {prog_name, java_agent_opts, "-s", Main.RFC_PATH};
           
             CmdExecutor exe = new CmdExecutor(cmd);
             int ret = exe.exec();
@@ -141,83 +145,20 @@ public class MailArchiver extends WorkerParent
         
         return false;
     }
- /*   private boolean handle_archive_smtp(File rfc_dump)
-    {        
     
-  DataOutputStream os  = null;
-  BufferedReader   is  = null;
-  String           sRt = "";
-
-
-  public synchronized final String sendEmail( String sSmtpServer,
-                                              String sFromAdr, String sFromRealName,
-                                              String sToAdr,   String sToRealName,
-                                              String sSubject, String sText )
-  throws IOException, Exception
-  {
-    Socket so = null;
-    try {
-      sRt = "";
-      if( null == sSmtpServer  || 0 >= sSmtpServer.length() ||
-          null == sFromAdr     || 0 >= sFromAdr.length()    ||
-          null == sToAdr       || 0 >= sToAdr.length()      ||
-          (  (null == sSubject || 0 >= sSubject.length())
-          && (null == sText    || 0 >= sText.length())  )   )
-        throw new Exception( "Invalid Parameters for SmtpSimple.sendEmail()." );
-      if( null == sFromRealName || 0 >= sFromRealName.length() )  sFromRealName = sFromAdr;
-      if( null == sToRealName   || 0 >= sToRealName.length() )    sToRealName   = sToAdr;
-      so = new Socket( sSmtpServer, 25 );
-      os = new DataOutputStream( so.getOutputStream() );
-      is = new BufferedReader(
-           new InputStreamReader( so.getInputStream() ) );
-      so.setSoTimeout( 10000 );
-      writeRead( true, "220", null );
-      writeRead( true, "250", "HELO " + sSmtpServer + "\n" );
-      writeRead( true, "250", "RSET\n" );
-      writeRead( true, "250", "MAIL FROM:<" + sFromAdr + ">\n" );
-      writeRead( true, "250", "RCPT TO:<" + sToAdr + ">\n" );
-      writeRead( true, "354", "DATA\n" );
-      writeRead( false, null, "To: " + sToRealName + " <" + sToAdr + ">\n" );
-      writeRead( false, null, "From: " + sFromRealName + " <" + sFromAdr + ">\n" );
-      writeRead( false, null, "Subject: " + sSubject + "\n" );
-      writeRead( false, null, "Mime-Version: 1.0\n" );
-      writeRead( false, null, "Content-Type: text/plain; charset=\"iso-8859-1\"\n" );
-      writeRead( false, null, "Content-Transfer-Encoding: quoted-printable\n\n" );
-      writeRead( false, null, sText + "\n" );
-      writeRead( true, "250", ".\n" );
-      writeRead( true, "221", "QUIT\n" );
-      return sRt;
-    } finally {
-      if( is != null ) try { is.close(); } catch (Exception ex) {}
-      if( os != null ) try { os.close(); } catch (Exception ex) {}
-      if( so != null ) try { so.close(); } catch (Exception ex) {}
-      is = null;
-      os = null;
-    }
-  }
-
-  private final void writeRead( boolean bReadAnswer,
-                                String  sAnswerMustStartWith,
-                                String  sWrite )
-  throws IOException, Exception
-  {
-    if( null != sWrite && 0 < sWrite.length() )
+    public boolean check_mailarchiva_online()
     {
-      sRt += sWrite;
-      os.writeBytes( sWrite );
+        if (System.getProperty("os.name").startsWith("Windows"))
+            return true;
+
+        String cmd[] = {"lsof", "| grep \"TCP localhost.localdomain:8091\""};        
+        
+        CmdExecutor exe = new CmdExecutor(cmd);
+        int ret = exe.exec();
+        
+        return (ret == 0) ? true : false;
     }
-    if( bReadAnswer )
-    {
-      String sRd = is.readLine() + "\n";
-      sRt += sRd;
-      if( null != sAnswerMustStartWith
-          && 0 < sAnswerMustStartWith.length()
-          && !sRd.startsWith( sAnswerMustStartWith ) )
-        throw new Exception( sRt );
-    }
-  }
-}
-    */
+
     
     
     
@@ -227,6 +168,13 @@ public class MailArchiver extends WorkerParent
         {
             Main.sleep(1000);
             File rfc_dump = null;
+            
+            if (!check_mailarchiva_online())
+            {
+                this.setStatusTxt("Mailarchive is offline");
+                this.setGoodState(false);
+                continue;
+            }
             
             synchronized (file_list)            
             {
@@ -275,6 +223,7 @@ public class MailArchiver extends WorkerParent
             }                       
         }                    
     }
+    
     private void run_loop_bulk()
     {
         while (!isShutdown())
@@ -283,12 +232,19 @@ public class MailArchiver extends WorkerParent
             File rfc_dump = null;
             eml_file_list.clear();
             
+            
+            if (!check_mailarchiva_online())
+            {
+                this.setStatusTxt("Mailarchive is offline");
+                this.setGoodState(false);
+                continue;
+            }
+            
             synchronized (file_list)            
             {
                 if (file_list.isEmpty())
                     continue;
-
-                
+                                
                 try
                 {
                     
@@ -335,8 +291,10 @@ public class MailArchiver extends WorkerParent
                 
                 catch (Exception exc)
                 {
+                    this.setStatusTxt("Failed to convert");
+                    this.setGoodState(false);
                     Main.err_log_fatal("Failed to convert files in rfc_directory: " + exc.getMessage());
-                    Main.sleep(60);
+                    Main.sleep(60*000);
                     continue;
                 }                                    
             }
@@ -344,7 +302,7 @@ public class MailArchiver extends WorkerParent
             
             // OK, ALL FILES ARE NOW .eml
 
-            this.setStatusTxt("Archiving " + file_list.size() + " file(s) from rfc directory...");
+            this.setStatusTxt("Archiving " + eml_file_list.size() + " file(s...");
             this.setGoodState(true);
             Main.debug_msg(0, this.getStatusTxt());
             
@@ -358,10 +316,11 @@ public class MailArchiver extends WorkerParent
                         eml_file_list.get(i).delete();
                     }
                     
+                    this.setGoodState(true);
+                    this.setStatusTxt("Archived " + eml_file_list.size() + " file(s)");
+                    
                     eml_file_list.clear();
                 }
-                this.setGoodState(true);
-                this.setStatusTxt("");
                 
             }
             else

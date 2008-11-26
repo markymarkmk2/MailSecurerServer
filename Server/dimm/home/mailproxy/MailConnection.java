@@ -19,14 +19,15 @@ import java.util.concurrent.Semaphore;
 public abstract class MailConnection 
 {
     
-    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000, 45000};
+    static final int SOCKET_TIMEOUT[] = {60000, 60000};
+//    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000, 45000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
     final static byte END_OF_LINE[] = {'\r','\n'};
     
     // variables    
-    String m_host;							// host name or IP adsress
+/*    String m_host;							// host name or IP adsress
     int m_RemotePort = 110;					// port to connect
-    
+    */
     
     static final int ERROR_TIMEOUT_EXCEEDED = 1;
     static final int ERROR_NO_ANSWER = 2;
@@ -48,12 +49,13 @@ public abstract class MailConnection
     
     static final int POP_RETR = 1;
     static final int POP_MULTILINE = 2;
-    static final int SMTP_MULTILINE = 2;   
-    static final int POP_SINGLELINE = 4;
-    static final int SMTP_SINGLELINE = 4;   
+    static final int SMTP_MULTILINE = 4;   
+    static final int POP_SINGLELINE = 3;
+    static final int SMTP_SINGLELINE = 5;   
     static final int SMTP_DATA = 1;
-    static final int POP_QUIT = 3;
-    static final int SMTP_QUIT = 3;
+    static final int POP_QUIT = 6;
+    static final int SMTP_QUIT = 7;
+    static final int SMTP_CLIENTREQUEST = 8;
     
 
      
@@ -72,18 +74,23 @@ public abstract class MailConnection
     
     static Semaphore mtx = new Semaphore(MAX_THREADS);
     
+    ProxyEntry pe;
     
-    
-    protected MailConnection(String host, int RemotePort)
-    {        
-        m_host = host;
-        m_RemotePort = RemotePort;
-        
+    MailConnection(ProxyEntry _pe)
+    {                 
+        pe = _pe;
+  /*      m_host = pe.getHost();
+        m_RemotePort = pe.getRemotePort();
+    */    
         m_Stop = false;
         m_error = -1;
-        m_Command = -1;
-        
+        m_Command = -1;        
     }    
+    
+    boolean is_connected()
+    {
+        return !clientSocket.isClosed();
+    }
     
     boolean is_command_multiline(String sData)
     {        
@@ -129,6 +136,7 @@ public abstract class MailConnection
         {
             inc_thread_count();
             this_thread_id = get_thread_count();
+            pe.incInstanceCnt();
         }
 
         if (get_thread_count() > MAX_THREADS)
@@ -137,6 +145,7 @@ public abstract class MailConnection
             synchronized (mtx)
             {
                 dec_thread_count();
+                pe.decInstanceCnt();
             }
         }
         else
@@ -154,6 +163,7 @@ public abstract class MailConnection
                     synchronized (mtx)
                     {
                         dec_thread_count();
+                        pe.decInstanceCnt();
                     }
                 }
             };
@@ -191,6 +201,14 @@ public abstract class MailConnection
             {
                 clientWriter.close();
                 clientWriter = null;
+            }
+            if (clientSocket != null&& clientSocket.isConnected())
+            {
+                clientSocket.close();
+            }
+            if (serverSocket != null&& serverSocket.isConnected())
+            {
+                serverSocket.close();
             }
 
         } catch (IOException iex)
@@ -302,7 +320,7 @@ public abstract class MailConnection
 
                 int avail = reader.available();
 
-                if (command_type == POP_MULTILINE || command_type == SMTP_MULTILINE)
+                if (command_type == POP_MULTILINE)
                 {
                     if (avail > buffer.length + END_OF_MULTILINE.length)
                     {
@@ -325,8 +343,22 @@ public abstract class MailConnection
                         if (has_multi_eol( buffer, rlen )) 
                             finished = true;
                     }
+                    // DETECT ERR ON MULTILINE ANSWER
+                    if (buffer[0] == '-' && buffer[1] == 'E')
+                    {
+                        // GET REST OF MESSAGE
+                        avail = reader.available();
+                        
+                        if (avail > 0)
+                        {
+                            rlen += reader.read(buffer, rlen, avail );
+                        }
+                        // END OF LINE IS ENOUGH
+                        if ( has_eol( buffer, rlen ) && reader.available() == 0) 
+                            finished = true;    
+                    }
                 }                
-                else if (command_type == POP_SINGLELINE || command_type == SMTP_SINGLELINE)
+                else if (command_type == POP_SINGLELINE || command_type == SMTP_CLIENTREQUEST || command_type == SMTP_DATA)
                 {
                     rlen = reader.read(buffer);
                     if (has_eol( buffer, rlen ) && reader.available() == 0) 
@@ -350,6 +382,26 @@ public abstract class MailConnection
                 {
                     output.append( (char) buffer[i]);
                 }        
+                
+                if ( command_type == SMTP_MULTILINE || command_type == SMTP_SINGLELINE)
+                {
+                    // CHECK IF WE HAVE LAST LINE OF MULTILINE SMTP
+                    int idx = output.length() - 2;
+                    while (idx > 0 && output.charAt(idx) != '\n' )
+                    {
+                        idx--;
+                    }
+                    if (idx == 0)
+                        idx--;
+                    
+                    idx += 4;
+                    if (idx < output.length())
+                    {
+                        char ch_after_code = output.charAt(idx);
+                        if (ch_after_code == ' ' || ch_after_code == '\r')
+                            finished = true;
+                    }                    
+                }
             } 
             catch (SocketTimeoutException ste)
             {
@@ -369,7 +421,7 @@ public abstract class MailConnection
                     {
                         // we try again to read a message recursively
                         m_retries++;
-                        Main.debug_msg(1, "timeout. Trying again [" + m_retries + "]");
+                        Main.debug_msg(1, "Mail timeout. Trying again [" + m_retries + "]");
                     }
                 }
                 else
@@ -397,101 +449,7 @@ public abstract class MailConnection
         
         return output;
     }    
-    /*
-    StringBuffer _getDataFromInputStream(BufferedInputStream reader)
-    {
-        int charRead = 0;									// char read
-        final int MAX_BUF = 8192;  						// buffer 8 Kb
-        byte buffer[] = new byte[MAX_BUF];			// buffer array
-        StringBuffer output = new StringBuffer("");		// output string
-
-        try
-        {
-            // we are retrying the read operation
-            // because the timeout was triggered.
-            // we increase slowly the timeout.
-            if (m_retries > 0)
-            {
-                serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-            }
-
-            // verify if the user stopped the thread
-            if (m_Stop)
-            {
-                return output;
-            }
-
-            // read the stream until EOF (-1)
-            while (charRead != -1)
-            {
-                // read the buffer
-                charRead = reader.read(buffer);
-                if (charRead > -1)
-                {
-                    // append to the output string
-                    output.append(new String(buffer, 0, charRead));
-                }
-            }
-
-            // no data returned
-            if (output.length() == 0)
-            {
-                m_error = ERROR_NO_ANSWER;
-            }
-
-        } catch (SocketTimeoutException ste)
-        {
-            /////////////////////
-            // timeout triggered
-            /////////////////////
-
-            // no data
-            if (output.length() == 0)
-            {
-                // the max quantity of retries was reached
-                // without answer
-                if (m_retries == SOCKET_TIMEOUT.length - 1)
-                {
-                    m_error = ERROR_TIMEOUT_EXCEEDED;
-                } else
-                {
-                    // we try again to read a message recursively
-                    m_retries++;
-                    Main.debug_msg(1, "timeout. Trying again [" + m_retries + "]");
-                    output = getDataFromInputStream(reader);
-                }
-            }
-
-        } catch (Exception e)
-        {
-            // reader failed
-            m_error = ERROR_UNKNOWN;
-            Main.err_log(e.getMessage());
-        }
-
-        // errors found
-        if (m_error < 0)
-        {
-            output = processMessage(output);
-        }
-
-        try
-        {
-            // return to the normal timeout (faster answer)
-            if (m_retries > 0)
-            {
-                m_retries = 0;
-                serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-            }
-        } catch (Exception ex)
-        {
-            Main.err_log(ex.getMessage());
-        }
-
-        return output;
-
-    }  // getDataFromInputStream
-    */
+    
 
     String getErrorMessage()
     {

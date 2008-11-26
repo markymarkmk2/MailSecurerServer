@@ -10,12 +10,24 @@
 package dimm.home.mailproxy;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.net.SocketException;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import dimm.home.mailproxy.Commands.Ping;
 import dimm.home.mailproxy.Utilities.CmdExecutor;
+import java.io.FileReader;
+import java.net.NetworkInterface;
+import java.security.MessageDigest;
+import java.security.Provider;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  *
@@ -29,6 +41,8 @@ public class LogicControl
     MailProxyServer ps;
     
     ArrayList<WorkerParent> worker_list;
+    
+    boolean _is_licensed;
     
     
     /** Creates a new instance of LogicControl */
@@ -49,16 +63,101 @@ public class LogicControl
             
             ps = new MailProxyServer();
             worker_list.add( ps );
-            
-            
-            
-            
+                                                
         }
         catch (Exception ex)
         {
             Main.err_log_fatal("Constructor falied: " + ex.getMessage() );
         }
     }
+    
+    
+    public boolean is_licensed()
+    {
+        return _is_licensed;
+    }
+    
+    
+    boolean check_licensed()
+    {
+        NetworkInterface ni;
+        {
+            FileReader fr = null;
+            try
+            {
+                ni = NetworkInterface.getByName("eth0");
+                byte[] mac = ni.getHardwareAddress();
+
+                MessageDigest md5 = MessageDigest.getInstance("MD5");
+                md5.reset();
+                md5.update(mac);
+                byte[] result = md5.digest();
+
+                /* Ausgabe */
+                StringBuffer hexString = new StringBuffer();
+                for (int i=1; i<=result.length; i++) 
+                {
+                    hexString.append(Integer.toHexString(0xFF & result[ result.length - i]));
+                }
+          
+                if (Main.create_licensefile)
+                {
+                    File licfile = new File("mailproxy.license");
+                    FileWriter fw = new FileWriter( licfile );
+                    fw.write( hexString.toString() );
+                    fw.close();
+                    Main.info_msg("License file was created");
+                    return true;
+                }
+                else
+                {
+                    File licfile = new File("mailproxy.license");
+                    fr = new FileReader(licfile);
+
+                    char[] buff = new char[40];
+                    int len = fr.read(buff);
+                    
+
+                    String lic_string = new String( buff, 0, len );
+
+
+                    if (lic_string.equals( hexString.toString() ))
+                        return true;                          
+
+                    Main.err_log_fatal("Unlicensed host");
+                }
+            }
+            catch (NoSuchAlgorithmException ex)
+            {
+                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            }            
+            catch (FileNotFoundException ex2)
+            {
+                Main.err_log_fatal("Missing licensefile");
+            }
+            catch (SocketException ex3)
+            {
+                Main.err_log_fatal("No network interface for licensecheck");
+            }
+            catch (IOException ex1)
+            {
+                Main.err_log_fatal("Error while reading licensefile: " + ex1.getMessage());
+            }            
+            finally
+            {
+                try
+                {
+                    if (fr != null)
+                        fr.close();
+                }
+                catch (IOException ex)
+                {
+                    
+                }
+            }
+        }
+        return false;
+    }        
 
     void initialize()
     {
@@ -80,8 +179,23 @@ public class LogicControl
                 comm.setStatusTxt( "Internet not reachable" );
                 comm.setGoodState( false );
                 Main.err_log_fatal("Cannot connect internet at startup" );        
+               
             }  
+            else
+            {
+               
+                if (!comm.isGoodState())
+                {
+                    comm.setStatusTxt( "Internet reachable" );
+                    comm.setGoodState( true );
+                }
+            }   
+                
         }        
+        
+        _is_licensed = check_licensed();
+        
+        
         for (int i = 0; i < worker_list.size(); i++)
         {
             try
@@ -169,6 +283,14 @@ public class LogicControl
         if( sd != null)
             this.sd.set_router_ok(ok );
         
+        if (comm != null)
+        {
+            
+            if (!ok)
+                comm.setStatusTxt( "Internet not reachable" );
+            comm.setGoodState( ok );
+        }
+                        
         return ok;
     }
     
@@ -287,6 +409,10 @@ public class LogicControl
     public MailArchiver get_mail_archiver()
     {
         return ma;
+    }
+    public MailProxyServer get_proxy_server()
+    {
+        return ps;
     }
     
     WorkerParent get_worker(String name)
