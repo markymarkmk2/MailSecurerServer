@@ -44,6 +44,7 @@ public class Preferences
     public static final String X_POS = "XPos";
     public static final String Y_POS = "YPos";
     public static final String COUNTRYCODE = "CountryCode";
+    public static final String MAILARCHIVAURL = "MailArchivaURL";
     
     
     java.util.Properties props;
@@ -65,6 +66,7 @@ public class Preferences
         prop_names.add( X_POS );
         prop_names.add( Y_POS );
         prop_names.add( COUNTRYCODE );
+        prop_names.add( MAILARCHIVAURL );
         
                 
         read_props();

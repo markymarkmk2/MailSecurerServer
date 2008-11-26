@@ -8,6 +8,7 @@ package dimm.home.mailproxyclient;
 
 
 
+import dimm.home.mailproxyclient.Utilities.CmdExecutor;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -60,6 +61,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     
     Communicator comm;
     
+    StatusDialog status_dlg;
     
     /** Creates new form MainFrame */
     public MainFrame(boolean _is_udp, boolean allow_tcp, String _fixed_ip )
@@ -231,10 +233,16 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         String answer = null;
         
         comm.do_scan( st_list, fixed_ip, fast_mode );
-
+        
         table_changed();
         
-        if (st_list.size() == 1)
+        if (st_list.size() == 0)
+        {
+            this.TXT_STATUS.setText("Kein Geraet gefunden");
+            if (status_dlg != null)
+                status_dlg.reset_status();
+        }
+        else if (st_list.size() == 1)
             this.TXT_STATUS.setText("Ein Geraet gefunden");
         else
             this.TXT_STATUS.setText("Insg. " + st_list.size() + " Geraete gefunden");
@@ -266,6 +274,8 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         jPanel2 = new javax.swing.JPanel();
         jTextField1 = new javax.swing.JTextField();
         BTG_IP = new javax.swing.ButtonGroup();
+        jPanel4 = new javax.swing.JPanel();
+        jButton1 = new javax.swing.JButton();
         jPanel1 = new javax.swing.JPanel();
         BT_SCAN = new javax.swing.JButton();
         SCP_LIST = new javax.swing.JScrollPane();
@@ -273,6 +283,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         jLabel1 = new javax.swing.JLabel();
         BT_NEW_IP = new javax.swing.JButton();
         TXT_IP = new javax.swing.JTextField();
+        BT_MAILARCHIVA = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         TXT_STATUS = new javax.swing.JTextField();
         TXT_USER = new javax.swing.JTextField();
@@ -300,6 +311,19 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         jPanel2.setLayout(new java.awt.GridLayout(1, 0));
 
         jTextField1.setText("jTextField1");
+
+        org.jdesktop.layout.GroupLayout jPanel4Layout = new org.jdesktop.layout.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(0, 100, Short.MAX_VALUE)
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(0, 100, Short.MAX_VALUE)
+        );
+
+        jButton1.setText("jButton1");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("SonicRemote");
@@ -336,6 +360,15 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             }
         });
 
+        BT_MAILARCHIVA.setText("Mailrchiva");
+        BT_MAILARCHIVA.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                BT_MAILARCHIVAActionPerformed(evt);
+            }
+        });
+
         org.jdesktop.layout.GroupLayout jPanel1Layout = new org.jdesktop.layout.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -343,13 +376,15 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             .add(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 399, Short.MAX_VALUE)
+                    .add(org.jdesktop.layout.GroupLayout.TRAILING, SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 533, Short.MAX_VALUE)
                     .add(jLabel1)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .add(BT_NEW_IP)
+                    .add(jPanel1Layout.createSequentialGroup()
+                        .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
+                            .add(org.jdesktop.layout.GroupLayout.LEADING, BT_NEW_IP, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .add(org.jdesktop.layout.GroupLayout.LEADING, BT_MAILARCHIVA, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 88, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 151, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 277, Short.MAX_VALUE)
                         .add(BT_SCAN)))
                 .addContainerGap())
         );
@@ -359,12 +394,14 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                 .addContainerGap()
                 .add(jLabel1)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 131, Short.MAX_VALUE)
+                .add(SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(BT_SCAN)
-                    .add(BT_NEW_IP)
-                    .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(BT_NEW_IP))
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                .add(BT_MAILARCHIVA)
                 .addContainerGap())
         );
 
@@ -411,7 +448,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         MU_FILE.add(MUI_LOGIN);
 
         BTG_IP.add(MUI_UDP);
-        MUI_UDP.setText("Lokales Netzwerk");
+        MUI_UDP.setText("Lokales Netzwerk (UDP)");
         MUI_UDP.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -422,7 +459,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         MU_FILE.add(MUI_UDP);
 
         BTG_IP.add(MUI_TCP);
-        MUI_TCP.setText("Internet");
+        MUI_TCP.setText("TCP/IP");
         MUI_TCP.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -791,10 +828,10 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
 // TODO Ihre Ereignisbehandlung hier einf�gen:
         if (check_selected())
         {
-            StatusDialog dlg = new StatusDialog( this );
-            dlg.setLocation( this.getLocationOnScreen().x + 20, this.getLocationOnScreen().y + 30 );
+            status_dlg = new StatusDialog( this );
+            status_dlg.setLocation( this.getLocationOnScreen().x + 20, this.getLocationOnScreen().y + 30 );
            
-            dlg.setVisible( true );                        
+            status_dlg.setVisible( true );                        
         }              
     }//GEN-LAST:event_PUI_STATUSActionPerformed
 
@@ -890,6 +927,34 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         this.dispose();
         System.exit(0);
     }//GEN-LAST:event_MUI_EXITActionPerformed
+
+    private void BT_MAILARCHIVAActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_BT_MAILARCHIVAActionPerformed
+    {//GEN-HEADEREND:event_BT_MAILARCHIVAActionPerformed
+        // TODO add your handling code here:
+        if (!check_selected())
+            return;
+        
+        StationEntry se = st_list.get( table.getSelectedRow() );
+        
+        String mailarchiva_url = "http://" + se.get_ip() +  Main.get_prop(Preferences.MAILARCHIVAURL, ":8090/mailarchiva");
+            
+        
+        
+        if (System.getProperty("os.name").startsWith("Windows"))
+        {            
+            String[] cmd = {"rundll32", "url.dll,FileProtocolHandler", mailarchiva_url};
+            CmdExecutor exe = new CmdExecutor( cmd );
+            exe.start();
+        }
+        if (System.getProperty("os.name").startsWith("Mac"))
+        {            
+            String[] cmd = {"open", mailarchiva_url};
+            CmdExecutor exe = new CmdExecutor( cmd );
+            exe.start();
+        }
+        
+        
+    }//GEN-LAST:event_BT_MAILARCHIVAActionPerformed
 
     
     void scan_entry_list()
@@ -993,6 +1058,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup BTG_IP;
+    private javax.swing.JButton BT_MAILARCHIVA;
     private javax.swing.JButton BT_NEW_IP;
     private javax.swing.JButton BT_SCAN;
     private javax.swing.JList LST_LIST;
@@ -1017,11 +1083,13 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JTextField TXT_IP;
     private javax.swing.JTextField TXT_STATUS;
     private javax.swing.JTextField TXT_USER;
+    private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JSeparator jSeparator2;
     private javax.swing.JTextField jTextField1;

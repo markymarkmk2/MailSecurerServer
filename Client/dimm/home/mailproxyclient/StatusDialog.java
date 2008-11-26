@@ -16,7 +16,119 @@ import javax.swing.JButton;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 import dimm.home.mailproxyclient.Utilities.ParseToken;
+import java.util.ArrayList;
+import javax.swing.table.AbstractTableModel;
 
+class ProxyEntry
+{
+    
+    private String host;
+    private int localPort;
+    private int remotePort;
+    private String protokoll;
+    private int instanceCnt;
+    
+    ProxyEntry( String _host, long l, long r, long ic, String p )
+    {
+        host = _host;
+        localPort =  (int)l;
+        remotePort =  (int)r;
+        instanceCnt = (int)ic;
+        protokoll = p;
+    }
+  
+    String getHost()
+    {
+        return host;
+    }
+
+    public int getLocalPort()
+    {
+        return localPort;
+    }
+
+    public int getRemotePort()
+    {
+        return remotePort;
+    }
+
+    public String getProtokoll()
+    {
+        return protokoll;
+    }
+   
+    public int getInstanceCnt()
+    {
+        return instanceCnt;
+    }   
+    public void setInstanceCnt(int i)
+    {
+        instanceCnt = i;
+    }   
+    
+    public boolean is_equal( ProxyEntry pe )
+    {
+        if (pe.getLocalPort() != getLocalPort())
+            return false;
+        if (pe.getRemotePort() != getRemotePort())
+            return false;
+        
+        if (!pe.getHost().equals(host))
+            return false;
+        if (!pe.getProtokoll().equals(getProtokoll()))
+            return false;
+        
+        return true;
+    }
+        
+}
+class ProxyTableModel extends AbstractTableModel
+{
+    ArrayList<ProxyEntry> proxy_list;
+    String col_names[] = {"Protokoll", "LocalPort", "Host", "RemotePort", "Tasks" };
+    Class col_classes[] = {String.class, Integer.class, String.class, Integer.class, Integer.class };
+
+    @Override
+    public Class<?> getColumnClass(int columnIndex)
+    {
+        return super.getColumnClass(columnIndex);
+    }
+
+    @Override
+    public String getColumnName(int column)
+    {
+        return col_names[column];
+    }
+    
+    ProxyTableModel( ArrayList<ProxyEntry> _proxy_list )
+    {
+        proxy_list = _proxy_list;
+    }
+
+    public int getRowCount()
+    {
+        return proxy_list.size();
+    }
+
+    public int getColumnCount()
+    {
+        return col_names.length;
+    }
+
+    public Object getValueAt(int rowIndex, int columnIndex)
+    {
+        ProxyEntry pe = proxy_list.get(rowIndex);
+        switch ( columnIndex )
+        {
+            case 0: return pe.getProtokoll();
+            case 1: return pe.getLocalPort();
+            case 2: return pe.getHost();
+            case 3: return pe.getRemotePort();
+            case 4: return pe.getInstanceCnt();
+        }
+        return "?";
+    }
+}
 /**
  *
  * @author  Administrator
@@ -29,6 +141,9 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
     
     Color ok_color = new Color(153, 255, 153 );
     Color nok_color = new Color(255, 153, 153 );
+    ProxyTableModel model;
+    ArrayList<ProxyEntry> proxy_list;
+    
     
     /** Creates new form StatusDialog */
     public StatusDialog(MainFrame _parent)
@@ -36,22 +151,66 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
         super(_parent, false);
         parent = _parent;
         initComponents();
+               
         
-         String nlic_txt = "nicht lizensiert";
-         TXT_PLSTATUS_0.setText( nlic_txt );
-         TXT_PLSTATUS_1.setText( nlic_txt );
-         TXT_PLSTATUS_2.setText( nlic_txt );
-         TXT_PLSTATUS_3.setText( nlic_txt );
-         TXT_PLSTATUS_4.setText( nlic_txt );
-        
-        read_status();
+        proxy_list = new ArrayList<ProxyEntry>();
         
         timer = new Timer( 1000, this );
         timer.start();
         
+        
+        model = new ProxyTableModel( proxy_list);
+        
+        TB_TASKS.setModel(model);
+        TB_TASKS.setShowVerticalLines(false);
+        TB_TASKS.setGridColor(Color.LIGHT_GRAY);
+        TB_TASKS.getColumnModel().getColumn(0).setPreferredWidth(50);
+        TB_TASKS.getColumnModel().getColumn(1).setPreferredWidth(50);
+        TB_TASKS.getColumnModel().getColumn(2).setPreferredWidth(150);
+        TB_TASKS.getColumnModel().getColumn(3).setPreferredWidth(50);
+        TB_TASKS.getColumnModel().getColumn(4).setPreferredWidth(50);
+        TB_TASKS.setEnabled(false);
 
-         parent.get_comm().comm_open();
-         
+        parent.get_comm().comm_open();
+       
+        read_status();        
+    }
+    public void reset_status()
+    {
+        proxy_list.clear();
+        model.fireTableDataChanged();
+        
+        TXT_TIME.setText( "" );
+        TXT_RESOURCE.setText( "" );
+        TXT_CM.setText( "" );
+        TXT_PS.setText( "" );
+        TXT_SD.setText( "" );                                     
+        TXT_MA.setText( "" );
+        
+    }
+    
+    boolean add_to_proxy_list( ProxyEntry pe )
+    {
+        int i;
+        for (i = 0; i < proxy_list.size(); i++)
+        {
+            if (proxy_list.get(i).is_equal(pe))
+            {
+                if (proxy_list.get(i).getInstanceCnt() != pe.getInstanceCnt())
+                {
+                    proxy_list.get(i).setInstanceCnt( pe.getInstanceCnt());
+                    return true;
+                }
+                return false;
+            }
+        }
+        if (i == proxy_list.size())
+        {
+            proxy_list.add( pe );
+            return true;
+        }
+        return false;
+
     }
     
     
@@ -60,70 +219,27 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
      * WARNING: Do NOT modify this code. The content of this method is
      * always regenerated by the Form Editor.
      */
-    // <editor-fold defaultstate="collapsed" desc=" Erzeugter Quelltext ">//GEN-BEGIN:initComponents
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents()
     {
+
         jPanel2 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
-        TXT_SF = new javax.swing.JTextField();
+        TXT_MA = new javax.swing.JTextField();
         jLabel6 = new javax.swing.JLabel();
-        TXT_DF = new javax.swing.JTextField();
-        jLabel7 = new javax.swing.JLabel();
-        TXT_COMM = new javax.swing.JTextField();
-        jLabel8 = new javax.swing.JLabel();
-        TXT_SD = new javax.swing.JTextField();
+        TXT_PS = new javax.swing.JTextField();
         jLabel9 = new javax.swing.JLabel();
-        TXT_PM = new javax.swing.JTextField();
-        jLabel10 = new javax.swing.JLabel();
-        TXT_DB = new javax.swing.JTextField();
+        TXT_SD = new javax.swing.JTextField();
         jLabel27 = new javax.swing.JLabel();
         TXT_TIME = new javax.swing.JTextField();
-        jPanel1 = new javax.swing.JPanel();
-        jLabel1 = new javax.swing.JLabel();
-        TXT_TITEL_0 = new javax.swing.JTextField();
-        jLabel2 = new javax.swing.JLabel();
-        TXT_NTITEL_0 = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
-        TXT_PLSTATUS_0 = new javax.swing.JTextField();
-        jLabel4 = new javax.swing.JLabel();
-        TXT_DLSTATUS_0 = new javax.swing.JTextField();
-        jPanel3 = new javax.swing.JPanel();
+        jLabel10 = new javax.swing.JLabel();
+        TXT_RESOURCE = new javax.swing.JTextField();
+        TXT_CM = new javax.swing.JTextField();
         jLabel11 = new javax.swing.JLabel();
-        TXT_TITEL_1 = new javax.swing.JTextField();
-        jLabel12 = new javax.swing.JLabel();
-        TXT_NTITEL_1 = new javax.swing.JTextField();
-        jLabel13 = new javax.swing.JLabel();
-        TXT_PLSTATUS_1 = new javax.swing.JTextField();
-        jLabel14 = new javax.swing.JLabel();
-        TXT_DLSTATUS_1 = new javax.swing.JTextField();
-        jPanel4 = new javax.swing.JPanel();
-        jLabel15 = new javax.swing.JLabel();
-        TXT_TITEL_2 = new javax.swing.JTextField();
-        jLabel16 = new javax.swing.JLabel();
-        TXT_NTITEL_2 = new javax.swing.JTextField();
-        jLabel17 = new javax.swing.JLabel();
-        TXT_PLSTATUS_2 = new javax.swing.JTextField();
-        jLabel18 = new javax.swing.JLabel();
-        TXT_DLSTATUS_2 = new javax.swing.JTextField();
-        jPanel5 = new javax.swing.JPanel();
-        jLabel19 = new javax.swing.JLabel();
-        TXT_TITEL_3 = new javax.swing.JTextField();
-        jLabel20 = new javax.swing.JLabel();
-        TXT_NTITEL_3 = new javax.swing.JTextField();
-        jLabel21 = new javax.swing.JLabel();
-        TXT_PLSTATUS_3 = new javax.swing.JTextField();
-        jLabel22 = new javax.swing.JLabel();
-        TXT_DLSTATUS_3 = new javax.swing.JTextField();
-        jPanel6 = new javax.swing.JPanel();
-        jLabel23 = new javax.swing.JLabel();
-        TXT_TITEL_4 = new javax.swing.JTextField();
-        jLabel24 = new javax.swing.JLabel();
-        TXT_NTITEL_4 = new javax.swing.JTextField();
-        jLabel25 = new javax.swing.JLabel();
-        TXT_PLSTATUS_4 = new javax.swing.JTextField();
-        jLabel26 = new javax.swing.JLabel();
-        TXT_DLSTATUS_4 = new javax.swing.JTextField();
         BT_OK = new javax.swing.JButton();
+        PN_TASKS = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        TB_TASKS = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter()
@@ -135,40 +251,36 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
         });
 
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Allgemein"));
-        jLabel5.setText("SongFactory");
 
-        TXT_SF.setEditable(false);
-        TXT_SF.setDoubleBuffered(true);
+        jLabel5.setText("MailArchiver");
 
-        jLabel6.setText("DataFactory");
+        TXT_MA.setEditable(false);
+        TXT_MA.setDoubleBuffered(true);
 
-        TXT_DF.setEditable(false);
-        TXT_DF.setDoubleBuffered(true);
+        jLabel6.setText("ProxyServer");
 
-        jLabel7.setText("Communicator");
+        TXT_PS.setEditable(false);
+        TXT_PS.setDoubleBuffered(true);
 
-        TXT_COMM.setEditable(false);
-        TXT_COMM.setDoubleBuffered(true);
-
-        jLabel8.setText("StatusDisplay");
+        jLabel9.setText("Status");
 
         TXT_SD.setEditable(false);
         TXT_SD.setDoubleBuffered(true);
-
-        jLabel9.setText("PlaylistManager");
-
-        TXT_PM.setEditable(false);
-        TXT_PM.setDoubleBuffered(true);
-
-        jLabel10.setText("DatabaseWorker");
-
-        TXT_DB.setEditable(false);
-        TXT_DB.setDoubleBuffered(true);
 
         jLabel27.setText("Datum Uhrzeit");
 
         TXT_TIME.setEditable(false);
         TXT_TIME.setDoubleBuffered(true);
+
+        jLabel10.setText("Resourcen");
+
+        TXT_RESOURCE.setEditable(false);
+        TXT_RESOURCE.setDoubleBuffered(true);
+
+        TXT_CM.setEditable(false);
+        TXT_CM.setDoubleBuffered(true);
+
+        jLabel11.setText("Communicator");
 
         org.jdesktop.layout.GroupLayout jPanel2Layout = new org.jdesktop.layout.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -177,20 +289,18 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
             .add(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .add(jPanel2Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_DB, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
                     .add(jLabel5)
                     .add(jLabel6)
-                    .add(jLabel7)
-                    .add(jLabel8)
-                    .add(jLabel9)
-                    .add(jLabel10)
-                    .add(TXT_PM, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
-                    .add(TXT_SD, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
-                    .add(TXT_COMM, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
-                    .add(TXT_DF, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
-                    .add(TXT_SF, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
+                    .add(TXT_PS, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
+                    .add(TXT_MA, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
                     .add(jLabel27)
-                    .add(TXT_TIME, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 185, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+                    .add(TXT_TIME, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 185, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                    .add(jLabel10)
+                    .add(TXT_RESOURCE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
+                    .add(jLabel9)
+                    .add(TXT_SD, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
+                    .add(jLabel11)
+                    .add(TXT_CM, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -199,349 +309,28 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
                 .addContainerGap()
                 .add(jLabel5)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_SF, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(TXT_MA, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(jLabel6)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_DF, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jLabel7)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_COMM, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jLabel8)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_SD, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(TXT_PS, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(jLabel9)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_PM, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(TXT_SD, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                .add(jLabel11)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(TXT_CM, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(42, 42, 42)
                 .add(jLabel10)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(TXT_DB, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(TXT_RESOURCE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                 .add(44, 44, 44)
                 .add(jLabel27)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                 .add(TXT_TIME, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(56, Short.MAX_VALUE))
-        );
-
-        jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("Channel 1"));
-        jLabel1.setText("Aktueller Titel");
-
-        TXT_TITEL_0.setEditable(false);
-        TXT_TITEL_0.setDoubleBuffered(true);
-
-        jLabel2.setText("N\u00e4chster Titel");
-
-        TXT_NTITEL_0.setEditable(false);
-        TXT_NTITEL_0.setDoubleBuffered(true);
-
-        jLabel3.setText("Playliststatus");
-
-        TXT_PLSTATUS_0.setEditable(false);
-        TXT_PLSTATUS_0.setDoubleBuffered(true);
-
-        jLabel4.setText("Downloadstatus");
-
-        TXT_DLSTATUS_0.setEditable(false);
-        TXT_DLSTATUS_0.setDoubleBuffered(true);
-
-        org.jdesktop.layout.GroupLayout jPanel1Layout = new org.jdesktop.layout.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel1)
-                    .add(jLabel2))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_NTITEL_0, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE)
-                    .add(TXT_TITEL_0, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel4)
-                    .add(jLabel3))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_PLSTATUS_0, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-                    .add(TXT_DLSTATUS_0, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel1Layout.createSequentialGroup()
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel1)
-                    .add(TXT_TITEL_0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(jLabel3)
-                    .add(TXT_PLSTATUS_0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel2)
-                    .add(TXT_NTITEL_0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_DLSTATUS_0, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(jLabel4))
                 .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-        );
-
-        jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder("Channel 2"));
-        jLabel11.setText("Aktueller Titel");
-
-        TXT_TITEL_1.setEditable(false);
-        TXT_TITEL_1.setDoubleBuffered(true);
-
-        jLabel12.setText("N\u00e4chster Titel");
-
-        TXT_NTITEL_1.setEditable(false);
-        TXT_NTITEL_1.setDoubleBuffered(true);
-
-        jLabel13.setText("Playliststatus");
-
-        TXT_PLSTATUS_1.setEditable(false);
-        TXT_PLSTATUS_1.setDoubleBuffered(true);
-
-        jLabel14.setText("Downloadstatus");
-
-        TXT_DLSTATUS_1.setEditable(false);
-        TXT_DLSTATUS_1.setDoubleBuffered(true);
-
-        org.jdesktop.layout.GroupLayout jPanel3Layout = new org.jdesktop.layout.GroupLayout(jPanel3);
-        jPanel3.setLayout(jPanel3Layout);
-        jPanel3Layout.setHorizontalGroup(
-            jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel3Layout.createSequentialGroup()
-                .addContainerGap()
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel11)
-                    .add(jLabel12))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_NTITEL_1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE)
-                    .add(TXT_TITEL_1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel14)
-                    .add(jLabel13))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_PLSTATUS_1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-                    .add(TXT_DLSTATUS_1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        jPanel3Layout.setVerticalGroup(
-            jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel3Layout.createSequentialGroup()
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel11)
-                    .add(jLabel13)
-                    .add(TXT_PLSTATUS_1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_TITEL_1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel3Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel12)
-                    .add(TXT_DLSTATUS_1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_NTITEL_1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel3Layout.createSequentialGroup()
-                .addContainerGap(32, Short.MAX_VALUE)
-                .add(jLabel14)
-                .addContainerGap())
-        );
-
-        jPanel4.setBorder(javax.swing.BorderFactory.createTitledBorder("Channel 3"));
-        jLabel15.setText("Aktueller Titel");
-
-        TXT_TITEL_2.setEditable(false);
-        TXT_TITEL_2.setDoubleBuffered(true);
-
-        jLabel16.setText("N\u00e4chster Titel");
-
-        TXT_NTITEL_2.setEditable(false);
-        TXT_NTITEL_2.setDoubleBuffered(true);
-
-        jLabel17.setText("Playliststatus");
-
-        TXT_PLSTATUS_2.setEditable(false);
-        TXT_PLSTATUS_2.setDoubleBuffered(true);
-
-        jLabel18.setText("Downloadstatus");
-
-        TXT_DLSTATUS_2.setEditable(false);
-        TXT_DLSTATUS_2.setDoubleBuffered(true);
-
-        org.jdesktop.layout.GroupLayout jPanel4Layout = new org.jdesktop.layout.GroupLayout(jPanel4);
-        jPanel4.setLayout(jPanel4Layout);
-        jPanel4Layout.setHorizontalGroup(
-            jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel4Layout.createSequentialGroup()
-                .addContainerGap()
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel15)
-                    .add(jLabel16))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_NTITEL_2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE)
-                    .add(TXT_TITEL_2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel18)
-                    .add(jLabel17))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_DLSTATUS_2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-                    .add(TXT_PLSTATUS_2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        jPanel4Layout.setVerticalGroup(
-            jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel4Layout.createSequentialGroup()
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel15)
-                    .add(jLabel17)
-                    .add(TXT_TITEL_2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_PLSTATUS_2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel16)
-                    .add(TXT_NTITEL_2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_DLSTATUS_2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel4Layout.createSequentialGroup()
-                .addContainerGap(32, Short.MAX_VALUE)
-                .add(jLabel18)
-                .addContainerGap())
-        );
-
-        jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder("Channel 4"));
-        jLabel19.setText("Aktueller Titel");
-
-        TXT_TITEL_3.setEditable(false);
-        TXT_TITEL_3.setDoubleBuffered(true);
-
-        jLabel20.setText("N\u00e4chster Titel");
-
-        TXT_NTITEL_3.setEditable(false);
-        TXT_NTITEL_3.setDoubleBuffered(true);
-
-        jLabel21.setText("Playliststatus");
-
-        TXT_PLSTATUS_3.setEditable(false);
-        TXT_PLSTATUS_3.setDoubleBuffered(true);
-
-        jLabel22.setText("Downloadstatus");
-
-        TXT_DLSTATUS_3.setEditable(false);
-        TXT_DLSTATUS_3.setDoubleBuffered(true);
-
-        org.jdesktop.layout.GroupLayout jPanel5Layout = new org.jdesktop.layout.GroupLayout(jPanel5);
-        jPanel5.setLayout(jPanel5Layout);
-        jPanel5Layout.setHorizontalGroup(
-            jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel5Layout.createSequentialGroup()
-                .addContainerGap()
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel19)
-                    .add(jLabel20))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_NTITEL_3, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-                    .add(TXT_TITEL_3, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel22)
-                    .add(jLabel21))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_PLSTATUS_3, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE)
-                    .add(TXT_DLSTATUS_3, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        jPanel5Layout.setVerticalGroup(
-            jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel5Layout.createSequentialGroup()
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel19)
-                    .add(jLabel21)
-                    .add(TXT_TITEL_3, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_PLSTATUS_3, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel5Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel20)
-                    .add(TXT_NTITEL_3, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_DLSTATUS_3, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel5Layout.createSequentialGroup()
-                .addContainerGap(32, Short.MAX_VALUE)
-                .add(jLabel22)
-                .addContainerGap())
-        );
-
-        jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder("Channel 5"));
-        jLabel23.setText("Aktueller Titel");
-
-        TXT_TITEL_4.setEditable(false);
-        TXT_TITEL_4.setDoubleBuffered(true);
-
-        jLabel24.setText("N\u00e4chster Titel");
-
-        TXT_NTITEL_4.setEditable(false);
-        TXT_NTITEL_4.setDoubleBuffered(true);
-
-        jLabel25.setText("Playliststatus");
-
-        TXT_PLSTATUS_4.setEditable(false);
-        TXT_PLSTATUS_4.setDoubleBuffered(true);
-
-        jLabel26.setText("Downloadstatus");
-
-        TXT_DLSTATUS_4.setEditable(false);
-        TXT_DLSTATUS_4.setDoubleBuffered(true);
-
-        org.jdesktop.layout.GroupLayout jPanel6Layout = new org.jdesktop.layout.GroupLayout(jPanel6);
-        jPanel6.setLayout(jPanel6Layout);
-        jPanel6Layout.setHorizontalGroup(
-            jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel6Layout.createSequentialGroup()
-                .addContainerGap()
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel23)
-                    .add(jLabel24))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_NTITEL_4, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE)
-                    .add(TXT_TITEL_4, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 175, Short.MAX_VALUE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(jLabel26)
-                    .add(jLabel25))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(TXT_PLSTATUS_4, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE)
-                    .add(TXT_DLSTATUS_4, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 176, Short.MAX_VALUE))
-                .addContainerGap())
-        );
-        jPanel6Layout.setVerticalGroup(
-            jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel6Layout.createSequentialGroup()
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel23)
-                    .add(jLabel25)
-                    .add(TXT_TITEL_4, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_PLSTATUS_4, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(jPanel6Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
-                    .add(jLabel24)
-                    .add(TXT_NTITEL_4, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(TXT_DLSTATUS_4, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel6Layout.createSequentialGroup()
-                .addContainerGap(32, Short.MAX_VALUE)
-                .add(jLabel26)
-                .addContainerGap())
         );
 
         BT_OK.setText("Schliessen");
@@ -553,6 +342,39 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
             }
         });
 
+        PN_TASKS.setBorder(javax.swing.BorderFactory.createTitledBorder("Tasks"));
+
+        TB_TASKS.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][]
+            {
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null},
+                {null, null, null, null}
+            },
+            new String []
+            {
+                "Title 1", "Title 2", "Title 3", "Title 4"
+            }
+        ));
+        jScrollPane1.setViewportView(TB_TASKS);
+
+        org.jdesktop.layout.GroupLayout PN_TASKSLayout = new org.jdesktop.layout.GroupLayout(PN_TASKS);
+        PN_TASKS.setLayout(PN_TASKSLayout);
+        PN_TASKSLayout.setHorizontalGroup(
+            PN_TASKSLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(PN_TASKSLayout.createSequentialGroup()
+                .addContainerGap()
+                .add(jScrollPane1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 506, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+        PN_TASKSLayout.setVerticalGroup(
+            PN_TASKSLayout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(PN_TASKSLayout.createSequentialGroup()
+                .add(jScrollPane1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 365, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
         org.jdesktop.layout.GroupLayout layout = new org.jdesktop.layout.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -560,38 +382,24 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
             .add(layout.createSequentialGroup()
                 .addContainerGap()
                 .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, layout.createSequentialGroup()
-                        .add(jPanel2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .add(layout.createSequentialGroup()
+                        .add(jPanel2, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel3, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(jPanel4, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel5, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(jPanel6, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .add(PN_TASKS, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .add(org.jdesktop.layout.GroupLayout.TRAILING, BT_OK))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(layout.createSequentialGroup()
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
+                .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
                     .add(org.jdesktop.layout.GroupLayout.LEADING, jPanel2, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .add(org.jdesktop.layout.GroupLayout.LEADING, layout.createSequentialGroup()
-                        .add(jPanel1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(jPanel3, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(jPanel4, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .add(14, 14, 14)
-                        .add(jPanel5, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                        .add(jPanel6, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)))
+                    .add(org.jdesktop.layout.GroupLayout.LEADING, PN_TASKS, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(BT_OK)
-                .addContainerGap(org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .add(BT_OK))
         );
+
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
@@ -623,10 +431,12 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
     }
 
     private void read_status()
-    {
-        
+    {        
         if (parent.send_cmd("GETSTATUS"))
         {
+            boolean touched = false;
+            //proxy_list.clear();
+            
             StringTokenizer sto = new StringTokenizer( parent.get_answer(), "\n\r" );
             while (sto.hasMoreTokens())
             {
@@ -638,6 +448,13 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
                 String date_str = pt.GetString("TIM:");
                 if (date_str != null && date_str.length() > 0) 
                     TXT_TIME.setText( date_str );
+                String space_str = pt.GetString("FSP:");
+                String mem_str = pt.GetString("FMY:");
+                
+                if (space_str != null && space_str.length() > 0 && mem_str != null)
+                {
+                    TXT_RESOURCE.setText("Disk: " + space_str + " Mem: " + mem_str);
+                }
                                                 
                 String name = pt.GetString("WPN:");
                 if (name != null && name.length() > 0)
@@ -649,17 +466,13 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
                     Color color = (ok) ? ok_color : nok_color;
 
                     if (name.compareTo("Communicator") == 0)
-                        txtf = TXT_COMM;
+                        txtf = TXT_CM;
+                    if (name.compareTo("MailProxyServer") == 0)
+                        txtf = TXT_PS;
                     if (name.compareTo("StatusDisplay") == 0)
-                        txtf = TXT_SD;
-                    if (name.compareTo("PlayManager") == 0)
-                        txtf = TXT_PM;
-                    if (name.compareTo("DataGatherer") == 0)
-                        txtf = TXT_DF;
-                    if (name.compareTo("SQLWorker") == 0)
-                        txtf = TXT_DB;
-                    if (name.compareTo("SongFactory") == 0)
-                        txtf = TXT_SF;
+                        txtf = TXT_SD;                                      
+                    if (name.compareTo("MailArchiver") == 0)
+                        txtf = TXT_MA;
 
                     if (txtf != null)
                     {
@@ -667,135 +480,54 @@ public class StatusDialog extends javax.swing.JDialog implements ActionListener
                         txtf.setBackground( color );                    
                     }
                 }
-                String pl = pt.GetString("PL:");
-                if (pl != null && pl.length() > 0)
+                
+                
+               
+                for ( int i = 0; ; i++)
                 {
-                    String status = pt.GetString("ST:");
-                    boolean ok = pt.GetBoolean("OK:");
-                    Color color = (ok) ? ok_color : nok_color;
+                    String protokoll = pt.GetString("PXPT" + i + ":");
+                    if (protokoll == null || protokoll.length() == 0)
+                        break;
                     
-                    JTextField txtf_at = null;
-                    JTextField txtf_nt = null;
-                    JTextField txtf_st = null;
-                    JTextField txtf_dl = null;
-                    if (pl.compareTo("PlayList0") == 0)
-                    {
-                        txtf_at = TXT_TITEL_0;
-                        txtf_nt = TXT_NTITEL_0;
-                        txtf_st = TXT_PLSTATUS_0;
-                        txtf_dl = TXT_DLSTATUS_0;
-                    }                    
-                    if (pl.compareTo("PlayList1") == 0)
-                    {
-                        txtf_at = TXT_TITEL_1;
-                        txtf_nt = TXT_NTITEL_1;
-                        txtf_st = TXT_PLSTATUS_1;
-                        txtf_dl = TXT_DLSTATUS_1;
-                    }                    
-                    if (pl.compareTo("PlayList2") == 0)
-                    {
-                        txtf_at = TXT_TITEL_2;
-                        txtf_nt = TXT_NTITEL_2;
-                        txtf_st = TXT_PLSTATUS_2;
-                        txtf_dl = TXT_DLSTATUS_2;
-                    }                    
-                    if (pl.compareTo("PlayList3") == 0)
-                    {
-                        txtf_at = TXT_TITEL_3;
-                        txtf_nt = TXT_NTITEL_3;
-                        txtf_st = TXT_PLSTATUS_3;
-                        txtf_dl = TXT_DLSTATUS_3;
-                    }                    
-                    if (pl.compareTo("PlayList4") == 0)
-                    {
-                        txtf_at = TXT_TITEL_4;
-                        txtf_nt = TXT_NTITEL_4;
-                        txtf_st = TXT_PLSTATUS_4;
-                        txtf_dl = TXT_DLSTATUS_4;
-                    }          
-                    String new_at = pt.GetString("AT:");
-                    String new_nt = pt.GetString("NT:");
-                    String new_dl = pt.GetString("DL:");
-                    String new_st = pt.GetString("ST:");
-                    if (txtf_at.getText().compareTo( new_at ) != 0)                        
-                        txtf_at.setText( new_at );
-                    if (txtf_nt.getText().compareTo( new_nt ) != 0)                        
-                        txtf_nt.setText( new_nt );
-                    if (txtf_dl.getText().compareTo( new_dl ) != 0)                        
-                        txtf_dl.setText( new_dl );
-                    if (txtf_st.getText().compareTo( new_st ) != 0)                        
-                        txtf_st.setText( new_st );
+                    String host =  pt.GetString("PXHO" + i + ":");
+                    long local_port = pt.GetLongValue("PXPL" + i + ":");
+                    long remote_port = pt.GetLongValue("PXPR" + i + ":");
+                    long inst_cnt = pt.GetLongValue("PXIN" + i + ":");
                     
-                    txtf_st.setBackground( color );
-                }
+                    ProxyEntry pe = new ProxyEntry( host, local_port, remote_port, inst_cnt, protokoll );
+//                    proxy_list.add(pe);
+                    if (add_to_proxy_list( pe ))
+                        touched = true;
+                    
+                }  
+                
+                
             }
+            if (touched)
+                model.fireTableDataChanged();
         }
     }
     
 
     
-    // Variablendeklaration - nicht modifizieren//GEN-BEGIN:variables
+    // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton BT_OK;
-    private javax.swing.JTextField TXT_COMM;
-    private javax.swing.JTextField TXT_DB;
-    private javax.swing.JTextField TXT_DF;
-    private javax.swing.JTextField TXT_DLSTATUS_0;
-    private javax.swing.JTextField TXT_DLSTATUS_1;
-    private javax.swing.JTextField TXT_DLSTATUS_2;
-    private javax.swing.JTextField TXT_DLSTATUS_3;
-    private javax.swing.JTextField TXT_DLSTATUS_4;
-    private javax.swing.JTextField TXT_NTITEL_0;
-    private javax.swing.JTextField TXT_NTITEL_1;
-    private javax.swing.JTextField TXT_NTITEL_2;
-    private javax.swing.JTextField TXT_NTITEL_3;
-    private javax.swing.JTextField TXT_NTITEL_4;
-    private javax.swing.JTextField TXT_PLSTATUS_0;
-    private javax.swing.JTextField TXT_PLSTATUS_1;
-    private javax.swing.JTextField TXT_PLSTATUS_2;
-    private javax.swing.JTextField TXT_PLSTATUS_3;
-    private javax.swing.JTextField TXT_PLSTATUS_4;
-    private javax.swing.JTextField TXT_PM;
+    private javax.swing.JPanel PN_TASKS;
+    private javax.swing.JTable TB_TASKS;
+    private javax.swing.JTextField TXT_CM;
+    private javax.swing.JTextField TXT_MA;
+    private javax.swing.JTextField TXT_PS;
+    private javax.swing.JTextField TXT_RESOURCE;
     private javax.swing.JTextField TXT_SD;
-    private javax.swing.JTextField TXT_SF;
     private javax.swing.JTextField TXT_TIME;
-    private javax.swing.JTextField TXT_TITEL_0;
-    private javax.swing.JTextField TXT_TITEL_1;
-    private javax.swing.JTextField TXT_TITEL_2;
-    private javax.swing.JTextField TXT_TITEL_3;
-    private javax.swing.JTextField TXT_TITEL_4;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
-    private javax.swing.JLabel jLabel12;
-    private javax.swing.JLabel jLabel13;
-    private javax.swing.JLabel jLabel14;
-    private javax.swing.JLabel jLabel15;
-    private javax.swing.JLabel jLabel16;
-    private javax.swing.JLabel jLabel17;
-    private javax.swing.JLabel jLabel18;
-    private javax.swing.JLabel jLabel19;
-    private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel20;
-    private javax.swing.JLabel jLabel21;
-    private javax.swing.JLabel jLabel22;
-    private javax.swing.JLabel jLabel23;
-    private javax.swing.JLabel jLabel24;
-    private javax.swing.JLabel jLabel25;
-    private javax.swing.JLabel jLabel26;
     private javax.swing.JLabel jLabel27;
-    private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
     private javax.swing.JLabel jLabel9;
-    private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
-    private javax.swing.JPanel jPanel4;
-    private javax.swing.JPanel jPanel5;
-    private javax.swing.JPanel jPanel6;
-    // Ende der Variablendeklaration//GEN-END:variables
+    private javax.swing.JScrollPane jScrollPane1;
+    // End of variables declaration//GEN-END:variables
     
 }

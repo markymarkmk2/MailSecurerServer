@@ -328,7 +328,7 @@ public class UDP_Communicator extends Communicator
                     }
                     else
                     {
-                        if (result.substring(0, 8).compareTo( magic ) != 0)
+                        if (result.substring(0, magic.length()).compareTo( magic ) != 0)
                             System.out.println("Result: " + result );
 
                     }

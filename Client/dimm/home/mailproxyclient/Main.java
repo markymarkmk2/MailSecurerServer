@@ -35,6 +35,7 @@ public class Main
     
     
     
+    
     Preferences prefs;
     
     /** Creates a new instance of Main */
@@ -120,8 +121,7 @@ public class Main
             }
         }        
         
-        Main mm = new Main();
-        
+        Main mm = new Main();        
 
        
         long start = System.currentTimeMillis() / 1000;
