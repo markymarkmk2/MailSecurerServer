@@ -69,6 +69,7 @@ public class Communicator extends WorkerParent
         cmd_list.add( new GetLog() );
         cmd_list.add( new SetStation() );
         cmd_list.add( new WriteFile() );
+        cmd_list.add( new ProxyList() );
     }
     
     public boolean initialize()

@@ -31,6 +31,7 @@ import java.util.StringTokenizer;
 public class MailProxyServer extends WorkerParent
 {
     public static final String NAME = "MailProxyServer";
+    private static final String PROXYFILE = "proxy_list.txt";
 
     //private static MoreLogger logger; 				// class from log4j by Jocca Jocaf
     private static boolean m_Stop;					// stop the thread
@@ -39,6 +40,8 @@ public class MailProxyServer extends WorkerParent
     ArrayList<ProxyEntry> proxy_list;
     
     ArrayList<MailConnection> connection_list;
+    
+    SwingWorker idle_worker;
 
     /**
      * Constructor
@@ -59,7 +62,7 @@ public class MailProxyServer extends WorkerParent
     
     static public void write_proxy_str(String txt) throws IOException
     {
-        File f = new File( Main.PREFS_PATH + "proxy_list.txt" );
+        File f = new File( Main.PREFS_PATH + PROXYFILE );
         
         FileWriter fw = new FileWriter( f );
         
@@ -76,7 +79,7 @@ public class MailProxyServer extends WorkerParent
         
         ArrayList<ProxyEntry> p_list = new ArrayList<ProxyEntry>();
         
-        File f = new File( Main.PREFS_PATH + "proxy_list.txt" );
+        File f = new File( Main.PREFS_PATH + PROXYFILE );
         
         if (!f.exists())
         {
@@ -139,17 +142,25 @@ public class MailProxyServer extends WorkerParent
             ss = new ServerSocket(LocalPort);
             // 1 second timeout
             ss.setSoTimeout(1000);
-            Main.info_msg("JMailProxy is running for the host 'pop3://" + host +
-                    ":" + RemotePort + "' on local port" + LocalPort);
+            Main.info_msg("BettyMailProxy is running for the host 'pop3://" + host +
+                    ":" + RemotePort + "' on local port " + LocalPort);
            
 
             while (!m_Stop)
             {
                 try
                 {
-                    POP3Connection m_POP3Connection = new POP3Connection( pe );
+                    
                     Socket theSocket = ss.accept();
-                    Main.info_msg("Connection accepted for the host '" + host + "'...");
+                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    
+                    POP3Connection m_POP3Connection = new POP3Connection( pe );
+                    
+                    if (m_Stop)
+                    {
+                        m_POP3Connection.closeConnections();
+                        break;
+                    }
                     
                     synchronized(connection_list)
                     {
@@ -165,11 +176,11 @@ public class MailProxyServer extends WorkerParent
                 }
             }
 
-            Main.info_msg("stopping the host '" + host + "' on port " + LocalPort);
+            Main.info_msg("stopping the pop3 proxy for host '" + host + "' on local port " + LocalPort);
         } 
         catch (java.net.BindException be)
         {
-            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Verify if this port is being used by other" + " programs.";
+            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
             Main.err_log(errmsg);
             this.setStatusTxt("Not listening, port in use");
             this.setGoodState(false);
@@ -208,18 +219,26 @@ public class MailProxyServer extends WorkerParent
             ss = new ServerSocket(LocalPort);
             // 1 second timeout
             ss.setSoTimeout(1000);
-            Main.info_msg("JMailProxy is running for the host 'smtp://" + host +
-                    ":" + RemotePort + "' on local port" + LocalPort);
+            Main.info_msg("BettyMailProxy is running for the host 'smtp://" + host +
+                    ":" + RemotePort + "' on local port " + LocalPort);
 
-            SMTPConnection m_SMTPConnection = new SMTPConnection( pe);
+            
 
             while (!m_Stop)
             {
                 try
                 {
                     Socket theSocket = ss.accept();
-                    Main.info_msg("Connection accepted for the host '" + host + "'...");
+                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
+                    SMTPConnection m_SMTPConnection = new SMTPConnection( pe);
+                    
+                    if (m_Stop)
+                    {
+                        m_SMTPConnection.closeConnections();
+                        break;
+                    }
+                        
                     synchronized(connection_list)
                     {
                         connection_list.add(m_SMTPConnection);
@@ -235,12 +254,12 @@ public class MailProxyServer extends WorkerParent
                 }
             }
 
-            Main.info_msg("stopping the host '" + host + "' on port " + LocalPort);
+            Main.info_msg("stopping the smtp proxy for host '" + host + "' on local port " + LocalPort);
             
         } 
         catch (java.net.BindException be)
         {
-            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Verify if this port is being used by other" + " programs.";
+            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
             Main.err_log(errmsg);
             this.setStatusTxt("Not listening, port in use");
             this.setGoodState(false);
@@ -267,12 +286,18 @@ public class MailProxyServer extends WorkerParent
 
     }  // go
 
-    public static void StopServer()
+    public void StopServer()
     {
         m_Stop = true;
         POP3Connection.StopServer();
         SMTPConnection.StopServer();
-        LogicControl.sleep(2000);
+                
+        LogicControl.sleep(1100);
+        
+        while (!idle_worker.finished())
+        {
+            LogicControl.sleep(1000);
+        }
     }
 
     @Override
@@ -287,6 +312,8 @@ public class MailProxyServer extends WorkerParent
     {
         Main.debug_msg(1, "Starting " + proxy_list.size() + " proxy tasks" );
        
+        m_Stop = false;
+        
         for (int i = 0; i < proxy_list.size(); i++)
         {
             final ProxyEntry pe = proxy_list.get(i);
@@ -308,7 +335,7 @@ public class MailProxyServer extends WorkerParent
             worker.start();
         }
 
-        SwingWorker idle_worker = new SwingWorker()
+        idle_worker = new SwingWorker()
         {
             public Object construct()
             {
@@ -334,6 +361,10 @@ public class MailProxyServer extends WorkerParent
             // CLEAN UP LIST OF FINISHED CONNECTIONS
             synchronized(connection_list)
             {
+                if ( m_Stop && connection_list.isEmpty())
+                    break;
+                
+                
                 for (int i = 0; i < connection_list.size(); i++)
                 {
                     MailConnection m = connection_list.get(i);

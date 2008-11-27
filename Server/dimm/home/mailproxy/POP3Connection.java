@@ -79,9 +79,9 @@ public class POP3Connection extends MailConnection
             serverSocket = new Socket(pe.getHost(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
-            Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            Main.debug_msg(1, "getSoTimeout: " + serverSocket.getSoTimeout());
+            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
+            Main.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
 
             // get the server output stream
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(), serverSocket.getSendBufferSize());
@@ -97,6 +97,7 @@ public class POP3Connection extends MailConnection
             {
 
                 // read the answer from the server
+                log( 2, "Waiting for Server...");
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -111,7 +112,7 @@ public class POP3Connection extends MailConnection
                     if (clientSocket.isConnected() && !clientSocket.isClosed() && clientWriter != null && sData.length() > 0)
                     {
                         // write the answer to the POP client
-                        Main.debug_msg(1, "Error : " + getErrorMessage());
+                        log( "Error : " + getErrorMessage());
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();
                     }
@@ -125,7 +126,7 @@ public class POP3Connection extends MailConnection
                     break;
                 }
 
-                Main.debug_msg(1, "S: " + sData);
+                log( "S: " + sData);
                 if (trace_writer != null)
                     trace_writer.write(sData);
                 
@@ -142,6 +143,8 @@ public class POP3Connection extends MailConnection
                 // reset the command
                 m_Command = -1;
 
+                log( 2, "Waiting for Client...");
+                
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
 
@@ -157,7 +160,7 @@ public class POP3Connection extends MailConnection
                     break;
                 }
 
-                Main.debug_msg(1, "C: " + sData);
+                log( "C: " + sData);
                 if (trace_writer != null)
                     trace_writer.write(sData);
                 
@@ -182,7 +185,7 @@ public class POP3Connection extends MailConnection
                     }
                     
                     sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
-                    Main.debug_msg(1, "C: " + sData);
+                    log( "C: " + sData);
                     if (trace_writer != null)
                         trace_writer.write(sData);
 
@@ -226,6 +229,7 @@ public class POP3Connection extends MailConnection
         {
             Main.err_log(e.getMessage());
         }
+        log( "Finished" );
     }  // handleConnection
 
 
@@ -241,30 +245,7 @@ public class POP3Connection extends MailConnection
         return sData;
     }*/
 
-    private StringBuffer ensureEndOfMessage(StringBuffer sData)
-    {
-        // look for the point at the end of the message
-        int pointPosition = sData.lastIndexOf(".");
-
-        // if the message was not concluded
-        // i.e. the point was not found at the end of the string
-        if (pointPosition < sData.length() - 5)
-        {
-            Main.debug_msg(1, "MESSAGE NOT FINISHED");
-            // remove the last new line
-//    		int index = sData.lastIndexOf(Common.LINE_FEED);
-//    		// if the line feed was found
-//    		if (index>-1)
-//    		{
-//    			// remove the line feed
-//    			sData = sData.delete(index, sData.length());
-//    		}
-            // add the rest of the message
-            sData.append(getDataFromInputStream(serverReader));
-        }
-
-        return sData;
-    }
+   
 
 
     private int RETRBYTE(FileWriter trace_writer)
@@ -454,7 +435,7 @@ public class POP3Connection extends MailConnection
                          }
                          catch (Exception exc)
                          {}
-                         Main.debug_msg(1, "POP3 timeout. Trying again [" + m_retries + "]");
+                         log( "POP3 timeout. Trying again [" + m_retries + "]");
                      }
                 }
             }  

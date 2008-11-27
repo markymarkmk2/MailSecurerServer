@@ -84,12 +84,18 @@ public class ProxyList extends AbstractCommand
             {
                 MailProxyServer.write_proxy_str(sb.toString());
                 
-                MailProxyServer.StopServer();
+                // RESTART SERVER
+                Main.info_msg("Restarting ProxyServer...");
+                Main.get_control().get_proxy_server().StopServer();
+                sb.setLength(0);
+                Main.get_control().get_proxy_server().check_requirements(sb);
+                Main.get_control().get_proxy_server().start_run_loop();
                 
                 return true;
             }
             catch (Exception exc)
             {
+                Main.err_log("Restarting ProxyServer failed");
                 answer = WRONG_ARGS;
                 return false;
             }

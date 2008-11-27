@@ -46,6 +46,7 @@ public class SMTPConnection extends MailConnection
         super( pe );
     }
 
+    
    
     public void runConnection(Socket _clientSocket)
     {
@@ -71,9 +72,9 @@ public class SMTPConnection extends MailConnection
             serverSocket = new Socket(pe.getHost(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
-            Main.debug_msg(1, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            Main.debug_msg(1, "getSoTimeout: " + serverSocket.getSoTimeout());
+            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
+            Main.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
 
             // get the server output stream
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(),
@@ -92,6 +93,7 @@ public class SMTPConnection extends MailConnection
             {
 
                 // read the answer from the server
+                log( 2, "Waiting for Server...");
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -106,7 +108,7 @@ public class SMTPConnection extends MailConnection
                     if (clientSocket.isConnected() && !clientSocket.isClosed() && clientWriter != null && sData.length() > 0)
                     {
                         // write the answer to the POP client
-                        Main.debug_msg(1, "Error : " + getErrorMessage());
+                        log( "Error : " + getErrorMessage());
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();
                     }
@@ -132,7 +134,7 @@ public class SMTPConnection extends MailConnection
                     break;
                 }
 
-                Main.debug_msg(1, "S: " + sData);
+                log( "S: " + sData);
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
@@ -146,6 +148,7 @@ public class SMTPConnection extends MailConnection
                 // reset the command
                 m_Command = -1;
 
+                log( 2, "Waiting for Client...");
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
@@ -161,7 +164,7 @@ public class SMTPConnection extends MailConnection
                     break;
                 }
 
-                Main.debug_msg(1, "C: " + sData);
+                log( "C: " + sData);
 
                 // write it to the POP server
                 serverWriter.write(sData.getBytes());
@@ -200,6 +203,8 @@ public class SMTPConnection extends MailConnection
         {
             Main.err_log(e.getMessage());
         }
+        log( "Finished" );
+        
     }  // handleConnection
 
 /*
@@ -416,7 +421,7 @@ public class SMTPConnection extends MailConnection
                         catch (Exception exc)
                         {
                         }
-                        Main.debug_msg(1, "SMTP timeout. Trying again [" + m_retries + "]");
+                        log( "SMTP timeout. Trying again [" + m_retries + "]");
                     }
                 }
             }
@@ -437,7 +442,11 @@ public class SMTPConnection extends MailConnection
                 if (finished)
                 {
                     Main.get_control().get_mail_archiver().add_rfc_file( rfc_dump );
-                }            
+                }  
+                else
+                {
+                    rfc_dump.delete();
+                }
             }
             catch (Exception exc)
             {
@@ -455,6 +464,17 @@ public class SMTPConnection extends MailConnection
         if (finished)
         {
             return 0;
+        }
+        else if (rfc_dump.exists())
+        {
+            try
+            {
+                rfc_dump.delete();
+
+            }
+            catch (Exception exception)
+            {
+            }
         }
         if (m_error > 0)
             return m_error;

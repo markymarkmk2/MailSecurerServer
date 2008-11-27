@@ -89,6 +89,9 @@ public abstract class MailConnection
     
     boolean is_connected()
     {
+        if (clientSocket == null)
+            return true;
+    
         return !clientSocket.isClosed();
     }
     
@@ -131,6 +134,7 @@ public abstract class MailConnection
     {
         Thread sockThread;
 
+        
         // runs the server
         synchronized (mtx)
         {
@@ -139,6 +143,8 @@ public abstract class MailConnection
             pe.incInstanceCnt();
         }
 
+        log("Opening Connection");
+        
         if (get_thread_count() > MAX_THREADS)
         {
             runConnection(clientSocket);
@@ -176,7 +182,7 @@ public abstract class MailConnection
     void closeConnections()
     {
         // close the connections
-        Main.info_msg("Closing Connection...");
+        log("Closing Connection");
         try
         {
             if (serverWriter != null)
@@ -281,6 +287,21 @@ public abstract class MailConnection
             }
         }
         return false;
+    }
+
+    void log( String txt )
+    {
+        txt = txt.replace('\n', ' ');
+        txt = txt.replace('\r', ' ');
+        txt = txt.trim();
+        Main.debug_msg(1, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
+    }
+    void log( int dbg, String txt )
+    {
+        txt = txt.replace('\n', ' ');
+        txt = txt.replace('\r', ' ');
+        txt = txt.trim();
+        Main.debug_msg(dbg, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
 
     
@@ -421,7 +442,7 @@ public abstract class MailConnection
                     {
                         // we try again to read a message recursively
                         m_retries++;
-                        Main.debug_msg(1, "Mail timeout. Trying again [" + m_retries + "]");
+                        log( "Mail timeout. Trying again [" + m_retries + "]");
                     }
                 }
                 else
@@ -437,7 +458,7 @@ public abstract class MailConnection
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                Main.err_log(e.getMessage());
+                Main.err_log("Exception: " + e.getMessage());
             }            
         }
         
