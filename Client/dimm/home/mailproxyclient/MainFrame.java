@@ -298,6 +298,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         MUI_EXIT = new javax.swing.JMenuItem();
         MU_PARAMS = new javax.swing.JMenu();
         MUI_NETWORK = new javax.swing.JMenuItem();
+        MUI_PROXY_LIST = new javax.swing.JMenuItem();
         MUI_STATIONID = new javax.swing.JMenuItem();
         MUI_PARAM = new javax.swing.JMenuItem();
         MU_EXTRA = new javax.swing.JMenu();
@@ -360,7 +361,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             }
         });
 
-        BT_MAILARCHIVA.setText("Mailrchiva");
+        BT_MAILARCHIVA.setText("Mailarchiv öffnen");
         BT_MAILARCHIVA.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -384,7 +385,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                             .add(org.jdesktop.layout.GroupLayout.LEADING, BT_MAILARCHIVA, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 88, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 277, Short.MAX_VALUE)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 241, Short.MAX_VALUE)
                         .add(BT_SCAN)))
                 .addContainerGap())
         );
@@ -505,6 +506,16 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             }
         });
         MU_PARAMS.add(MUI_NETWORK);
+
+        MUI_PROXY_LIST.setText("Mailproxyliste");
+        MUI_PROXY_LIST.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                MUI_PROXY_LISTActionPerformed(evt);
+            }
+        });
+        MU_PARAMS.add(MUI_PROXY_LIST);
 
         MUI_STATIONID.setText("Stations-ID festlegen");
         MUI_STATIONID.addActionListener(new java.awt.event.ActionListener()
@@ -956,6 +967,15 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         
     }//GEN-LAST:event_BT_MAILARCHIVAActionPerformed
 
+    private void MUI_PROXY_LISTActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_MUI_PROXY_LISTActionPerformed
+    {//GEN-HEADEREND:event_MUI_PROXY_LISTActionPerformed
+        // TODO add your handling code here:
+        
+        ProxyListDlg dlf = new ProxyListDlg( this );
+        dlf.setLocation(this.getLocationOnScreen().x + 30, this.getLocationOnScreen().y + 30);
+        dlf.setVisible(true);
+    }//GEN-LAST:event_MUI_PROXY_LISTActionPerformed
+
     
     void scan_entry_list()
     {
@@ -1056,6 +1076,21 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
 
     }
     
+    public boolean is_logged_in()
+    {
+        return logged_in;
+    }
+    public boolean check_logged_in()
+    {
+        if (!is_logged_in())
+        {
+            errm_ok("Sie müssen sich zuerst anmelden");
+            return false;
+        }
+        return true;
+    }
+    
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup BTG_IP;
     private javax.swing.JButton BT_MAILARCHIVA;
@@ -1070,6 +1105,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JMenuItem MUI_NETWORK;
     private javax.swing.JMenuItem MUI_OWNPARAM;
     private javax.swing.JMenuItem MUI_PARAM;
+    private javax.swing.JMenuItem MUI_PROXY_LIST;
     private javax.swing.JMenuItem MUI_RESTART;
     private javax.swing.JMenuItem MUI_SHELL;
     private javax.swing.JMenuItem MUI_STATIONID;

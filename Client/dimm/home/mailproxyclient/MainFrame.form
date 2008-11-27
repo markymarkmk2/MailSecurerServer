@@ -109,6 +109,14 @@
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="MUI_NETWORKActionPerformed"/>
               </Events>
             </MenuItem>
+            <MenuItem class="javax.swing.JMenuItem" name="MUI_PROXY_LIST">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Mailproxyliste"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="MUI_PROXY_LISTActionPerformed"/>
+              </Events>
+            </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="MUI_STATIONID">
               <Properties>
                 <Property name="text" type="java.lang.String" value="Stations-ID festlegen"/>
@@ -229,7 +237,7 @@
                           </Group>
                           <EmptySpace max="-2" attributes="0"/>
                           <Component id="TXT_IP" min="-2" pref="88" max="-2" attributes="0"/>
-                          <EmptySpace pref="277" max="32767" attributes="0"/>
+                          <EmptySpace pref="241" max="32767" attributes="0"/>
                           <Component id="BT_SCAN" min="-2" max="-2" attributes="0"/>
                       </Group>
                   </Group>
@@ -303,7 +311,7 @@
         </Component>
         <Component class="javax.swing.JButton" name="BT_MAILARCHIVA">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Mailrchiva"/>
+            <Property name="text" type="java.lang.String" value="Mailarchiv &#xf6;ffnen"/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="BT_MAILARCHIVAActionPerformed"/>

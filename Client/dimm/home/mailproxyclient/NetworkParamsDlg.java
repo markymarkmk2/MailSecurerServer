@@ -40,6 +40,7 @@ public class NetworkParamsDlg extends javax.swing.JDialog
         
         initComponents();
         
+        
         SP_ETH.setModel( new SpinnerNumberModel(0, 0, 10, 1) );
         
         read_params();
@@ -443,6 +444,11 @@ public class NetworkParamsDlg extends javax.swing.JDialog
     private void BT_OKActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_BT_OKActionPerformed
     {//GEN-HEADEREND:event_BT_OKActionPerformed
 // TODO Ihre Ereignisbehandlung hier einf�gen:
+        if (!parent.check_logged_in())
+        {
+            return;
+        }
+
         if (check_params())
         {
             write_params();
