@@ -52,6 +52,7 @@ public class GetLog extends AbstractCommand
         return ok;
     }
     
+    @Override
     public InputStream get_stream()
     {
         FileInputStream fis;
@@ -66,10 +67,12 @@ public class GetLog extends AbstractCommand
         return fis;
     }
     
+    @Override
     public long get_data_len()
     {
         return dump.length();    
     }
+    @Override
     public boolean has_stream()
     {
         return (dump != null);
