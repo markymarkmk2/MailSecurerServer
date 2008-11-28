@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Form version="1.3" type="org.netbeans.modules.form.forminfo.JDialogFormInfo">
+<Form version="1.3" maxVersion="1.3" type="org.netbeans.modules.form.forminfo.JDialogFormInfo">
   <Properties>
     <Property name="defaultCloseOperation" type="int" value="2"/>
     <Property name="title" type="java.lang.String" value="Log Dateien ansehen"/>
@@ -12,7 +12,9 @@
     <EventHandler event="windowClosed" listener="java.awt.event.WindowListener" parameters="java.awt.event.WindowEvent" handler="formWindowClosed"/>
   </Events>
   <AuxValues>
+    <AuxValue name="FormSettings_autoResourcing" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_generateMnemonicsCode" type="java.lang.Boolean" value="false"/>
+    <AuxValue name="FormSettings_i18nAutoMode" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_layoutCodeTarget" type="java.lang.Integer" value="2"/>
     <AuxValue name="FormSettings_listenerGenerationStyle" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_variablesLocal" type="java.lang.Boolean" value="false"/>
@@ -37,7 +39,7 @@
                   </Group>
                   <Group type="102" alignment="1" attributes="0">
                       <Component id="BT_GETLOG" min="-2" max="-2" attributes="0"/>
-                      <EmptySpace pref="196" max="32767" attributes="0"/>
+                      <EmptySpace pref="152" max="32767" attributes="0"/>
                       <Component id="BT_OK" min="-2" max="-2" attributes="0"/>
                   </Group>
               </Group>
@@ -124,7 +126,7 @@
     </Component>
     <Component class="javax.swing.JButton" name="BT_GETLOG">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Log Download"/>
+        <Property name="text" type="java.lang.String" value="Log Download (TCP/IP)"/>
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="BT_GETLOGActionPerformed"/>

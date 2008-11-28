@@ -15,12 +15,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
 import javax.swing.JOptionPane;
 import javax.swing.event.TableModelEvent;
  
 import dimm.home.mailproxyclient.Utilities.SwingWorker;
 import dimm.home.mailproxyclient.Utilities.StandardTable;
+import javax.swing.ImageIcon;
 
 
 
@@ -63,6 +63,11 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     
     StatusDialog status_dlg;
     
+    boolean get_is_udp()
+    {
+        return is_udp;
+    }
+    
     /** Creates new form MainFrame */
     public MainFrame(boolean _is_udp, boolean allow_tcp, String _fixed_ip )
     {
@@ -72,12 +77,26 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
 
         initComponents();
         
+        File icf = new File ("logo.png");
+        if (icf.exists())
+        {
+            ImageIcon ic = new ImageIcon(icf.getAbsolutePath() );
+            
+            LB_ICON.setIcon( ic);
+            pack();
+        }
+        else
+        {
+            LB_ICON.setVisible(false);
+        }
+       
         if (is_udp)
         {
             BT_NEW_IP.setVisible( false );
             TXT_IP.setVisible( false );
             MUI_UDP.setSelected( true );
             MUI_FILETRANSFER.setEnabled( false );
+            
         }
         if (!allow_tcp)
         {
@@ -284,7 +303,8 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         BT_NEW_IP = new javax.swing.JButton();
         TXT_IP = new javax.swing.JTextField();
         BT_MAILARCHIVA = new javax.swing.JButton();
-        jPanel3 = new javax.swing.JPanel();
+        LB_ICON = new javax.swing.JLabel();
+        PN_STATUS = new javax.swing.JPanel();
         TXT_STATUS = new javax.swing.JTextField();
         TXT_USER = new javax.swing.JTextField();
         jMenuBar1 = new javax.swing.JMenuBar();
@@ -303,7 +323,6 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         MUI_PARAM = new javax.swing.JMenuItem();
         MU_EXTRA = new javax.swing.JMenu();
         PUI_STATUS = new javax.swing.JMenuItem();
-        MUI_RESTART = new javax.swing.JMenuItem();
         MUI_BOOT = new javax.swing.JMenuItem();
         MUI_LOG = new javax.swing.JMenuItem();
         MUI_SHELL = new javax.swing.JMenuItem();
@@ -342,7 +361,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         LST_LIST.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         SCP_LIST.setViewportView(LST_LIST);
 
-        jLabel1.setText("BettyMailArchiver");
+        jLabel1.setText("BettyMAIL");
 
         BT_NEW_IP.setText("Neue IP");
         BT_NEW_IP.addActionListener(new java.awt.event.ActionListener()
@@ -370,39 +389,45 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             }
         });
 
+        LB_ICON.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        LB_ICON.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        LB_ICON.setIconTextGap(0);
+
         org.jdesktop.layout.GroupLayout jPanel1Layout = new org.jdesktop.layout.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel1Layout.createSequentialGroup()
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-                    .add(org.jdesktop.layout.GroupLayout.TRAILING, SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 533, Short.MAX_VALUE)
-                    .add(jLabel1)
+                .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING)
+                    .add(org.jdesktop.layout.GroupLayout.LEADING, LB_ICON, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 507, Short.MAX_VALUE)
+                    .add(SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 507, Short.MAX_VALUE)
                     .add(jPanel1Layout.createSequentialGroup()
-                        .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.TRAILING, false)
-                            .add(org.jdesktop.layout.GroupLayout.LEADING, BT_NEW_IP, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .add(org.jdesktop.layout.GroupLayout.LEADING, BT_MAILARCHIVA, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .add(BT_MAILARCHIVA)
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
+                        .add(BT_NEW_IP)
                         .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
                         .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 88, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 241, Short.MAX_VALUE)
-                        .add(BT_SCAN)))
+                        .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED, 132, Short.MAX_VALUE)
+                        .add(BT_SCAN))
+                    .add(org.jdesktop.layout.GroupLayout.LEADING, jLabel1))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
-            .add(jPanel1Layout.createSequentialGroup()
+            .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
+                .add(LB_ICON, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 2, Short.MAX_VALUE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(jLabel1)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
-                .add(SCP_LIST, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 253, Short.MAX_VALUE)
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(SCP_LIST, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 150, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .add(18, 18, 18)
                 .add(jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.BASELINE)
                     .add(BT_SCAN)
-                    .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
-                    .add(BT_NEW_IP))
-                .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
-                .add(BT_MAILARCHIVA)
+                    .add(BT_MAILARCHIVA)
+                    .add(BT_NEW_IP)
+                    .add(TXT_IP, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -414,27 +439,31 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         gridBagConstraints.weighty = 1.0;
         getContentPane().add(jPanel1, gridBagConstraints);
 
-        jPanel3.setBorder(javax.swing.BorderFactory.createEtchedBorder());
-        jPanel3.setLayout(new java.awt.GridBagLayout());
+        PN_STATUS.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        PN_STATUS.setLayout(new java.awt.GridBagLayout());
 
         TXT_STATUS.setEditable(false);
         gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 1;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 1.0;
-        jPanel3.add(TXT_STATUS, gridBagConstraints);
+        PN_STATUS.add(TXT_STATUS, gridBagConstraints);
 
         TXT_USER.setEditable(false);
         TXT_USER.setText("jTextField2");
         gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        jPanel3.add(TXT_USER, gridBagConstraints);
+        gridBagConstraints.weightx = 0.1;
+        PN_STATUS.add(TXT_USER, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 1.0;
-        getContentPane().add(jPanel3, gridBagConstraints);
+        getContentPane().add(PN_STATUS, gridBagConstraints);
 
         MU_FILE.setText("Datei");
 
@@ -551,16 +580,6 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         });
         MU_EXTRA.add(PUI_STATUS);
 
-        MUI_RESTART.setText("Neustart Program");
-        MUI_RESTART.addActionListener(new java.awt.event.ActionListener()
-        {
-            public void actionPerformed(java.awt.event.ActionEvent evt)
-            {
-                MUI_RESTARTActionPerformed(evt);
-            }
-        });
-        MU_EXTRA.add(MUI_RESTART);
-
         MUI_BOOT.setText("Reboot Box");
         MUI_BOOT.addActionListener(new java.awt.event.ActionListener()
         {
@@ -591,7 +610,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         });
         MU_EXTRA.add(MUI_SHELL);
 
-        MUI_FILETRANSFER.setText("Dateitransfer");
+        MUI_FILETRANSFER.setText("Dateitransfer (TCP/IP)");
         MUI_FILETRANSFER.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -628,18 +647,6 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
 
     }//GEN-LAST:event_MUI_OWNPARAMActionPerformed
 
-    private void MUI_RESTARTActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_MUI_RESTARTActionPerformed
-    {//GEN-HEADEREND:event_MUI_RESTARTActionPerformed
-// TODO Ihre Ereignisbehandlung hier einf�gen:
-        if (check_selected())
-        {
-            RestartDlg dlg = new RestartDlg( this );
-            dlg.setLocation( this.getLocationOnScreen().x + 80, this.getLocationOnScreen().y + 50 );
-            dlg.setVisible( true );
-        }
-        
-    }//GEN-LAST:event_MUI_RESTARTActionPerformed
-
     private void MUI_SHELLActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_MUI_SHELLActionPerformed
     {//GEN-HEADEREND:event_MUI_SHELLActionPerformed
 // TODO Ihre Ereignisbehandlung hier einf�gen:
@@ -669,7 +676,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                 return;
             
             if ((dlg.get_pwd().compareTo("helikon") == 0) || 
-                 (dlg.get_pwd().compareTo("123fckw456") == 0))   
+                 (dlg.get_pwd().compareTo("bettymail") == 0))   
             {
                 int retry = 0;
                 while (true)
@@ -693,10 +700,10 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                     String pwd1 = dlg.get_pwd();
                     if (pwd1.length() < 4)
                     {
-                        this.errm_ok("ICH SAGTE 4 ZEICHEN!!!");
+                        this.errm_ok("Bitte mindestens 4 Zeichen!");
                         continue;
                     }
-                    this.errm_ok("Fein, wiederholen Sie bitte das neue Benutzerpasswort");
+                    this.errm_ok("Gut, wiederholen Sie bitte das neue Benutzerpasswort");
                     dlg.setVisible( true );
                     if (dlg.get_pwd() == null)
                         return;
@@ -716,10 +723,10 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                             this.errm_ok("Verdammt, die Passwortdatei konnte nicht erzeugt werden");
                             return;
                         }
-                        this.errm_ok("Das neue Benutzerpasswort wurde gespeichert");
+                        this.errm_ok("Das neue Benutzerpasswort wurde gespeichert, Sie können sich nun anmelden");
                         return;
                     }                    
-                    this.errm_ok("Na toll, vertippt...");
+                    this.errm_ok("Die Passworte sind unterschiedlich, noch mal von vorn...");
                 }
             }
         }     
@@ -762,11 +769,15 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
                 login_retries++;
                 if (login_retries == 5)
                 {
-                    this.errm_ok("Halloo?? Konzentration bitte!");
+                    this.errm_ok("Bitte etwas mehr Konzentration!");
                 }
                 if (login_retries >= 8)
                 {
-                    this.errm_ok("Na, ich glaub das wird nichts mehr!");
+                    this.errm_ok("Ich würde gern einen Tip geben, aber ich darf nicht!");
+                }
+                if (login_retries >= 16)
+                {
+                    this.errm_ok("Wow, das nenn ich Ausdauer, Respekt!");
                 }
             }                    
         }
@@ -816,6 +827,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         TXT_IP.setVisible( false );
         MUI_FILETRANSFER.setEnabled( false );
         
+        
         scan_entry_list();
     }//GEN-LAST:event_MUI_UDPActionPerformed
 
@@ -829,6 +841,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         // for now we enter IP manually
         BT_NEW_IP.setVisible( true );
         MUI_FILETRANSFER.setEnabled( true );
+        
          
         scan_entry_list();
 
@@ -1055,14 +1068,15 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     {
         if (b)
         {
-            TXT_USER.setText("Admin");
+            TXT_USER.setText(" Admin ");
         }
         else
         {
-            TXT_USER.setText("Gast");
+            TXT_USER.setText(" Gast ");
         }
-        TXT_USER.repaint();
-        this.validate();
+        
+        TXT_USER.validate();
+        this.PN_STATUS.validate();
         logged_in = b;        
         
         MUI_STATIONID.setEnabled( b );
@@ -1071,7 +1085,8 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         MUI_SHELL.setEnabled( b );
         MUI_OWNPARAM.setEnabled( b );
         MUI_TCP.setEnabled( b );
-        
+        this.MUI_NETWORK.setEnabled(b);
+        this.MUI_PROXY_LIST.setEnabled(b);
         
 
     }
@@ -1096,6 +1111,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JButton BT_MAILARCHIVA;
     private javax.swing.JButton BT_NEW_IP;
     private javax.swing.JButton BT_SCAN;
+    private javax.swing.JLabel LB_ICON;
     private javax.swing.JList LST_LIST;
     private javax.swing.JMenuItem MUI_BOOT;
     private javax.swing.JMenuItem MUI_EXIT;
@@ -1106,7 +1122,6 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JMenuItem MUI_OWNPARAM;
     private javax.swing.JMenuItem MUI_PARAM;
     private javax.swing.JMenuItem MUI_PROXY_LIST;
-    private javax.swing.JMenuItem MUI_RESTART;
     private javax.swing.JMenuItem MUI_SHELL;
     private javax.swing.JMenuItem MUI_STATIONID;
     private javax.swing.JRadioButtonMenuItem MUI_TCP;
@@ -1114,6 +1129,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JMenu MU_EXTRA;
     private javax.swing.JMenu MU_FILE;
     private javax.swing.JMenu MU_PARAMS;
+    private javax.swing.JPanel PN_STATUS;
     private javax.swing.JMenuItem PUI_STATUS;
     private javax.swing.JScrollPane SCP_LIST;
     private javax.swing.JTextField TXT_IP;
@@ -1124,7 +1140,6 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JSeparator jSeparator2;

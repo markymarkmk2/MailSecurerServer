@@ -30,8 +30,8 @@ public class Main
     
     public  static final String version_str = "1.0.0";
     
-    public static final String SERVERAPP = "BettyMailArchiver";
-    public static final String CLIENTAPP = "BettyMailArchiverRemote";
+    public static final String SERVERAPP = "BettyMAIL";
+    public static final String CLIENTAPP = "BettyMAIL Remote";
     
     
     

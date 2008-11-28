@@ -30,7 +30,7 @@
     <AuxValue name="FormSettings_autoSetComponentName" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_generateMnemonicsCode" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_i18nAutoMode" type="java.lang.Boolean" value="false"/>
-    <AuxValue name="FormSettings_layoutCodeTarget" type="java.lang.Integer" value="1"/>
+    <AuxValue name="FormSettings_layoutCodeTarget" type="java.lang.Integer" value="2"/>
     <AuxValue name="FormSettings_listenerGenerationStyle" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_variablesLocal" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_variablesModifier" type="java.lang.Integer" value="2"/>
@@ -44,9 +44,9 @@
               <Group type="103" groupAlignment="1" attributes="0">
                   <Component id="jPanel1" alignment="0" max="32767" attributes="0"/>
                   <Group type="102" alignment="1" attributes="0">
-                      <Component id="BT_ABORT" min="-2" max="-2" attributes="0"/>
+                      <Component id="BT_ABORT" linkSize="2" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="BT_OK" min="-2" max="-2" attributes="0"/>
+                      <Component id="BT_OK" linkSize="2" min="-2" max="-2" attributes="0"/>
                   </Group>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
@@ -168,7 +168,7 @@
     </Container>
     <Component class="javax.swing.JButton" name="BT_OK">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Setzen"/>
+        <Property name="text" type="java.lang.String" value="Okay"/>
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="BT_OKActionPerformed"/>
