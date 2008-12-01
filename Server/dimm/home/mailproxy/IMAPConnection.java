@@ -20,6 +20,7 @@ public class IMAPConnection extends MailConnection
     private static final int IMAP_SINGLELINE = 1;
     private static final int IMAP_MULTILINE = 2;
     private static final int IMAP_RETR = 3;
+    private static final int IMAP_IDLE = 4;
      
     /**
      *  Constructor
@@ -88,8 +89,9 @@ public class IMAPConnection extends MailConnection
                                 last_nl_idx++;
                                 break;
                             }
+                            last_nl_idx--;
                         }
-                        if (buffer[last_nl_idx] != '*' &&  buffer[last_nl_idx] != '+')
+                        if (buffer[last_nl_idx] != '*')
                             finished = true;
                     }
                 }
@@ -250,8 +252,17 @@ public class IMAPConnection extends MailConnection
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
                 
+                if (m_Command == IMAP_IDLE && sData.charAt(0) == '+')
+                {
+                    if (!IDLE( trace_writer  ))
+                    {
+                        break;
+                    }
+                }
+                    
+                
                 // QUIT
-                if (do_quit)
+                if (do_quit || m_Stop)
                 {
                     break;
                 }
@@ -288,7 +299,9 @@ public class IMAPConnection extends MailConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
-                    if (FETCH( trace_writer ) > 0)
+                    boolean with_body = (sData.toUpperCase().indexOf("BODY[") > 0 && sData.toUpperCase().indexOf("[HEADER]") == -1);
+                    
+                    if (FETCH( trace_writer, with_body ) > 0)
                     {
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();                        
@@ -318,28 +331,38 @@ public class IMAPConnection extends MailConnection
                 serverWriter.flush();
                 
                 // ALL FURTHER ANSWERS ARE MULTILINE
-                m_Command = SMTP_MULTILINE;
+                m_Command = IMAP_MULTILINE;
                 
                 if (is_command_quit( sData ))
                 {
                     do_quit = true;
-                }                               
-
+                }         
+                if (is_command_idle( sData ))
+                {
+                    m_Command = IMAP_IDLE;                    
+                }      
+                
             }  // while
-
-            closeConnections();
-
-            System.gc();
-
-        } catch (UnknownHostException uhe)
+        } 
+        catch (UnknownHostException uhe)
         {
             String msgerror = "Verify that you are connected to the internet or that the IMAP server '" + pe.getHost() + "' exists.";
             //Common.showError(msgerror);
             Main.err_log(msgerror);
-        } catch (Exception e)
+        } 
+        catch (Exception e)
         {
             Main.err_log(e.getMessage());
         }
+        
+        try
+        {
+            closeConnections();
+        }
+        catch (Exception e)
+        {
+        }
+        
         log( "Finished" );
     }  // handleConnection
 
@@ -351,6 +374,64 @@ public class IMAPConnection extends MailConnection
             return true;
         }
         return false;
+    }
+    private boolean is_command_idle(String sData)
+    {
+        if (sData.toUpperCase().indexOf("IDLE") > 0)
+        {
+            return true;
+        }
+        return false;
+    }
+    
+    boolean IDLE(FileWriter trace_writer) throws IOException
+    {
+        String sData;
+        boolean idle_done = false;
+        
+        
+        
+        while (!idle_done && clientSocket.isConnected() && serverSocket.isConnected() && !m_Stop)
+        {
+            while (!m_Stop && serverReader.available() == 0 && clientReader.available() == 0 && clientSocket.isConnected() && serverSocket.isConnected())
+            {
+                LogicControl.sleep(500);
+            }
+            if (serverReader.available() > 0)
+            {
+                sData = getIMAPStream(serverReader, IMAP_SINGLELINE).toString();
+                log( "S: " + sData);
+                if (trace_writer != null)
+                    trace_writer.write(sData);
+
+                 // write the answer to the POP client
+                clientWriter.write(sData.getBytes());
+                clientWriter.flush();
+            }
+
+            if (clientReader.available() > 0)
+            {
+                sData = getIMAPStream(clientReader, IMAP_SINGLELINE).toString();
+                log( "C: " + sData);
+                if (sData.toUpperCase().indexOf("DONE") >= 0)
+                    idle_done = true;
+
+                if (trace_writer != null)
+                    trace_writer.write(sData);
+
+                 // write the answer to the POP client
+                serverWriter.write(sData.getBytes());
+                serverWriter.flush();
+
+                sData = getIMAPStream(serverReader, IMAP_SINGLELINE).toString();
+                log( "S: " + sData);
+                // write the answer to the POP client
+                clientWriter.write(sData.getBytes());
+                clientWriter.flush();                        
+            }
+        }       
+        
+        return idle_done;
     }
 
 /*
@@ -368,7 +449,7 @@ public class IMAPConnection extends MailConnection
    
 
 
-    private int FETCH(FileWriter trace_writer)
+    private int FETCH(FileWriter trace_writer, boolean with_body)
     {
         // GET ACCEPT ANSWER FROM SERVER
 
@@ -379,14 +460,19 @@ public class IMAPConnection extends MailConnection
         File rfc_dump = new File(Main.RFC_PATH + "imap_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = Main.get_control().get_mail_archiver().get_rfc_stream(rfc_dump);
+        BufferedOutputStream bos = null;
+        
+        if (with_body)
+        {
+            bos = Main.get_control().get_mail_archiver().get_rfc_stream(rfc_dump);
 
-        if (bos == null)
-        {        
-            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
-            {
-                m_error = ERROR_UNKNOWN;
-                return m_error;
+            if (bos == null)
+            {        
+                if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+                {
+                    m_error = ERROR_UNKNOWN;
+                    return m_error;
+                }
             }
         }
         
@@ -409,7 +495,7 @@ public class IMAPConnection extends MailConnection
                     return 1;
 
                 
-                int avail = serverReader.available();
+               // int avail = serverReader.available();
                 
                 rlen = serverReader.read(buffer);
                 
@@ -425,8 +511,9 @@ public class IMAPConnection extends MailConnection
                                 last_nl_idx++;
                                 break;
                             }
+                            last_nl_idx--;
                         }
-                        if (buffer[last_nl_idx] != '*' &&  buffer[last_nl_idx] != '+')
+                        if (buffer[last_nl_idx] != '*')
                             finished = true;
                     }
                 }
@@ -442,6 +529,12 @@ public class IMAPConnection extends MailConnection
                 
                 
                 
+                String d  = new String(buffer, 0, rlen);
+                
+                if (!with_body)
+                {
+                    log( "S: " + d  );
+                }
 
                 if (rlen > 0)
                 {     
@@ -647,5 +740,6 @@ public class IMAPConnection extends MailConnection
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+ 
 }  // POP3connection
 

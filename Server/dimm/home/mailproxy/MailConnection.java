@@ -292,16 +292,14 @@ public abstract class MailConnection
 
     void log( String txt )
     {
-        txt = txt.replace('\n', ' ');
-        txt = txt.replace('\r', ' ');
-        txt = txt.trim();
+        if (txt.indexOf("\r\n") == txt.length() - 2)
+            txt = txt.substring(0, txt.length() - 2);
         Main.debug_msg(1, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
-        txt = txt.replace('\n', ' ');
-        txt = txt.replace('\r', ' ');
-        txt = txt.trim();
+        if (txt.indexOf("\r\n") == txt.length() - 2)
+            txt = txt.substring(0, txt.length() - 2);
         Main.debug_msg(dbg, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
 
