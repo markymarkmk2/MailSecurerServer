@@ -9,6 +9,7 @@ package dimm.home.mailproxyclient;
 
 
 import dimm.home.mailproxyclient.Utilities.CmdExecutor;
+import dimm.home.mailproxyclient.Utilities.ParseToken;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -325,6 +326,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         PUI_STATUS = new javax.swing.JMenuItem();
         MUI_BOOT = new javax.swing.JMenuItem();
         MUI_LOG = new javax.swing.JMenuItem();
+        MUI_VPN = new javax.swing.JCheckBoxMenuItem();
         MUI_SHELL = new javax.swing.JMenuItem();
         MUI_FILETRANSFER = new javax.swing.JMenuItem();
 
@@ -569,6 +571,13 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         jMenuBar1.add(MU_PARAMS);
 
         MU_EXTRA.setText("Extras");
+        MU_EXTRA.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                MU_EXTRAActionPerformed(evt);
+            }
+        });
 
         PUI_STATUS.setText("Statusdisplay");
         PUI_STATUS.addActionListener(new java.awt.event.ActionListener()
@@ -599,6 +608,17 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             }
         });
         MU_EXTRA.add(MUI_LOG);
+
+        MUI_VPN.setSelected(true);
+        MUI_VPN.setText("VPN-Verbindung aktiv");
+        MUI_VPN.addActionListener(new java.awt.event.ActionListener()
+        {
+            public void actionPerformed(java.awt.event.ActionEvent evt)
+            {
+                MUI_VPNActionPerformed(evt);
+            }
+        });
+        MU_EXTRA.add(MUI_VPN);
 
         MUI_SHELL.setText("Kommandozeile");
         MUI_SHELL.addActionListener(new java.awt.event.ActionListener()
@@ -989,6 +1009,51 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         dlf.setVisible(true);
     }//GEN-LAST:event_MUI_PROXY_LISTActionPerformed
 
+    private void MUI_VPNActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_MUI_VPNActionPerformed
+    {//GEN-HEADEREND:event_MUI_VPNActionPerformed
+        // TODO add your handling code here:
+        if (check_selected())
+        {
+            if (!MUI_VPN.isSelected())
+            {
+                if (this.errm_ok_cancel("Wollen Sie die VPN-Verbindung öffnen?" ))
+                    comm.send_cmd("STARTVPN CMD:START" );
+            }
+            else
+            {
+                if (this.errm_ok_cancel("Wollen Sie die VPN-Verbindung schließen?" ))
+                    comm.send_cmd("STARTVPN CMD:STOP" );
+            }
+            
+            ParseToken pt = new ParseToken( comm.get_answer() );
+            long retcode = pt.GetLong("VPN:");
+            
+            if (retcode != 0)
+                this.errm_ok("Der Vorgang wurde nicht fehlerfrei abgeschlossen");
+            
+            // CHECK SETTINGS
+            comm.send_cmd("STARTVPN CMD:GET" );
+            pt = new ParseToken( comm.get_answer() );
+            retcode = pt.GetLong("VPN:");
+            MUI_VPN.setSelected((retcode == 1));
+        }            
+    }//GEN-LAST:event_MUI_VPNActionPerformed
+
+    private void MU_EXTRAActionPerformed(java.awt.event.ActionEvent evt)//GEN-FIRST:event_MU_EXTRAActionPerformed
+    {//GEN-HEADEREND:event_MU_EXTRAActionPerformed
+        // TODO add your handling code here:
+        if (check_selected())
+        {
+            // CHECK SETTINGS
+            comm.send_cmd("STARTVPN CMD:GET" );
+            ParseToken pt = new ParseToken( comm.get_answer() );
+            long retcode = pt.GetLong("VPN:");
+            MUI_VPN.setSelected((retcode == 1));
+        }
+        else
+            MUI_VPN.setSelected( false );
+    }//GEN-LAST:event_MU_EXTRAActionPerformed
+
     
     void scan_entry_list()
     {
@@ -1126,6 +1191,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
     private javax.swing.JMenuItem MUI_STATIONID;
     private javax.swing.JRadioButtonMenuItem MUI_TCP;
     private javax.swing.JRadioButtonMenuItem MUI_UDP;
+    private javax.swing.JCheckBoxMenuItem MUI_VPN;
     private javax.swing.JMenu MU_EXTRA;
     private javax.swing.JMenu MU_FILE;
     private javax.swing.JMenu MU_PARAMS;

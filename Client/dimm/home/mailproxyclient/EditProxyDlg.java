@@ -119,7 +119,7 @@ public class EditProxyDlg extends javax.swing.JDialog
 
         jLabel5.setText("Protokoll");
 
-        CB_PROTOKOLL.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "POP3", "SMTP" }));
+        CB_PROTOKOLL.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "POP3", "IMAP", "SMTP" }));
         CB_PROTOKOLL.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -272,6 +272,11 @@ public class EditProxyDlg extends javax.swing.JDialog
         {
             TXT_LOCALPORT.setText("25");
             TXT_REMOTEPORT.setText("25");
+        }
+        if (prot.equals("IMAP"))
+        {
+            TXT_LOCALPORT.setText("143");
+            TXT_REMOTEPORT.setText("143");
         }
 
             
