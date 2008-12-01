@@ -38,6 +38,10 @@ public class ProxyEntry
     {
         return new ProxyEntry( _host, l, r, SMTP );
     }
+    static public ProxyEntry create_imap_entry( String _host, int l, int r )
+    {
+        return new ProxyEntry( _host, l, r, IMAP );
+    }
 
     public String getHost()
     {

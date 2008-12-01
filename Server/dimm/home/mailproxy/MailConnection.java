@@ -71,6 +71,7 @@ public abstract class MailConnection
     abstract void runConnection(final Socket clientSocket);
     abstract String[] get_single_line_commands();
     abstract String[] get_multi_line_commands();
+    abstract public int get_default_port();
     
     static Semaphore mtx = new Semaphore(MAX_THREADS);
     

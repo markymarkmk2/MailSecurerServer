@@ -501,5 +501,11 @@ public class SMTPConnection extends MailConnection
         thread_count--;
     }
 
+    @Override
+    public int get_default_port()
+    {
+        return 25;
+    }
+
 }  // POP3connection
 

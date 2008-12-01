@@ -26,6 +26,7 @@ public class Main
     
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
+    public static final String SCRIPT_PATH = "scripts/";
     
     
     public static final String PROGNAME = "MailProxy.jar";

@@ -121,6 +121,10 @@ public class MailProxyServer extends WorkerParent
             {
                 p_list.add( ProxyEntry.create_smtp_entry(host, local_port, remote_port));
             }
+            else if (protokoll.equals("imap"))
+            {
+                p_list.add( ProxyEntry.create_imap_entry(host, local_port, remote_port));
+            }
             else
                 throw new Exception( "Unsupported protokoll " + protokoll);            
         }
@@ -286,11 +290,91 @@ public class MailProxyServer extends WorkerParent
 
     }  // go
 
+    
+    void go_imap( ProxyEntry pe )
+    {
+        ServerSocket ss = null;
+        
+        String host = pe.getHost();
+        int LocalPort = pe.getLocalPort();
+        int RemotePort = pe.getRemotePort();
+        try
+        {
+            ss = new ServerSocket(LocalPort);
+            // 1 second timeout
+            ss.setSoTimeout(1000);
+            Main.info_msg("BettyMailProxy is running for the host 'imap://" + host +
+                    ":" + RemotePort + "' on local port " + LocalPort);
+           
+
+            while (!m_Stop)
+            {
+                try
+                {
+                    
+                    Socket theSocket = ss.accept();
+                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    
+                    IMAPConnection con = new IMAPConnection( pe );
+                    
+                    if (m_Stop)
+                    {
+                        con.closeConnections();
+                        break;
+                    }
+                    
+                    synchronized(connection_list)
+                    {
+                        connection_list.add(con);
+                    }
+                    
+                    con.handleConnection(theSocket);
+
+                } catch (SocketTimeoutException ste)
+                {
+                // timeout triggered
+                // do nothing
+                }
+            }
+
+            Main.info_msg("stopping the imap proxy for host '" + host + "' on local port " + LocalPort);
+        } 
+        catch (java.net.BindException be)
+        {
+            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
+            Main.err_log(errmsg);
+            this.setStatusTxt("Not listening, port in use");
+            this.setGoodState(false);
+            
+            //Common.showError(errmsg);
+        } 
+        catch (java.io.IOException ex)
+        {
+            Main.err_log(ex.getMessage());
+        }
+
+        // close the server connection
+        if (ss != null)
+        {
+            try
+            {
+                ss.close();
+                ss = null;
+            } catch (Exception e)
+            {
+                Main.err_log(e.getMessage());
+            }
+        }
+
+    }  // go	
+
+    
     public void StopServer()
     {
         m_Stop = true;
         POP3Connection.StopServer();
         SMTPConnection.StopServer();
+        IMAPConnection.StopServer();
                 
         LogicControl.sleep(1100);
         
@@ -326,6 +410,8 @@ public class MailProxyServer extends WorkerParent
                        go_pop( pe );
                    else if (pe.getProtokoll() == ProxyEntry.SMTP)
                        go_smtp( pe );
+                   else if (pe.getProtokoll() == ProxyEntry.IMAP)
+                       go_imap( pe );
 
 
                     return null;
