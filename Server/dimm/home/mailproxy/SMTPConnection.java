@@ -93,7 +93,7 @@ public class SMTPConnection extends MailConnection
             {
 
                 // read the answer from the server
-                log( 2, "Waiting for Server...");
+                log( 3, "Waiting for Server...");
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -108,7 +108,7 @@ public class SMTPConnection extends MailConnection
                     if (clientSocket.isConnected() && !clientSocket.isClosed() && clientWriter != null && sData.length() > 0)
                     {
                         // write the answer to the POP client
-                        log( "Error : " + getErrorMessage());
+                        log(1, "Error : " + getErrorMessage());
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();
                     }
@@ -148,7 +148,7 @@ public class SMTPConnection extends MailConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 2, "Waiting for Client...");
+                log( 3, "Waiting for Client...");
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
@@ -421,7 +421,7 @@ public class SMTPConnection extends MailConnection
                         catch (Exception exc)
                         {
                         }
-                        log( "SMTP timeout. Trying again [" + m_retries + "]");
+                        log(1, "SMTP timeout. Trying again [" + m_retries + "]");
                     }
                 }
             }

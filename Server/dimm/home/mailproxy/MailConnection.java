@@ -294,7 +294,7 @@ public abstract class MailConnection
     {
         if (txt.indexOf("\r\n") == txt.length() - 2)
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(1, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(2, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
@@ -441,7 +441,7 @@ public abstract class MailConnection
                     {
                         // we try again to read a message recursively
                         m_retries++;
-                        log( "Mail timeout. Trying again [" + m_retries + "]");
+                        log(1, "Mail timeout. Trying again [" + m_retries + "]");
                     }
                 }
                 else

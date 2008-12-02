@@ -299,7 +299,7 @@ public class IMAPConnection extends MailConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
-                    boolean with_body = (sData.toUpperCase().indexOf("BODY[") > 0 && sData.toUpperCase().indexOf("[HEADER]") == -1);
+                    boolean with_body = ((sData.toUpperCase().indexOf("BODY[") > 0 || sData.toUpperCase().indexOf("BODY.PEEK[") > 0) && sData.toUpperCase().indexOf("[HEADER]") == -1);
                     
                     if (FETCH( trace_writer, with_body ) > 0)
                     {
@@ -313,7 +313,7 @@ public class IMAPConnection extends MailConnection
                         break;
                     }
                     
-                    sData = getDataFromInputStream(clientReader, IMAP_SINGLELINE).toString();
+                    sData = getIMAPStream(clientReader, IMAP_SINGLELINE).toString();
                     log( "C: " + sData);
                     if (trace_writer != null)
                         trace_writer.write(sData);

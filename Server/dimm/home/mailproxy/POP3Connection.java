@@ -9,8 +9,6 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class POP3Connection extends MailConnection
 {
@@ -60,7 +58,7 @@ public class POP3Connection extends MailConnection
             }
             catch (IOException ex)
             {
-                Logger.getLogger(POP3Connection.class.getName()).log(Level.SEVERE, null, ex);
+                Main.err_log_fatal("Cannot open trace writer" );
                 trace_writer = null;
             }
         }
@@ -97,7 +95,7 @@ public class POP3Connection extends MailConnection
             {
 
                 // read the answer from the server
-                log( 2, "Waiting for Server...");
+                log( 3, "Waiting for Server...");
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -112,7 +110,7 @@ public class POP3Connection extends MailConnection
                     if (clientSocket.isConnected() && !clientSocket.isClosed() && clientWriter != null && sData.length() > 0)
                     {
                         // write the answer to the POP client
-                        log( "Error : " + getErrorMessage());
+                        log(1, "Error : " + getErrorMessage());
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();
                     }
@@ -143,7 +141,7 @@ public class POP3Connection extends MailConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 2, "Waiting for Client...");
+                log( 3, "Waiting for Client...");
                 
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
@@ -435,7 +433,7 @@ public class POP3Connection extends MailConnection
                          }
                          catch (Exception exc)
                          {}
-                         log( "POP3 timeout. Trying again [" + m_retries + "]");
+                         log(1, "POP3 timeout. Trying again [" + m_retries + "]");
                      }
                 }
             }  

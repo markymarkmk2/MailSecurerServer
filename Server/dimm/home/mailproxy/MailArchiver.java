@@ -154,6 +154,7 @@ public class MailArchiver extends WorkerParent
         String cmd[] = {"lsof", "| grep \"TCP localhost.localdomain:8091\""};        
         
         CmdExecutor exe = new CmdExecutor(cmd);
+        exe.set_no_debug( true );
         int ret = exe.exec();
         
         return (ret == 0) ? true : false;

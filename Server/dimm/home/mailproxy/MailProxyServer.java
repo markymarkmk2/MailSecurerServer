@@ -395,6 +395,13 @@ public class MailProxyServer extends WorkerParent
     public boolean start_run_loop()
     {
         Main.debug_msg(1, "Starting " + proxy_list.size() + " proxy tasks" );
+        
+        if (!Main.get_control().is_licensed())
+        {
+            this.setStatusTxt("Not licensed");
+            this.setGoodState(false);
+            return false;
+        }
        
         m_Stop = false;
         
@@ -410,9 +417,9 @@ public class MailProxyServer extends WorkerParent
                        go_pop( pe );
                    else if (pe.getProtokoll() == ProxyEntry.SMTP)
                        go_smtp( pe );
-                   else if (pe.getProtokoll() == ProxyEntry.IMAP)
+/*                   else if (pe.getProtokoll() == ProxyEntry.IMAP)
                        go_imap( pe );
-
+*/
 
                     return null;
                 }
