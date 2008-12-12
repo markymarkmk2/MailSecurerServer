@@ -140,6 +140,7 @@
             <Property name="text" type="java.lang.String" value="Extras"/>
           </Properties>
           <Events>
+            <EventHandler event="menuSelected" listener="javax.swing.event.MenuListener" parameters="javax.swing.event.MenuEvent" handler="MU_EXTRAMenuSelected"/>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="MU_EXTRAActionPerformed"/>
           </Events>
           <SubComponents>

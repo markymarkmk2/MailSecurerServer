@@ -571,6 +571,19 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         jMenuBar1.add(MU_PARAMS);
 
         MU_EXTRA.setText("Extras");
+        MU_EXTRA.addMenuListener(new javax.swing.event.MenuListener()
+        {
+            public void menuCanceled(javax.swing.event.MenuEvent evt)
+            {
+            }
+            public void menuDeselected(javax.swing.event.MenuEvent evt)
+            {
+            }
+            public void menuSelected(javax.swing.event.MenuEvent evt)
+            {
+                MU_EXTRAMenuSelected(evt);
+            }
+        });
         MU_EXTRA.addActionListener(new java.awt.event.ActionListener()
         {
             public void actionPerformed(java.awt.event.ActionEvent evt)
@@ -1014,7 +1027,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         // TODO add your handling code here:
         if (check_selected())
         {
-            if (!MUI_VPN.isSelected())
+            if (MUI_VPN.isSelected())
             {
                 if (this.errm_ok_cancel("Wollen Sie die VPN-Verbindung öffnen?" ))
                     comm.send_cmd("STARTVPN CMD:START" );
@@ -1053,6 +1066,12 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         else
             MUI_VPN.setSelected( false );
     }//GEN-LAST:event_MU_EXTRAActionPerformed
+
+    private void MU_EXTRAMenuSelected(javax.swing.event.MenuEvent evt)//GEN-FIRST:event_MU_EXTRAMenuSelected
+    {//GEN-HEADEREND:event_MU_EXTRAMenuSelected
+        // TODO add your handling code here:
+        MU_EXTRAActionPerformed( null );
+    }//GEN-LAST:event_MU_EXTRAMenuSelected
 
     
     void scan_entry_list()
