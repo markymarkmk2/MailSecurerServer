@@ -59,6 +59,7 @@ public class Communicator extends WorkerParent
         
         cmd_list.add( new HelloCommand() );
         cmd_list.add( new GetSetOption() );
+        cmd_list.add( new ListOptions() );
         cmd_list.add( new IPConfig() );
         cmd_list.add( new Ping() );
         cmd_list.add( new ReadLog() );

@@ -262,6 +262,29 @@ public class SMTPConnection extends MailConnection
 
         final int MAX_BUF = 2048;  						// buffer 8 Kb
         byte buffer[] = new byte[MAX_BUF];			// buffer array
+      
+        int avail = 0;
+        
+        // WAIT TEN SECONDS (100*100ms) FOR DATA
+        int maxwait = 100;
+        while (avail == 0 && maxwait > 0)
+        {
+            try 
+            {
+                avail = clientReader.available();
+            }
+            catch (Exception exc)
+            {
+            }
+            if (avail > 0)
+                break;
+            Main.sleep(100);
+            maxwait--;
+        }
+        
+        if (maxwait <= 0)
+            Main.err_log("Timeout while waiting for Server" );
+        
         
         int rlen = 0;
         while (!finished && m_error <= 0)
@@ -277,9 +300,7 @@ public class SMTPConnection extends MailConnection
                 {
                     return 1;
                 }
-
-                int avail = clientReader.available();
-                
+                                
                 
                 if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
@@ -297,6 +318,8 @@ public class SMTPConnection extends MailConnection
                     }
                 }
 
+                avail = clientReader.available();
+                
                 if (rlen == END_OF_MULTILINE.length)
                 {
                     int i = 0;

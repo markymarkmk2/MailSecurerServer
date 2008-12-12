@@ -151,7 +151,7 @@ public class MailArchiver extends WorkerParent
         if (System.getProperty("os.name").startsWith("Windows"))
             return true;
 
-        String cmd[] = {"lsof", "| grep \"TCP localhost.localdomain:8091\""};        
+        String cmd[] = {"lsof", "| grep \":8091 (\""};        
         
         CmdExecutor exe = new CmdExecutor(cmd);
         exe.set_no_debug( true );
@@ -241,6 +241,12 @@ public class MailArchiver extends WorkerParent
                 continue;
             }
             
+            if (this.isGoodState() == false)
+            {
+                this.setGoodState(true);
+                this.setStatusTxt("Mailarchive is online");
+            }
+            
             synchronized (file_list)            
             {
                 if (file_list.isEmpty())
@@ -304,7 +310,7 @@ public class MailArchiver extends WorkerParent
             // OK, ALL FILES ARE NOW .eml
 
             this.setStatusTxt("Archiving " + eml_file_list.size() + " file(s...");
-            this.setGoodState(true);
+            
             Main.debug_msg(0, this.getStatusTxt());
             
             

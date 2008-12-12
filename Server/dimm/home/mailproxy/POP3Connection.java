@@ -271,23 +271,38 @@ public class POP3Connection extends MailConnection
         int rlen = 0;
         final int MAX_BUF = 2048;  						// buffer 8 Kb
         byte buffer[] = new byte[MAX_BUF];			// buffer array
+
+        int avail = 0;
         
+        // WAIT TEN SECONDS (100*100ms) FOR DATA
+        int maxwait = 100;
+        while (avail == 0 && maxwait > 0)
+        {
+            try 
+            {
+                avail = serverReader.available();
+            }
+            catch (Exception exc)
+            {
+            }
+            if (avail > 0)
+                break;
+            Main.sleep(100);
+            maxwait--;
+        }
         
+        if (maxwait <= 0)
+            Main.err_log("Timeout while waiting for Server" );
         
         while (!finished && m_error <= 0)
         {
             try 
             {
-                // we are retrying the read operation
-                // because the timeout was triggered.
-                // we increase slowly the timeout.
 
                 // verify if the user stopped the thread
                 if (m_Stop)	
                     return 1;
 
-                
-                int avail = serverReader.available();
                 
                 if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
@@ -304,6 +319,8 @@ public class POP3Connection extends MailConnection
                         rlen = serverReader.read(buffer, 0, END_OF_MULTILINE.length);
                     }
                 }
+                
+                avail = serverReader.available();
 
                 if (rlen == END_OF_MULTILINE.length)
                 {
