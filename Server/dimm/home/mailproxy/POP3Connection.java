@@ -77,6 +77,8 @@ public class POP3Connection extends MailConnection
             serverSocket = new Socket(pe.getHost(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            
             Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
             Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
             Main.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
@@ -125,6 +127,7 @@ public class POP3Connection extends MailConnection
                 }
 
                 log( "S: " + sData);
+
                 if (trace_writer != null)
                     trace_writer.write(sData);
                 
@@ -292,49 +295,94 @@ public class POP3Connection extends MailConnection
         }
         
         if (maxwait <= 0)
-            Main.err_log("Timeout while waiting for Server" );
+            log(1,"Timeout while waiting for Server" );
+        
+        long dgb_level = Main.get_long_prop(Preferences.DEBUG);
         
         while (!finished && m_error <= 0)
         {
             try 
             {
-
                 // verify if the user stopped the thread
                 if (m_Stop)	
                     return 1;
-
+                
+                
+                // WAIT FOR DATA, WE ARE TOO FAST
+                maxwait = 10;
+                while (avail == 0 && maxwait > 0)
+                {
+                    try 
+                    {
+                        avail = serverReader.available();
+                    }
+                    catch (Exception exc)
+                    {
+                    }
+                    if (avail > 0)
+                        break;
+                    Main.sleep(1000);
+                    maxwait--;
+                }
+                
                 
                 if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
                     rlen = serverReader.read(buffer);
+                    if (dgb_level > 3)
+                        log( 4, new String( buffer ) );
                 }
                 else
                 {
                     if (avail > END_OF_MULTILINE.length)
                     {
                         rlen = serverReader.read(buffer, 0, avail - END_OF_MULTILINE.length);
+                    if (dgb_level > 3)
+                        log( 4, new String( buffer ) );
                     }
                     else
                     {
-                        rlen = serverReader.read(buffer, 0, END_OF_MULTILINE.length);
+                        // NOW WE SHOULD ONLY GET THE REST OF THE MULTILINE ANSWER, THIS SHOULD BE 5 BYTE
+                        rlen = serverReader.read(buffer, 0, avail);
+                        if (dgb_level > 3)
+                            log( 4, new String( buffer ) );
+                        
+                        if (rlen < END_OF_MULTILINE.length)
+                        {
+                            log(1,"Gathering slow data");
+                            // WAIT FOR ANY REMAINING DATA
+                            Main.sleep(5000);
+                            avail = serverReader.available();
+                            
+                            while (avail > 0 && (rlen + avail) <= buffer.length)
+                            {
+                                rlen += serverReader.read(buffer, rlen, avail);
+                                if (dgb_level > 3)
+                                    log( 4, new String( buffer ) );
+                                
+                                Main.sleep(2000);
+                                avail = serverReader.available();
+                            }
+                                
+                            if (rlen != END_OF_MULTILINE.length && avail == 0)
+                            {
+                                log(1,"Protokoll Error in RETRBYTE, rlen:" + rlen + " avail:" + avail + " stillalavail:" + serverReader.available() );
+                                m_error = ERROR_UNKNOWN;
+                                return m_error;                                
+                            }
+                        }
                     }
                 }
                 
                 avail = serverReader.available();
 
-                if (rlen == END_OF_MULTILINE.length)
+                // IF NO MORE DATA IN BUFFER, WE CHECK FOR MEOL
+                if (avail == 0)
                 {
-                    int i = 0;
-                    for (i = 0; i < END_OF_MULTILINE.length; i++)
-                    {
-                        if (buffer[i] != END_OF_MULTILINE[i])
-                            break;
-                    }
-                    if ( i == END_OF_MULTILINE.length)
+                    if (has_multi_eol( buffer, rlen ))
                         finished = true;
                 }
                 
-
                 if (rlen > 0)
                 {     
                     if (trace_writer != null)
