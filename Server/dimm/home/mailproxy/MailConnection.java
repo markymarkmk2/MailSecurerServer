@@ -238,7 +238,10 @@ public abstract class MailConnection
                 break;
         }
         if ( i == END_OF_LINE.length)
-            return true;
+        {
+            log( 4, "Detected EOL" );            
+            return true;              
+        }
         
         return false;        
     }
@@ -256,7 +259,10 @@ public abstract class MailConnection
         }
         
         if ( i == END_OF_LINE.length)
-            return true;                        
+        {
+            log( 4, "Detected EOL" );            
+            return true;              
+        }
 
         return false;        
     }
@@ -274,7 +280,10 @@ public abstract class MailConnection
         }
         
         if ( i == END_OF_MULTILINE.length)
-            return true;                        
+        {
+            log( 4, "Detected MEOL" );
+            return true;              
+        }
 
         return false;        
     }
@@ -284,6 +293,7 @@ public abstract class MailConnection
         {
             if (sData.substring(0,4).toUpperCase().compareTo("QUIT") == 0)
             {
+                log( 4, "Detected QUIT" );
                 return true;
             }
         }
@@ -319,6 +329,28 @@ public abstract class MailConnection
 
         boolean finished = false;
         int rlen = 0;
+                
+        int avail = 0;
+        
+        // WAIT TEN SECONDS (100*100ms) FOR DATA
+        int maxwait = 100;
+        while (avail == 0 && maxwait > 0)
+        {
+            try 
+            {
+                avail = reader.available();
+            }
+            catch (Exception exc)
+            {
+            }
+            if (avail > 0)
+                break;
+            Main.sleep(100);
+            maxwait--;
+        }
+        
+        if (maxwait <= 0)
+            Main.err_log("Timeout while waiting for Server" );
         
         while ( !finished && m_error < 0)
         {
@@ -337,8 +369,7 @@ public abstract class MailConnection
                 {
                     return output;
                 }
-
-                int avail = reader.available();
+                
 
                 if (command_type == POP_MULTILINE)
                 {
@@ -354,9 +385,10 @@ public abstract class MailConnection
                         }
                         else
                         {
-                            rlen = reader.read(buffer, 0, END_OF_MULTILINE.length);
+                            rlen = reader.read(buffer, 0, avail);
                         }
                     }
+                    avail = reader.available();
 
                     if (rlen == END_OF_MULTILINE.length)
                     {
@@ -365,16 +397,14 @@ public abstract class MailConnection
                     }
                     // DETECT ERR ON MULTILINE ANSWER
                     if (buffer[0] == '-' && buffer[1] == 'E')
-                    {
-                        // GET REST OF MESSAGE
-                        avail = reader.available();
-                        
+                    {                                                
                         if (avail > 0)
                         {
                             rlen += reader.read(buffer, rlen, avail );
+                            avail = reader.available();
                         }
                         // END OF LINE IS ENOUGH
-                        if ( has_eol( buffer, rlen ) && reader.available() == 0) 
+                        if ( has_eol( buffer, rlen ) && avail == 0) 
                             finished = true;    
                     }
                 }                
@@ -388,6 +418,7 @@ public abstract class MailConnection
                 {
                     rlen = reader.read(buffer);
                 }   
+                avail = reader.available();
                 
                 // NO MORE DATA ?
                 if (rlen == -1)
