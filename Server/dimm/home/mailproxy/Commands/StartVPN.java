@@ -38,7 +38,7 @@ public class StartVPN extends AbstractCommand
         if (cmd.equals("GET"))
         {
             String cmd_str[];
-            cmd_str = new String[]{"ps", "aef | grep openvpn | grep -v grep" };
+            cmd_str = new String[]{"ps", "ax | grep openvpn | grep -v grep" };
             
             CmdExecutor exe = new CmdExecutor( cmd_str );
             if (exe.exec() == 0)
@@ -50,22 +50,31 @@ public class StartVPN extends AbstractCommand
         if (cmd.equals("STOP"))
         {
             String cmd_str[];
-            cmd_str = new String[]{Main.SCRIPT_PATH + "start_vpn" };
+            cmd_str = new String[]{Main.SCRIPT_PATH + "stop_vpn" };
             
             CmdExecutor exe = new CmdExecutor( cmd_str );
             
             int ret = exe.exec();
+            if (ret != 0)
+            {
+                Main.err_log("Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
+            }
             answer = "VPN:" + ret;
         }
         
         if (cmd.equals("START"))
         {
             String cmd_str[];
-            cmd_str = new String[]{Main.SCRIPT_PATH + "stop_vpn" };        
+            cmd_str = new String[]{Main.SCRIPT_PATH + "start_vpn" };        
             
             CmdExecutor exe = new CmdExecutor( cmd_str );
             
             int ret = exe.exec();
+            if (ret != 0)
+            {
+                Main.err_log("Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
+            }
+            
             answer = "VPN:" + ret;
         }
             
