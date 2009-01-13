@@ -23,11 +23,8 @@ import dimm.home.mailproxy.Utilities.CmdExecutor;
 import java.io.FileReader;
 import java.net.NetworkInterface;
 import java.security.MessageDigest;
-import java.security.Provider;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
 
 /**
  *
@@ -85,9 +82,9 @@ public class LogicControl
             FileReader fr = null;
             try
             {
-                ni = NetworkInterface.getByName("eth0");
+                ni = NetworkInterface.getByName( Main.license_interface );
                 if (ni == null || ni.getHardwareAddress() == null)
-                    throw new Exception( "Missing interface eth0 or eth0 has no hardware address" );
+                    throw new Exception( "Missing interface " + Main.license_interface + " or has no hardware address" );
                 
                 byte[] mac = ni.getHardwareAddress();
 

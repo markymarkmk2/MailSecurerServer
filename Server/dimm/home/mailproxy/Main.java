@@ -51,6 +51,8 @@ public class Main
     static LogicControl control;
     
     public static boolean create_licensefile = false;
+    public static String license_interface = "eth0";
+    
     
     static void print_system_property( String key )
     {
@@ -107,6 +109,12 @@ public class Main
             
             if (args[i].compareTo("-L") == 0)
                 create_licensefile = true;            
+            
+            if (args[i].compareTo("-e") == 0 && args[i + 1] != null)
+            {
+                license_interface = args[i + 1];            
+                info_msg("Using interface license_interface for licensing");                
+            }
         }            
         try
         {            
