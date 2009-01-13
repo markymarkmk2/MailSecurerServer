@@ -86,6 +86,9 @@ public class LogicControl
             try
             {
                 ni = NetworkInterface.getByName("eth0");
+                if (ni == null || ni.getHardwareAddress() == null)
+                    throw new Exception( "Missing interface eth0 or eth0 has no hardware address" );
+                
                 byte[] mac = ni.getHardwareAddress();
 
                 MessageDigest md5 = MessageDigest.getInstance("MD5");
@@ -142,7 +145,11 @@ public class LogicControl
             catch (IOException ex1)
             {
                 Main.err_log_fatal("Error while reading licensefile: " + ex1.getMessage());
-            }            
+            } 
+            catch (Exception ex4)
+            {
+                Main.err_log_fatal("Error during license check: " + ex4.getMessage());
+            }
             finally
             {
                 try
