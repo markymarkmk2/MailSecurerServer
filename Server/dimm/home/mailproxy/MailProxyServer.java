@@ -156,7 +156,7 @@ public class MailProxyServer extends WorkerParent
                 {
                     
                     Socket theSocket = ss.accept();
-                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
                     POP3Connection m_POP3Connection = new POP3Connection( pe );
                     
@@ -233,7 +233,7 @@ public class MailProxyServer extends WorkerParent
                 try
                 {
                     Socket theSocket = ss.accept();
-                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
                     SMTPConnection m_SMTPConnection = new SMTPConnection( pe);
                     
@@ -313,7 +313,7 @@ public class MailProxyServer extends WorkerParent
                 {
                     
                     Socket theSocket = ss.accept();
-                    Main.info_msg("Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
                     IMAPConnection con = new IMAPConnection( pe );
                     

@@ -18,7 +18,7 @@ import java.util.ArrayList;
 public class Main 
 {
     
-    public static final String VERSION = "0.0.1";
+    public static final String VERSION = "1.0.1";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -56,7 +56,7 @@ public class Main
     
     static void print_system_property( String key )
     {
-        System.out.println("Property " + key + ": " + System.getProperty(key) );
+        info_msg("Property " + key + ": " + System.getProperty(key) );
     }
     
     /** Creates a new instance of Main */
@@ -96,6 +96,7 @@ public class Main
             Main.err_log_fatal("Cannot create local dirs: " + exc.getMessage() );
         } 
         
+        info_msg("Starting " + APPNAME + " V" + VERSION );
 
         // PREFS FOR ARGS, ARGS HABEN PRIO
         prefs = new Preferences();

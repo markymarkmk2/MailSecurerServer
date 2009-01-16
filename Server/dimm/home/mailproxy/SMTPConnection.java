@@ -170,7 +170,8 @@ public class SMTPConnection extends MailConnection
                 serverWriter.write(sData.getBytes());
                 serverWriter.flush();
 
-                if (sData.toUpperCase().startsWith("DATA"))
+                String token = sData.toUpperCase();
+                if (token.startsWith("DATA") || token.endsWith("\r\nDATA\r\n") )
                 {
                     m_Command = SMTP_DATA;
                 }
@@ -203,7 +204,7 @@ public class SMTPConnection extends MailConnection
         {
             Main.err_log(e.getMessage());
         }
-        log( "Finished" );
+        log(2, "Finished" );
         
     }  // handleConnection
 
@@ -239,18 +240,12 @@ public class SMTPConnection extends MailConnection
     
     private int DATA()
     {
-        // GET ACCEPT ANSWER FROM SERVER
-
-        // NOW MOVE DATA FROM SMTP-CLIENT TO SERVER 
-        boolean finished = false;
-
-        
 
         File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
         BufferedOutputStream bos = Main.get_control().get_mail_archiver().get_rfc_stream(rfc_dump);
-        
+
         if (bos == null)
         {        
             if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
@@ -260,250 +255,37 @@ public class SMTPConnection extends MailConnection
             }
         }
 
-        final int MAX_BUF = 2048;  						// buffer 8 Kb
-        byte buffer[] = new byte[MAX_BUF];			// buffer array
-      
-        int avail = 0;
+
+        int ret = get_multiline_proxy_data(clientReader, serverWriter,  rfc_dump, bos);
         
-        // WAIT TEN SECONDS (100*100ms) FOR DATA
-        int maxwait = 100;
-        while (avail == 0 && maxwait > 0)
+        // CLOSE STREAM
+        try
         {
-            try 
+            bos.close();
+
+            if (ret == 0)
             {
-                avail = clientReader.available();
-            }
-            catch (Exception exc)
-            {
-            }
-            if (avail > 0)
-                break;
-            Main.sleep(100);
-            maxwait--;
-        }
-        
-        if (maxwait <= 0)
-            Main.err_log("Timeout while waiting for Server" );
-        
-        
-        int rlen = 0;
-        while (!finished && m_error <= 0)
-        {
-            try
-            {
-                // we are retrying the read operation
-                // because the timeout was triggered.
-                // we increase slowly the timeout.
-
-                // verify if the user stopped the thread
-                if (m_Stop)
-                {
-                    return 1;
-                }
-                                
-                
-                if (avail > buffer.length + END_OF_MULTILINE.length)
-                {
-                    rlen = clientReader.read(buffer);
-                }
-                else
-                {
-                    if (avail > END_OF_MULTILINE.length)
-                    {
-                        rlen = clientReader.read(buffer, 0, avail - END_OF_MULTILINE.length);
-                    }
-                    else
-                    {
-                        rlen = clientReader.read(buffer, 0, END_OF_MULTILINE.length);
-                    }
-                }
-
-                avail = clientReader.available();
-                
-                if (rlen == END_OF_MULTILINE.length)
-                {
-                    int i = 0;
-                    for (i = 0; i < END_OF_MULTILINE.length; i++)
-                    {
-                        if (buffer[i] != END_OF_MULTILINE[i])
-                            break;
-                    }
-                    if ( i == END_OF_MULTILINE.length)
-                        finished = true;
-                }
-                  
-
-                if (rlen > 0)
-                {                            
-                    serverWriter.write(buffer, 0, rlen);
-                    
-                  
-                    if (finished)
-                    {
-                        serverWriter.flush();
-                    }
-
-                    if (bos != null)
-                    {
-                        try
-                        {
-                            bos.write(buffer, 0, rlen);
-                        }
-                        catch (Exception exc)
-                        {
-                            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
-
-                            // CLOSE AND INVALIDATE STREAM
-                            try
-                            {
-                                bos.close();
-                                
-                            }
-                            catch (Exception exce)
-                            {
-                            }
-                            finally
-                            {
-                                if (rfc_dump.exists())
-                                    rfc_dump.delete();
-                            }
-
-                            bos = null;
-                            
-
-                            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
-                            {
-                                m_error = ERROR_UNKNOWN;
-                                return m_error;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (bos != null)
-                    {
-                        try
-                        {
-                            bos.close();
-                        }
-                        catch (Exception exce)
-                        {
-                        }
-                        finally
-                        {
-                            if (rfc_dump.exists())
-                                rfc_dump.delete();
-                        }                        
-                    }
-                    
-                    m_error = ERROR_NO_ANSWER;
-                    return m_error;
-                }
-
-                try
-                {
-                    // return to the normal timeout (faster answer)
-                    if (m_retries > 0)
-                    {
-                        m_retries = 0;
-                        clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-                        
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Main.err_log(ex.getMessage());
-                }
-
-            }
-            catch (SocketTimeoutException ste)
-            {
-                /////////////////////
-                // timeout triggered
-                /////////////////////
-
-                if (rlen == 0)
-                {
-                    // the max quantity of retries was reached
-                    // without answer
-                    if (m_retries == SOCKET_TIMEOUT.length - 1)
-                    {
-                        m_error = ERROR_TIMEOUT_EXCEEDED;
-                    }
-                    else
-                    {
-                        // we try again to read a message recursively
-                        m_retries++;
-                        try
-                        {
-                            clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-                            serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-                        }
-                        catch (Exception exc)
-                        {
-                        }
-                        log(1, "SMTP timeout. Trying again [" + m_retries + "]");
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                // reader failed
-                m_error = ERROR_UNKNOWN;
-                Main.err_log(e.getMessage());
-            }
-        }
-        if (bos != null)
-        {
-            // CLOSE STREAM
-            try
-            {
-                bos.close();
-                
-                if (finished)
-                {
-                    Main.get_control().get_mail_archiver().add_rfc_file( rfc_dump );
-                }  
-                else
-                {
-                    rfc_dump.delete();
-                }
-            }
-            catch (Exception exc)
-            {
-                long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
-
-                if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
-                {
-                    m_error = ERROR_UNKNOWN;
-                    return m_error;
-                }
-            }
-        }
-        
-        if (finished)
-        {
-            return 0;
-        }
-        else if (rfc_dump.exists())
-        {
-            try
-            {
+                Main.get_control().get_mail_archiver().add_rfc_file( rfc_dump );
+            }  
+            else
+            {                
                 rfc_dump.delete();
-
-            }
-            catch (Exception exception)
-            {
             }
         }
-        if (m_error > 0)
-            return m_error;
-        
-        return -1;
+        catch (Exception exc)
+        {
+            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+            Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
+            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+            {
+                m_error = ERROR_UNKNOWN;
+                return m_error;
+            }
+        }
+        
+
+        return ret;
     }
     
     @Override

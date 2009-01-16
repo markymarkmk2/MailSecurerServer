@@ -7,6 +7,7 @@ package dimm.home.mailproxy;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -144,7 +145,7 @@ public abstract class MailConnection
             pe.incInstanceCnt();
         }
 
-        log("Opening Connection");
+        log(2, "Opening Connection");
         
         if (get_thread_count() > MAX_THREADS)
         {
@@ -183,7 +184,7 @@ public abstract class MailConnection
     void closeConnections()
     {
         // close the connections
-        log("Closing Connection");
+        log(2, "Closing Connection");
         try
         {
             if (serverWriter != null)
@@ -302,14 +303,15 @@ public abstract class MailConnection
 
     void log( String txt )
     {
-        if (txt.indexOf("\r\n") == txt.length() - 2)
+        if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
         Main.debug_msg(2, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
-        if (txt.indexOf("\r\n") == txt.length() - 2)
+        if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
+        
         Main.debug_msg(dbg, pe.getProtokollStr() + " " + this.this_thread_id + ": " + txt);
     }
 
@@ -521,6 +523,280 @@ public abstract class MailConnection
         m_Stop = true;
     }
     
+    
+    protected int get_multiline_proxy_data(BufferedInputStream Reader, BufferedOutputStream Writer, File rfc_dump, BufferedOutputStream bos)
+    {
+        // NOW MOVE DATA FROM READER TO WRITERCLIENT TO SERVER 
+        boolean finished = false;
+
+        final int MAX_BUF = 2048;  						// buffer 8 Kb
+        byte buffer[] = new byte[MAX_BUF];			// buffer array
+      
+        int avail = 0;
+        
+        // WAIT TEN SECONDS (100*100ms) FOR DATA
+        int maxwait = 100;
+        while (avail == 0 && maxwait > 0)
+        {
+            try 
+            {
+                avail = Reader.available();
+            }
+            catch (Exception exc)
+            {
+            }
+            if (avail > 0)
+                break;
+            Main.sleep(100);
+            maxwait--;
+        }
+        
+        if (maxwait <= 0)
+            Main.err_log("Timeout while waiting for Server" );
+        
+        long dgb_level = Main.get_long_prop(Preferences.DEBUG);
+        byte[] last_4 = new byte[4];
+        
+        
+        int rlen = 0;
+        while (!finished && m_error <= 0)
+        {
+            try
+            {
+
+                // verify if the user stopped the thread
+                if (m_Stop)
+                {
+                    return 1;
+                }
+                       
+                // WAIT FOR DATA, WE ARE TOO FAST
+                maxwait = 10;
+                while (avail == 0 && maxwait > 0)
+                {
+                    try 
+                    {
+                        avail = Reader.available();
+                    }
+                    catch (Exception exc)
+                    {
+                    }
+                    if (avail > 0)
+                        break;
+                    Main.sleep(1000);
+                    maxwait--;
+                }
+                
+                
+                if (avail > buffer.length + END_OF_MULTILINE.length)
+                {
+                    rlen = Reader.read(buffer);
+                    if (dgb_level > 3)
+                    {
+                        log(4, new String(buffer, 0, rlen));
+                    }
+                    
+                }
+                else
+                {
+                    if (avail > END_OF_MULTILINE.length)
+                    {
+                        rlen = Reader.read(buffer, 0, avail - END_OF_MULTILINE.length);
+                        if (dgb_level > 3)
+                        {
+                            log(4, new String(buffer, 0, rlen));
+                        }                        
+                    }
+                    else
+                    {
+                        rlen = Reader.read(buffer, 0, avail);
+                        if (dgb_level > 3)
+                            log( 4, new String( buffer, 0, rlen ) );
+                        
+                        if (rlen < END_OF_MULTILINE.length)
+                        {
+                            String str = new String( last_4 );
+                            str += new String( buffer, 0, rlen );
+                            if (has_multi_eol(str.getBytes(), str.length()))
+                            {
+                                finished = true;
+                            }
+                        }
+                        if (!finished && rlen < END_OF_MULTILINE.length)
+                        {
+                            log(1, "Gathering slow data");
+                            // WAIT FOR ANY REMAINING DATA
+                            Main.sleep(5000);
+                            avail = Reader.available();
+                            
+                            while (avail > 0 && (rlen + avail) <= buffer.length)
+                            {
+                                rlen += Reader.read(buffer, rlen, avail);
+                                if (dgb_level > 3)
+                                    log( 4, new String( buffer, 0, rlen ) );
+                                
+                                Main.sleep(2000);
+                                avail = Reader.available();
+                            }
+
+                            // CHECK IF NO DATA AND NO MEOL
+                            if (avail == 0 && !has_multi_eol( buffer, rlen ))
+                            {
+                                log(1,"Protokoll Error in get_multiline_proxy_data, rlen:" + rlen + " avail:" + avail + " stillalavail:" + Reader.available() );
+                                m_error = ERROR_UNKNOWN;
+                                return m_error;                                
+                            }
+                        }
+                    }
+                }
+
+                avail = Reader.available();
+                
+                if (rlen == END_OF_MULTILINE.length)
+                {
+                    int i = 0;
+                    for (i = 0; i < END_OF_MULTILINE.length; i++)
+                    {
+                        if (buffer[i] != END_OF_MULTILINE[i])
+                            break;
+                    }
+                    if ( i == END_OF_MULTILINE.length)
+                        finished = true;
+                }
+                  
+
+                if (rlen > 0)
+                {              
+                    
+                    // SAVE LAST 4 BYTE
+                    int start_idx = 0;
+                    if (rlen > 4)
+                    {
+                        start_idx = rlen - 4;
+                    }
+                        
+                    for (int i = start_idx; i < rlen; i++)
+                    {
+                        last_4[i - start_idx] = buffer[i];
+                    }
+                            
+                    
+                    Writer.write(buffer, 0, rlen);
+                    
+                  
+                    if (finished)
+                    {
+                        Writer.flush();
+                    }
+
+                    if (bos != null)
+                    {
+                        try
+                        {
+                            bos.write(buffer, 0, rlen);
+                        }
+                        catch (Exception exc)
+                        {
+                            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+
+                            // CLOSE AND INVALIDATE STREAM
+                            try
+                            {
+                                bos.close();
+                                
+                            }
+                            catch (Exception exce)
+                            {
+                            }
+                            finally
+                            {
+                                if (rfc_dump.exists())
+                                    rfc_dump.delete();
+                            }
+
+                            bos = null;
+                            
+
+                            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+                            {
+                                m_error = ERROR_UNKNOWN;
+                                return m_error;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                     m_error = ERROR_NO_ANSWER;
+                     return m_error;
+                }
+
+                try
+                {
+                    // return to the normal timeout (faster answer)
+                    if (m_retries > 0)
+                    {
+                        m_retries = 0;
+                        clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);    
+                        serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Main.err_log(ex.getMessage());
+                }
+
+            }
+            catch (SocketTimeoutException ste)
+            {
+                /////////////////////
+                // timeout triggered
+                /////////////////////
+
+                if (rlen == 0)
+                {
+                    // the max quantity of retries was reached
+                    // without answer
+                    if (m_retries == SOCKET_TIMEOUT.length - 1)
+                    {
+                        m_error = ERROR_TIMEOUT_EXCEEDED;
+                    }
+                    else
+                    {
+                        // we try again to read a message recursively
+                        m_retries++;
+                        try
+                        {
+                            clientSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
+                            serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
+                        }
+                        catch (Exception exc)
+                        {
+                        }
+                        log(1, "Timeout. Trying again [" + m_retries + "]");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // reader failed
+                m_error = ERROR_UNKNOWN;
+                Main.err_log(e.getMessage());
+            }
+        }
+        
+        if (finished)
+        {
+            return 0;
+        }
+        
+        if (m_error > 0)
+            return m_error;
+        
+        return -1;
+
+    }
     
 
 }

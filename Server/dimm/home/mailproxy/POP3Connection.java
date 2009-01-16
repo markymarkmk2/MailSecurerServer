@@ -230,7 +230,7 @@ public class POP3Connection extends MailConnection
         {
             Main.err_log(e.getMessage());
         }
-        log( "Finished" );
+        log(2, "Finished" );
     }  // handleConnection
 
 
@@ -251,11 +251,6 @@ public class POP3Connection extends MailConnection
 
     private int RETRBYTE(FileWriter trace_writer)
     {
-        // GET ACCEPT ANSWER FROM SERVER
-
-        // NOW MOVE DATA FROM SMTP-CLIENT TO SERVER 
-	boolean finished = false;
-        
 
         File rfc_dump = new File(Main.RFC_PATH + "pop3_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
@@ -271,279 +266,35 @@ public class POP3Connection extends MailConnection
             }
         }
         
-        int rlen = 0;
-        final int MAX_BUF = 2048;  						// buffer 8 Kb
-        byte buffer[] = new byte[MAX_BUF];			// buffer array
 
-        int avail = 0;
+        int ret = get_multiline_proxy_data(serverReader, clientWriter,  rfc_dump, bos);
         
-        // WAIT TEN SECONDS (100*100ms) FOR DATA
-        int maxwait = 100;
-        while (avail == 0 && maxwait > 0)
+        // CLOSE STREAM
+        try
         {
-            try 
+            bos.close();
+
+            if (ret == 0)
             {
-                avail = serverReader.available();
-            }
-            catch (Exception exc)
-            {
-            }
-            if (avail > 0)
-                break;
-            Main.sleep(100);
-            maxwait--;
-        }
-        
-        if (maxwait <= 0)
-            log(1,"Timeout while waiting for Server" );
-        
-        long dgb_level = Main.get_long_prop(Preferences.DEBUG);
-        
-        while (!finished && m_error <= 0)
-        {
-            try 
-            {
-                // verify if the user stopped the thread
-                if (m_Stop)	
-                    return 1;
-                
-                
-                // WAIT FOR DATA, WE ARE TOO FAST
-                maxwait = 10;
-                while (avail == 0 && maxwait > 0)
-                {
-                    try 
-                    {
-                        avail = serverReader.available();
-                    }
-                    catch (Exception exc)
-                    {
-                    }
-                    if (avail > 0)
-                        break;
-                    Main.sleep(1000);
-                    maxwait--;
-                }
-                
-                
-                if (avail > buffer.length + END_OF_MULTILINE.length)
-                {
-                    rlen = serverReader.read(buffer);
-                    if (dgb_level > 3)
-                        log( 4, new String( buffer ) );
-                }
-                else
-                {
-                    if (avail > END_OF_MULTILINE.length)
-                    {
-                        rlen = serverReader.read(buffer, 0, avail - END_OF_MULTILINE.length);
-                    if (dgb_level > 3)
-                        log( 4, new String( buffer ) );
-                    }
-                    else
-                    {
-                        // NOW WE SHOULD ONLY GET THE REST OF THE MULTILINE ANSWER, THIS SHOULD BE 5 BYTE
-                        rlen = serverReader.read(buffer, 0, avail);
-                        if (dgb_level > 3)
-                            log( 4, new String( buffer ) );
-                        
-                        if (rlen < END_OF_MULTILINE.length)
-                        {
-                            log(1,"Gathering slow data");
-                            // WAIT FOR ANY REMAINING DATA
-                            Main.sleep(5000);
-                            avail = serverReader.available();
-                            
-                            while (avail > 0 && (rlen + avail) <= buffer.length)
-                            {
-                                rlen += serverReader.read(buffer, rlen, avail);
-                                if (dgb_level > 3)
-                                    log( 4, new String( buffer ) );
-                                
-                                Main.sleep(2000);
-                                avail = serverReader.available();
-                            }
-                                
-                            if (rlen != END_OF_MULTILINE.length && avail == 0)
-                            {
-                                log(1,"Protokoll Error in RETRBYTE, rlen:" + rlen + " avail:" + avail + " stillalavail:" + serverReader.available() );
-                                m_error = ERROR_UNKNOWN;
-                                return m_error;                                
-                            }
-                        }
-                    }
-                }
-                
-                avail = serverReader.available();
-
-                // IF NO MORE DATA IN BUFFER, WE CHECK FOR MEOL
-                if (avail == 0)
-                {
-                    if (has_multi_eol( buffer, rlen ))
-                        finished = true;
-                }
-                
-                if (rlen > 0)
-                {     
-                    if (trace_writer != null)
-                    {
-                        String data = new String( buffer, 0, rlen );
-                        trace_writer.write(data, 0, rlen);
-                    }
-                    
-                    clientWriter.write(buffer, 0, rlen);
-                                      
-                    if (finished)
-                    {
-                        clientWriter.flush();
-                    }                
-                    
-                    if (bos != null)
-                    {
-                        try
-                        {
-                            bos.write(buffer, 0, rlen);
-                        }
-                        catch (Exception exc)
-                        {
-                            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
-
-                            // CLOSE AND INVALIDATE STREAM
-                            try
-                            {
-                                bos.close();
-                                
-                            }
-                            catch (Exception exce)
-                            {
-                            }
-                            finally
-                            {
-                                if (rfc_dump.exists())
-                                    rfc_dump.delete();
-                            }
-
-                            bos = null;
-                            
-
-                            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
-                            {
-                                m_error = ERROR_UNKNOWN;
-                                return m_error;
-                            }
-                        }
-                    }
-                    
-                }
-                else
-                {
-                    
-                    if (bos != null)
-                    {
-                        try
-                        {
-                            bos.close();
-                        }
-                        catch (Exception exce)
-                        {
-                        }
-                        finally
-                        {
-                            if (rfc_dump.exists())
-                                rfc_dump.delete();
-                        }                        
-                    }
-                    
-                    m_error = ERROR_NO_ANSWER;
-                    return m_error;
-                }
-                
-                try 
-                {
-                    // return to the normal timeout (faster answer)
-                    if (m_retries>0)
-                    {
-                        m_retries=0;
-                        serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-                    }
-                }
-                catch (Exception ex) 
-                {
-                    Main.err_log(ex.getMessage());
-                }
-                
-            } 
-            catch (SocketTimeoutException ste) 
-            {
-                /////////////////////
-                // timeout triggered
-                /////////////////////
-
-                if (rlen == 0)
-                {
-                    // the max quantity of retries was reached
-                    // without answer
-                     if(m_retries==SOCKET_TIMEOUT.length -1)
-                     {
-                        m_error = ERROR_TIMEOUT_EXCEEDED;
-                     }
-                     else
-                     {
-                         // we try again to read a message recursively
-                         m_retries++;
-                         try
-                         {
-                            serverSocket.setSoTimeout(SOCKET_TIMEOUT[m_retries]);
-                         }
-                         catch (Exception exc)
-                         {}
-                         log(1, "POP3 timeout. Trying again [" + m_retries + "]");
-                     }
-                }
+                Main.get_control().get_mail_archiver().add_rfc_file( rfc_dump );
             }  
-            catch (Exception e) 
-            {
-                // reader failed
-                m_error = ERROR_UNKNOWN;
-                Main.err_log(e.getMessage());
-            }            
-        }	
-        
-        if (bos != null)
-        {
-            // CLOSE STREAM
-            try
-            {
-                bos.flush();
-                bos.close();
-                
-                if (finished)
-                {
-                    Main.get_control().get_mail_archiver().add_rfc_file( rfc_dump );
-                }            
+            else
+            {                
+                rfc_dump.delete();
             }
-            catch (Exception exc)
-            {
-                long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+        }
+        catch (Exception exc)
+        {
+            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+            Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
-                if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
-                {
-                    m_error = ERROR_UNKNOWN;
-                    return m_error;
-                }
+            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+            {
+                m_error = ERROR_UNKNOWN;
+                return m_error;
             }
         }
-        
-        if (finished)
-        {
-            return 0;
-        }
-        if (m_error > 0)
-            return m_error;
-        
-        return -1;
+        return ret;
 
     }
 
