@@ -68,7 +68,7 @@ public class ParameterRawDlg extends javax.swing.JDialog
     {
         if (!warned)
         {
-            parent.errm_ok("Bitte setzen Sie keine Variablen ohne deren Bedeutung zu kennen, Sie k�nnten die Funktionn der Box gef�hrden!");
+            parent.errm_ok("Bitte setzen Sie keine Variablen ohne deren Bedeutung zu kennen, Sie könnten die Funktion der Box gefährden!");
             warned = true;
             return;
         }

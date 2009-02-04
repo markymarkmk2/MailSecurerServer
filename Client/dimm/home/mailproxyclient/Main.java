@@ -25,6 +25,7 @@ public class Main
     
     public static boolean scan_local = false;
     public static boolean enable_admin = false;
+    public static boolean enable_console = false;
     
     public static final String PREFS_PATH = "";
     
@@ -136,6 +137,8 @@ public class Main
             {
                 fixed_ip = args[i+1];
             }     
+            if (args[i].compareTo("-c") == 0)
+                enable_console = true;
             
         }
         MainFrame frm = new MainFrame(true, true, fixed_ip);

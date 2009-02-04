@@ -78,6 +78,11 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
 
         initComponents();
         
+        if (!Main.enable_console)
+        {
+            this.MUI_SHELL.setVisible(false);
+        }
+        
         File icf = new File ("logo.png");
         if (icf.exists())
         {
@@ -86,11 +91,11 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             LB_ICON.setIcon( ic);
             pack();
         }
-        else
+/*        else
         {
             LB_ICON.setVisible(false);
         }
-       
+  */     
         if (is_udp)
         {
             BT_NEW_IP.setVisible( false );
@@ -392,6 +397,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
         });
 
         LB_ICON.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        LB_ICON.setIcon(new javax.swing.ImageIcon(getClass().getResource("/dimm/home/mailproxyclient/logo.png"))); // NOI18N
         LB_ICON.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         LB_ICON.setIconTextGap(0);
 
@@ -419,7 +425,7 @@ public class MainFrame extends javax.swing.JFrame implements CommContainer
             jPanel1Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
             .add(org.jdesktop.layout.GroupLayout.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .add(LB_ICON, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, 2, Short.MAX_VALUE)
+                .add(LB_ICON, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.UNRELATED)
                 .add(jLabel1)
                 .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
