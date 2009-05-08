@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 28.04.2009 17:09:44 by Hibernate Tools 3.2.1.GA -->
+<hibernate-mapping>
+  <class name="dimm.home.hibernate.Milter" schema="public" table="milter">
+    <id name="id" type="int">
+      <column name="id"/>
+      <generator class="assigned"/>
+    </id>
+    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
+      <column name="da_id"/>
+    </many-to-one>
+    <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
+      <column name="mid"/>
+    </many-to-one>
+    <property name="inServer" type="string">
+      <column name="in_server"/>
+    </property>
+    <property name="inPort" type="java.lang.Integer">
+      <column name="in_port"/>
+    </property>
+    <property name="outServer" type="string">
+      <column name="out_server"/>
+    </property>
+    <property name="outPort" type="java.lang.Integer">
+      <column name="out_port"/>
+    </property>
+    <property name="type" type="string">
+      <column length="80" name="type"/>
+    </property>
+    <property name="flags" type="string">
+      <column name="flags"/>
+    </property>
+  </class>
+</hibernate-mapping>

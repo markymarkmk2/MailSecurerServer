@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 28.04.2009 17:09:44 by Hibernate Tools 3.2.1.GA -->
+<hibernate-mapping>
+  <class name="dimm.home.hibernate.DiskSpace" schema="public" table="disk_space">
+    <id name="id" type="int">
+      <column name="id"/>
+      <generator class="assigned"/>
+    </id>
+    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
+      <column name="da_id" not-null="true"/>
+    </many-to-one>
+    <property name="path" type="string">
+      <column name="path" not-null="true"/>
+    </property>
+    <property name="maxCapacity" type="string">
+      <column length="80" name="max_capacity">
+        <comment>Size in kB, MB, GB, TB etc</comment>
+      </column>
+    </property>
+  </class>
+</hibernate-mapping>

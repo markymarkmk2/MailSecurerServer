@@ -19,7 +19,7 @@ import java.sql.Statement;
 
 /**
  *
- * @author mw
+ * @author http://www.pornotubia.com/videos/
  */
 public class JDBCTest extends javax.swing.JFrame
 {
