@@ -5,69 +5,29 @@
 
 package dimm.home.importmail;
 
-import dimm.home.hibernate.Proxy;
-import dimm.home.mail.RFCMail;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Preferences;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.concurrent.Semaphore;
 
 /**
  *
  * @author mw
  */
-public abstract class ProxyConnection  extends GenericImport  implements ImportMail
+public abstract class ProxyConnection
 {
-    Proxy proxy;
 
-    @Override
-    public ArrayList<RFCMail> get_mail()
-    {
-        return null;
-    }
-
-    @Override
-    public boolean exists_mails()
-    {
-        return false;
-    }
-
-    @Override
-    public boolean read_data( Object hibernate_data )
-    {
-        if (!(hibernate_data instanceof Proxy))
-            return false;
-        proxy = (Proxy)hibernate_data;
-        return true;
-    }
-
-    @Override
-    public void notify_control()
-    {
-    }
-
-    private int instanceCnt;
-
-    public int getInstanceCnt()
-    {
-        return instanceCnt;
-    }
-    public void incInstanceCnt()
-    {
-        instanceCnt++;
-    }
-    public void decInstanceCnt()
-    {
-        instanceCnt--;
-    }
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
 
     static final int SOCKET_TIMEOUT[] = {60000, 60000};
@@ -123,22 +83,18 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
     abstract String[] get_single_line_commands();
     abstract String[] get_multi_line_commands();
     abstract public int get_default_port();
-    abstract public String getProtokollStr();
 
     static final Semaphore mtx = new Semaphore(MAX_THREADS);
 
-    //ProxyEntry pe;
-    /*
-    MailConnection(ProxyEntry _pe)
-    { */
-//        pe = _pe;
-  /*      m_host = pe.getHost();
-        m_RemotePort = pe.getRemotePort();
-    */   /*
+    ProxyEntry pe;
+
+    ProxyConnection(ProxyEntry _pe)
+    {
+        pe = _pe;
         m_Stop = false;
         m_error = -1;
         m_Command = -1;
-    }    */
+    }
 
     public boolean is_connected()
     {
@@ -193,7 +149,7 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
         {
             inc_thread_count();
             this_thread_id = get_thread_count();
-            incInstanceCnt();
+            pe.incInstanceCnt();
         }
 
         log(2, "Opening Connection");
@@ -204,7 +160,7 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
             synchronized (mtx)
             {
                 dec_thread_count();
-                decInstanceCnt();
+                pe.decInstanceCnt();
             }
         }
         else
@@ -222,7 +178,7 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
                     synchronized (mtx)
                     {
                         dec_thread_count();
-                        decInstanceCnt();
+                        pe.decInstanceCnt();
                     }
                 }
             };
@@ -272,7 +228,7 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
 
         } catch (IOException iex)
         {
-            Main.err_log(iex.getMessage());
+            LogManager.err_log("Error while closing ProxyConnection", iex);
         }
 
     }
@@ -356,14 +312,14 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(2, getProtokollStr() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(2, pe.getProtokoll() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
 
-        Main.debug_msg(dbg, getProtokollStr() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(dbg, pe.getProtokoll() + " " + this.this_thread_id + ": " + txt);
     }
 
 
@@ -862,48 +818,6 @@ public abstract class ProxyConnection  extends GenericImport  implements ImportM
 
     }
 
-    public BufferedOutputStream get_rfc_stream( File rfc_dump)
-    {
-
-        BufferedOutputStream bos = null;
-        try
-        {
-            if (rfc_dump.exists())
-            {
-                Main.err_log_warn("Removing existing rfc_dump file " + rfc_dump.getName());
-                rfc_dump.delete();
-            }
-
-            FileOutputStream fos = new FileOutputStream(rfc_dump);
-            bos = new BufferedOutputStream(fos);
-
-            rfc_dump.getFreeSpace();
-        }
-        catch (Exception exc)
-        {
-            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-            Main.err_log_fatal("Cannot open rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
-
-            try
-            {
-                if (bos != null)
-                {
-                    bos.close();
-                }
-                if (rfc_dump != null && rfc_dump.exists())
-                {
-                    rfc_dump.delete();
-                }
-            }
-            catch (Exception exce)
-            {
-            }
-            bos = null;
-
-        }
-        return bos;
-    }
-
-
 
 }
+

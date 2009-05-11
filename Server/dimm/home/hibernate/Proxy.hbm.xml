@@ -13,20 +13,20 @@
     <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
       <column name="mid"/>
     </many-to-one>
-    <property name="inServer" type="string">
-      <column name="in_server"/>
+    <property name="localServer" type="string">
+      <column name="local_server"/>
     </property>
-    <property name="inPort" type="java.lang.Integer">
-      <column name="in_port"/>
+    <property name="localPort" type="java.lang.Integer">
+      <column name="local_port"/>
     </property>
-    <property name="outServer" type="string">
-      <column name="out_server"/>
+    <property name="remoteServer" type="string">
+      <column name="remote_server"/>
     </property>
-    <property name="outPort" type="java.lang.Integer">
-      <column name="out_port"/>
+    <property name="remotePort" type="java.lang.Integer">
+      <column name="remote_port"/>
     </property>
-    <property name="type" type="string">
-      <column length="80" name="type"/>
+    <property name="protokoll" type="string">
+      <column length="80" name="protokoll"/>
     </property>
     <property name="flags" type="string">
       <column name="flags"/>

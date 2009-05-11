@@ -1,4 +1,4 @@
-package dimm.home.mailarchiv;
+package dimm.home.workers;
 
 /**
  * MailProxyServer - POP3 Proxy Server for Spam Assassin.
@@ -10,18 +10,22 @@ package dimm.home.mailarchiv;
  * @author Jocca Jocaf
  *
  */
+import dimm.home.hibernate.Proxy;
+import dimm.home.importmail.SMTPConnection;
+import dimm.home.importmail.POP3Connection;
+import dimm.home.importmail.ProxyConnection;
+import dimm.home.importmail.ProxyEntry;
+import dimm.home.mailarchiv.LogicControl;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import dimm.home.mailarchiv.WorkerParent;
+import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
 
 
 
@@ -31,15 +35,11 @@ import java.util.StringTokenizer;
 public class MailProxyServer extends WorkerParent
 {
     public static final String NAME = "MailProxyServer";
-    private static final String PROXYFILE = "proxy_list.txt";
 
-    //private static MoreLogger logger; 				// class from log4j by Jocca Jocaf
     private static boolean m_Stop;					// stop the thread
-    		// POP3Connection
     
     ArrayList<ProxyEntry> proxy_list;
-    
-    ArrayList<MailConnection> connection_list;
+    final ArrayList<ProxyConnection> connection_list;
     
     SwingWorker idle_worker;
 
@@ -54,91 +54,28 @@ public class MailProxyServer extends WorkerParent
         super(NAME);
         
         m_Stop = false;
-        connection_list = new ArrayList<MailConnection>();
-        
-        
+        connection_list = new ArrayList<ProxyConnection>();
 
     }
     
-    static public void write_proxy_str(String txt) throws IOException
-    {
-        File f = new File( Main.PREFS_PATH + PROXYFILE );
-        
-        FileWriter fw = new FileWriter( f );
-        
-        BufferedWriter bw = new BufferedWriter( fw );
-        
-        bw.write(txt + "\n");
-
-        bw.close();                        
-    }
-    
-    static public ArrayList<ProxyEntry> read_proxy_list() throws Exception
+    public void set_proxy_list(Proxy[] proxy_array) throws Exception
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
+        // TODO:
+        // STOP OLD PROCESSES, RESTART NEW 
         
-        ArrayList<ProxyEntry> p_list = new ArrayList<ProxyEntry>();
-        
-        File f = new File( Main.PREFS_PATH + PROXYFILE );
-        
-        if (!f.exists())
+        proxy_list = new ArrayList<ProxyEntry>();
+        for (int i = 0; i < proxy_array.length; i++)
         {
-            throw new Exception("No proxy list detected, missing file " + f.getAbsolutePath() );
+            proxy_list.add( new ProxyEntry( proxy_array[i] ));
         }
-        FileReader fr = new FileReader( f );
-        
-        BufferedReader bis = new BufferedReader( fr );
-        
-        while( true )
-        {
-            
-            String line = bis.readLine();
-            if (line == null)
-                break;
-            
-            line = line.trim().toLowerCase();
-            
-            if (line.length() == 0 || line.charAt(0) == '#')
-                continue;
-            
-            StringTokenizer str = new StringTokenizer(line, " \t:,;");
-            
-            String protokoll = str.nextToken();
-            if (!protokoll.equals("pop3") && !protokoll.equals("smtp") && !protokoll.equals("imap"))
-                throw new Exception( "Invalid protokoll "  + protokoll );
-            
-            int local_port = Integer.parseInt(str.nextToken());
-            
-            String host = str.nextToken();
-            
-            int remote_port = Integer.parseInt(str.nextToken());
-
-            if (protokoll.equals("pop3"))
-            {
-                p_list.add( ProxyEntry.create_pop3_entry(host, local_port, remote_port));
-            }
-            else if (protokoll.equals("smtp"))
-            {
-                p_list.add( ProxyEntry.create_smtp_entry(host, local_port, remote_port));
-            }
-            else if (protokoll.equals("imap"))
-            {
-                p_list.add( ProxyEntry.create_imap_entry(host, local_port, remote_port));
-            }
-            else
-                throw new Exception( "Unsupported protokoll " + protokoll);            
-        }
-        bis.close();
-        
-        return p_list;
-        
     }
 
     void go_pop( ProxyEntry pe )
     {
         ServerSocket ss = null;
         
-        String host = pe.getHost();
+        String host = pe.getRemoteServer();
         int LocalPort = pe.getLocalPort();
         int RemotePort = pe.getRemotePort();
         try
@@ -214,7 +151,7 @@ public class MailProxyServer extends WorkerParent
     void go_smtp(ProxyEntry pe)
     {
         ServerSocket ss = null;
-        String host = pe.getHost();
+        String host = pe.getRemoteServer();
         int LocalPort = pe.getLocalPort();
         int RemotePort = pe.getRemotePort();
 
@@ -235,7 +172,7 @@ public class MailProxyServer extends WorkerParent
                     Socket theSocket = ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
-                    SMTPConnection m_SMTPConnection = new SMTPConnection( pe);
+                    SMTPConnection m_SMTPConnection = new SMTPConnection(pe);
                     
                     if (m_Stop)
                     {
@@ -290,91 +227,13 @@ public class MailProxyServer extends WorkerParent
 
     }  // go
 
-    
-    void go_imap( ProxyEntry pe )
-    {
-        ServerSocket ss = null;
         
-        String host = pe.getHost();
-        int LocalPort = pe.getLocalPort();
-        int RemotePort = pe.getRemotePort();
-        try
-        {
-            ss = new ServerSocket(LocalPort);
-            // 1 second timeout
-            ss.setSoTimeout(1000);
-            Main.info_msg("BettyMailProxy is running for the host 'imap://" + host +
-                    ":" + RemotePort + "' on local port " + LocalPort);
-           
-
-            while (!m_Stop)
-            {
-                try
-                {
-                    
-                    Socket theSocket = ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
-                    
-                    IMAPConnection con = new IMAPConnection( pe );
-                    
-                    if (m_Stop)
-                    {
-                        con.closeConnections();
-                        break;
-                    }
-                    
-                    synchronized(connection_list)
-                    {
-                        connection_list.add(con);
-                    }
-                    
-                    con.handleConnection(theSocket);
-
-                } catch (SocketTimeoutException ste)
-                {
-                // timeout triggered
-                // do nothing
-                }
-            }
-
-            Main.info_msg("stopping the imap proxy for host '" + host + "' on local port " + LocalPort);
-        } 
-        catch (java.net.BindException be)
-        {
-            String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
-            Main.err_log(errmsg);
-            this.setStatusTxt("Not listening, port in use");
-            this.setGoodState(false);
-            
-            //Common.showError(errmsg);
-        } 
-        catch (java.io.IOException ex)
-        {
-            Main.err_log(ex.getMessage());
-        }
-
-        // close the server connection
-        if (ss != null)
-        {
-            try
-            {
-                ss.close();
-                ss = null;
-            } catch (Exception e)
-            {
-                Main.err_log(e.getMessage());
-            }
-        }
-
-    }  // go	
-
     
     public void StopServer()
     {
         m_Stop = true;
         POP3Connection.StopServer();
         SMTPConnection.StopServer();
-        IMAPConnection.StopServer();
                 
         LogicControl.sleep(1100);
         
@@ -388,6 +247,22 @@ public class MailProxyServer extends WorkerParent
     public boolean initialize()
     {
         return true;
+    }
+
+    boolean is_pop3( Proxy pe )
+    {
+        if (pe.getProtokoll().compareTo("POP3") == 0)
+            return true;
+
+        return false;
+    }
+
+    boolean is_smtp( Proxy pe )
+    {
+        if (pe.getProtokoll().compareTo("SMTP") == 0)
+            return true;
+
+        return false;
     }
 
     
@@ -411,15 +286,13 @@ public class MailProxyServer extends WorkerParent
             
             SwingWorker worker = new SwingWorker()
             {
+                @Override
                 public Object construct()
                 {
-                   if (pe.getProtokoll() == ProxyEntry.POP3)
+                   if (is_pop3(pe))
                        go_pop( pe );
-                   else if (pe.getProtokoll() == ProxyEntry.SMTP)
+                   else if (is_smtp(pe))
                        go_smtp( pe );
-/*                   else if (pe.getProtokoll() == ProxyEntry.IMAP)
-                       go_imap( pe );
-*/
 
                     return null;
                 }
@@ -430,6 +303,7 @@ public class MailProxyServer extends WorkerParent
 
         idle_worker = new SwingWorker()
         {
+            @Override
             public Object construct()
             {
                 do_idle();
@@ -460,7 +334,7 @@ public class MailProxyServer extends WorkerParent
                 
                 for (int i = 0; i < connection_list.size(); i++)
                 {
-                    MailConnection m = connection_list.get(i);
+                    ProxyConnection m = connection_list.get(i);
                     if (!m.is_connected())
                     {
                         connection_list.remove(m);
@@ -486,11 +360,11 @@ public class MailProxyServer extends WorkerParent
         for (int i = 0; i < proxy_list.size(); i++)
         {
             ProxyEntry pe = proxy_list.get(i);
-            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokollStr());
+            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokoll());
             stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
             stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
             stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );            
-            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getHost() + "' " );
+            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );
         }
         
         return stb.toString();
@@ -499,19 +373,50 @@ public class MailProxyServer extends WorkerParent
     @Override
     public boolean check_requirements(StringBuffer sb)
     {
+        return true;
+    }
+
+    public static BufferedOutputStream get_rfc_stream( File rfc_dump)
+    {
+
+        BufferedOutputStream bos = null;
         try
         {
-            proxy_list = read_proxy_list();
+            if (rfc_dump.exists())
+            {
+                Main.err_log_warn("Removing existing rfc_dump file " + rfc_dump.getName());
+                rfc_dump.delete();
+            }
+
+            FileOutputStream fos = new FileOutputStream(rfc_dump);
+            bos = new BufferedOutputStream(fos);
+
+            rfc_dump.getFreeSpace();
         }
         catch (Exception exc)
         {
-            Main.err_log("Cannot read proxy list: " + exc.getMessage());
-            this.setStatusTxt("Proxylist is empty");
-            this.setGoodState(false);
-            
-            return false;
+            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+            Main.err_log_fatal("Cannot open rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+
+            try
+            {
+                if (bos != null)
+                {
+                    bos.close();
+                }
+                if (rfc_dump != null && rfc_dump.exists())
+                {
+                    rfc_dump.delete();
+                }
+            }
+            catch (Exception exce)
+            {
+            }
+            bos = null;
+
         }
-        return true;
+        return bos;
     }
+
 } // POP3Server
 

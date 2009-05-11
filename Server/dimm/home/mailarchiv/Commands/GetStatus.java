@@ -68,8 +68,6 @@ public class GetStatus extends AbstractCommand
         // 1. LINE GENERAL INF= AND WORKERS
         sb.append( "TIM:'" + sdf.format( new Date() ) + "' FSP:'" + fsp + "' FMY:'" + fmy + "'\n");
 
-        String proxy_status = Main.get_control().get_proxy_server().get_proxy_status_txt();
-        sb.append( proxy_status + "\n");
                         
                         
         for (int i = 0; i < list.size(); i++)

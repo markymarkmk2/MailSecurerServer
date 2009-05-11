@@ -6,6 +6,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.text.SimpleDateFormat;
@@ -52,12 +53,15 @@ public class Main
     
     public static boolean create_licensefile = false;
     public static String license_interface = "eth0";
+
+
     
     
     static void print_system_property( String key )
     {
-        info_msg("Property " + key + ": " + System.getProperty(key) );
+        LogManager.info_msg("Property " + key + ": " + System.getProperty(key) );
     }
+
     
     /** Creates a new instance of Main */
     public Main(String[] args)
@@ -333,84 +337,7 @@ public class Main
         }
     }
     
-    
-    // CAN BE CALLED FROM INSIDE SQL-WORKER
-    static void err_log_no_lock_fatal(String string)
-    {
-        log( "error.log", string );
-    }
 
-    public static void err_log_fatal(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-        
-        log( "error.log", string );
-        
-    }
-
-    public static void err_log_warn(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-        
-        log( "warn.log", string );
-    }
-
-    public static void info_msg(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-        
-        log( "info.log", string );
-    }
-    public static void debug_msg(long level,  String string)
-    {
-        long debug_level= get_debug_lvl();
-        
-        if (level <= debug_level)
-        {
-            log( "debug.log", string );
-        }
-    }
-
-    public static void err_log(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-        
-        log( "error.log", string );
-        
-    }
-    
-    
-    static SimpleDateFormat sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");    
-
-    
-    
-    static synchronized void log( String file, String s )
-    {
-        System.out.println( s );
-        
-        File log = new File( LOG_PATH + file );
-        try
-        {
-            FileWriter fw = new FileWriter( log, /*append*/ true );
-            java.util.Date now = new java.util.Date();
-            
-            fw.write( sdf.format( now ) );
-            fw.write( ": " );            
-            fw.write( s );
-            fw.write( "\n" );
-            fw.close();
-        }
-        catch ( Exception exc)
-        {
-            exc.printStackTrace();
-        }
-        
-        
-    }
 
     public static int get_station_id()
     {
@@ -502,6 +429,29 @@ public class Main
     {
         return work_dir;
     }
+
+    public static void info_msg( String string )
+    {
+        LogManager.info_msg(string);
+    }
+    public static void err_log( String string )
+    {
+        LogManager.err_log(string);
+    }
+
+    public static void err_log_fatal( String string )
+    {
+        LogManager.err_log_fatal(string);
+    }
     
+    public static void debug_msg( int i, String string )
+    {
+        LogManager.debug_msg(i, string);
+    }
+    public static void err_log_warn( String string )
+    {
+         LogManager.err_log_warn(string);
+    }
+
 
 }

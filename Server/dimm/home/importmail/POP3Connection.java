@@ -1,6 +1,7 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.*;
+import dimm.home.workers.MailProxyServer;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -9,14 +10,23 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileWriter;
+import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 
 public class POP3Connection extends ProxyConnection
 {
+
+    private static final String NAME = "POP3-Proxy";
     
     String multi_line_commands[] = {"LIST", "RETR", "UIDL", "TOP", "CAPA"};
     String single_line_commands[] = {"QUIT", "USER", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
 
-    static int thread_count = 0;    
+    static int thread_count = 0;
+
+    public POP3Connection(ProxyEntry pe)
+    {
+        super( pe );
+    }
     
     @Override
     String[] get_single_line_commands()
@@ -41,22 +51,7 @@ public class POP3Connection extends ProxyConnection
         m_Command = -1;
         
         clientSocket = _clientSocket;
-        
-        FileWriter trace_writer = null;
-        
-        if (Main.trace_mode)
-        {
-            try
-            {
-                trace_writer = new FileWriter(File.createTempFile("pop3", ".txt"));
-            }
-            catch (IOException ex)
-            {
-                Main.err_log_fatal("Cannot open trace writer" );
-                trace_writer = null;
-            }
-        }
-            
+                    
 
         try
         {
@@ -68,7 +63,7 @@ public class POP3Connection extends ProxyConnection
             clientReader = new BufferedInputStream(clientSocket.getInputStream(), clientSocket.getReceiveBufferSize());
 
             // connect to the real POP3 server
-            serverSocket = new Socket(proxy.getOutServer(), proxy.getOutPort());
+            serverSocket = new Socket(pe.getRemoteServer(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
@@ -122,8 +117,6 @@ public class POP3Connection extends ProxyConnection
 
                 log( "S: " + sData);
 
-                if (trace_writer != null)
-                    trace_writer.write(sData);
                 
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
@@ -156,8 +149,6 @@ public class POP3Connection extends ProxyConnection
                 }
 
                 log( "C: " + sData);
-                if (trace_writer != null)
-                    trace_writer.write(sData);
                 
                 while (sData.toUpperCase().startsWith("RETR "))
                 {
@@ -167,7 +158,7 @@ public class POP3Connection extends ProxyConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
-                    if (RETRBYTE( trace_writer ) > 0)
+                    if (RETRBYTE() > 0)
                     {
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();                        
@@ -181,8 +172,6 @@ public class POP3Connection extends ProxyConnection
                     
                     sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
                     log( "C: " + sData);
-                    if (trace_writer != null)
-                        trace_writer.write(sData);
 
                     
                     // verify if the user stopped the thread
@@ -217,7 +206,7 @@ public class POP3Connection extends ProxyConnection
 
         } catch (UnknownHostException uhe)
         {
-            String msgerror = "Verify that you are connected to the internet or that the POP server '" + proxy.getOutServer() + "' exists.";
+            String msgerror = "Verify that you are connected to the internet or that the POP server '" + pe.getRemoteServer() + "' exists.";
             //Common.showError(msgerror);
             Main.err_log(msgerror);
         } catch (Exception e)
@@ -228,28 +217,15 @@ public class POP3Connection extends ProxyConnection
     }  // handleConnection
 
 
-/*
-    StringBuffer processMessage(StringBuffer sData)
-    {
-        switch (m_Command)
-        {            
-            case POP_MULTILINE:
-                sData = ensureEndOfMessage(sData);
-        }
-
-        return sData;
-    }*/
-
-   
 
 
-    private int RETRBYTE(FileWriter trace_writer)
+    private int RETRBYTE()
     {
 
         File rfc_dump = new File(Main.RFC_PATH + "pop3_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = get_rfc_stream(rfc_dump);
+        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump);
 
         if (bos == null)
         {        
@@ -270,7 +246,7 @@ public class POP3Connection extends ProxyConnection
 
             if (ret == 0)
             {
-                notify_control();
+               Main.get_control().add_new_inmail( rfc_dump );
             }  
             else
             {                
@@ -292,8 +268,7 @@ public class POP3Connection extends ProxyConnection
 
     }
 
- 
-    
+     
     
    
     @Override
@@ -320,11 +295,9 @@ public class POP3Connection extends ProxyConnection
         return 110;
     }
 
-    @Override
-    public String getProtokollStr()
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+  
 
+  
+ 
 }  // POP3connection
 

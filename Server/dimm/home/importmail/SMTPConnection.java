@@ -1,6 +1,8 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.*;
+import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.workers.MailProxyServer;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -9,6 +11,7 @@ import java.net.UnknownHostException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.net.ServerSocket;
 
 /**
  * POP3Connection - Handles the POP3 connections.
@@ -20,6 +23,7 @@ import java.io.File;
  */
 public class SMTPConnection extends ProxyConnection
 {
+    private static final String NAME = "SMTP-Proxy";
     // constants
     String multi_line_commands[] = {"EHLO"};
     String single_line_commands[] = {"AUTH", "QUIT", "HELP", "MAIL", "RCPT", "RSET", "SEND", "SOML", "VRFY", "EXPN", "NOOP", "TURN"};
@@ -34,7 +38,12 @@ public class SMTPConnection extends ProxyConnection
     {
         return multi_line_commands;
     }
-    
+
+    public SMTPConnection(ProxyEntry pe)
+    {
+        super( pe );
+    }
+
     
     // variables    
     static int thread_count = 0;
@@ -45,8 +54,11 @@ public class SMTPConnection extends ProxyConnection
      * @param host Host name or IP address
      */
 
+     
+
     
    
+    @Override
     public void runConnection(Socket _clientSocket)
     {
         boolean do_quit = false;
@@ -70,12 +82,12 @@ public class SMTPConnection extends ProxyConnection
 //            clientReader = clientSocket.getInputStream();
             
             // connect to the real POP3 server
-            serverSocket = new Socket(proxy.getOutServer(), proxy.getOutPort());
+            serverSocket = new Socket(pe.getRemoteServer(), pe.getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
-            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            Main.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
+            LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+            LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
+            LogManager.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
 
             // get the server output stream
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(),
@@ -199,30 +211,18 @@ public class SMTPConnection extends ProxyConnection
         }
         catch (UnknownHostException uhe)
         {
-            String msgerror = "Verify that you are connected to the internet or that the SMTP server '" + proxy.getOutServer() + "' exists.";
+            String msgerror = "Verify that you are connected to the internet or that the SMTP server '" + pe.getRemoteServer() + "' exists.";
             //Common.showError(msgerror);
-            Main.err_log(msgerror);
+            LogManager.err_log(msgerror);
         }
         catch (Exception e)
         {
-            Main.err_log(e.getMessage());
+            LogManager.err_log(e.getMessage());
         }
         log(2, "Finished" );
         
     }  // handleConnection
 
-/*
-    StringBuffer processMessage(StringBuffer sData)
-    {
-        	switch (m_Command)
-        {
-        case SMTP_DATA:
-        sData = ensureEndOfMessage(sData);
-        }
-         
-        return sData;
-    }
-*/
     int read_line( byte buffer[] ) throws IOException
     {
                 
@@ -247,7 +247,7 @@ public class SMTPConnection extends ProxyConnection
         File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = get_rfc_stream(rfc_dump);
+        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump);
 
         if (bos == null)
         {        
@@ -268,7 +268,7 @@ public class SMTPConnection extends ProxyConnection
 
             if (ret == 0)
             {
-                notify_control();
+               Main.get_control().add_new_outmail( rfc_dump );
             }  
             else
             {                
@@ -278,7 +278,7 @@ public class SMTPConnection extends ProxyConnection
         catch (Exception exc)
         {
             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-            Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+            LogManager.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
             if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
             {
@@ -315,11 +315,8 @@ public class SMTPConnection extends ProxyConnection
         return 25;
     }
 
-    @Override
-    public String getProtokollStr()
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+ 
 
+ 
 }  // POP3connection
 

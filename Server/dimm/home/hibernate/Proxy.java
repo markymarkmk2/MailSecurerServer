@@ -12,11 +12,11 @@ public class Proxy  implements java.io.Serializable {
      private int id;
      private DiskArchive diskArchive;
      private Mandant mandant;
-     private String inServer;
-     private Integer inPort;
-     private String outServer;
-     private Integer outPort;
-     private String type;
+     private String localServer;
+     private Integer localPort;
+     private String remoteServer;
+     private Integer remotePort;
+     private String protokoll;
      private String flags;
 
     public Proxy() {
@@ -30,11 +30,11 @@ public class Proxy  implements java.io.Serializable {
        this.id = id;
        this.diskArchive = diskArchive;
        this.mandant = mandant;
-       this.inServer = inServer;
-       this.inPort = inPort;
-       this.outServer = outServer;
-       this.outPort = outPort;
-       this.type = type;
+       this.localServer = inServer;
+       this.localPort = inPort;
+       this.remoteServer = outServer;
+       this.remotePort = outPort;
+       this.protokoll = type;
        this.flags = flags;
     }
    
@@ -59,40 +59,40 @@ public class Proxy  implements java.io.Serializable {
     public void setMandant(Mandant mandant) {
         this.mandant = mandant;
     }
-    public String getInServer() {
-        return this.inServer;
+    public String getLocalServer() {
+        return this.localServer;
     }
     
-    public void setInServer(String inServer) {
-        this.inServer = inServer;
+    public void setLocalServer(String inServer) {
+        this.localServer = inServer;
     }
-    public Integer getInPort() {
-        return this.inPort;
-    }
-    
-    public void setInPort(Integer inPort) {
-        this.inPort = inPort;
-    }
-    public String getOutServer() {
-        return this.outServer;
+    public Integer getLocalPort() {
+        return this.localPort;
     }
     
-    public void setOutServer(String outServer) {
-        this.outServer = outServer;
+    public void setLocalPort(Integer inPort) {
+        this.localPort = inPort;
     }
-    public Integer getOutPort() {
-        return this.outPort;
-    }
-    
-    public void setOutPort(Integer outPort) {
-        this.outPort = outPort;
-    }
-    public String getType() {
-        return this.type;
+    public String getRemoteServer() {
+        return this.remoteServer;
     }
     
-    public void setType(String type) {
-        this.type = type;
+    public void setRemoteServer(String outServer) {
+        this.remoteServer = outServer;
+    }
+    public Integer getRemotePort() {
+        return this.remotePort;
+    }
+    
+    public void setRemotePort(Integer outPort) {
+        this.remotePort = outPort;
+    }
+    public String getProtokoll() {
+        return this.protokoll;
+    }
+    
+    public void setProtokoll(String protokoll) {
+        this.protokoll = protokoll;
     }
     public String getFlags() {
         return this.flags;

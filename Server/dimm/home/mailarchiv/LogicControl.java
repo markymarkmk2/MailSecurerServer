@@ -9,6 +9,7 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.mail.RFCMail;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.FileReader;
 import java.net.NetworkInterface;
 import java.security.MessageDigest;
@@ -34,8 +36,6 @@ public class LogicControl
 {
     Communicator comm;
     StatusDisplay sd;
-    MailArchiver ma;
-    MailProxyServer ps;
     
     ArrayList<WorkerParent> worker_list;
     
@@ -55,17 +55,27 @@ public class LogicControl
             sd = new StatusDisplay();
             worker_list.add( sd );
             
-            ma = new MailArchiver();
-            worker_list.add( ma );
-            
-            ps = new MailProxyServer();
-            worker_list.add( ps );
                                                 
         }
         catch (Exception ex)
         {
-            Main.err_log_fatal("Constructor falied: " + ex.getMessage() );
+            LogManager.err_log_fatal("Constructor failed", ex );
         }
+    }
+
+    public void add_new_inmail( File rfc_dump )
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public void add_new_outmail( File rfc_dump )
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public void add_new_outmail( RFCMail mail )
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
     }
     
     
@@ -106,7 +116,7 @@ public class LogicControl
                     FileWriter fw = new FileWriter( licfile );
                     fw.write( hexString.toString() );
                     fw.close();
-                    Main.info_msg("License file was created");
+                    LogManager.info_msg("License file was created");
                     return true;
                 }
                 else
@@ -124,7 +134,7 @@ public class LogicControl
                     if (lic_string.equals( hexString.toString() ))
                         return true;                          
 
-                    Main.err_log_fatal("Unlicensed host");
+                    LogManager.err_log_fatal("Unlicensed host");
                 }
             }
             catch (NoSuchAlgorithmException ex)
@@ -133,19 +143,19 @@ public class LogicControl
             }            
             catch (FileNotFoundException ex2)
             {
-                Main.err_log_fatal("Missing licensefile");
+                LogManager.err_log_fatal("Missing licensefile");
             }
             catch (SocketException ex3)
             {
-                Main.err_log_fatal("No network interface for licensecheck");
+                LogManager.err_log_fatal("No network interface for licensecheck");
             }
             catch (IOException ex1)
             {
-                Main.err_log_fatal("Error while reading licensefile: " + ex1.getMessage());
+                LogManager.err_log_fatal("Error while reading licensefile: " + ex1.getMessage());
             } 
             catch (Exception ex4)
             {
-                Main.err_log_fatal("Error during license check: " + ex4.getMessage());
+                LogManager.err_log_fatal("Error during license check: " + ex4.getMessage());
             }
             finally
             {
@@ -182,7 +192,7 @@ public class LogicControl
             {
                 comm.setStatusTxt( "Internet not reachable" );
                 comm.setGoodState( false );
-                Main.err_log_fatal("Cannot connect internet at startup" );        
+                LogManager.err_log_fatal("Cannot connect internet at startup" );
                
             }  
             else
@@ -207,13 +217,13 @@ public class LogicControl
                 boolean ok = worker_list.get(i).initialize();
                 if (!ok)
                 {
-                    Main.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed" );
+                    LogManager.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed" );
                 }                    
             }
             catch (Exception ex)
             {
                 // SHOULD NEVER BE RECHED
-                Main.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed : " + ex.getMessage() );
+                LogManager.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed : " + ex.getMessage() );
             }
         }                  
     }
@@ -254,13 +264,13 @@ public class LogicControl
                     if (exec.get_err_text() != null && exec.get_err_text().length() > 0)
                         err_txt += exec.get_err_text();
 
-                    Main.err_log_warn("System time cannot be retrieved: " + err_txt );     
+                    LogManager.err_log_warn("System time cannot be retrieved: " + err_txt );
                     
                     sleep(1000);
                 }
                 else
                 {
-                    Main.debug_msg(1, "Systemtime was synchronized" );
+                    LogManager.debug_msg(1, "Systemtime was synchronized" );
                     break;
                 }
             }
@@ -324,7 +334,7 @@ public class LogicControl
             {
                 if (!worker_list.get(i).start_run_loop())
                 {
-                    Main.err_log_fatal("Cannot start runloop for Worker " + worker_list.get(i).getName() );
+                    LogManager.err_log_fatal("Cannot start runloop for Worker " + worker_list.get(i).getName() );
                 }
             }
             
@@ -374,7 +384,7 @@ public class LogicControl
         }
                         
         
-        Main.info_msg("Closing down " +  Main.APPNAME);
+        LogManager.info_msg("Closing down " +  Main.APPNAME);
         System.exit(0);
     }
     
@@ -409,14 +419,6 @@ public class LogicControl
     public StatusDisplay get_status_display()
     {
         return sd;
-    }
-    public MailArchiver get_mail_archiver()
-    {
-        return ma;
-    }
-    public MailProxyServer get_proxy_server()
-    {
-        return ps;
     }
     
     WorkerParent get_worker(String name)
