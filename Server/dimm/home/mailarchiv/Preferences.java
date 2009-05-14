@@ -55,6 +55,7 @@ public class Preferences
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
     public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
     public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";
+
               
     java.util.Properties props;
 
@@ -182,6 +183,28 @@ public class Preferences
         }
         return false;
     }
-    
+
+    public String get_KeyAlgorithm()
+    {
+        return "PBEWithMD5AndDES";
+    }
+
+    // 8-byte Salt
+    static byte[] salt =
+    {
+        (byte) 0x19, (byte) 0x09, (byte) 0x58, (byte) 0x0f,
+        (byte) 'h', (byte) 'e', (byte) 'l', (byte) 'i'
+    };
+
+    // THIS IS FIXED, IF USER LOOSES THIS, DATA IS LOST FOR EVER...
+    public byte[] get_KeyPBESalt()
+    {
+        return salt;
+    }
+    public int get_KeyPBEIteration()
+    {
+        return 13;
+    }
+
     
 }
