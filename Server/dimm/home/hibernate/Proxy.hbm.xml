@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 28.04.2009 17:09:44 by Hibernate Tools 3.2.1.GA -->
+<!-- Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
   <class name="dimm.home.hibernate.Proxy" schema="public" table="proxy">
     <id name="id" type="int">
@@ -25,8 +25,8 @@
     <property name="remotePort" type="java.lang.Integer">
       <column name="remote_port"/>
     </property>
-    <property name="protokoll" type="string">
-      <column length="80" name="protokoll"/>
+    <property name="type" type="string">
+      <column length="80" name="type"/>
     </property>
     <property name="flags" type="string">
       <column name="flags"/>

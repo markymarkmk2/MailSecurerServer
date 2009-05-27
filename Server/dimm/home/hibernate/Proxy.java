@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 28.04.2009 17:09:44 by Hibernate Tools 3.2.1.GA
+// Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA
 
 
 
@@ -16,7 +16,7 @@ public class Proxy  implements java.io.Serializable {
      private Integer localPort;
      private String remoteServer;
      private Integer remotePort;
-     private String protokoll;
+     private String type;
      private String flags;
 
     public Proxy() {
@@ -26,15 +26,15 @@ public class Proxy  implements java.io.Serializable {
     public Proxy(int id) {
         this.id = id;
     }
-    public Proxy(int id, DiskArchive diskArchive, Mandant mandant, String inServer, Integer inPort, String outServer, Integer outPort, String type, String flags) {
+    public Proxy(int id, DiskArchive diskArchive, Mandant mandant, String localServer, Integer localPort, String remoteServer, Integer remotePort, String type, String flags) {
        this.id = id;
        this.diskArchive = diskArchive;
        this.mandant = mandant;
-       this.localServer = inServer;
-       this.localPort = inPort;
-       this.remoteServer = outServer;
-       this.remotePort = outPort;
-       this.protokoll = type;
+       this.localServer = localServer;
+       this.localPort = localPort;
+       this.remoteServer = remoteServer;
+       this.remotePort = remotePort;
+       this.type = type;
        this.flags = flags;
     }
    
@@ -63,36 +63,36 @@ public class Proxy  implements java.io.Serializable {
         return this.localServer;
     }
     
-    public void setLocalServer(String inServer) {
-        this.localServer = inServer;
+    public void setLocalServer(String localServer) {
+        this.localServer = localServer;
     }
     public Integer getLocalPort() {
         return this.localPort;
     }
     
-    public void setLocalPort(Integer inPort) {
-        this.localPort = inPort;
+    public void setLocalPort(Integer localPort) {
+        this.localPort = localPort;
     }
     public String getRemoteServer() {
         return this.remoteServer;
     }
     
-    public void setRemoteServer(String outServer) {
-        this.remoteServer = outServer;
+    public void setRemoteServer(String remoteServer) {
+        this.remoteServer = remoteServer;
     }
     public Integer getRemotePort() {
         return this.remotePort;
     }
     
-    public void setRemotePort(Integer outPort) {
-        this.remotePort = outPort;
+    public void setRemotePort(Integer remotePort) {
+        this.remotePort = remotePort;
     }
-    public String getProtokoll() {
-        return this.protokoll;
+    public String getType() {
+        return this.type;
     }
     
-    public void setProtokoll(String protokoll) {
-        this.protokoll = protokoll;
+    public void setType(String type) {
+        this.type = type;
     }
     public String getFlags() {
         return this.flags;

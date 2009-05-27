@@ -152,7 +152,7 @@ public abstract class ProxyConnection
             pe.incInstanceCnt();
         }
 
-        log(2, "Opening Connection");
+        log(2, Main.Txt("Opening_Connection"));
 
         if (get_thread_count() > MAX_THREADS)
         {
@@ -191,7 +191,7 @@ public abstract class ProxyConnection
     public void closeConnections()
     {
         // close the connections
-        log(2, "Closing Connection");
+        log(2, Main.Txt("Closing_Connection"));
         try
         {
             if (serverWriter != null)
@@ -228,7 +228,7 @@ public abstract class ProxyConnection
 
         } catch (IOException iex)
         {
-            LogManager.err_log("Error while closing ProxyConnection", iex);
+            LogManager.err_log(Main.Txt("Error_while_closing_ProxyConnection"), iex);
         }
 
     }
@@ -247,7 +247,7 @@ public abstract class ProxyConnection
         }
         if ( i == END_OF_LINE.length)
         {
-            log( 4, "Detected EOL" );
+            log( 4, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -268,7 +268,7 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_LINE.length)
         {
-            log( 4, "Detected EOL" );
+            log( 4, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -289,7 +289,7 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_MULTILINE.length)
         {
-            log( 4, "Detected MEOL" );
+            log( 4, Main.Txt("Detected_MEOL") );
             return true;
         }
 
@@ -301,7 +301,7 @@ public abstract class ProxyConnection
         {
             if (sData.substring(0,4).toUpperCase().compareTo("QUIT") == 0)
             {
-                log( 4, "Detected QUIT" );
+                log( 4, Main.Txt("Detected_QUIT") );
                 return true;
             }
         }
@@ -312,14 +312,14 @@ public abstract class ProxyConnection
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(2, pe.getProtokoll() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(2, pe.getType() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
 
-        Main.debug_msg(dbg, pe.getProtokoll() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(dbg, pe.getType() + " " + this.this_thread_id + ": " + txt);
     }
 
 
@@ -359,7 +359,7 @@ public abstract class ProxyConnection
         }
 
         if (maxwait <= 0)
-            Main.err_log("Timeout while waiting for Server" );
+            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
 
         while ( !finished && m_error < 0)
         {
@@ -481,7 +481,7 @@ public abstract class ProxyConnection
                     {
                         // we try again to read a message recursively
                         m_retries++;
-                        log(1, "Mail timeout. Trying again [" + m_retries + "]");
+                        log(1, Main.Txt("Mail_timeout._Trying_again_[") + m_retries + "]");
                     }
                 }
                 else
@@ -504,7 +504,7 @@ public abstract class ProxyConnection
         if (!finished)
         {
             m_error = ERROR_NO_ANSWER;
-            Main.err_log("Aborted answer: " + output.toString());
+            Main.err_log(Main.Txt("Aborted_answer:_") + output.toString());
         }
 
         return output;
@@ -559,7 +559,7 @@ public abstract class ProxyConnection
         }
 
         if (maxwait <= 0)
-            Main.err_log("Timeout while waiting for Server" );
+            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
 
         long dgb_level = Main.get_long_prop(Preferences.DEBUG);
         byte[] last_4 = new byte[4];
@@ -632,7 +632,7 @@ public abstract class ProxyConnection
 
                         if (!finished && rlen < END_OF_MULTILINE.length)
                         {
-                            log(1, "Gathering slow data");
+                            log(1, Main.Txt("Gathering_slow_data"));
                             // WAIT FOR ANY REMAINING DATA
                             Main.sleep(5000);
                             avail = Reader.available();
@@ -653,7 +653,7 @@ public abstract class ProxyConnection
                                 String str = new String( last_4 ).substring(1);
                                 if (str.compareTo("\r\n.") == 0)
                                 {
-                                    log(1, "Detected short end of message, ignoring error");
+                                    log(1, Main.Txt("Detected_short_end_of_message,_ignoring_error"));
                                     finished = true;
                                 }
                                 else

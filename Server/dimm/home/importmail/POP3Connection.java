@@ -2,16 +2,12 @@ package dimm.home.importmail;
 
 import dimm.home.mailarchiv.*;
 import dimm.home.workers.MailProxyServer;
-import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileWriter;
-import java.net.ServerSocket;
-import java.net.SocketTimeoutException;
 
 public class POP3Connection extends ProxyConnection
 {
@@ -86,7 +82,7 @@ public class POP3Connection extends ProxyConnection
             {
 
                 // read the answer from the server
-                log( 3, "Waiting for Server...");
+                log( 3, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -131,7 +127,7 @@ public class POP3Connection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 3, "Waiting for Client...");
+                log( 3, Main.Txt("Waiting_for_Client..."));
                 
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
@@ -206,14 +202,14 @@ public class POP3Connection extends ProxyConnection
 
         } catch (UnknownHostException uhe)
         {
-            String msgerror = "Verify that you are connected to the internet or that the POP server '" + pe.getRemoteServer() + "' exists.";
+            String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.getRemoteServer() + Main.Txt("'_exists.");
             //Common.showError(msgerror);
             Main.err_log(msgerror);
         } catch (Exception e)
         {
             Main.err_log(e.getMessage());
         }
-        log(2, "Finished" );
+        log(2, Main.Txt("Finished") );
     }  // handleConnection
 
 
@@ -246,7 +242,7 @@ public class POP3Connection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_new_inmail( rfc_dump );
+               Main.get_control().add_new_inmail( rfc_dump, pe.getMandant(), pe.getDiskArchive() );
             }  
             else
             {                

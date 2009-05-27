@@ -12,7 +12,8 @@ import com.sendmail.jilter.JilterHandler;
 
 import com.sendmail.jilter.JilterHandlerAdapter;
 import com.sendmail.jilter.JilterProcessor;
-import dimm.home.mail.RFCMail;
+import dimm.home.hibernate.Milter;
+import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.ByteArrayInputStream;
@@ -81,33 +82,33 @@ class ServerRunnable implements Runnable
             while (this.processor.process(this.socket, (ByteBuffer) dataBuffer.flip()))
             {
                 dataBuffer.compact();
-                LogManager.debug("Going to read");
+                LogManager.debug(Main.Txt("Going_to_read"));
                 if (this.socket.read(dataBuffer) == -1)
                 {
-                    LogManager.debug("socket reports EOF, exiting read loop");
+                    LogManager.debug(Main.Txt("socket_reports_EOF,_exiting_read_loop"));
                     break;
                 }
-                LogManager.debug("Back from read");
+                LogManager.debug(Main.Txt("Back_from_read"));
             }
         }
         catch (IOException e)
         {
-            LogManager.debug("Unexpected exception, connection will be closed", e);
+            LogManager.debug(Main.Txt("Unexpected_exception,_connection_will_be_closed"), e);
         }
         finally
         {
-            LogManager.debug("Closing processor");
+            LogManager.debug(Main.Txt("Closing_processor"));
             this.processor.close();
-            LogManager.debug("Processor closed");
+            LogManager.debug(Main.Txt("Processor_closed"));
             try
             {
-                LogManager.debug("Closing socket");
+                LogManager.debug(Main.Txt("Closing_socket"));
                 this.socket.close();
-                LogManager.debug("Socket closed");
+                LogManager.debug(Main.Txt("Socket_closed"));
             }
             catch (IOException e)
             {
-                LogManager.debug("Unexpected exception", e);
+                LogManager.debug(Main.Txt("Unexpected_exception"), e);
             }
         }
         is_finished = true;
@@ -128,10 +129,13 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     StringBuffer header_sb;
     String connect_host;
     ByteArrayOutputStream out_stream;
+    Milter milter;
 
 
-    public MailImportJilterHandler()
+    public MailImportJilterHandler(Milter _milter)
     {
+        milter = _milter;
+
         initialize();
     }
     void initialize()
@@ -206,9 +210,9 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     public JilterStatus eom( JilterEOMActions eomActions, Properties properties )
     {
         ByteArrayInputStream mail_stream = new ByteArrayInputStream( out_stream.toByteArray() );
-        RFCMail mail = new RFCMail( mail_stream, this.getClass().getCanonicalName() );
+        RFCMailStream mail = new RFCMailStream( mail_stream, this.getClass().getCanonicalName() );
 
-        Main.get_control().add_new_outmail(mail);
+        Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive() );
         return JilterStatus.SMFIS_CONTINUE;
         
     }
@@ -239,11 +243,12 @@ public class MilterImporter
     InetSocketAddress adress;
 
     final ArrayList<ServerRunnable> active_milter_list;
+    Milter milter;
 
 
     private JilterHandler newHandler() throws InstantiationException, IllegalAccessException
     {
-        return new MailImportJilterHandler();
+        return new MailImportJilterHandler( milter );
     }
     public SocketAddress getSocketAddress()
     {
@@ -251,16 +256,17 @@ public class MilterImporter
     }
 
 
-    public MilterImporter( String milter_server, int milter_port)
+    public MilterImporter( Milter _milter)
         throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
     {
-        adress = new InetSocketAddress(milter_server, milter_port) ;
-        log_debug("Opening socket");
+        milter = _milter;
+        adress = new InetSocketAddress(milter.getOutServer(), milter.getOutPort()) ;
+        log_debug(Main.Txt("Opening_socket"));
         this.serverSocketChannel = ServerSocketChannel.open();
         this.serverSocketChannel.configureBlocking(true);
-        log_debug("Binding to endpoint " + adress);
+        log_debug(Main.Txt("Binding_to_endpoint_") + adress);
         this.serverSocketChannel.socket().bind(adress);
-        log_debug("Bound to " + getSocketAddress());
+        log_debug(Main.Txt("Bound_to_") + getSocketAddress());
         do_finish = false;
         active_milter_list = new ArrayList<ServerRunnable>();
     }
@@ -296,11 +302,11 @@ public class MilterImporter
 
             try
             {
-                log_debug("Going to accept");
+                log_debug(Main.Txt("Going_to_accept"));
                 connection = this.serverSocketChannel.accept();
-                log_debug("Got a connection from " + connection.socket().getInetAddress().getHostAddress());
+                log_debug(Main.Txt("Got_a_connection_from_") + connection.socket().getInetAddress().getHostAddress());
 
-                log_debug("Firing up new thread");
+                log_debug(Main.Txt("Firing_up_new_thread"));
 
                 ServerRunnable sr = new ServerRunnable( connection, newHandler() );
                 synchronized(active_milter_list)
@@ -312,19 +318,19 @@ public class MilterImporter
 
 
 
-                log_debug("Thread started");
+                log_debug(Main.Txt("Thread_started"));
             }
             catch (IOException e)
             {
-                log_debug("Unexpected exception", e);
+                log_debug(Main.Txt("Unexpected_exception"), e);
             }
             catch (InstantiationException e)
             {
-                log_debug("Unexpected exception", e);
+                log_debug(Main.Txt("Unexpected_exception"), e);
             }
             catch (IllegalAccessException e)
             {
-                log_debug("Unexpected exception", e);
+                log_debug(Main.Txt("Unexpected_exception"), e);
             }
         }
     }

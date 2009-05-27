@@ -11,12 +11,12 @@ import java.io.InputStream;
  *
  * @author mw
  */
-public class RFCMail
+public class RFCMailStream
 {
     InputStream mail_stream;
     String handler_source;
 
-    public RFCMail(InputStream _mail_stream, String _handler_source)
+    public RFCMailStream(InputStream _mail_stream, String _handler_source)
     {
         mail_stream = _mail_stream;
         handler_source = _handler_source;

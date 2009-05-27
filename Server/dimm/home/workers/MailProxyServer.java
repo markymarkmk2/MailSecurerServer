@@ -251,7 +251,7 @@ public class MailProxyServer extends WorkerParent
 
     boolean is_pop3( Proxy pe )
     {
-        if (pe.getProtokoll().compareTo("POP3") == 0)
+        if (pe.getType().compareTo("POP3") == 0)
             return true;
 
         return false;
@@ -259,7 +259,7 @@ public class MailProxyServer extends WorkerParent
 
     boolean is_smtp( Proxy pe )
     {
-        if (pe.getProtokoll().compareTo("SMTP") == 0)
+        if (pe.getType().compareTo("SMTP") == 0)
             return true;
 
         return false;
@@ -360,7 +360,7 @@ public class MailProxyServer extends WorkerParent
         for (int i = 0; i < proxy_list.size(); i++)
         {
             ProxyEntry pe = proxy_list.get(i);
-            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokoll());
+            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getType());
             stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
             stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
             stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );            

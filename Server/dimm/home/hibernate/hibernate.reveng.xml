@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE hibernate-reverse-engineering PUBLIC "-//Hibernate/Hibernate Reverse Engineering DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-reverse-engineering-3.0.dtd">
 <hibernate-reverse-engineering>
-  <schema-selection match-catalog="datavault" match-schema="public"/>
+  <schema-selection match-catalog="datavault"/>
   <table-filter match-name="account_connector"/>
   <table-filter match-name="disk_archive"/>
   <table-filter match-name="disk_space"/>
   <table-filter match-name="hotfolder"/>
+  <table-filter match-name="hotfolder_exclude"/>
   <table-filter match-name="imap_fetcher"/>
   <table-filter match-name="mail"/>
   <table-filter match-name="mail_header"/>

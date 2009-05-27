@@ -9,8 +9,8 @@
 
 package dimm.home.workers;
 
-import dimm.home.hibernate.Milter;
-import dimm.home.importmail.MilterImporter;
+import dimm.home.hibernate.Hotfolder;
+import dimm.home.importmail.HotFolderImport;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import java.util.ArrayList;
@@ -23,25 +23,25 @@ import javax.swing.Timer;
  *
  * @author Administrator
  */
-public class MilterServer extends WorkerParent
+public class HotfolderServer extends WorkerParent
 {
     
     
-    public static final String NAME = "MilterServer";
+    public static final String NAME = "HotfolderServer";
 
     
     Timer timer;
-    final ArrayList<MilterImporter> milter_list;
+    final ArrayList<HotFolderImport> hfolder_list;
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
     
     
     /** Creates a new instance of StatusDisplay */
-    public MilterServer()
+    public HotfolderServer()
     {        
         super(NAME);
-        milter_list = new ArrayList<MilterImporter>();
+        hfolder_list = new ArrayList<HotFolderImport>();
     }
     
     @Override
@@ -50,23 +50,23 @@ public class MilterServer extends WorkerParent
         return true;
     }
 
-    public void set_milter_list(Milter[] milter_array) throws Exception
+    public void set_hfolder_list(Hotfolder[] hf_array) throws Exception
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:
         // STOP OLD PROCESSES, RESTART NEW
 
-        milter_list.clear();
-        for (int i = 0; i < milter_array.length; i++)
+        hfolder_list.clear();
+        for (int i = 0; i < hf_array.length; i++)
         {
-            milter_list.add( new MilterImporter( milter_array[i] ));
+            hfolder_list.add( new HotFolderImport( hf_array[i] ) );
         }
     }
 
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting " + milter_list.size() + " milter tasks" );
+        Main.debug_msg(1, "Starting " + hfolder_list.size() + " hotfolder tasks" );
 
         if (!Main.get_control().is_licensed())
         {
@@ -77,9 +77,9 @@ public class MilterServer extends WorkerParent
 
         m_Stop = false;
 
-        for (int i = 0; i < milter_list.size(); i++)
+        for (int i = 0; i < hfolder_list.size(); i++)
         {
-            final MilterImporter pe = milter_list.get(i);
+            final HotFolderImport hf = hfolder_list.get(i);
 
             SwingWorker worker = new SwingWorker()
             {
@@ -87,7 +87,7 @@ public class MilterServer extends WorkerParent
                 public Object construct()
                 {
 
-                    pe.run_loop();
+                    hf.run_loop();
 
                     return null;
                 }
@@ -121,16 +121,16 @@ public class MilterServer extends WorkerParent
             LogicControl.sleep(1000);
 
             // CLEAN UP LIST OF FINISHED CONNECTIONS
-            synchronized(milter_list)
+            synchronized(hfolder_list)
             {
-                if ( m_Stop && milter_list.isEmpty())
+                if ( m_Stop && hfolder_list.isEmpty())
                     break;
 
 
-                for (int i = 0; i < milter_list.size(); i++)
+                for (int i = 0; i < hfolder_list.size(); i++)
                 {
-                    MilterImporter m = milter_list.get(i);
-                    m.idle_check();
+                    HotFolderImport hf = hfolder_list.get(i);
+                    hf.idle_check();
                 }
                 if (this.isGoodState())
                 {
@@ -138,10 +138,10 @@ public class MilterServer extends WorkerParent
                 }
             }
         }
-        for (int i = 0; i < milter_list.size(); i++)
+        for (int i = 0; i < hfolder_list.size(); i++)
         {
-            MilterImporter m = milter_list.get(i);
-            m.finish();
+            HotFolderImport hf = hfolder_list.get(i);
+            hf.finish();
         }
 
     }
@@ -151,11 +151,12 @@ public class MilterServer extends WorkerParent
         StringBuffer stb = new StringBuffer();
 
         // CLEAN UP LIST OF FINISHED CONNECTIONS
-        for (int i = 0; i < milter_list.size(); i++)
+        for (int i = 0; i < hfolder_list.size(); i++)
         {
-            MilterImporter pe = milter_list.get(i);
-  /*          stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokoll());
-            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
+            HotFolderImport hf = hfolder_list.get(i);
+
+            stb.append("HFST"); stb.append(i); stb.append(":"); stb.append(hf.get_status() );
+/*            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
             stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
             stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
             stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );*/

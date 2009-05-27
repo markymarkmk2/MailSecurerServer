@@ -2,19 +2,19 @@
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.MailHeader" schema="public" table="mail_header">
+  <class name="dimm.home.hibernate.HotfolderExclude" schema="public" table="hotfolder_exclude">
     <id name="id" type="int">
       <column name="id"/>
       <generator class="assigned"/>
     </id>
-    <many-to-one class="dimm.home.hibernate.Mail" fetch="select" name="mail">
-      <column name="mail_id"/>
+    <many-to-one class="dimm.home.hibernate.Hotfolder" fetch="select" name="hotfolder">
+      <column name="hf_id"/>
     </many-to-one>
-    <many-to-one class="dimm.home.hibernate.MailHeaderVariable" fetch="select" name="mailHeaderVariable">
-      <column name="var_id"/>
-    </many-to-one>
-    <property name="varValue" type="string">
-      <column name="var_value"/>
+    <property name="name" type="string">
+      <column length="256" name="name"/>
+    </property>
+    <property name="flags" type="java.lang.Integer">
+      <column name="flags"/>
     </property>
   </class>
 </hibernate-mapping>

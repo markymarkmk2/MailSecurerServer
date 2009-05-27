@@ -21,7 +21,9 @@ public class ProxyEntry extends Proxy
         setLocalServer(p.getLocalServer());
         setRemotePort(p.getRemotePort());
         setRemoteServer(p.getRemoteServer());
-        setProtokoll(p.getProtokoll());
+        setType(p.getType());
+        setMandant(p.getMandant());
+        setDiskArchive(p.getDiskArchive());
         setFlags(p.getFlags());
         instanceCnt = 0;
     }
@@ -40,7 +42,7 @@ public class ProxyEntry extends Proxy
     }
     public String getConfigLine()
     {
-        return getProtokoll() + "\t" + getLocalPort() + "\t" + getRemoteServer() + "\t" + getRemotePort() + "\n";
+        return getType() + "\t" + getLocalPort() + "\t" + getRemoteServer() + "\t" + getRemotePort() + "\n";
     }
 
 

@@ -5,7 +5,7 @@
 
 package dimm.home.importmail;
 
-import dimm.home.mail.RFCMail;
+import dimm.home.mail.RFCMailStream;
 import java.util.ArrayList;
 
 /**
@@ -15,7 +15,7 @@ import java.util.ArrayList;
 public interface ImportMail
 {
 
-    ArrayList<RFCMail> get_mail();
+    ArrayList<RFCMailStream> get_mail();
     boolean exists_mails();
     void notify_control();
 

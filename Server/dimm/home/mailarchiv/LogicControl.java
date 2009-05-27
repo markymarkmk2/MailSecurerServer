@@ -9,7 +9,9 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.mail.RFCMail;
+import dimm.home.hibernate.DiskArchive;
+import dimm.home.hibernate.Mandant;
+import dimm.home.mail.RFCMailStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -27,6 +29,7 @@ import java.net.NetworkInterface;
 import java.security.MessageDigest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.Message;
 
 /**
  *
@@ -63,18 +66,27 @@ public class LogicControl
         }
     }
 
-    public void add_new_inmail( File rfc_dump )
+    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da   )
     {
+        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public void add_new_outmail( File rfc_dump )
+    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da  )
     {
+        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public void add_new_outmail( RFCMail mail )
+    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive )
     {
+        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da  )
+    {
+        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
     

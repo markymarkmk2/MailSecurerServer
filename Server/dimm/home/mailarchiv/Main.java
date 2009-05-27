@@ -452,6 +452,10 @@ public class Main
     {
          LogManager.err_log_warn(string);
     }
+    public static String Txt(String key )
+    {
+        return key;
+    }
 
 
 }
