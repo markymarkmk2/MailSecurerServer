@@ -1,35 +1,36 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.Milter" schema="public" table="milter">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
-      <column name="da_id"/>
-    </many-to-one>
-    <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
-      <column name="mid"/>
-    </many-to-one>
-    <property name="inServer" type="string">
-      <column name="in_server"/>
-    </property>
-    <property name="inPort" type="java.lang.Integer">
-      <column name="in_port"/>
-    </property>
-    <property name="outServer" type="string">
-      <column name="out_server"/>
-    </property>
-    <property name="outPort" type="java.lang.Integer">
-      <column name="out_port"/>
-    </property>
-    <property name="type" type="string">
-      <column length="80" name="type"/>
-    </property>
-    <property name="flags" type="string">
-      <column name="flags"/>
-    </property>
-  </class>
+    <class name="dimm.home.hibernate.Milter" table="milter" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <many-to-one name="diskArchive" class="dimm.home.hibernate.DiskArchive" fetch="select">
+            <column name="da_id" />
+        </many-to-one>
+        <many-to-one name="mandant" class="dimm.home.hibernate.Mandant" fetch="select">
+            <column name="mid" />
+        </many-to-one>
+        <property name="inServer" type="string">
+            <column name="in_server" />
+        </property>
+        <property name="inPort" type="java.lang.Integer">
+            <column name="in_port" />
+        </property>
+        <property name="outServer" type="string">
+            <column name="out_server" />
+        </property>
+        <property name="outPort" type="java.lang.Integer">
+            <column name="out_port" />
+        </property>
+        <property name="type" type="string">
+            <column name="type" length="80" />
+        </property>
+        <property name="flags" type="string">
+            <column name="flags" />
+        </property>
+    </class>
 </hibernate-mapping>

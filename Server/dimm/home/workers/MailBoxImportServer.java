@@ -10,7 +10,9 @@
 package dimm.home.workers;
 
 import dimm.home.hibernate.Hotfolder;
+import dimm.home.hibernate.ImapFetcher;
 import dimm.home.importmail.HotFolderImport;
+import dimm.home.importmail.MailBoxImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import java.util.ArrayList;
@@ -23,25 +25,25 @@ import javax.swing.Timer;
  *
  * @author Administrator
  */
-public class HotfolderServer extends WorkerParent
+public class MailBoxImportServer extends WorkerParent
 {
     
     
-    public static final String NAME = "HotfolderServer";
+    public static final String NAME = "MailboxImportServer";
 
     
     Timer timer;
-    final ArrayList<HotFolderImport> hfolder_list;
+    final ArrayList<MailBoxImporter> hfolder_list;
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
     
     
     /** Creates a new instance of StatusDisplay */
-    public HotfolderServer()
+    public MailBoxImportServer()
     {        
         super(NAME);
-        hfolder_list = new ArrayList<HotFolderImport>();
+        hfolder_list = new ArrayList<MailBoxImporter>();
     }
     
     @Override
@@ -50,23 +52,23 @@ public class HotfolderServer extends WorkerParent
         return true;
     }
 
-    public void set_hfolder_list(Hotfolder[] hf_array) throws Exception
+    public void set_hfolder_list(ImapFetcher[] if_array) throws Exception
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:
         // STOP OLD PROCESSES, RESTART NEW
 
         hfolder_list.clear();
-        for (int i = 0; i < hf_array.length; i++)
+        for (int i = 0; i < if_array.length; i++)
         {
-            hfolder_list.add( new HotFolderImport( hf_array[i] ) );
+            hfolder_list.add( new MailBoxImporter( if_array[i] ) );
         }
     }
 
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting " + hfolder_list.size() + " hotfolder tasks" );
+        Main.debug_msg(1, "Starting " + hfolder_list.size() + " MailBoxImport tasks" );
 
         if (!Main.get_control().is_licensed())
         {
@@ -79,7 +81,7 @@ public class HotfolderServer extends WorkerParent
 
         for (int i = 0; i < hfolder_list.size(); i++)
         {
-            final HotFolderImport hf = hfolder_list.get(i);
+            final MailBoxImporter hf = hfolder_list.get(i);
 
             SwingWorker worker = new SwingWorker()
             {
@@ -129,7 +131,7 @@ public class HotfolderServer extends WorkerParent
 
                 for (int i = 0; i < hfolder_list.size(); i++)
                 {
-                    HotFolderImport hf = hfolder_list.get(i);
+                    MailBoxImporter hf = hfolder_list.get(i);
                     hf.idle_check();
                 }
                 if (this.isGoodState())
@@ -140,7 +142,7 @@ public class HotfolderServer extends WorkerParent
         }
         for (int i = 0; i < hfolder_list.size(); i++)
         {
-            HotFolderImport hf = hfolder_list.get(i);
+            MailBoxImporter hf = hfolder_list.get(i);
             hf.finish();
         }
 
@@ -153,7 +155,7 @@ public class HotfolderServer extends WorkerParent
         // CLEAN UP LIST OF FINISHED CONNECTIONS
         for (int i = 0; i < hfolder_list.size(); i++)
         {
-            HotFolderImport hf = hfolder_list.get(i);
+            MailBoxImporter hf = hfolder_list.get(i);
 
             stb.append("HFST"); stb.append(i); stb.append(":"); stb.append(hf.get_status_txt() );
 /*            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );

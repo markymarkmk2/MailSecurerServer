@@ -216,7 +216,8 @@ public class CryptTools
             byte[] enc = crypt( ctx, utf8, passPhrase, encrypt );
 
             // Encode bytes to base64 to get a string
-            return new sun.misc.BASE64Encoder().encode(enc);
+            return new String( Base64.encodeBase64(enc) );
+            //return new sun.misc.BASE64Encoder().encode(enc);
         }
         catch (UnsupportedEncodingException ex)
         {

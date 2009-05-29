@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA
+// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
 
 
 import java.util.HashSet;
@@ -14,7 +14,9 @@ public class DiskArchive  implements java.io.Serializable {
      private int id;
      private Mandant mandant;
      private String name;
+     private Integer flags;
      private Set<DiskSpace> diskSpaces = new HashSet<DiskSpace>(0);
+     private Set<ImapFetcher> imapFetchers = new HashSet<ImapFetcher>(0);
      private Set<Milter> milters = new HashSet<Milter>(0);
      private Set<Proxy> proxies = new HashSet<Proxy>(0);
      private Set<Hotfolder> hotfolders = new HashSet<Hotfolder>(0);
@@ -26,11 +28,13 @@ public class DiskArchive  implements java.io.Serializable {
     public DiskArchive(int id) {
         this.id = id;
     }
-    public DiskArchive(int id, Mandant mandant, String name, Set<DiskSpace> diskSpaces, Set<Milter> milters, Set<Proxy> proxies, Set<Hotfolder> hotfolders) {
+    public DiskArchive(int id, Mandant mandant, String name, Integer flags, Set<DiskSpace> diskSpaces, Set<ImapFetcher> imapFetchers, Set<Milter> milters, Set<Proxy> proxies, Set<Hotfolder> hotfolders) {
        this.id = id;
        this.mandant = mandant;
        this.name = name;
+       this.flags = flags;
        this.diskSpaces = diskSpaces;
+       this.imapFetchers = imapFetchers;
        this.milters = milters;
        this.proxies = proxies;
        this.hotfolders = hotfolders;
@@ -57,12 +61,26 @@ public class DiskArchive  implements java.io.Serializable {
     public void setName(String name) {
         this.name = name;
     }
+    public Integer getFlags() {
+        return this.flags;
+    }
+    
+    public void setFlags(Integer flags) {
+        this.flags = flags;
+    }
     public Set<DiskSpace> getDiskSpaces() {
         return this.diskSpaces;
     }
     
     public void setDiskSpaces(Set<DiskSpace> diskSpaces) {
         this.diskSpaces = diskSpaces;
+    }
+    public Set<ImapFetcher> getImapFetchers() {
+        return this.imapFetchers;
+    }
+    
+    public void setImapFetchers(Set<ImapFetcher> imapFetchers) {
+        this.imapFetchers = imapFetchers;
     }
     public Set<Milter> getMilters() {
         return this.milters;

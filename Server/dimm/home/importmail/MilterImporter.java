@@ -14,8 +14,10 @@ import com.sendmail.jilter.JilterHandlerAdapter;
 import com.sendmail.jilter.JilterProcessor;
 import dimm.home.hibernate.Milter;
 import dimm.home.mail.RFCMailStream;
+import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.WorkerParentChild;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +31,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 
@@ -211,8 +215,15 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     {
         ByteArrayInputStream mail_stream = new ByteArrayInputStream( out_stream.toByteArray() );
         RFCMailStream mail = new RFCMailStream( mail_stream, this.getClass().getCanonicalName() );
-
-        Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive() );
+        try
+        {
+            Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive());
+        }
+        catch (ArchiveMsgException ex)
+        {
+            // TODO: ARCHIVE FAILED
+            Logger.getLogger(MailImportJilterHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
         return JilterStatus.SMFIS_CONTINUE;
         
     }
@@ -236,7 +247,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     }
 }
 
-public class MilterImporter
+public class MilterImporter implements WorkerParentChild
 {
 
     private ServerSocketChannel serverSocketChannel = null;

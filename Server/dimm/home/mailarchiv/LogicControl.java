@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import dimm.home.mailarchiv.Commands.Ping;
+import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.FileReader;
@@ -66,25 +67,25 @@ public class LogicControl
         }
     }
 
-    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da   )
+    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da   ) throws ArchiveMsgException
     {
         // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da  )
+    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da  ) throws ArchiveMsgException
     {
         // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive )
+    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException
     {
         // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da  )
+    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da  ) throws ArchiveMsgException
     {
         // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
         throw new UnsupportedOperationException("Not yet implemented");

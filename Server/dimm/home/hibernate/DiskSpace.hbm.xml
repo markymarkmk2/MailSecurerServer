@@ -1,22 +1,26 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.DiskSpace" schema="public" table="disk_space">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
-      <column name="da_id" not-null="true"/>
-    </many-to-one>
-    <property name="path" type="string">
-      <column name="path" not-null="true"/>
-    </property>
-    <property name="maxCapacity" type="string">
-      <column length="80" name="max_capacity">
-        <comment>Size in kB, MB, GB, TB etc</comment>
-      </column>
-    </property>
-  </class>
+    <class name="dimm.home.hibernate.DiskSpace" table="disk_space" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <many-to-one name="diskArchive" class="dimm.home.hibernate.DiskArchive" fetch="select">
+            <column name="da_id" not-null="true" />
+        </many-to-one>
+        <property name="path" type="string">
+            <column name="path" not-null="true" />
+        </property>
+        <property name="maxCapacity" type="string">
+            <column name="max_capacity" length="80">
+                <comment>Size in kB, MB, GB, TB etc</comment>
+            </column>
+        </property>
+        <property name="flags" type="java.lang.Integer">
+            <column name="flags" />
+        </property>
+    </class>
 </hibernate-mapping>

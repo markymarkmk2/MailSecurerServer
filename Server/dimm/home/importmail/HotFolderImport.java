@@ -7,9 +7,12 @@ package dimm.home.importmail;
 import dimm.home.hibernate.Hotfolder;
 import dimm.home.hibernate.HotfolderExclude;
 import dimm.home.mail.RFCMimeMail;
+import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
+import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.ZipUtilities;
+import dimm.home.mailarchiv.WorkerParentChild;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -248,7 +251,7 @@ class DirectoryEntry
  *
  * @author mw
  */
-public class HotFolderImport
+public class HotFolderImport implements StatusHandler, WorkerParentChild
 {
 
     final Hotfolder hfolder;
@@ -274,16 +277,13 @@ public class HotFolderImport
     }
     boolean do_finish;
 
+    @Override
     public void finish()
     {
         do_finish = true;
     }
-    StatusEntry status;
-    public StatusEntry get_status()
-    {
-        return status;
-    }
 
+    @Override
     public void run_loop()
     {
 
@@ -354,6 +354,7 @@ public class HotFolderImport
         }
     }
 
+    @Override
     public void idle_check()
     {
         synchronized (hfolder)
@@ -361,7 +362,7 @@ public class HotFolderImport
         }
     }
 
-    private void handle_hotfolder_entry( DirectoryEntry entry )
+    private void handle_hotfolder_entry( DirectoryEntry entry ) throws ArchiveMsgException
     {
         File arch_file = entry.getFile();
         File zipfile = null;
@@ -400,7 +401,7 @@ public class HotFolderImport
 
     }
 
-    private boolean handle_hotfolder_file( File arch_file )
+    private boolean handle_hotfolder_file( File arch_file ) throws ArchiveMsgException
     {
         try
         {
@@ -420,6 +421,18 @@ public class HotFolderImport
         // TODO: QUARANTINE FOR FAILED OBJECTS
         return false;
         
+    }
+
+    @Override
+    public String get_status_txt()
+    {
+        return status.get_status_txt();
+    }
+
+    @Override
+    public int get_status_code()
+    {
+        return status.get_status_code();
     }
 
 }

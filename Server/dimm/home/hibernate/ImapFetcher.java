@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA
+// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
 
 
 
@@ -10,28 +10,32 @@ public class ImapFetcher  implements java.io.Serializable {
 
 
      private int id;
+     private DiskArchive diskArchive;
      private Mandant mandant;
      private String server;
      private Integer port;
-     private int daId;
-     private String flags;
+     private String username;
+     private String password;
+     private Integer flags;
 
     public ImapFetcher() {
     }
 
 	
-    public ImapFetcher(int id, Mandant mandant, String server, int daId) {
+    public ImapFetcher(int id, DiskArchive diskArchive, Mandant mandant, String server) {
         this.id = id;
+        this.diskArchive = diskArchive;
         this.mandant = mandant;
         this.server = server;
-        this.daId = daId;
     }
-    public ImapFetcher(int id, Mandant mandant, String server, Integer port, int daId, String flags) {
+    public ImapFetcher(int id, DiskArchive diskArchive, Mandant mandant, String server, Integer port, String username, String password, Integer flags) {
        this.id = id;
+       this.diskArchive = diskArchive;
        this.mandant = mandant;
        this.server = server;
        this.port = port;
-       this.daId = daId;
+       this.username = username;
+       this.password = password;
        this.flags = flags;
     }
    
@@ -41,6 +45,13 @@ public class ImapFetcher  implements java.io.Serializable {
     
     public void setId(int id) {
         this.id = id;
+    }
+    public DiskArchive getDiskArchive() {
+        return this.diskArchive;
+    }
+    
+    public void setDiskArchive(DiskArchive diskArchive) {
+        this.diskArchive = diskArchive;
     }
     public Mandant getMandant() {
         return this.mandant;
@@ -63,18 +74,25 @@ public class ImapFetcher  implements java.io.Serializable {
     public void setPort(Integer port) {
         this.port = port;
     }
-    public int getDaId() {
-        return this.daId;
+    public String getUsername() {
+        return this.username;
     }
     
-    public void setDaId(int daId) {
-        this.daId = daId;
+    public void setUsername(String username) {
+        this.username = username;
     }
-    public String getFlags() {
+    public String getPassword() {
+        return this.password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    public Integer getFlags() {
         return this.flags;
     }
     
-    public void setFlags(String flags) {
+    public void setFlags(Integer flags) {
         this.flags = flags;
     }
 

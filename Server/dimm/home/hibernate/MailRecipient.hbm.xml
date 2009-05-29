@@ -1,20 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 27.05.2009 11:16:36 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.MailRecipient" schema="public" table="mail_recipient">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <property name="mailAdress" type="string">
-      <column name="mail_adress"/>
-    </property>
-    <set inverse="true" name="mailRecipientLinks">
-      <key>
-        <column name="mr_id"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.MailRecipientLink"/>
-    </set>
-  </class>
+    <class name="dimm.home.hibernate.MailRecipient" table="mail_recipient" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <property name="mailAdress" type="string">
+            <column name="mail_adress" />
+        </property>
+        <set name="mailRecipientLinks" inverse="true">
+            <key>
+                <column name="mr_id" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.MailRecipientLink" />
+        </set>
+    </class>
 </hibernate-mapping>
