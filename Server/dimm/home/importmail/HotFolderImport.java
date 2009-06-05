@@ -410,7 +410,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
             mm.create(hfolder.getUserMailAdress(), hfolder.getUserMailAdress(), Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
             
-            Main.get_control().add_new_outmail( mm.getMsg(), hfolder.getMandant(),  hfolder.getDiskArchive() );
+            Main.get_control().add_new_outmail( mm.getMsg(), hfolder.getMandant(),  hfolder.getDiskArchive(), false );
             return true;
         }
         catch (MessagingException ex)

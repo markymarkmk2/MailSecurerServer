@@ -5,13 +5,11 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.net.ServerSocket;
 
 /**
  * POP3Connection - Handles the POP3 connections.
@@ -268,7 +266,7 @@ public class SMTPConnection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_new_outmail( rfc_dump, pe.getMandant(), pe.getDiskArchive() );
+               Main.get_control().add_new_outmail( rfc_dump, pe.getMandant(), pe.getDiskArchive(), false );
             }  
             else
             {                

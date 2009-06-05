@@ -217,7 +217,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         RFCMailStream mail = new RFCMailStream( mail_stream, this.getClass().getCanonicalName() );
         try
         {
-            Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive());
+            Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive(), false);
         }
         catch (ArchiveMsgException ex)
         {

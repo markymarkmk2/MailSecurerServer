@@ -455,7 +455,7 @@ public class MailBoxImporter implements StatusHandler, WorkerParentChild
     {
          status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
 
-         Main.get_control().add_new_outmail(message, imfetcher.getMandant(), imfetcher.getDiskArchive());
+         Main.get_control().add_new_outmail(message, imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
          
          set_msg_deleted( message );
 

@@ -51,6 +51,7 @@ public class Preferences
     public static final String PXSOCKSPORT = "ProxySocksPort";
     public static final String SERVER_SW_PATH = "SoftwareUpdateDir";
     public static final String RDATE_COMMAND = "RDateCommand";
+    public static final String TEMPFILEDIR ="TempFileDir";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
     public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
@@ -87,6 +88,7 @@ public class Preferences
         prop_names.add( SERVER_SW_PATH );
         prop_names.add( RDATE_COMMAND );
         prop_names.add( MAIL_ARCHIVA_URL );
+        prop_names.add( TEMPFILEDIR );
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
         prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );

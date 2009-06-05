@@ -25,12 +25,18 @@ import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.InputStream;
 import java.net.NetworkInterface;
 import java.security.MessageDigest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 
 /**
  *
@@ -67,28 +73,170 @@ public class LogicControl
         }
     }
 
-    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da   ) throws ArchiveMsgException
+    public void add_mail_file( InputStream mail_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
     {
-        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (mail_is == null)
+        {
+            throw new ArchiveMsgException("Mail input stream is null" );
+        }
+
     }
 
-    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da  ) throws ArchiveMsgException
+    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background  ) throws ArchiveMsgException
     {
-        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
-        throw new UnsupportedOperationException("Not yet implemented");
+        FileInputStream rfc_is;
+        try
+        {
+            rfc_is = new FileInputStream(rfc_dump);
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Mail file disappeared: " + ex.getMessage());
+        }
+        add_new_mail( rfc_is, mandant, da, background );
     }
 
-    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException
+    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background  ) throws ArchiveMsgException
     {
-        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
-        throw new UnsupportedOperationException("Not yet implemented");
+        if (background)
+        {
+            try
+            {
+                File mail_file = create_dupl_temp_file(mandant, rfc_is);
+                add_mail_file( new FileInputStream( mail_file ), mandant, da, background );
+            }
+            catch (FileNotFoundException ex)
+            {
+                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+                throw new ArchiveMsgException("Temp file disappeared: " + ex.getMessage());
+            }
+        }
+        else
+        {
+            add_mail_file( rfc_is, mandant, da, background );
+        }
     }
 
-    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da  ) throws ArchiveMsgException
+    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background  ) throws ArchiveMsgException
     {
-        // HAS TO BE SYNCHRON, WE DELETE PARTS OF THE MESSAGE AFTER THIS CALL!!!
-        throw new UnsupportedOperationException("Not yet implemented");
+        add_new_mail( rfc_dump, mandant, da, background );
+    }
+    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background  ) throws ArchiveMsgException
+    {
+        add_new_mail( rfc_dump, mandant, da, background );
+    }
+
+    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException
+    {
+        try
+        {
+            add_new_mail(msg.getInputStream(), mandant, diskArchive, background);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Message Inputstream exception: " + ex.getMessage());
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Messaging exception: " + ex.getMessage());
+        }
+    }
+
+    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background  ) throws ArchiveMsgException
+    {
+        add_new_mail(mail.getInputStream(), mandant, da, background);
+    }
+
+    public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
+    {
+        File tmp_file = null;
+        File directory = null;
+        try
+        {
+            String tmp_dir = Main.get_prop(Preferences.TEMPFILEDIR);
+            if (tmp_dir != null && tmp_dir.length() > 0)
+            {
+                directory = new File(tmp_dir);
+                if (!directory.exists())
+                {
+                    directory.mkdirs();
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            directory = null;
+        }
+        try
+        {
+            tmp_file = File.createTempFile("mlt" + mandant.getId(), ".tmp", directory);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        if (tmp_file == null)
+        {
+            try
+            {
+                tmp_file = File.createTempFile("mlt" + mandant.getId(), ".tmp", null);
+            }
+            catch (IOException ex)
+            {
+                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+                throw new ArchiveMsgException("Cannot create temp file: " + ex.getMessage());
+            }
+        }
+
+        // GET RID OF FILE ON EXIT OF JVM
+        tmp_file.deleteOnExit();
+
+        return tmp_file;
+    }
+
+    public File create_dupl_temp_file( Mandant mandant, InputStream is ) throws ArchiveMsgException
+    {
+        BufferedOutputStream bos = null;
+        byte[] buff = new byte[8192];
+
+        File tmp_file = create_temp_file(mandant);
+
+        try
+        {
+
+            BufferedInputStream bis = new BufferedInputStream(is);
+            bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+
+            while (true)
+            {
+                int rlen = bis.read(buff);
+                if (rlen == -1)
+                    break;
+
+                bos.write(buff, 0, rlen);
+            }
+
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                bos.close();
+            }
+            catch (IOException ex)
+            {
+            }
+        }
+
+        return tmp_file;
     }
     
     

@@ -21,5 +21,13 @@ public class RFCMailStream
         mail_stream = _mail_stream;
         handler_source = _handler_source;
     }
+    public InputStream getInputStream()
+    {
+        return mail_stream;
+    }
+    public String getHandlerSource()
+    {
+        return handler_source;
+    }
 
 }
