@@ -62,6 +62,14 @@ public class HotfolderServer extends WorkerParent
             hfolder_list.add( new HotFolderImport( hf_array[i] ) );
         }
     }
+    public void add_hfolder(Hotfolder hf)
+    {
+        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
+        // TODO:
+        // STOP OLD PROCESSES, RESTART NEW
+
+            hfolder_list.add( new HotFolderImport( hf ) );
+    }
 
     @Override
     public boolean start_run_loop()

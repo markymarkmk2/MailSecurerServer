@@ -55,20 +55,29 @@ public class MailProxyServer extends WorkerParent
         
         m_Stop = false;
         connection_list = new ArrayList<ProxyConnection>();
+        proxy_list = new ArrayList<ProxyEntry>();
 
     }
     
-    public void set_proxy_list(Proxy[] proxy_array) throws Exception
+    public void set_proxy_list(Proxy[] proxy_array)
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:
         // STOP OLD PROCESSES, RESTART NEW 
         
-        proxy_list = new ArrayList<ProxyEntry>();
+        proxy_list.clear();
         for (int i = 0; i < proxy_array.length; i++)
         {
             proxy_list.add( new ProxyEntry( proxy_array[i] ));
         }
+    }
+    public void add_proxy(Proxy proxy)
+    {
+        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
+        // TODO:
+        // STOP OLD PROCESSES, RESTART NEW
+
+        proxy_list.add( new ProxyEntry( proxy ));
     }
 
     void go_pop( ProxyEntry pe )

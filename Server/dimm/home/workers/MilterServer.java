@@ -13,6 +13,7 @@ import dimm.home.hibernate.Milter;
 import dimm.home.importmail.MilterImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import java.io.IOException;
 import java.util.ArrayList;
 import javax.swing.Timer;
 
@@ -50,7 +51,7 @@ public class MilterServer extends WorkerParent
         return true;
     }
 
-    public void set_milter_list(Milter[] milter_array) throws Exception
+    public void set_milter_list(Milter[] milter_array) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:
@@ -61,6 +62,14 @@ public class MilterServer extends WorkerParent
         {
             milter_list.add( new MilterImporter( milter_array[i] ));
         }
+    }
+    public void add_milter(Milter milter) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
+    {
+        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
+        // TODO:
+        // STOP OLD PROCESSES, RESTART NEW
+
+        milter_list.add( new MilterImporter( milter ));
     }
 
     @Override

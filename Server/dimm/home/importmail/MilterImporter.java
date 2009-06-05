@@ -272,13 +272,19 @@ public class MilterImporter implements WorkerParentChild
     {
         milter = _milter;
         adress = new InetSocketAddress(milter.getOutServer(), milter.getOutPort()) ;
+
         log_debug(Main.Txt("Opening_socket"));
+
         this.serverSocketChannel = ServerSocketChannel.open();
         this.serverSocketChannel.configureBlocking(true);
+
         log_debug(Main.Txt("Binding_to_endpoint_") + adress);
         this.serverSocketChannel.socket().bind(adress);
+
         log_debug(Main.Txt("Bound_to_") + getSocketAddress());
+
         do_finish = false;
+
         active_milter_list = new ArrayList<ServerRunnable>();
     }
     

@@ -8,7 +8,7 @@ package dimm.home.vault;
 import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.Mandant;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
-import javax.mail.Message;
+import java.io.File;
 
 /**
  *
@@ -16,5 +16,5 @@ import javax.mail.Message;
  */
 public interface Vault
 {
-    boolean archive_mail( Message msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException;
+    boolean archive_mail( File msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException;
 }
