@@ -18,11 +18,13 @@ import java.util.Iterator;
  */
 public class MandantContext
 {
+    private MandantPreferences prefs;
     private Mandant mandant;
     private ArrayList<Vault> vaultArray;
 
-    public MandantContext( Mandant _m )
+    public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
+        prefs = _prefs;
         mandant = _m;
         vaultArray = new ArrayList<Vault>();
     }
@@ -42,7 +44,7 @@ public class MandantContext
         while( it.hasNext() )
         {
             DiskArchive da =  it.next();
-            getVaultArray().add( new DiskVault( da ));
+            getVaultArray().add( new DiskVault( this, da ));
         }
     }
 
@@ -53,4 +55,9 @@ public class MandantContext
     {
         return vaultArray;
     }
+        public MandantPreferences getPrefs()
+    {
+        return prefs;
+    }
+
 }

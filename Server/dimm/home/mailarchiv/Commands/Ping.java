@@ -9,8 +9,8 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Preferences;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 
@@ -27,11 +27,12 @@ public class Ping extends AbstractCommand
         super("PING");
     }
 
+    @Override
     public boolean do_command(String data)
     {
         answer = "";
         
-        String server = Main.get_prop(Preferences.SERVER, Main.DEFAULTSERVER);
+        String server = Main.get_prop(GeneralPreferences.SERVER, Main.DEFAULTSERVER);
         
         if (data != null && data.length() > 0)
         {

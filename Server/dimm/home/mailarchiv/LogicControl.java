@@ -15,19 +15,19 @@ import dimm.home.hibernate.ImapFetcher;
 import dimm.home.hibernate.Mandant;
 import dimm.home.hibernate.Milter;
 import dimm.home.hibernate.Proxy;
+import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMailStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.SocketException;
-import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
@@ -38,10 +38,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.InputStream;
-import java.net.NetworkInterface;
-import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -66,11 +63,14 @@ public class LogicControl
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
-    boolean _is_licensed;
+
+    LicenseChecker lic_checker;
 
     /** Creates a new instance of LogicControl */
     public LogicControl()
     {
+        lic_checker = new LicenseChecker( Main.license_interface, Main.create_licensefile );
+
         mandanten_list = new ArrayList<MandantContext>();
         worker_list = new ArrayList<WorkerParent>();
         try
@@ -104,9 +104,9 @@ public class LogicControl
         }
     }
 
-    public void add_mandant( Mandant m )
+    public void add_mandant( MandantPreferences prefs, Mandant m )
     {
-        mandanten_list.add(new MandantContext(m));
+        mandanten_list.add(new MandantContext(prefs, m));
     }
 
     MandantContext get_m_context( Mandant m )
@@ -122,6 +122,11 @@ public class LogicControl
         return null;
     }
 
+    public boolean is_licensed()
+    {
+        return lic_checker.is_licensed();
+    }
+
     public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
     {
         // TODO: background
@@ -129,6 +134,7 @@ public class LogicControl
         {
             throw new ArchiveMsgException("Mail input file is null");
         }
+        RFCFileMail mf = new RFCFileMail( mail );
 
         MandantContext context = get_m_context(mandant);
         if (context == null)
@@ -141,7 +147,7 @@ public class LogicControl
         for (int i = 0; i < vault_list.size(); i++)
         {
             Vault vault = vault_list.get(i);
-            vault.archive_mail(mail, mandant, da);
+            vault.archive_mail(mf, context, da);
         }
     }
 
@@ -234,7 +240,7 @@ public class LogicControl
         File directory = null;
         try
         {
-            String tmp_dir = Main.get_prop(Preferences.TEMPFILEDIR);
+            String tmp_dir = Main.get_prop(MandantPreferences.TEMPFILEDIR);
             if (tmp_dir != null && tmp_dir.length() > 0)
             {
                 directory = new File(tmp_dir);
@@ -318,103 +324,6 @@ public class LogicControl
         return tmp_file;
     }
 
-    public boolean is_licensed()
-    {
-        return _is_licensed;
-    }
-
-    boolean check_licensed()
-    {
-        NetworkInterface ni;
-        {
-            FileReader fr = null;
-            try
-            {
-                ni = NetworkInterface.getByName(Main.license_interface);
-                if (ni == null || ni.getHardwareAddress() == null)
-                {
-                    throw new Exception("Missing interface " + Main.license_interface + " or has no hardware address");
-                }
-
-                byte[] mac = ni.getHardwareAddress();
-
-                MessageDigest md5 = MessageDigest.getInstance("MD5");
-                md5.reset();
-                md5.update(mac);
-                byte[] result = md5.digest();
-
-                /* Ausgabe */
-                StringBuffer hexString = new StringBuffer();
-                for (int i = 1; i <= result.length; i++)
-                {
-                    hexString.append(Integer.toHexString(0xFF & result[result.length - i]));
-                }
-
-                if (Main.create_licensefile)
-                {
-                    File licfile = new File("mailproxy.license");
-                    FileWriter fw = new FileWriter(licfile);
-                    fw.write(hexString.toString());
-                    fw.close();
-                    LogManager.info_msg("License file was created");
-                    return true;
-                }
-                else
-                {
-                    File licfile = new File("mailproxy.license");
-                    fr = new FileReader(licfile);
-
-                    char[] buff = new char[40];
-                    int len = fr.read(buff);
-
-
-                    String lic_string = new String(buff, 0, len);
-
-
-                    if (lic_string.equals(hexString.toString()))
-                    {
-                        return true;
-                    }
-
-                    LogManager.err_log_fatal("Unlicensed host");
-                }
-            }
-            catch (NoSuchAlgorithmException ex)
-            {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            catch (FileNotFoundException ex2)
-            {
-                LogManager.err_log_fatal("Missing licensefile");
-            }
-            catch (SocketException ex3)
-            {
-                LogManager.err_log_fatal("No network interface for licensecheck");
-            }
-            catch (IOException ex1)
-            {
-                LogManager.err_log_fatal("Error while reading licensefile: " + ex1.getMessage());
-            }
-            catch (Exception ex4)
-            {
-                LogManager.err_log_fatal("Error during license check: " + ex4.getMessage());
-            }
-            finally
-            {
-                try
-                {
-                    if (fr != null)
-                    {
-                        fr.close();
-                    }
-                }
-                catch (IOException ex)
-                {
-                }
-            }
-        }
-        return false;
-    }
 
     void initialize()
     {
@@ -530,7 +439,7 @@ public class LogicControl
             }
         }
 
-        _is_licensed = check_licensed();
+        lic_checker.check_licensed();
 
         for (int i = 0; i < worker_list.size(); i++)
         {
@@ -574,7 +483,7 @@ public class LogicControl
 
             for (int idx = 0; idx < ntp_server_list.length; idx++)
             {
-                String rdate_cmd = Main.get_prop(Preferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
+                String rdate_cmd = Main.get_prop(GeneralPreferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
                 String[] cmd =
                 {
                     rdate_cmd
@@ -789,6 +698,13 @@ public class LogicControl
         return ok;
     }
 
+    private MandantPreferences read_mandant_prefs( Mandant m )
+    {
+        String prefs_path = Main.PREFS_PATH + m.getId() + "/";
+        MandantPreferences prefs = new MandantPreferences(prefs_path);
+        return prefs;
+    }
+
     private void read_param_db()
     {
         List<Mandant> mandantList = null;
@@ -796,13 +712,28 @@ public class LogicControl
         {
             org.hibernate.classic.Session session = HibernateUtil.getSessionFactory().getCurrentSession();            
             org.hibernate.Query q = session.createQuery("from Mandant");
-
-            mandantList = (List<Mandant>) q.list();
-
-            for (int i = 0; i < mandantList.size(); i++)
+            List l = q.list();
+            if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
-                Mandant m = mandantList.get(i);
-                add_mandant(m);
+                mandantList = (List<Mandant>) q.list();
+
+                for (int i = 0; i < mandantList.size(); i++)
+                {
+                    Mandant m = mandantList.get(i);
+                    try
+                    {
+                        MandantPreferences prefs = read_mandant_prefs( m );
+                        add_mandant(prefs, m);
+
+                        // PREFS NEEDS CONTEXT FOR ENCRYPTION
+                        prefs.setContext( get_m_context(m));
+                        
+                    }
+                    catch (Exception ex )
+                    {
+                        LogManager.err_log_fatal("Cannot read preferences for Mandant " +  m.getName(), ex);
+                    }
+                }
             }
         }
         catch (Exception e)

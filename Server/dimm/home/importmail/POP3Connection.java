@@ -225,7 +225,7 @@ public class POP3Connection extends ProxyConnection
 
         if (bos == null)
         {        
-            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+            if (Main.get_bool_prop(MandantPreferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
             {
                 m_error = ERROR_UNKNOWN;
                 return m_error;
@@ -254,7 +254,7 @@ public class POP3Connection extends ProxyConnection
             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
             Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
-            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+            if (Main.get_bool_prop(MandantPreferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
             {
                 m_error = ERROR_UNKNOWN;
                 return m_error;

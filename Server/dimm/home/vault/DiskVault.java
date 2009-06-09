@@ -8,21 +8,23 @@ package dimm.home.vault;
 import dimm.home.DAO.DiskSpaceDAO;
 import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.DiskSpace;
-import dimm.home.hibernate.Mandant;
+import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.LogicControl;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
+import dimm.home.mailarchiv.Utilities.CryptTools;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
@@ -41,69 +43,30 @@ public class DiskVault implements Vault, StatusHandler
     public static final int DS_ERROR = 0x0002;
     public static final int DS_OFFLINE = 0x0004;
 
+    MandantContext context;
     DiskArchive disk_archive;
+    String password;
+    ArrayList<DiskSpaceHandler> dsh_list;
 
 
-    public DiskVault( DiskArchive da )
+    public DiskVault( MandantContext _context, DiskArchive da )
     {
         disk_archive = da;
+        context = _context;
+        password = context.getPrefs().get_password();
+
+        dsh_list = new ArrayList<DiskSpaceHandler>();
+        Set<DiskSpace> dss = disk_archive.getDiskSpaces();
+
+        Iterator<DiskSpace> it = dss.iterator();
+
+        while (it.hasNext())
+        {
+            dsh_list.add( new DiskSpaceHandler(it.next()));
+        }
+
     }
 
-    long parse_capacity( String s )
-    {
-        long cap = 0;
-        long f = 1;
-
-        int idx = s.toUpperCase().indexOf("K");
-        if (idx > 0)
-        {
-            s = s.substring(0, idx);
-            f = 1024;
-        }
-        idx = s.toUpperCase().indexOf("M");
-        if (idx > 0)
-        {
-            s = s.substring(0, idx);
-            f = 1024*1024;
-        }
-        idx = s.toUpperCase().indexOf("G");
-        if (idx > 0)
-        {
-            s = s.substring(0, idx);
-            f = 1024*1024*1024;
-        }
-
-        try
-        {
-            cap = Long.parseLong(s);
-            cap *= f;
-        }
-        catch (Exception ex)
-        {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, "Invalid capacity string " + s, ex);
-            cap = 0;
-        }
-        return cap;
-    }
-    private boolean checkCapacity( DiskSpace ds, File msg )
-    {
-        File path = new File( ds.getPath() );
-
-        long allowed_cap = parse_capacity(ds.getMaxCapacity());
-
-        // TEST IF FS IS FULL ANYWAY
-        if (path.getFreeSpace() < msg.length() + 1024*1024)  // AT LEAST 1MB ON FS
-            return false;
-
-        // READ SIZE FROM DISK
-        long act_cap = read_act_capacity( ds );
-
-        // CHECK IF OKAY
-        if (allowed_cap > 0 && act_cap + msg.length() > allowed_cap)
-            return false;
-
-        return true;
-    }
 
     synchronized private File create_unique_mailfile( DiskSpace ds, File mail )
     {
@@ -132,68 +95,30 @@ public class DiskVault implements Vault, StatusHandler
         return trg_file;
     }
 
-    private long read_act_capacity( DiskSpace ds )
-    {
-        File cap_file = new File( ds.getPath() + "/" + "cap.dat" );
-        long cap = 0;
-
-        if (cap_file.exists())
-        {
-            try
-            {
-                RandomAccessFile raf = new RandomAccessFile(cap_file, "r");
-                cap = Long.parseLong(raf.readLine());
-                raf.close();
-            }
-            catch (Exception ex)
-            {
-                Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-        }
-        return cap;
-    }
-    private long incr_act_capacity( DiskSpace ds, long diff  )
-    {
-        File cap_file = new File( ds.getPath() + "/" + "cap.dat" );
-        long cap = 0;
-
-        if (cap_file.exists())
-        {
-            try
-            {
-                RandomAccessFile raf = new RandomAccessFile(cap_file, "rw");
-                cap = Long.parseLong(raf.readLine());
-                cap += diff;
-                raf.seek(0);
-                raf.writeBytes(Long.toString(cap));
-                raf.close();
-            }
-            catch (Exception ex)
-            {
-                Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-        }
-        return cap;
-    }
 
     private boolean test_flag( DiskSpace ds, int flag )
     {
         return ((ds.getFlags() & flag) == flag);
     }
 
-    DiskSpace get_next_active_diskspace(int index )
+    DiskSpaceHandler get_next_active_diskspace(int index )
     {
-        Set<DiskSpace> dss = disk_archive.getDiskSpaces();
 
-        Iterator<DiskSpace> it = dss.iterator();
+        Iterator<DiskSpaceHandler> it = dsh_list.iterator();
 
         while (it.hasNext())
         {
-            DiskSpace ds = it.next();
+            DiskSpaceHandler dsh = it.next();
+            DiskSpace ds = dsh.getDs();
             if (test_flag( ds, DS_FULL) || test_flag(ds, DS_ERROR) || test_flag(ds, DS_OFFLINE))
                 continue;
+
+            File dsf = new File( ds.getPath() );
+            if ( !dsf.exists() )
+            {
+                LogManager.err_log_fatal("DiskSpace <" + dsf.getAbsolutePath() + "> was not found, skipping");
+                continue;
+            }
 
             if (index > 0)
             {
@@ -202,7 +127,7 @@ public class DiskVault implements Vault, StatusHandler
             }
 
             // GOT IT
-            return ds;
+            return dsh;
         }
 
         // NADA
@@ -223,12 +148,12 @@ public class DiskVault implements Vault, StatusHandler
     }
 
     @Override
-    public boolean archive_mail( File msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException
+    public boolean archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException
     {
         boolean ret = false;
         try
         {
-            ret = low_level_archive_mail(msg, mandant, diskArchive);
+            ret = low_level_archive_mail(msg.getFile(), context, diskArchive);
         }
         catch (IOException ex)
         {
@@ -236,7 +161,7 @@ public class DiskVault implements Vault, StatusHandler
             // IF MAIL IS BIGGER THAN DISKSPACE WE CHOKE
             try
             {
-                ret = low_level_archive_mail(msg, mandant, diskArchive);
+                ret = low_level_archive_mail(msg.getFile(), context, diskArchive);
             }
             catch (IOException _ex)
             {
@@ -248,18 +173,20 @@ public class DiskVault implements Vault, StatusHandler
         return ret;
     }
 
-    boolean low_level_archive_mail( File msg, Mandant mandant, DiskArchive diskArchive ) throws ArchiveMsgException, IOException
+    boolean low_level_archive_mail( File msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException
     {
         int ds_idx = 0;
 
-        DiskSpace ds = get_next_active_diskspace( ds_idx );
+        DiskSpaceHandler dsh = get_next_active_diskspace( ds_idx );
 
-        if (ds == null)
+        if (dsh == null)
         {
             throw new ArchiveMsgException("No Diskspace found" );
         }
-        while (!checkCapacity(ds, msg))
+        while (!dsh.checkCapacity(msg))
         {
+            DiskSpace ds = dsh.getDs();
+
             status.set_status(StatusEntry.BUSY, "DiskSpace " + ds.getPath() + " is full" );
             Notification.throw_notification( disk_archive.getMandant(), Notification.NF_INFORMATIVE, status.get_status_txt() );
             ds.setFlags(ds.getFlags() | DS_FULL);
@@ -267,37 +194,40 @@ public class DiskVault implements Vault, StatusHandler
             DiskSpaceDAO dao = new DiskSpaceDAO();
             dao.save(ds);
 
-            ds = get_next_active_diskspace( ds_idx );
+            dsh = get_next_active_diskspace( ds_idx );
 
-            if (ds == null)
+            if (dsh == null)
             {
                 throw new ArchiveMsgException("No Diskspace found" );
             }
         }
 
 
-        write_mail_file( ds, msg );
+        write_mail_file( context, dsh.getDs(), msg );
 
         // ADD CAPACITY COUNTER
-        incr_act_capacity(ds, msg.length());
+        dsh.incr_act_capacity(msg.length());
 
         return true;
     }
 
-    void write_mail_file( DiskSpace ds, File mail ) throws ArchiveMsgException, IOException
+    void write_mail_file( MandantContext context, DiskSpace ds, File mail ) throws ArchiveMsgException, IOException
     {
-        BufferedOutputStream bos = null;
+        OutputStream bos = null;
         byte[] buff = new byte[8192];
 
         // NOW WE HAVE A FILE ON E FREE DISKSPACE
 
         File out_file = create_unique_mailfile(ds, mail);
+        CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
 
         try
         {
 
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(mail));
-            bos = new BufferedOutputStream(new FileOutputStream(out_file));
+            OutputStream os = new FileOutputStream(out_file);
+            bos = CryptTools.create_crypt_outstream(context, os, password, encrypt);
+
 
             while (true)
             {
@@ -329,5 +259,4 @@ public class DiskVault implements Vault, StatusHandler
             }
         }
     }
-
 }

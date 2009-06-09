@@ -9,14 +9,13 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.GeneralPreferences;
 import java.io.File;
 import java.io.FileWriter;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Preferences;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import java.io.FileReader;
-import java.nio.CharBuffer;
 
 /**
  *
@@ -31,6 +30,7 @@ public class IPConfig extends AbstractCommand
         super("IPCONFIG");
     }
 
+    @Override
     public boolean do_command(String data)
     {
         answer = "";
@@ -49,21 +49,21 @@ public class IPConfig extends AbstractCommand
         if ( command.compareTo("GET") == 0)
         {
             int eth_nr = pt.GetLong("IF:").intValue();
-            String ip = Main.get_prop( Preferences.IP, eth_nr );
-            String mask = Main.get_prop( Preferences.MASK, eth_nr );
-            String dhcp = Main.get_prop( Preferences.DHCP, eth_nr );
-            String gw = Main.get_prop( Preferences.GW, eth_nr );
-            String dns = Main.get_prop( Preferences.DNS, eth_nr );
+            String ip = Main.get_prop( GeneralPreferences.IP, eth_nr );
+            String mask = Main.get_prop( GeneralPreferences.MASK, eth_nr );
+            String dhcp = Main.get_prop( GeneralPreferences.DHCP, eth_nr );
+            String gw = Main.get_prop( GeneralPreferences.GW, eth_nr );
+            String dns = Main.get_prop( GeneralPreferences.DNS, eth_nr );
             if (ip == null || dhcp == null || gw == null || dns == null)
             {
                 answer = WRONG_ARGS;
                 return false;                
             }
             
-            String px_enable = Main.get_prop( Preferences.PXENABLE );
-            String px_server = Main.get_prop( Preferences.PXSERVER, "" );
-            String px_port = Main.get_prop( Preferences.PXPORT, "3128" );
-            String px_socksport = Main.get_prop( Preferences.PXSOCKSPORT, "1080" );
+            String px_enable = Main.get_prop( GeneralPreferences.PXENABLE );
+            String px_server = Main.get_prop( GeneralPreferences.PXSERVER, "" );
+            String px_port = Main.get_prop( GeneralPreferences.PXPORT, "3128" );
+            String px_socksport = Main.get_prop( GeneralPreferences.PXSOCKSPORT, "1080" );
  
             answer = "IF:" + eth_nr + "IP:" + ip + " MASK:" + mask + " DHCP:" + dhcp + " GW:" + gw + " DNS:" + dns +
                         " PXE:" + px_enable + " PXS:" + px_server + " PXP:" + px_port + " PXSP:" + px_socksport;             
@@ -88,21 +88,21 @@ public class IPConfig extends AbstractCommand
             {
                 // NICHT DIE NUMMER �BERNEHMEN, DAS IST ZU RISKANT
                 //Main.set_long_prop( Preferences.NETINTERFACE, eth_nr );
-                Main.set_prop( Preferences.IP, ip, eth_nr );
-                Main.set_prop( Preferences.MASK, mask, eth_nr );
-                Main.set_prop( Preferences.DHCP, dhcp? "1":"0", eth_nr );
-                Main.set_prop( Preferences.GW, gw, eth_nr );
-                Main.set_prop( Preferences.DNS, dns, eth_nr );
+                Main.set_prop( GeneralPreferences.IP, ip, eth_nr );
+                Main.set_prop( GeneralPreferences.MASK, mask, eth_nr );
+                Main.set_prop( GeneralPreferences.DHCP, dhcp? "1":"0", eth_nr );
+                Main.set_prop( GeneralPreferences.GW, gw, eth_nr );
+                Main.set_prop( GeneralPreferences.DNS, dns, eth_nr );
 
-                Main.set_prop( Preferences.PXENABLE, px_enable );
-                Main.set_prop( Preferences.PXSERVER, px_server );
-                Main.set_prop( Preferences.PXPORT, px_port );
-                Main.set_prop( Preferences.PXSOCKSPORT, px_socksport );
+                Main.set_prop( GeneralPreferences.PXENABLE, px_enable );
+                Main.set_prop( GeneralPreferences.PXSERVER, px_server );
+                Main.set_prop( GeneralPreferences.PXPORT, px_port );
+                Main.set_prop( GeneralPreferences.PXSOCKSPORT, px_socksport );
                 
-                if (Main.is_proxy_enabled() && Main.get_long_prop(Preferences.PXSOCKSPORT) > 0)
+                if (Main.is_proxy_enabled() && Main.get_long_prop(GeneralPreferences.PXSOCKSPORT) > 0)
                 {
-                    System.setProperty("proxyPort",Main.get_prop(Preferences.PXSOCKSPORT));
-                    System.setProperty("proxyHost",Main.get_prop(Preferences.PXSERVER));        
+                    System.setProperty("proxyPort",Main.get_prop(GeneralPreferences.PXSOCKSPORT));
+                    System.setProperty("proxyHost",Main.get_prop(GeneralPreferences.PXSERVER));
                 }
                 else
                 {
@@ -372,7 +372,7 @@ ONBOOT=yes
         
 
         // TRY TO GET A PING
-        String cmd3[]  = {"ping", "-c", "1", Main.get_prop(Preferences.SERVER, Main.DEFAULTSERVER) };
+        String cmd3[]  = {"ping", "-c", "1", Main.get_prop(GeneralPreferences.SERVER, Main.DEFAULTSERVER) };
         
         exe = new CmdExecutor( cmd3 );
         
@@ -489,7 +489,7 @@ ONBOOT=yes
         
 
         // TRY TO GET A PING
-        String cmd3[]  = {"ping", "-c", "1", Main.get_prop(Preferences.SERVER, Main.DEFAULTSERVER) };
+        String cmd3[]  = {"ping", "-c", "1", Main.get_prop(GeneralPreferences.SERVER, Main.DEFAULTSERVER) };
         
         exe = new CmdExecutor( cmd3 );
         
@@ -588,12 +588,12 @@ ONBOOT=yes
     
     public boolean set_programmed_ipconfig()
     {
-        int eth_nr = (int)Main.get_long_prop(Preferences.NETINTERFACE );
-        String ip = Main.get_prop( Preferences.IP, eth_nr );
-        String mask = Main.get_prop( Preferences.MASK, eth_nr );
-        boolean dhcp = Main.get_long_prop( Preferences.DHCP, eth_nr ) > 0 ? true : false;
-        String gw = Main.get_prop( Preferences.GW, eth_nr );
-        String dns = Main.get_prop( Preferences.DNS, eth_nr );
+        int eth_nr = (int)Main.get_long_prop(GeneralPreferences.NETINTERFACE );
+        String ip = Main.get_prop( GeneralPreferences.IP, eth_nr );
+        String mask = Main.get_prop( GeneralPreferences.MASK, eth_nr );
+        boolean dhcp = Main.get_long_prop( GeneralPreferences.DHCP, eth_nr ) > 0 ? true : false;
+        String gw = Main.get_prop( GeneralPreferences.GW, eth_nr );
+        String dns = Main.get_prop( GeneralPreferences.DNS, eth_nr );
         if (ip == null || gw == null || dns == null)
         {            
             return false;                
@@ -603,10 +603,10 @@ ONBOOT=yes
         if (set_ipconfig( eth_nr, dhcp, ip, mask, gw, dns ))
         {
 
-            if (Main.is_proxy_enabled() && Main.get_long_prop(Preferences.PXSOCKSPORT) > 0)
+            if (Main.is_proxy_enabled() && Main.get_long_prop(GeneralPreferences.PXSOCKSPORT) > 0)
             {
-                System.setProperty("proxyPort",Main.get_prop(Preferences.PXSOCKSPORT));
-                System.setProperty("proxyHost",Main.get_prop(Preferences.PXSERVER));        
+                System.setProperty("proxyPort",Main.get_prop(GeneralPreferences.PXSOCKSPORT));
+                System.setProperty("proxyHost",Main.get_prop(GeneralPreferences.PXSERVER));
             }
             else
             {

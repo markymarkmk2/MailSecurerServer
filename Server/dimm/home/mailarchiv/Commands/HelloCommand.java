@@ -9,8 +9,8 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Preferences;
 
 /**
  *
@@ -25,9 +25,10 @@ public class HelloCommand extends AbstractCommand
         super("HELLO");
     }
 
+    @Override
     public boolean do_command(String data)
     {
-        answer = "VER:" + Main.VERSION + " STATION:" + Main.get_long_prop(Preferences.STATION_ID, 0);         
+        answer = "VER:" + Main.VERSION + " STATION:" + Main.get_long_prop(GeneralPreferences.STATION_ID, 0);
         return true;
     }
     

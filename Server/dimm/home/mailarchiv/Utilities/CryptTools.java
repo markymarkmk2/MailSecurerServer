@@ -4,7 +4,7 @@
  */
 package dimm.home.mailarchiv.Utilities;
 
-import dimm.home.mailarchiv.MContext;
+import dimm.home.mailarchiv.MandantContext;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -40,9 +40,14 @@ import org.apache.commons.codec.binary.Hex;
  */
 public class CryptTools
 {
-    MContext ctx;
+    MandantContext ctx;
+    public enum ENC_MODE
+    {
+        ENCRYPT,
+        DECRYPT
+    };
 
-    public CryptTools( MContext _ctx )
+    public CryptTools( MandantContext _ctx )
     {
         ctx = _ctx;
     }
@@ -150,7 +155,7 @@ public class CryptTools
      * */
     // Iteration count
 
-    public static byte[] crypt( MContext context, byte[] data, String passPhrase, boolean encrypt )
+    public static byte[] crypt( MandantContext context, byte[] data, String passPhrase, ENC_MODE encrypt )
     {
         int iterationCount = context.getPrefs().get_KeyPBEIteration();
         byte[] salt = context.getPrefs().get_KeyPBESalt();
@@ -164,7 +169,7 @@ public class CryptTools
             Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
             // Create the ciphers
-            if (encrypt)
+            if (encrypt == ENC_MODE.ENCRYPT)
             {
                 cipher.init(Cipher.ENCRYPT_MODE, key, paramSpec);
             }
@@ -205,7 +210,7 @@ public class CryptTools
         return null;
     }
 
-    public static String crypt( MContext ctx, String str, String passPhrase, boolean encrypt )
+    public static String crypt( MandantContext ctx, String str, String passPhrase, ENC_MODE encrypt )
     {
         try
         {
@@ -225,8 +230,29 @@ public class CryptTools
         }
         return null;
     }
+    public static String crypt_internal( MandantContext ctx, String str, ENC_MODE encrypt )
+    {
+        String passPhrase = ctx.getPrefs().get_InternalPassPhrase();
+        try
+        {
+            // Encode the string into bytes using utf-8
+            byte[] utf8 = str.getBytes("UTF8");
 
-    public static OutputStream create_crypt_outstream( MContext context, OutputStream os, String passPhrase, boolean encrypt )
+            // Encrypt
+            byte[] enc = crypt( ctx, utf8, passPhrase, encrypt );
+
+            // Encode bytes to base64 to get a string
+            return new String( Base64.encodeBase64(enc) );
+            //return new sun.misc.BASE64Encoder().encode(enc);
+        }
+        catch (UnsupportedEncodingException ex)
+        {
+            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+
+    public static OutputStream create_crypt_outstream( MandantContext context, OutputStream os, String passPhrase, ENC_MODE encrypt )
     {
         int iterationCount = context.getPrefs().get_KeyPBEIteration();
         byte[] salt = context.getPrefs().get_KeyPBESalt();
@@ -240,7 +266,7 @@ public class CryptTools
             Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
 
-            cipher.init(encrypt ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE, key, paramSpec);
+            cipher.init(encrypt == ENC_MODE.ENCRYPT ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE, key, paramSpec);
 
             os = new CipherOutputStream(os, cipher);
 
@@ -269,7 +295,7 @@ public class CryptTools
         return null;
     }
     
-    public static InputStream create_crypt_instream( MContext context, InputStream is, String passPhrase, boolean encrypt )
+    public static InputStream create_crypt_instream( MandantContext context, InputStream is, String passPhrase, ENC_MODE encrypt )
     {
         int iterationCount = context.getPrefs().get_KeyPBEIteration();
         byte[] salt = context.getPrefs().get_KeyPBESalt();
@@ -283,7 +309,7 @@ public class CryptTools
             Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
 
-            cipher.init(encrypt ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE, key, paramSpec);
+            cipher.init(encrypt == ENC_MODE.ENCRYPT ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE, key, paramSpec);
 
             is = new CipherInputStream(is, cipher);
 

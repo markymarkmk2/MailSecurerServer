@@ -6,7 +6,7 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Preferences;
+import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -561,7 +561,7 @@ public abstract class ProxyConnection
         if (maxwait <= 0)
             Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
 
-        long dgb_level = Main.get_long_prop(Preferences.DEBUG);
+        long dgb_level = Main.get_long_prop(MandantPreferences.DEBUG);
         byte[] last_4 = new byte[4];
 
 
@@ -738,7 +738,7 @@ public abstract class ProxyConnection
                             bos = null;
 
 
-                            if (Main.get_bool_prop(Preferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+                            if (Main.get_bool_prop(MandantPreferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
                             {
                                 m_error = ERROR_UNKNOWN;
                                 return m_error;

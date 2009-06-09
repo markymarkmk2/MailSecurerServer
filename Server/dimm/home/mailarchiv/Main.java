@@ -8,8 +8,6 @@ package dimm.home.mailarchiv;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
-import java.io.FileWriter;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 /**
@@ -40,7 +38,7 @@ public class Main
     public static String DEFAULTSERVER = "www.gruppemedia.de";
     
     
-    public static Preferences prefs;
+    public static GeneralPreferences prefs;
     
     public static Main me;
 
@@ -103,7 +101,7 @@ public class Main
         info_msg("Starting " + APPNAME + " V" + VERSION );
 
         // PREFS FOR ARGS, ARGS HABEN PRIO
-        prefs = new Preferences();
+        prefs = new GeneralPreferences();
         
         read_args( args );
         
@@ -123,13 +121,13 @@ public class Main
         }            
         try
         {            
-            String pxs_port = get_prop(Preferences.PXSOCKSPORT);
+            String pxs_port = get_prop(GeneralPreferences.PXSOCKSPORT);
             
-            if (is_proxy_enabled()  && Main.get_long_prop(Preferences.PXSOCKSPORT) > 0)
+            if (is_proxy_enabled()  && Main.get_long_prop(GeneralPreferences.PXSOCKSPORT) > 0)
             {
-                System.setProperty("proxyPort",get_prop(Preferences.PXSOCKSPORT));
-                System.setProperty("proxyHost",get_prop(Preferences.PXSERVER));        
-                info_msg("Using Proxyserver " + get_prop(Preferences.PXSERVER) + ":" + get_prop( Preferences.PXSOCKSPORT ) );
+                System.setProperty("proxyPort",get_prop(GeneralPreferences.PXSOCKSPORT));
+                System.setProperty("proxyHost",get_prop(GeneralPreferences.PXSERVER));
+                info_msg("Using Proxyserver " + get_prop(GeneralPreferences.PXSERVER) + ":" + get_prop( GeneralPreferences.PXSOCKSPORT ) );
             }
         }
         catch (Exception exc)
@@ -202,7 +200,7 @@ public class Main
     
     static public boolean is_proxy_enabled()
     {
-        String px_enable = get_prop( Preferences.PXENABLE );
+        String px_enable = get_prop( GeneralPreferences.PXENABLE );
         if (px_enable != null && px_enable.length() > 0 && px_enable.charAt(0) == '1')
             return true;
         
@@ -210,7 +208,7 @@ public class Main
     }
     static public long get_debug_lvl()
     {
-        return get_long_prop( Preferences.DEBUG, startup_debug_level );        
+        return get_long_prop( GeneralPreferences.DEBUG, startup_debug_level );
     }
     
     void read_args( String[] args )
@@ -341,7 +339,7 @@ public class Main
 
     public static int get_station_id()
     {
-        int station = (int)get_long_prop(Preferences.STATION_ID, 0);
+        int station = (int)get_long_prop(GeneralPreferences.STATION_ID, 0);
         return station;
     }
 

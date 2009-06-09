@@ -9,11 +9,8 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import java.io.File;
-import java.io.FileWriter;
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Preferences;
-import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 
 /**
@@ -29,6 +26,7 @@ public class SetStation extends AbstractCommand
         super("SETSTATION");
     }
 
+    @Override
     public boolean do_command(String data)
     {
         String opt = get_opts( data );
@@ -40,7 +38,7 @@ public class SetStation extends AbstractCommand
         
         if (write_new_vpn_conf( new_id))
         {
-            Main.set_long_prop(Preferences.STATION_ID, new_id );
+            Main.set_long_prop(GeneralPreferences.STATION_ID, new_id );
             Main.write_prefs();
             return true;
         }
