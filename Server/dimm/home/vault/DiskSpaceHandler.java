@@ -6,8 +6,12 @@
 package dimm.home.vault;
 
 import dimm.home.hibernate.DiskSpace;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import java.beans.XMLEncoder;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 
 /**
@@ -56,12 +60,12 @@ public class DiskSpaceHandler
         return cap;
     }
 
-    public long calc_real_capacity() throws Exception
+    public long calc_real_capacity() throws VaultException
     {
         File path = new File( ds.getPath() );
         if (!path.exists())
         {
-            throw new Exception( "Missing directory for DiskSpace " + ds.getPath());
+            throw new VaultException( ds, "Missing directory");
         }
         long cap = 0;
         cap = cap_recursive( path, cap );
@@ -76,36 +80,60 @@ public class DiskSpaceHandler
     }
 
 
-    public void clear() throws Exception
+    public void clear() throws VaultException
     {
         File path = new File( ds.getPath() );
         if (!path.exists())
         {
-            throw new Exception( "Missing directory for DiskSpace " + ds.getPath());
+            throw new VaultException( ds, "Missing directory");
         }
         del_recursive( path );
     }
 
 
-    public void create() throws Exception
+    public void create() throws VaultException
     {
         File path = new File( ds.getPath() );
         if (!path.getParentFile().exists())
         {
-            throw new Exception( "Missing parent directory for DiskSpace " + ds.getPath());
+            throw new VaultException( ds, "Missing parent directory");
         }
 
         path.mkdir();
 
         long cap = read_act_capacity();
         if (cap > 0)
-            throw new Exception( "DiskSpace still contains data" + ds.getPath());
+            throw new VaultException( ds, "Contains data, should be empty" );
 
         File cap_file = new File( ds.getPath() + "/" + "cap.dat" );
 
-        RandomAccessFile raf = new RandomAccessFile(cap_file, "rw");
-        raf.writeBytes(Long.toString(0));
-        raf.close();
+        try
+        {
+            RandomAccessFile raf = new RandomAccessFile(cap_file, "rw");
+            raf.writeBytes(Long.toString(0));
+            raf.close();
+        }
+        catch (Exception ex)
+        {
+            throw new VaultException( ds, "Cannot write cap file: " + ex.getMessage());
+        }
+        
+        try
+        {
+            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ds.xml")));
+            e.writeObject(ds);
+            e.close();
+            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/da.xml")));
+            e.writeObject(ds.getDiskArchive());
+            e.close();
+            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ma.xml")));
+            e.writeObject(ds.getDiskArchive().getMandant());
+            e.close();
+        }
+        catch (Exception ex)
+        {
+            throw new VaultException( ds, "Cannot write XML params: " + ex.getMessage());
+        }
     }
 
     public static long parse_capacity( String s )

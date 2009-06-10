@@ -23,9 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
@@ -68,32 +66,6 @@ public class DiskVault implements Vault, StatusHandler
     }
 
 
-    synchronized private File create_unique_mailfile( DiskSpace ds, File mail )
-    {
-        String path = ds.getPath();
-        File trg_file = null;
-
-        do
-        {
-            Date d = new Date();
-            SimpleDateFormat sdf = new SimpleDateFormat("/yyyy/MM/dd/HHmmss.SSS");
-            path = path + sdf.format(d);
-            trg_file = new File( path );
-            
-            if (trg_file.exists())
-            {
-                try
-                {
-                    Thread.sleep(5);
-                }
-                catch (InterruptedException ex)
-                {}
-            }
-
-        } while (trg_file.exists() );
-
-        return trg_file;
-    }
 
 
     private boolean test_flag( DiskSpace ds, int flag )
@@ -153,7 +125,7 @@ public class DiskVault implements Vault, StatusHandler
         boolean ret = false;
         try
         {
-            ret = low_level_archive_mail(msg.getFile(), context, diskArchive);
+            ret = low_level_archive_mail(msg, context, diskArchive);
         }
         catch (IOException ex)
         {
@@ -161,7 +133,7 @@ public class DiskVault implements Vault, StatusHandler
             // IF MAIL IS BIGGER THAN DISKSPACE WE CHOKE
             try
             {
-                ret = low_level_archive_mail(msg.getFile(), context, diskArchive);
+                ret = low_level_archive_mail(msg, context, diskArchive);
             }
             catch (IOException _ex)
             {
@@ -173,7 +145,7 @@ public class DiskVault implements Vault, StatusHandler
         return ret;
     }
 
-    boolean low_level_archive_mail( File msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException
+    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException
     {
         int ds_idx = 0;
 
@@ -183,7 +155,7 @@ public class DiskVault implements Vault, StatusHandler
         {
             throw new ArchiveMsgException("No Diskspace found" );
         }
-        while (!dsh.checkCapacity(msg))
+        while (!dsh.checkCapacity(msg.getFile()))
         {
             DiskSpace ds = dsh.getDs();
 
@@ -206,25 +178,24 @@ public class DiskVault implements Vault, StatusHandler
         write_mail_file( context, dsh.getDs(), msg );
 
         // ADD CAPACITY COUNTER
-        dsh.incr_act_capacity(msg.length());
+        dsh.incr_act_capacity(msg.getFile().length());
 
         return true;
     }
 
-    void write_mail_file( MandantContext context, DiskSpace ds, File mail ) throws ArchiveMsgException, IOException
+    void write_mail_file( MandantContext context, DiskSpace ds, RFCFileMail msg ) throws ArchiveMsgException, IOException
     {
         OutputStream bos = null;
         byte[] buff = new byte[8192];
 
         // NOW WE HAVE A FILE ON E FREE DISKSPACE
 
-        File out_file = create_unique_mailfile(ds, mail);
+        File out_file = msg.create_unique_mailfile(ds.getPath());
         CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
 
         try
         {
-
-            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(mail));
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(msg.getFile()));
             OutputStream os = new FileOutputStream(out_file);
             bos = CryptTools.create_crypt_outstream(context, os, password, encrypt);
 
