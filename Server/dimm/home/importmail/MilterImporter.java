@@ -219,7 +219,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         {
             Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive(), false);
         }
-        catch (ArchiveMsgException ex)
+        catch (Exception ex)
         {
             // TODO: ARCHIVE FAILED
             Logger.getLogger(MailImportJilterHandler.class.getName()).log(Level.SEVERE, null, ex);

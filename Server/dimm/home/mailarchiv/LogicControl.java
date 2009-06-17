@@ -17,6 +17,7 @@ import dimm.home.hibernate.Milter;
 import dimm.home.hibernate.Proxy;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMailStream;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -29,6 +30,8 @@ import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskSpaceHandler;
+import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
 import dimm.home.workers.MailBoxImportServer;
@@ -127,7 +130,7 @@ public class LogicControl
         return lic_checker.is_licensed();
     }
 
-    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         // TODO: background
         if (mail == null)
@@ -151,7 +154,7 @@ public class LogicControl
         }
     }
 
-    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         if (background)
         {
@@ -188,7 +191,7 @@ public class LogicControl
      * */
     }
 
-    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         if (true/*background*/)
         {
@@ -201,17 +204,17 @@ public class LogicControl
     }*/
     }
 
-    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
 
-    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
 
-    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException
+    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException
     {
         try
         {
@@ -229,10 +232,69 @@ public class LogicControl
         }
     }
 
-    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException
+    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         add_new_mail(mail.getInputStream(), mandant, da, background);
     }
+
+    public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException
+    {
+        long ds_id = DiskSpaceHandler.get_ds_id_from_uuid(mail_uuid);
+        long da_id = DiskSpaceHandler.get_da_id_from_uuid(mail_uuid);
+        long time = DiskSpaceHandler.get_time_from_uuid(mail_uuid);
+
+
+        MandantContext context = get_m_context(mandant);
+        if (context == null)
+        {
+            throw new ArchiveMsgException("Invalid context for mail");
+        }
+
+        DiskSpaceHandler found_ds = null;
+        ArrayList<Vault> vault_list = context.getVaultArray();
+
+        for (int i = 0; i < vault_list.size(); i++)
+        {
+            Vault vault = vault_list.get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault) vault;
+                DiskArchive da = dv.get_da();
+                if (da.getId() != da_id)
+                    continue;
+
+                found_ds = dv.get_dsh(ds_id);
+                break;
+            }
+        }
+        return found_ds;
+    }
+
+
+    public File get_mail_file( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, VaultException
+    {
+        long time = DiskSpaceHandler.get_time_from_uuid(mail_uuid);
+
+        DiskSpaceHandler found_ds = get_mail_dsh( mandant, mail_uuid );
+
+        if (found_ds == null)
+            throw new VaultException( "Cannot find ds for get mail file " + mail_uuid );
+
+        RFCFileMail msg = new RFCFileMail( null, new Date(time));
+        File mail_file = msg.create_unique_mailfile( found_ds.getDs().getPath() );
+
+        return mail_file;
+    }
+
+
+    public void delete_mail_file( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, IOException, VaultException
+    {
+        File mail_file = get_mail_file( mandant, mail_uuid );
+
+        if (mail_file.exists())
+            mail_file.delete();
+    }
+
 
     public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
     {
@@ -707,7 +769,6 @@ public class LogicControl
 
     private void read_param_db()
     {
-        List<Mandant> mandantList = null;
         try
         {
             org.hibernate.classic.Session session = HibernateUtil.getSessionFactory().getCurrentSession();            
@@ -715,11 +776,9 @@ public class LogicControl
             List l = q.list();
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
-                mandantList = (List<Mandant>) q.list();
-
-                for (int i = 0; i < mandantList.size(); i++)
+                for (int i = 0; i < l.size(); i++)
                 {
-                    Mandant m = mandantList.get(i);
+                    Mandant m = (Mandant)l.get(i);
                     try
                     {
                         MandantPreferences prefs = read_mandant_prefs( m );

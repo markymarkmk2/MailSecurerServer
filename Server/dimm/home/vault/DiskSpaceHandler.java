@@ -6,31 +6,161 @@
 package dimm.home.vault;
 
 import dimm.home.hibernate.DiskSpace;
+import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.RandomAccessFile;
 
 /**
  *
  * @author mw
  */
+
+class DiskSpaceInfo
+{
+    private long capacity;
+    private long firstEntryTS;
+    private long lastEntryTS;
+
+    DiskSpaceInfo()
+    {
+        capacity = 0;
+        firstEntryTS = 0;
+        lastEntryTS = 0;
+    }
+    /**
+     * @return the capacity
+     */
+    public long getCapacity()
+    {
+        return capacity;
+    }
+
+    /**
+     * @param capacity the capacity to set
+     */
+    public void setCapacity( long capacity )
+    {
+        this.capacity = capacity;
+    }
+
+    /**
+     * @return the firstEntryTS
+     */
+    public long getFirstEntryTS()
+    {
+        return firstEntryTS;
+    }
+
+    /**
+     * @param firstEntryTS the firstEntryTS to set
+     */
+    public void setFirstEntryTS( long firstEntryTS )
+    {
+        this.firstEntryTS = firstEntryTS;
+    }
+
+    /**
+     * @return the lastEntryTS
+     */
+    public long getLastEntryTS()
+    {
+        return lastEntryTS;
+    }
+
+    /**
+     * @param lastEntryTS the lastEntryTS to set
+     */
+    public void setLastEntryTS( long lastEntryTS )
+    {
+        this.lastEntryTS = lastEntryTS;
+    }
+}
+
+
 public class DiskSpaceHandler
 {
     DiskSpace ds;
+    DiskSpaceInfo dsi;
+    boolean _open;
 
     public DiskSpaceHandler( DiskSpace _ds )
     {
         ds = _ds;
+        _open = false;
+    }
+
+     public boolean is_open()
+    {
+        return _open;
+    }
+
+    public void open() throws VaultException
+    {
+        read_info();
+        _open = true;
+    }
+
+    
+    void read_info() throws VaultException
+    {
+        try
+        {
+            XMLDecoder e = new XMLDecoder(new BufferedInputStream(new FileInputStream(ds.getPath() + "/dsinfo.xml")));
+            Object o = e.readObject();
+            e.close();
+            if (o instanceof DiskSpaceInfo)
+                dsi = (DiskSpaceInfo)o;
+            else
+                throw new VaultException( ds, "Invalid info file" );
+        }
+        catch (Exception ex)
+        {
+            throw new VaultException( ds, "Cannot read info file: " + ex.getMessage() );
+        }
+    }
+    public void close() throws VaultException
+    {
+        update_info();
+        _open = false;
+    }
+
+    void update_info() throws VaultException
+    {
+        try
+        {
+            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/dsinfo.xml")));
+            e.writeObject(dsi);
+            e.close();
+        }
+        catch (Exception ex)
+        {
+            throw new VaultException( ds, "Cannot write info file: " + ex.getMessage() );
+        }
     }
     
     public DiskSpace getDs()
     {
         return ds;
     }
+
+
+    public void add_message_info( RFCFileMail msg ) throws VaultException
+    {
+        dsi.setCapacity( dsi.getCapacity() + msg.getFile().length());
+        dsi.setLastEntryTS(msg.getDate().getTime());
+        if (dsi.getFirstEntryTS() == 0)
+            dsi.setFirstEntryTS(dsi.getLastEntryTS());
+
+        update_info();
+    }
+
     void del_recursive(File f)
     {
         if (f.isDirectory())
@@ -43,34 +173,113 @@ public class DiskSpaceHandler
         }
         f.delete();
     }
-    private long cap_recursive(File f, long cap)
+
+    public void delete_mail( RFCFileMail mail )
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+
+    public String get_message_uuid( RFCFileMail msg )
+    {
+        String ret = ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime();
+        return ret;
+    }
+
+    public long build_time_from_path( String absolutePath )
+    {
+        String rel_path = absolutePath.substring( ds.getPath().length());
+
+        return RFCFileMail.get_time_from_mailfile(rel_path);
+    }
+    
+    public static long get_da_id_from_uuid( String uuid )
+    {
+        long id = -1;
+
+        try
+        {
+            int pos = uuid.indexOf('.');
+            id = Long.parseLong(uuid.substring(0, pos));
+        }
+        catch (Exception numberFormatException)
+        {
+        }
+
+        return id;
+    }
+
+    public static long get_ds_id_from_uuid( String uuid )
+    {
+        long id = -1;
+
+        try
+        {
+            int pos = uuid.indexOf('.');
+            pos++;
+            int pos2 = uuid.substring(pos).indexOf('.');
+            id = Long.parseLong(uuid.substring(pos, pos2));
+        }
+        catch (Exception numberFormatException)
+        {
+        }
+
+        return id;
+    }
+    public static long get_time_from_uuid( String uuid )
+    {
+        long id = -1;
+
+        try
+        {
+            int pos = uuid.indexOf('.');
+            pos++;
+            int pos2 = uuid.substring(pos).indexOf('.');
+            pos2++;
+            id = Long.parseLong(uuid.substring(pos2));
+        }
+        catch (Exception numberFormatException)
+        {
+        }
+
+        return id;
+    }
+    
+    private DiskSpaceInfo info_recursive(File f, DiskSpaceInfo local_dsi)
     {
         if (f.isDirectory())
         {
             File[] f_list = f.listFiles();
             for (int i = 0; i < f_list.length; i++)
             {
-                cap = cap_recursive( f_list[i], cap );
+                local_dsi = info_recursive( f_list[i], local_dsi );
             }
         }
         else
         {
-            cap += f.length();
+            local_dsi.setCapacity( local_dsi.getCapacity() + f.length());
+            long time = build_time_from_path( f.getAbsolutePath() );
+            if (time > 0)
+            {
+                if (time > local_dsi.getLastEntryTS())
+                    local_dsi.setLastEntryTS(time);
+                if (local_dsi.getFirstEntryTS() == 0 || time < local_dsi.getFirstEntryTS())
+                    local_dsi.setFirstEntryTS(time);
+            }
         }
-        return cap;
+        return local_dsi;
     }
 
-    public long calc_real_capacity() throws VaultException
+    void rebuild_info() throws VaultException
     {
         File path = new File( ds.getPath() );
         if (!path.exists())
         {
             throw new VaultException( ds, "Missing directory");
         }
-        long cap = 0;
-        cap = cap_recursive( path, cap );
-
-        return cap;
+        
+        DiskSpaceInfo local_dsi = new DiskSpaceInfo();
+        dsi = info_recursive( path, local_dsi );
     }
 
     public boolean exists()
@@ -101,22 +310,20 @@ public class DiskSpaceHandler
 
         path.mkdir();
 
-        long cap = read_act_capacity();
-        if (cap > 0)
-            throw new VaultException( ds, "Contains data, should be empty" );
-
-        File cap_file = new File( ds.getPath() + "/" + "cap.dat" );
-
         try
         {
-            RandomAccessFile raf = new RandomAccessFile(cap_file, "rw");
-            raf.writeBytes(Long.toString(0));
-            raf.close();
+            read_info();
+            if (dsi.getCapacity() > 0)
+                throw new VaultException( ds, "Contains data and info, should be empty" );
+
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot write cap file: " + ex.getMessage());
+            // REGULAR EXIT OF CHECK
         }
+
+        dsi = new DiskSpaceInfo();
+        update_info();
         
         try
         {
@@ -214,7 +421,7 @@ public class DiskSpaceHandler
             return false;
 
         // READ SIZE FROM DISK
-        long act_cap = read_act_capacity();
+        long act_cap = dsi.getCapacity();
 
         // CHECK IF OKAY
         if (allowed_cap > 0 && act_cap + msg.length() > allowed_cap)
@@ -222,7 +429,7 @@ public class DiskSpaceHandler
 
         return true;
     }
-
+/*
     public long read_act_capacity()
     {
         File cap_file = new File( ds.getPath() + "/" + "cap.dat" );
@@ -268,5 +475,5 @@ public class DiskSpaceHandler
         }
         return cap;
     }
-
+*/
 }

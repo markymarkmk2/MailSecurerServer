@@ -6,6 +6,8 @@
 package dimm.home.mail;
 
 import java.io.File;
+import java.text.ParseException;
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -22,15 +24,23 @@ public class RFCFileMail
     static SimpleDateFormat sdf = new SimpleDateFormat("/yyyy/MM/dd/HHmmss.SSS");
 
 
-    public RFCFileMail( File _msg )
+    public RFCFileMail( File _msg, Date _date )
     {
         msg = _msg;
-        date = new Date();
+        date = _date;
+    }
+    public RFCFileMail( File _msg )
+    {
+        this( _msg, new Date() );
     }
 
     public File getFile()
     {
         return msg;
+    }
+    public Date getDate()
+    {
+        return date;
     }
 
     synchronized public File create_unique_mailfile( String parent_path)
@@ -56,5 +66,18 @@ public class RFCFileMail
 
         return trg_file;
     }
+    public static long get_time_from_mailfile( String path)
+    {
+        try
+        {
+            Date d = sdf.parse(path);
+            return d.getTime();
+        }
+        catch (ParseException parseException)
+        {
+        }
+        return 0;
+    }
+
 
 }

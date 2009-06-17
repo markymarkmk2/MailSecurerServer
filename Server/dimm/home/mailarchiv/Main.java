@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.Httpd.Httpd;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
@@ -52,7 +53,7 @@ public class Main
     public static boolean create_licensefile = false;
     public static String license_interface = "eth0";
 
-
+    Httpd httpd;
     
     
     static void print_system_property( String key )
@@ -134,6 +135,10 @@ public class Main
         {
             exc.printStackTrace();
         }
+
+        httpd = new Httpd(8100);
+
+        httpd.start();
         
         
     }

@@ -6,6 +6,7 @@ package dimm.home.importmail;
 
 import com.sun.mail.imap.IMAPFolder;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.util.*;
 
 
@@ -451,7 +452,7 @@ public class MailBoxImporter implements StatusHandler, WorkerParentChild
 
         return s;
     }
-    protected void archive_message( Message message ) throws ArchiveMsgException
+    protected void archive_message( Message message ) throws ArchiveMsgException, VaultException
     {
          status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
 
@@ -495,7 +496,7 @@ public class MailBoxImporter implements StatusHandler, WorkerParentChild
             {
                 archive_message(message);
             }
-            catch (ArchiveMsgException ex)
+            catch (Exception ex)
             {
                 status.set_status(StatusEntry.ERROR, "Archive of message <" + get_subject(message) + "> failed on Mail server <" + imfetcher.getServer() + ">");
                 LogManager.err_log(status.get_status_txt(), ex);

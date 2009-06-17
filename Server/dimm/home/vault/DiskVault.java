@@ -10,6 +10,7 @@ import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.DiskSpace;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Notification;
@@ -62,7 +63,25 @@ public class DiskVault implements Vault, StatusHandler
         {
             dsh_list.add( new DiskSpaceHandler(it.next()));
         }
+    }
+    public DiskArchive get_da()
+    {
+        return disk_archive;
+    }
+    public ArrayList<DiskSpaceHandler>get_dsh_list()
+    {
+        return dsh_list;
+    }
+    public DiskSpaceHandler get_dsh( long ds_idx)
+    {
+        for (int i = 0; i < dsh_list.size(); i++)
+        {
+            DiskSpaceHandler diskSpaceHandler = dsh_list.get(i);
+            if (diskSpaceHandler.getDs().getId() == ds_idx)
+                return diskSpaceHandler;
+        }
 
+        return null;
     }
 
 
@@ -120,7 +139,7 @@ public class DiskVault implements Vault, StatusHandler
     }
 
     @Override
-    public boolean archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException
+    public boolean archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException
     {
         boolean ret = false;
         try
@@ -145,7 +164,7 @@ public class DiskVault implements Vault, StatusHandler
         return ret;
     }
 
-    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException
+    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException
     {
         int ds_idx = 0;
 
@@ -155,6 +174,7 @@ public class DiskVault implements Vault, StatusHandler
         {
             throw new ArchiveMsgException("No Diskspace found" );
         }
+
         while (!dsh.checkCapacity(msg.getFile()))
         {
             DiskSpace ds = dsh.getDs();
@@ -178,7 +198,7 @@ public class DiskVault implements Vault, StatusHandler
         write_mail_file( context, dsh.getDs(), msg );
 
         // ADD CAPACITY COUNTER
-        dsh.incr_act_capacity(msg.getFile().length());
+        dsh.add_message_info(msg);
 
         return true;
     }

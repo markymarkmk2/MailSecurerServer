@@ -8,6 +8,7 @@ import dimm.home.hibernate.Hotfolder;
 import dimm.home.hibernate.HotfolderExclude;
 import dimm.home.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
@@ -362,7 +363,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         }
     }
 
-    private void handle_hotfolder_entry( DirectoryEntry entry ) throws ArchiveMsgException
+    private void handle_hotfolder_entry( DirectoryEntry entry ) throws ArchiveMsgException, VaultException
     {
         File arch_file = entry.getFile();
         File zipfile = null;
@@ -398,10 +399,9 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
                 entry.delete_recursive();
 
         }
-
     }
 
-    private boolean handle_hotfolder_file( File arch_file ) throws ArchiveMsgException
+    private boolean handle_hotfolder_file( File arch_file ) throws ArchiveMsgException, VaultException
     {
         try
         {
