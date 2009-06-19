@@ -4,6 +4,7 @@
  */
 package dimm.home.Httpd;
 
+import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpsConfigurator;
@@ -16,7 +17,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManagerFactory;
 import javax.xml.ws.Endpoint;
@@ -163,13 +170,62 @@ public class Httpd
     /**
      * @param args the command line arguments
      */
-    public void start()
+    public void start() throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException
     {
+
+// keytool -genkey -keyalg RSA -keystore jaxws.keystore
+
+// The code I've got working to serve my HTTPS webservice is as follows - it's a bit rough and ready as I haven't tidied it up yet, but you should get the idea:
+
+        MWWebService calculator = new MWWebService();
+        Endpoint endpoint = Endpoint.create(/*"http://localhost:8050/1234",*/ calculator);
+        HttpsServer s1 =  HttpsServer.create(new InetSocketAddress(8050), 0);
+		SSLContext      sslContext = SSLContext.getInstance("TLS");
+        /*
+         * Allocate and initialize a KeyStore object.
+         */
+        char[] password = "123456".toCharArray();
+
+			KeyStore ks = KeyStore.getInstance("JKS");
+			FileInputStream fis = new FileInputStream("jaxws.keystore");
+			ks.load(fis, password);
+			/*
+			 * Allocate and initialize a KeyManagerFactory.
+			 */
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			kmf.init(ks, password);
+			/*
+			 * Allocate and initialize a TrustManagerFactory.
+			 */
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+			tmf.init(ks);
+
+			sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+
+        final SSLEngine m_engine = sslContext.createSSLEngine();
+
+        s1.setHttpsConfigurator(new HttpsConfigurator(sslContext)
+        {
+            @Override
+            public void configure(HttpsParameters params) {
+
+                params.setCipherSuites(m_engine.getEnabledCipherSuites());
+                params.setProtocols(m_engine.getEnabledProtocols());
+            }
+        });
+		s1.start();
+
+		HttpContext s = s1.createContext("/1234");
+		endpoint.publish(s);
+
+        
         // create and publish an endpoint
         m_arrayBlockingQueue = new ArrayBlockingQueue(10000);
         m_executor = new ThreadPoolExecutor(5, 50, 15L, TimeUnit.SECONDS, m_arrayBlockingQueue);
-        MWWebService calculator = new MWWebService();
-        Endpoint endpoint = Endpoint.publish("http://localhost:8050/1234", calculator);
+       // MWWebService calculator = new MWWebService();
+        //Endpoint endpoint = Endpoint.publish("https://localhost:8050/1234", calculator);
+        //endpoint.publish(s);
 
     }
 
