@@ -70,7 +70,7 @@
   </binding>
   <service name="MWWebServiceService">
     <port name="MWWebServicePort" binding="tns:MWWebServicePortBinding">
-      <soap:address location="https://localhost:8050/1234"/>
+      <soap:address location="http://localhost:8050/1234"/>
     </port>
   </service>
 </definitions>
