@@ -170,7 +170,7 @@ public class Httpd
     /**
      * @param args the command line arguments
      */
-    public void start() throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException
+    public void start_ssl() throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException
     {
 
 // keytool -genkey -keyalg RSA -keystore jaxws.keystore
@@ -223,10 +223,62 @@ public class Httpd
         // create and publish an endpoint
         m_arrayBlockingQueue = new ArrayBlockingQueue(10000);
         m_executor = new ThreadPoolExecutor(5, 50, 15L, TimeUnit.SECONDS, m_arrayBlockingQueue);
+
+        endpoint.setExecutor(m_executor);
+
        // MWWebService calculator = new MWWebService();
         //Endpoint endpoint = Endpoint.publish("https://localhost:8050/1234", calculator);
         //endpoint.publish(s);
 
+    }
+    public void start_regular() throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException
+    {
+        // create and publish an endpoint
+        m_arrayBlockingQueue = new ArrayBlockingQueue(10000);
+        m_executor = new ThreadPoolExecutor(5, 50, 15L, TimeUnit.SECONDS, m_arrayBlockingQueue);
+
+        MWWebService calculator = new MWWebService();
+        Endpoint endpoint = Endpoint.publish("http://localhost:8050/1234", calculator);
+        endpoint.setExecutor(m_executor);
+
+    }
+
+
+    void test()
+    {
+        System.setProperty("javax.net.ssl.trustStore", "jxws.ts");
+        System.setProperty("javax.net.ssl.trustStorePassword", "123456");
+
+/*
+
+        long now = System.currentTimeMillis() / 1000 + 14*24*3600;
+
+        MWWebServiceService service =
+                new MWWebServiceService();
+        dimm.home.httpd.MWWebService port = service.getMWWebServicePort();
+
+        // TODO initialize WS operation arguments here
+        int arg0 = 4;
+        int arg1 = 6;
+        int result = 0;
+        // TODO process result here
+        for (int i = 0; i < 1000; i++)
+        {
+            result = port.minus(arg0, arg1);
+   //         result = port.multiply(result , 2);
+        }
+
+        System.out.println(Thread.currentThread().toString() + " | Result = " + result);
+
+        String m1 = "abcdf ";
+        TestString m2 = new TestString();
+
+        m2.setS("blah");
+
+        String ret = port.stringConcat(m1, m2);
+
+        System.out.println(Thread.currentThread().toString() + " | Result = " + ret);
+  */
     }
 
 }
