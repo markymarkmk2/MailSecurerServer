@@ -18,6 +18,12 @@
   <message name="StringConcatResponse">
     <part name="parameters" element="tns:StringConcatResponse"/>
   </message>
+  <message name="getQuery">
+    <part name="parameters" element="tns:getQuery"/>
+  </message>
+  <message name="getQueryResponse">
+    <part name="parameters" element="tns:getQueryResponse"/>
+  </message>
   <message name="Minus">
     <part name="parameters" element="tns:Minus"/>
   </message>
@@ -32,6 +38,10 @@
     <operation name="StringConcat">
       <input message="tns:StringConcat"/>
       <output message="tns:StringConcatResponse"/>
+    </operation>
+    <operation name="getQuery">
+      <input message="tns:getQuery"/>
+      <output message="tns:getQueryResponse"/>
     </operation>
     <operation name="Minus">
       <input message="tns:Minus"/>
@@ -50,6 +60,15 @@
       </output>
     </operation>
     <operation name="StringConcat">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="getQuery">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>

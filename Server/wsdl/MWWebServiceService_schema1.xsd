@@ -13,6 +13,10 @@
 
   <xs:element name="StringConcatResponse" type="tns:StringConcatResponse"/>
 
+  <xs:element name="getQuery" type="tns:getQuery"/>
+
+  <xs:element name="getQueryResponse" type="tns:getQueryResponse"/>
+
   <xs:complexType name="StringConcat">
     <xs:sequence>
       <xs:element name="m1" type="xs:string" minOccurs="0"/>
@@ -42,6 +46,18 @@
   <xs:complexType name="MultiplyResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="getQuery">
+    <xs:sequence>
+      <xs:element name="qry" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="getQueryResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 

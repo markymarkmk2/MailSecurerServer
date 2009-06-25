@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
+// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
 
 
 import java.util.HashSet;
@@ -12,7 +12,7 @@ public class Mail  implements java.io.Serializable {
 
 
      private long id;
-     private Mandant mandant;
+     private Integer mid;
      private String from;
      private Integer rfc822Size;
      private String subject;
@@ -30,9 +30,9 @@ public class Mail  implements java.io.Serializable {
     public Mail(long id) {
         this.id = id;
     }
-    public Mail(long id, Mandant mandant, String from, Integer rfc822Size, String subject, String location, Integer locationId, String flags, Integer rcvTimestamp, Set<MailHeader> mailHeaders, Set<MailRecipientLink> mailRecipientLinks) {
+    public Mail(long id, Integer mid, String from, Integer rfc822Size, String subject, String location, Integer locationId, String flags, Integer rcvTimestamp, Set<MailHeader> mailHeaders, Set<MailRecipientLink> mailRecipientLinks) {
        this.id = id;
-       this.mandant = mandant;
+       this.mid = mid;
        this.from = from;
        this.rfc822Size = rfc822Size;
        this.subject = subject;
@@ -51,12 +51,12 @@ public class Mail  implements java.io.Serializable {
     public void setId(long id) {
         this.id = id;
     }
-    public Mandant getMandant() {
-        return this.mandant;
+    public Integer getMid() {
+        return this.mid;
     }
     
-    public void setMandant(Mandant mandant) {
-        this.mandant = mandant;
+    public void setMid(Integer mid) {
+        this.mid = mid;
     }
     public String getFrom() {
         return this.from;

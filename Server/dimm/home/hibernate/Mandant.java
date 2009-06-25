@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
+// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
 
 
 import java.util.HashSet;
@@ -20,7 +20,6 @@ public class Mandant  implements java.io.Serializable {
      private Set<Milter> milters = new HashSet<Milter>(0);
      private Set<Proxy> proxies = new HashSet<Proxy>(0);
      private Set<DiskArchive> diskArchives = new HashSet<DiskArchive>(0);
-     private Set<Mail> mails = new HashSet<Mail>(0);
      private Set<AccountConnector> accountConnectors = new HashSet<AccountConnector>(0);
 
     public Mandant() {
@@ -32,7 +31,7 @@ public class Mandant  implements java.io.Serializable {
         this.name = name;
         this.license = license;
     }
-    public Mandant(int id, String name, String license, Set<Hotfolder> hotfolders, Set<ImapFetcher> imapFetchers, Set<Role> roles, Set<Milter> milters, Set<Proxy> proxies, Set<DiskArchive> diskArchives, Set<Mail> mails, Set<AccountConnector> accountConnectors) {
+    public Mandant(int id, String name, String license, Set<Hotfolder> hotfolders, Set<ImapFetcher> imapFetchers, Set<Role> roles, Set<Milter> milters, Set<Proxy> proxies, Set<DiskArchive> diskArchives, Set<AccountConnector> accountConnectors) {
        this.id = id;
        this.name = name;
        this.license = license;
@@ -42,7 +41,6 @@ public class Mandant  implements java.io.Serializable {
        this.milters = milters;
        this.proxies = proxies;
        this.diskArchives = diskArchives;
-       this.mails = mails;
        this.accountConnectors = accountConnectors;
     }
    
@@ -108,13 +106,6 @@ public class Mandant  implements java.io.Serializable {
     
     public void setDiskArchives(Set<DiskArchive> diskArchives) {
         this.diskArchives = diskArchives;
-    }
-    public Set<Mail> getMails() {
-        return this.mails;
-    }
-    
-    public void setMails(Set<Mail> mails) {
-        this.mails = mails;
     }
     public Set<AccountConnector> getAccountConnectors() {
         return this.accountConnectors;

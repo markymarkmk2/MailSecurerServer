@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
+// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
 
 
 

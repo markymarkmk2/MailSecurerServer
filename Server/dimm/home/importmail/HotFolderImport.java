@@ -407,7 +407,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         {
             // Create a mail session
             RFCMimeMail mm = new RFCMimeMail();
-            mm.create(hfolder.getUserMailAdress(), hfolder.getUserMailAdress(), Main.Txt("Hotfolder_") + arch_file.getName(),
+            mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
             
             Main.get_control().add_new_outmail( mm.getMsg(), hfolder.getMandant(),  hfolder.getDiskArchive(), false );

@@ -147,7 +147,7 @@ public class Main
         httpd = new Httpd(8100);
         try
         {
-            httpd.start_ssl();
+            httpd.start_regular();
         }
         catch (IOException ex)
         {

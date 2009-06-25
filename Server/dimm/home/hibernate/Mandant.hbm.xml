@@ -1,65 +1,60 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.Mandant" schema="public" table="mandant">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <property name="name" type="string">
-      <column name="name" not-null="true"/>
-    </property>
-    <property name="license" type="string">
-      <column length="100" name="license" not-null="true"/>
-    </property>
-    <set inverse="true" name="hotfolders">
-      <key>
-        <column name="mid" not-null="true"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.Hotfolder"/>
-    </set>
-    <set inverse="true" name="imapFetchers">
-      <key>
-        <column name="mid" not-null="true"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.ImapFetcher"/>
-    </set>
-    <set inverse="true" name="roles">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.Role"/>
-    </set>
-    <set inverse="true" name="milters">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.Milter"/>
-    </set>
-    <set inverse="true" name="proxies">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.Proxy"/>
-    </set>
-    <set inverse="true" name="diskArchives">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.DiskArchive"/>
-    </set>
-    <set inverse="true" name="mails">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.Mail"/>
-    </set>
-    <set inverse="true" name="accountConnectors">
-      <key>
-        <column name="mid"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.AccountConnector"/>
-    </set>
-  </class>
+    <class name="dimm.home.hibernate.Mandant" table="mandant" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <property name="name" type="string">
+            <column name="name" not-null="true" />
+        </property>
+        <property name="license" type="string">
+            <column name="license" length="100" not-null="true" />
+        </property>
+        <set name="hotfolders" inverse="true">
+            <key>
+                <column name="mid" not-null="true" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.Hotfolder" />
+        </set>
+        <set name="imapFetchers" inverse="true">
+            <key>
+                <column name="mid" not-null="true" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.ImapFetcher" />
+        </set>
+        <set name="roles" inverse="true">
+            <key>
+                <column name="mid" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.Role" />
+        </set>
+        <set name="milters" inverse="true">
+            <key>
+                <column name="mid" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.Milter" />
+        </set>
+        <set name="proxies" inverse="true">
+            <key>
+                <column name="mid" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.Proxy" />
+        </set>
+        <set name="diskArchives" inverse="true">
+            <key>
+                <column name="mid" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.DiskArchive" />
+        </set>
+        <set name="accountConnectors" inverse="true">
+            <key>
+                <column name="mid" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.AccountConnector" />
+        </set>
+    </class>
 </hibernate-mapping>

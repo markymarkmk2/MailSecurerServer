@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA
+// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
 
 
 import java.util.HashSet;
@@ -14,7 +14,7 @@ public class Hotfolder  implements java.io.Serializable {
      private int id;
      private DiskArchive diskArchive;
      private Mandant mandant;
-     private String userMailAdress;
+     private String usermailadress;
      private String path;
      private String flags;
      private Set<HotfolderExclude> hotfolderExcludes = new HashSet<HotfolderExclude>(0);
@@ -23,18 +23,18 @@ public class Hotfolder  implements java.io.Serializable {
     }
 
 	
-    public Hotfolder(int id, DiskArchive diskArchive, Mandant mandant, String userMailAdress, String path) {
+    public Hotfolder(int id, DiskArchive diskArchive, Mandant mandant, String usermailadress, String path) {
         this.id = id;
         this.diskArchive = diskArchive;
         this.mandant = mandant;
-        this.userMailAdress = userMailAdress;
+        this.usermailadress = usermailadress;
         this.path = path;
     }
-    public Hotfolder(int id, DiskArchive diskArchive, Mandant mandant, String userMailAdress, String path, String flags, Set<HotfolderExclude> hotfolderExcludes) {
+    public Hotfolder(int id, DiskArchive diskArchive, Mandant mandant, String usermailadress, String path, String flags, Set<HotfolderExclude> hotfolderExcludes) {
        this.id = id;
        this.diskArchive = diskArchive;
        this.mandant = mandant;
-       this.userMailAdress = userMailAdress;
+       this.usermailadress = usermailadress;
        this.path = path;
        this.flags = flags;
        this.hotfolderExcludes = hotfolderExcludes;
@@ -61,12 +61,12 @@ public class Hotfolder  implements java.io.Serializable {
     public void setMandant(Mandant mandant) {
         this.mandant = mandant;
     }
-    public String getUserMailAdress() {
-        return this.userMailAdress;
+    public String getUsermailadress() {
+        return this.usermailadress;
     }
     
-    public void setUserMailAdress(String userMailAdress) {
-        this.userMailAdress = userMailAdress;
+    public void setUsermailadress(String usermailadress) {
+        this.usermailadress = usermailadress;
     }
     public String getPath() {
         return this.path;

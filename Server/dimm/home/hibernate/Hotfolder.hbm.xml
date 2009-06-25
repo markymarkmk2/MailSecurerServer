@@ -1,32 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.Hotfolder" schema="public" table="hotfolder">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
-      <column name="da_id" not-null="true"/>
-    </many-to-one>
-    <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
-      <column name="mid" not-null="true"/>
-    </many-to-one>
-    <property name="userMailAdress" type="string">
-      <column name="UserMailAdress" not-null="true"/>
-    </property>
-    <property name="path" type="string">
-      <column name="Path" not-null="true"/>
-    </property>
-    <property name="flags" type="string">
-      <column name="Flags"/>
-    </property>
-    <set inverse="true" name="hotfolderExcludes">
-      <key>
-        <column name="hf_id"/>
-      </key>
-      <one-to-many class="dimm.home.hibernate.HotfolderExclude"/>
-    </set>
-  </class>
+    <class name="dimm.home.hibernate.Hotfolder" table="hotfolder" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <many-to-one name="diskArchive" class="dimm.home.hibernate.DiskArchive" fetch="select">
+            <column name="da_id" not-null="true" />
+        </many-to-one>
+        <many-to-one name="mandant" class="dimm.home.hibernate.Mandant" fetch="select">
+            <column name="mid" not-null="true" />
+        </many-to-one>
+        <property name="usermailadress" type="string">
+            <column name="usermailadress" not-null="true" />
+        </property>
+        <property name="path" type="string">
+            <column name="path" not-null="true" />
+        </property>
+        <property name="flags" type="string">
+            <column name="flags" />
+        </property>
+        <set name="hotfolderExcludes" inverse="true">
+            <key>
+                <column name="hf_id" />
+            </key>
+            <one-to-many class="dimm.home.hibernate.HotfolderExclude" />
+        </set>
+    </class>
 </hibernate-mapping>

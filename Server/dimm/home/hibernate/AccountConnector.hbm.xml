@@ -1,23 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
-<!-- Generated 29.05.2009 11:20:51 by Hibernate Tools 3.2.1.GA -->
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<!-- Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-  <class name="dimm.home.hibernate.AccountConnector" schema="public" table="account_connector">
-    <id name="id" type="int">
-      <column name="id"/>
-      <generator class="assigned"/>
-    </id>
-    <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
-      <column name="mid"/>
-    </many-to-one>
-    <property name="type" type="string">
-      <column length="80" name="type"/>
-    </property>
-    <property name="ip" type="string">
-      <column length="80" name="ip"/>
-    </property>
-    <property name="port" type="java.lang.Integer">
-      <column name="port"/>
-    </property>
-  </class>
+    <class name="dimm.home.hibernate.AccountConnector" table="account_connector" schema="public">
+        <id name="id" type="int">
+            <column name="id" />
+            <generator class="assigned" />
+        </id>
+        <many-to-one name="mandant" class="dimm.home.hibernate.Mandant" fetch="select">
+            <column name="mid" />
+        </many-to-one>
+        <property name="type" type="string">
+            <column name="type" length="80" />
+        </property>
+        <property name="ip" type="string">
+            <column name="ip" length="80" />
+        </property>
+        <property name="port" type="java.lang.Integer">
+            <column name="port" />
+        </property>
+    </class>
 </hibernate-mapping>

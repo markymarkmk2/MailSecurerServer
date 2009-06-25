@@ -771,9 +771,12 @@ public class LogicControl
     {
         try
         {
-            org.hibernate.classic.Session session = HibernateUtil.getSessionFactory().getCurrentSession();            
+            org.hibernate.classic.Session session = HibernateUtil.getSessionFactory().getCurrentSession();
+            org.hibernate.Transaction tx = session.beginTransaction();
             org.hibernate.Query q = session.createQuery("from Mandant");
             List l = q.list();
+            tx.commit();
+
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
                 for (int i = 0; i < l.size(); i++)
@@ -794,6 +797,12 @@ public class LogicControl
                     }
                 }
             }
+            session = HibernateUtil.getSessionFactory().getCurrentSession();
+            tx = session.beginTransaction();
+            q = session.createQuery("from Hotfolder");
+            l = q.list();
+            tx.commit();
+
         }
         catch (Exception e)
         {
