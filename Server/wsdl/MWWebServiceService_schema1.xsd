@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xs:schema version="1.0" targetNamespace="http://Httpd.home.dimm/" xmlns:tns="http://Httpd.home.dimm/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
+  <xs:element name="Delete" type="tns:Delete"/>
+
+  <xs:element name="DeleteResponse" type="tns:DeleteResponse"/>
+
   <xs:element name="Minus" type="tns:Minus"/>
 
   <xs:element name="MinusResponse" type="tns:MinusResponse"/>
@@ -12,6 +16,10 @@
   <xs:element name="StringConcat" type="tns:StringConcat"/>
 
   <xs:element name="StringConcatResponse" type="tns:StringConcatResponse"/>
+
+  <xs:element name="Update" type="tns:Update"/>
+
+  <xs:element name="UpdateResponse" type="tns:UpdateResponse"/>
 
   <xs:element name="getQuery" type="tns:getQuery"/>
 
@@ -31,6 +39,18 @@
   </xs:complexType>
 
   <xs:complexType name="StringConcatResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Delete">
+    <xs:sequence>
+      <xs:element name="object" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DeleteResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
@@ -71,6 +91,18 @@
   <xs:complexType name="MinusResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="Update">
+    <xs:sequence>
+      <xs:element name="object" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="UpdateResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 </xs:schema>

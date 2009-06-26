@@ -1,14 +1,16 @@
 package dimm.home.Httpd;
 
+import dimm.home.DAO.GenericDAO;
 import dimm.home.Test.TestString;
 import dimm.home.hibernate.HibernateUtil;
+import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebService;
-import org.hibernate.HibernateException;
 
 @WebService
 public class MWWebService {
@@ -40,17 +42,89 @@ public class MWWebService {
         return m1 + m2.getS();
     }
 
+
+    @WebMethod(operationName = "Update")
+    public String Update( @WebParam(name = "object") String object )
+    {
+        org.hibernate.Query q = null;
+        org.hibernate.Transaction tx;
+        String ret = null;
+        Object o = null;
+
+        try
+        {
+            ByteArrayInputStream bis = new ByteArrayInputStream(object.getBytes("UTF-8"));
+            XMLDecoder dec = new XMLDecoder(bis);
+            o = dec.readObject();
+        }
+        catch (Exception ex)
+        {
+            return "3: cannot read object <" + object + ">: " + ex.getMessage();
+        }
+
+        try
+        {
+            org.hibernate.Session session = HibernateUtil.getSessionFactory().getCurrentSession();
+
+            if (GenericDAO.save(session, o))
+            {
+                return "0: okay";
+            }
+        }
+        catch (Exception ex)
+        {
+            return "2: exception " + ex.getMessage();
+        }
+        return "1: cannot update";
+    }
+
+    @WebMethod(operationName = "Delete")
+    public String Delete( @WebParam(name = "object") String object )
+    {
+        org.hibernate.Query q = null;
+        org.hibernate.Transaction tx;        
+        Object o = null;
+
+        try
+        {
+            ByteArrayInputStream bis = new ByteArrayInputStream(object.getBytes("UTF-8"));
+            XMLDecoder dec = new XMLDecoder(bis);
+            o = dec.readObject();
+        }
+        catch (Exception ex)
+        {
+            return "3: cannot read object <" + object + ">: " + ex.getMessage();
+        }
+
+        try
+        {
+            org.hibernate.Session session = HibernateUtil.getSessionFactory().getCurrentSession();
+
+            if (GenericDAO.delete(session, o))
+            {
+                return "0: okay";
+            }
+        }
+        catch (Exception ex)
+        {
+            return "2: exception " + ex.getMessage();
+        }
+        return "1: cannot delete";
+    }
+
+
     @WebMethod(operationName = "getQuery")
     public String getQuery( @WebParam(name = "qry") String qry )
     {
         org.hibernate.Query q = null;
+        org.hibernate.Transaction tx;
         String ret = null;
 
         List l = null;
         try
         {
             org.hibernate.Session session = HibernateUtil.getSessionFactory().getCurrentSession();
-            org.hibernate.Transaction tx = session.beginTransaction();
+            tx = session.beginTransaction();
             q = session.createQuery(qry);
         }
         catch (Exception ex)
@@ -64,6 +138,7 @@ public class MWWebService {
         try
         {
             l = q.list();
+            tx.commit();
         }
         catch (Exception ex)
         {
