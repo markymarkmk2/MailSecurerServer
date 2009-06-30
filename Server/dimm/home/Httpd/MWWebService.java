@@ -1,12 +1,9 @@
 package dimm.home.Httpd;
 
+import com.thoughtworks.xstream.XStream;
 import dimm.home.DAO.GenericDAO;
 import dimm.home.Test.TestString;
 import dimm.home.hibernate.HibernateUtil;
-import java.beans.XMLDecoder;
-import java.beans.XMLEncoder;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.util.List;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
@@ -53,9 +50,8 @@ public class MWWebService {
 
         try
         {
-            ByteArrayInputStream bis = new ByteArrayInputStream(object.getBytes("UTF-8"));
-            XMLDecoder dec = new XMLDecoder(bis);
-            o = dec.readObject();
+            XStream xstream = new XStream();
+            o = xstream.fromXML(object);
         }
         catch (Exception ex)
         {
@@ -87,9 +83,8 @@ public class MWWebService {
 
         try
         {
-            ByteArrayInputStream bis = new ByteArrayInputStream(object.getBytes("UTF-8"));
-            XMLDecoder dec = new XMLDecoder(bis);
-            o = dec.readObject();
+            XStream xstream = new XStream();
+            o = xstream.fromXML(object);
         }
         catch (Exception ex)
         {
@@ -155,12 +150,10 @@ public class MWWebService {
         
         try
         {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            XMLEncoder enc = new XMLEncoder(bos);
-            enc.writeObject(l);
-            enc.close();
+            XStream xstream = new XStream();
+            String xml = xstream.toXML(l);
 
-            ret = "0: " + bos.toString("UTF-8");
+            ret = "0: " + xml;
         }
         catch (Exception ex)
         {

@@ -8,6 +8,7 @@
  */
 package dimm.home.mailarchiv;
 
+import dimm.home.DAO.GenericDAO;
 import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.hibernate.Hotfolder;
@@ -767,15 +768,15 @@ public class LogicControl
         return prefs;
     }
 
+    org.hibernate.classic.Session param_session;
     private void read_param_db()
     {
         try
         {
-            org.hibernate.classic.Session session = HibernateUtil.getSessionFactory().getCurrentSession();
-            org.hibernate.Transaction tx = session.beginTransaction();
-            org.hibernate.Query q = session.createQuery("from Mandant");
+            param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+            org.hibernate.Transaction tx = param_session.beginTransaction();
+            org.hibernate.Query q = param_session.createQuery("from Mandant");
             List l = q.list();
-            tx.commit();
 
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
@@ -784,6 +785,10 @@ public class LogicControl
                     Mandant m = (Mandant)l.get(i);
                     try
                     {
+//                        param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+//                        m.setName( m.getName() + "s");
+//                        GenericDAO.save(param_session, m);
+
                         MandantPreferences prefs = read_mandant_prefs( m );
                         add_mandant(prefs, m);
 
@@ -797,11 +802,11 @@ public class LogicControl
                     }
                 }
             }
-            session = HibernateUtil.getSessionFactory().getCurrentSession();
-            tx = session.beginTransaction();
-            q = session.createQuery("from Hotfolder");
+            tx = param_session.beginTransaction();
+            q = param_session.createQuery("from Hotfolder");
             l = q.list();
             tx.commit();
+
 
         }
         catch (Exception e)
