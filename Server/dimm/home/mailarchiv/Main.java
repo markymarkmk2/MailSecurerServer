@@ -35,6 +35,7 @@ public class Main
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
     public static final String SCRIPT_PATH = "scripts/";
+    public static final String DATABASEPATH = "db/";
     
     
     public static final String PROGNAME = "MailProxy.jar";
@@ -97,6 +98,10 @@ public class Main
                 f.mkdirs();
         
             f = new File( RFC_PATH );
+            if (!f.exists())
+                f.mkdirs();
+            
+            f = new File( DATABASEPATH );
             if (!f.exists())
                 f.mkdirs();
         

@@ -1,33 +1,32 @@
-<?xml version="1.0"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
-"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-    <class name="dimm.home.hibernate.ImapFetcher" table="imap_fetcher" schema="public">
-        <id name="id" type="int">
-            <column name="id" />
-            <generator class="assigned" />
-        </id>
-        <many-to-one name="diskArchive" class="dimm.home.hibernate.DiskArchive" fetch="select">
-            <column name="da_id" not-null="true" />
-        </many-to-one>
-        <many-to-one name="mandant" class="dimm.home.hibernate.Mandant" fetch="select">
-            <column name="mid" not-null="true" />
-        </many-to-one>
-        <property name="server" type="string">
-            <column name="server" not-null="true" />
-        </property>
-        <property name="port" type="java.lang.Integer">
-            <column name="port" />
-        </property>
-        <property name="username" type="string">
-            <column name="username" length="80" />
-        </property>
-        <property name="password" type="string">
-            <column name="password" length="80" />
-        </property>
-        <property name="flags" type="java.lang.Integer">
-            <column name="flags" />
-        </property>
-    </class>
+  <class name="dimm.home.hibernate.ImapFetcher" schema="public" table="imap_fetcher">
+    <id name="id" type="int">
+      <column name="id"/>
+      <generator class="assigned"/>
+    </id>
+    <many-to-one class="dimm.home.hibernate.DiskArchive" fetch="select" name="diskArchive">
+      <column name="da_id" not-null="true"/>
+    </many-to-one>
+    <many-to-one class="dimm.home.hibernate.Mandant" fetch="select" name="mandant">
+      <column name="mid" not-null="true"/>
+    </many-to-one>
+    <property name="server" type="string">
+      <column name="server" not-null="true"/>
+    </property>
+    <property name="port" type="java.lang.Integer">
+      <column name="port"/>
+    </property>
+    <property name="username" type="string">
+      <column length="80" name="username"/>
+    </property>
+    <property name="password" type="string">
+      <column length="80" name="password"/>
+    </property>
+    <property name="flags" type="java.lang.Integer">
+      <column name="flags"/>
+    </property>
+  </class>
 </hibernate-mapping>

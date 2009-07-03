@@ -6,71 +6,101 @@
       <xsd:import namespace="http://Httpd.home.dimm/" schemaLocation="MWWebServiceService_schema1.xsd"/>
     </xsd:schema>
   </types>
-  <message name="Multiply">
-    <part name="parameters" element="tns:Multiply"/>
+  <message name="createStatement">
+    <part name="parameters" element="tns:createStatement"/>
   </message>
-  <message name="MultiplyResponse">
-    <part name="parameters" element="tns:MultiplyResponse"/>
+  <message name="createStatementResponse">
+    <part name="parameters" element="tns:createStatementResponse"/>
   </message>
-  <message name="StringConcat">
-    <part name="parameters" element="tns:StringConcat"/>
+  <message name="executeUpdate">
+    <part name="parameters" element="tns:executeUpdate"/>
   </message>
-  <message name="StringConcatResponse">
-    <part name="parameters" element="tns:StringConcatResponse"/>
+  <message name="executeUpdateResponse">
+    <part name="parameters" element="tns:executeUpdateResponse"/>
   </message>
-  <message name="getQuery">
-    <part name="parameters" element="tns:getQuery"/>
+  <message name="executeQuery">
+    <part name="parameters" element="tns:executeQuery"/>
   </message>
-  <message name="getQueryResponse">
-    <part name="parameters" element="tns:getQueryResponse"/>
+  <message name="executeQueryResponse">
+    <part name="parameters" element="tns:executeQueryResponse"/>
   </message>
-  <message name="Delete">
-    <part name="parameters" element="tns:Delete"/>
+  <message name="getMetaData">
+    <part name="parameters" element="tns:getMetaData"/>
   </message>
-  <message name="DeleteResponse">
-    <part name="parameters" element="tns:DeleteResponse"/>
+  <message name="getMetaDataResponse">
+    <part name="parameters" element="tns:getMetaDataResponse"/>
   </message>
-  <message name="Minus">
-    <part name="parameters" element="tns:Minus"/>
+  <message name="getSQLArrayResult">
+    <part name="parameters" element="tns:getSQLArrayResult"/>
   </message>
-  <message name="MinusResponse">
-    <part name="parameters" element="tns:MinusResponse"/>
+  <message name="getSQLArrayResultResponse">
+    <part name="parameters" element="tns:getSQLArrayResultResponse"/>
   </message>
-  <message name="Update">
-    <part name="parameters" element="tns:Update"/>
+  <message name="getSQLFirstRowField">
+    <part name="parameters" element="tns:getSQLFirstRowField"/>
   </message>
-  <message name="UpdateResponse">
-    <part name="parameters" element="tns:UpdateResponse"/>
+  <message name="getSQLFirstRowFieldResponse">
+    <part name="parameters" element="tns:getSQLFirstRowFieldResponse"/>
+  </message>
+  <message name="close">
+    <part name="parameters" element="tns:close"/>
+  </message>
+  <message name="closeResponse">
+    <part name="parameters" element="tns:closeResponse"/>
+  </message>
+  <message name="open">
+    <part name="parameters" element="tns:open"/>
+  </message>
+  <message name="openResponse">
+    <part name="parameters" element="tns:openResponse"/>
+  </message>
+  <message name="execute">
+    <part name="parameters" element="tns:execute"/>
+  </message>
+  <message name="executeResponse">
+    <part name="parameters" element="tns:executeResponse"/>
   </message>
   <portType name="MWWebService">
-    <operation name="Multiply">
-      <input message="tns:Multiply"/>
-      <output message="tns:MultiplyResponse"/>
+    <operation name="createStatement">
+      <input message="tns:createStatement"/>
+      <output message="tns:createStatementResponse"/>
     </operation>
-    <operation name="StringConcat">
-      <input message="tns:StringConcat"/>
-      <output message="tns:StringConcatResponse"/>
+    <operation name="executeUpdate">
+      <input message="tns:executeUpdate"/>
+      <output message="tns:executeUpdateResponse"/>
     </operation>
-    <operation name="getQuery">
-      <input message="tns:getQuery"/>
-      <output message="tns:getQueryResponse"/>
+    <operation name="executeQuery">
+      <input message="tns:executeQuery"/>
+      <output message="tns:executeQueryResponse"/>
     </operation>
-    <operation name="Delete">
-      <input message="tns:Delete"/>
-      <output message="tns:DeleteResponse"/>
+    <operation name="getMetaData">
+      <input message="tns:getMetaData"/>
+      <output message="tns:getMetaDataResponse"/>
     </operation>
-    <operation name="Minus">
-      <input message="tns:Minus"/>
-      <output message="tns:MinusResponse"/>
+    <operation name="getSQLArrayResult">
+      <input message="tns:getSQLArrayResult"/>
+      <output message="tns:getSQLArrayResultResponse"/>
     </operation>
-    <operation name="Update">
-      <input message="tns:Update"/>
-      <output message="tns:UpdateResponse"/>
+    <operation name="getSQLFirstRowField">
+      <input message="tns:getSQLFirstRowField"/>
+      <output message="tns:getSQLFirstRowFieldResponse"/>
+    </operation>
+    <operation name="close">
+      <input message="tns:close"/>
+      <output message="tns:closeResponse"/>
+    </operation>
+    <operation name="open">
+      <input message="tns:open"/>
+      <output message="tns:openResponse"/>
+    </operation>
+    <operation name="execute">
+      <input message="tns:execute"/>
+      <output message="tns:executeResponse"/>
     </operation>
   </portType>
   <binding name="MWWebServicePortBinding" type="tns:MWWebService">
     <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"/>
-    <operation name="Multiply">
+    <operation name="createStatement">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>
@@ -79,7 +109,7 @@
         <soap:body use="literal"/>
       </output>
     </operation>
-    <operation name="StringConcat">
+    <operation name="executeUpdate">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>
@@ -88,7 +118,7 @@
         <soap:body use="literal"/>
       </output>
     </operation>
-    <operation name="getQuery">
+    <operation name="executeQuery">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>
@@ -97,7 +127,7 @@
         <soap:body use="literal"/>
       </output>
     </operation>
-    <operation name="Delete">
+    <operation name="getMetaData">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>
@@ -106,7 +136,7 @@
         <soap:body use="literal"/>
       </output>
     </operation>
-    <operation name="Minus">
+    <operation name="getSQLArrayResult">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>
@@ -115,7 +145,34 @@
         <soap:body use="literal"/>
       </output>
     </operation>
-    <operation name="Update">
+    <operation name="getSQLFirstRowField">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="close">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="open">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="execute">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal"/>

@@ -8,7 +8,6 @@
  */
 package dimm.home.mailarchiv;
 
-import dimm.home.DAO.GenericDAO;
 import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.hibernate.Hotfolder;
@@ -38,6 +37,7 @@ import dimm.home.workers.HotfolderServer;
 import dimm.home.workers.MailBoxImportServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
+import dimm.home.workers.SQLWorker;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -64,6 +64,7 @@ public class LogicControl
     MailProxyServer ps;
     HotfolderServer hf;
     MailBoxImportServer mb;
+    SQLWorker sql;
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -98,6 +99,8 @@ public class LogicControl
             mb = new MailBoxImportServer();
             worker_list.add(mb);
 
+            sql = new SQLWorker();
+            worker_list.add(sql);
             
 
 
@@ -119,6 +122,19 @@ public class LogicControl
         {
             MandantContext mandantContext = mandanten_list.get(i);
             if (mandantContext.getMandant() == m)
+            {
+                return mandantContext;
+            }
+        }
+        return null;
+    }
+
+    public MandantContext get_mandant_by_id(long id)
+    {
+        for (int i = 0; i < mandanten_list.size(); i++)
+        {
+            MandantContext mandantContext = mandanten_list.get(i);
+            if (mandantContext.getMandant().getId() == id)
             {
                 return mandantContext;
             }
@@ -723,6 +739,10 @@ public class LogicControl
     {
         return sd;
     }
+    public SQLWorker get_sql_worker()
+    {
+        return sql;
+    }
 
     WorkerParent get_worker( String name )
     {
@@ -785,6 +805,15 @@ public class LogicControl
                     Mandant m = (Mandant)l.get(i);
                     try
                     {
+                        Set<Hotfolder> hfs = (Set<Hotfolder>)m.getHotfolders();
+                        Iterator<Hotfolder> hfi = hfs.iterator();
+
+                        while (hfi.hasNext())
+                        {
+                            Hotfolder hf = hfi.next();
+                            String p = hf.getPath();
+                        }
+
 //                        param_session = HibernateUtil.getSessionFactory().getCurrentSession();
 //                        m.setName( m.getName() + "s");
 //                        GenericDAO.save(param_session, m);
@@ -806,8 +835,6 @@ public class LogicControl
             q = param_session.createQuery("from Hotfolder");
             l = q.list();
             tx.commit();
-
-
         }
         catch (Exception e)
         {

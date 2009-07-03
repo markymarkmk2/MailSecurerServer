@@ -1,23 +1,22 @@
-<?xml version="1.0"?>
-<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
-"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
 <!-- Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA -->
 <hibernate-mapping>
-    <class name="dimm.home.hibernate.MailRecipientLink" table="mail_recipient_link" schema="public">
-        <id name="id" type="int">
-            <column name="id" />
-            <generator class="assigned" />
-        </id>
-        <many-to-one name="mail" class="dimm.home.hibernate.Mail" fetch="select">
-            <column name="mail_id" />
-        </many-to-one>
-        <many-to-one name="mailRecipient" class="dimm.home.hibernate.MailRecipient" fetch="select">
-            <column name="mr_id" />
-        </many-to-one>
-        <property name="type" type="string">
-            <column name="type" length="4">
-                <comment>cc/bcc/to/from</comment>
-            </column>
-        </property>
-    </class>
+  <class name="dimm.home.hibernate.MailRecipientLink" schema="public" table="mail_recipient_link">
+    <id name="id" type="int">
+      <column name="id"/>
+      <generator class="assigned"/>
+    </id>
+    <many-to-one class="dimm.home.hibernate.Mail" fetch="select" name="mail">
+      <column name="mail_id"/>
+    </many-to-one>
+    <many-to-one class="dimm.home.hibernate.MailRecipient" fetch="select" name="mailRecipient">
+      <column name="mr_id"/>
+    </many-to-one>
+    <property name="type" type="string">
+      <column length="4" name="type">
+        <comment>cc/bcc/to/from</comment>
+      </column>
+    </property>
+  </class>
 </hibernate-mapping>

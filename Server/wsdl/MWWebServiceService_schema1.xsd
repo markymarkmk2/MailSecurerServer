@@ -1,106 +1,150 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xs:schema version="1.0" targetNamespace="http://Httpd.home.dimm/" xmlns:tns="http://Httpd.home.dimm/" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-  <xs:element name="Delete" type="tns:Delete"/>
+  <xs:element name="close" type="tns:close"/>
 
-  <xs:element name="DeleteResponse" type="tns:DeleteResponse"/>
+  <xs:element name="closeResponse" type="tns:closeResponse"/>
 
-  <xs:element name="Minus" type="tns:Minus"/>
+  <xs:element name="createStatement" type="tns:createStatement"/>
 
-  <xs:element name="MinusResponse" type="tns:MinusResponse"/>
+  <xs:element name="createStatementResponse" type="tns:createStatementResponse"/>
 
-  <xs:element name="Multiply" type="tns:Multiply"/>
+  <xs:element name="execute" type="tns:execute"/>
 
-  <xs:element name="MultiplyResponse" type="tns:MultiplyResponse"/>
+  <xs:element name="executeQuery" type="tns:executeQuery"/>
 
-  <xs:element name="StringConcat" type="tns:StringConcat"/>
+  <xs:element name="executeQueryResponse" type="tns:executeQueryResponse"/>
 
-  <xs:element name="StringConcatResponse" type="tns:StringConcatResponse"/>
+  <xs:element name="executeResponse" type="tns:executeResponse"/>
 
-  <xs:element name="Update" type="tns:Update"/>
+  <xs:element name="executeUpdate" type="tns:executeUpdate"/>
 
-  <xs:element name="UpdateResponse" type="tns:UpdateResponse"/>
+  <xs:element name="executeUpdateResponse" type="tns:executeUpdateResponse"/>
 
-  <xs:element name="getQuery" type="tns:getQuery"/>
+  <xs:element name="getMetaData" type="tns:getMetaData"/>
 
-  <xs:element name="getQueryResponse" type="tns:getQueryResponse"/>
+  <xs:element name="getMetaDataResponse" type="tns:getMetaDataResponse"/>
 
-  <xs:complexType name="StringConcat">
+  <xs:element name="getSQLArrayResult" type="tns:getSQLArrayResult"/>
+
+  <xs:element name="getSQLArrayResultResponse" type="tns:getSQLArrayResultResponse"/>
+
+  <xs:element name="getSQLFirstRowField" type="tns:getSQLFirstRowField"/>
+
+  <xs:element name="getSQLFirstRowFieldResponse" type="tns:getSQLFirstRowFieldResponse"/>
+
+  <xs:element name="open" type="tns:open"/>
+
+  <xs:element name="openResponse" type="tns:openResponse"/>
+
+  <xs:complexType name="createStatement">
     <xs:sequence>
-      <xs:element name="m1" type="xs:string" minOccurs="0"/>
-      <xs:element name="m2" type="tns:testString" minOccurs="0"/>
+      <xs:element name="conn_id" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="testString">
-    <xs:sequence>
-      <xs:element name="s" type="xs:string" minOccurs="0"/>
-    </xs:sequence>
-  </xs:complexType>
-
-  <xs:complexType name="StringConcatResponse">
+  <xs:complexType name="createStatementResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="Delete">
+  <xs:complexType name="getSQLArrayResult">
     <xs:sequence>
-      <xs:element name="object" type="xs:string" minOccurs="0"/>
+      <xs:element name="resultset" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="DeleteResponse">
+  <xs:complexType name="getSQLArrayResultResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="Multiply">
+  <xs:complexType name="executeQuery">
     <xs:sequence>
-      <xs:element name="m1" type="xs:int"/>
-      <xs:element name="m2" type="xs:int"/>
+      <xs:element name="statement" type="xs:string" minOccurs="0"/>
+      <xs:element name="cmd" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="MultiplyResponse">
+  <xs:complexType name="executeQueryResponse">
     <xs:sequence>
-      <xs:element name="return" type="xs:int"/>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="getQuery">
+  <xs:complexType name="close">
     <xs:sequence>
+      <xs:element name="conn_txt" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="closeResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="executeUpdate">
+    <xs:sequence>
+      <xs:element name="statement" type="xs:string" minOccurs="0"/>
+      <xs:element name="cmd" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="executeUpdateResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="open">
+    <xs:sequence>
+      <xs:element name="db_name" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="openResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="getSQLFirstRowField">
+    <xs:sequence>
+      <xs:element name="conn_text" type="xs:string" minOccurs="0"/>
       <xs:element name="qry" type="xs:string" minOccurs="0"/>
+      <xs:element name="field" type="xs:int"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="getQueryResponse">
+  <xs:complexType name="getSQLFirstRowFieldResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="Minus">
+  <xs:complexType name="execute">
     <xs:sequence>
-      <xs:element name="m1" type="xs:int"/>
-      <xs:element name="m2" type="xs:int"/>
+      <xs:element name="statement" type="xs:string" minOccurs="0"/>
+      <xs:element name="cmd" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="MinusResponse">
+  <xs:complexType name="executeResponse">
     <xs:sequence>
-      <xs:element name="return" type="xs:int"/>
+      <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="Update">
+  <xs:complexType name="getMetaData">
     <xs:sequence>
-      <xs:element name="object" type="xs:string" minOccurs="0"/>
+      <xs:element name="resultset" type="xs:string" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
 
-  <xs:complexType name="UpdateResponse">
+  <xs:complexType name="getMetaDataResponse">
     <xs:sequence>
       <xs:element name="return" type="xs:string" minOccurs="0"/>
     </xs:sequence>

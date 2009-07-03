@@ -55,9 +55,19 @@ public class MandantContext
     {
         return vaultArray;
     }
-        public MandantPreferences getPrefs()
+
+    public MandantPreferences getPrefs()
     {
         return prefs;
     }
+
+    void build_mandant_struct()
+    {
+
+    }
+
+
+
+
 
 }
