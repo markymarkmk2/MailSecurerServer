@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
+// Generated 08.07.2009 13:28:14 by Hibernate Tools 3.2.1.GA
 
 
 import java.util.HashSet;
@@ -14,7 +14,7 @@ public class DiskArchive  implements java.io.Serializable {
      private int id;
      private Mandant mandant;
      private String name;
-     private Integer flags;
+     private String flags;
      private Set<DiskSpace> diskSpaces = new HashSet<DiskSpace>(0);
      private Set<ImapFetcher> imapFetchers = new HashSet<ImapFetcher>(0);
      private Set<Milter> milters = new HashSet<Milter>(0);
@@ -28,7 +28,7 @@ public class DiskArchive  implements java.io.Serializable {
     public DiskArchive(int id) {
         this.id = id;
     }
-    public DiskArchive(int id, Mandant mandant, String name, Integer flags, Set<DiskSpace> diskSpaces, Set<ImapFetcher> imapFetchers, Set<Milter> milters, Set<Proxy> proxies, Set<Hotfolder> hotfolders) {
+    public DiskArchive(int id, Mandant mandant, String name, String flags, Set<DiskSpace> diskSpaces, Set<ImapFetcher> imapFetchers, Set<Milter> milters, Set<Proxy> proxies, Set<Hotfolder> hotfolders) {
        this.id = id;
        this.mandant = mandant;
        this.name = name;
@@ -61,11 +61,11 @@ public class DiskArchive  implements java.io.Serializable {
     public void setName(String name) {
         this.name = name;
     }
-    public Integer getFlags() {
+    public String getFlags() {
         return this.flags;
     }
     
-    public void setFlags(Integer flags) {
+    public void setFlags(String flags) {
         this.flags = flags;
     }
     public Set<DiskSpace> getDiskSpaces() {

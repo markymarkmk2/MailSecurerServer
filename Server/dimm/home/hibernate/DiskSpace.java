@@ -1,5 +1,5 @@
 package dimm.home.hibernate;
-// Generated 25.06.2009 14:19:53 by Hibernate Tools 3.2.1.GA
+// Generated 08.07.2009 13:28:14 by Hibernate Tools 3.2.1.GA
 
 
 
@@ -13,7 +13,8 @@ public class DiskSpace  implements java.io.Serializable {
      private DiskArchive diskArchive;
      private String path;
      private String maxCapacity;
-     private Integer flags;
+     private String flags;
+     private String status;
 
     public DiskSpace() {
     }
@@ -24,12 +25,13 @@ public class DiskSpace  implements java.io.Serializable {
         this.diskArchive = diskArchive;
         this.path = path;
     }
-    public DiskSpace(int id, DiskArchive diskArchive, String path, String maxCapacity, Integer flags) {
+    public DiskSpace(int id, DiskArchive diskArchive, String path, String maxCapacity, String flags, String status) {
        this.id = id;
        this.diskArchive = diskArchive;
        this.path = path;
        this.maxCapacity = maxCapacity;
        this.flags = flags;
+       this.status = status;
     }
    
     public int getId() {
@@ -60,12 +62,19 @@ public class DiskSpace  implements java.io.Serializable {
     public void setMaxCapacity(String maxCapacity) {
         this.maxCapacity = maxCapacity;
     }
-    public Integer getFlags() {
+    public String getFlags() {
         return this.flags;
     }
     
-    public void setFlags(Integer flags) {
+    public void setFlags(String flags) {
         this.flags = flags;
+    }
+    public String getStatus() {
+        return this.status;
+    }
+    
+    public void setStatus(String status) {
+        this.status = status;
     }
 
 

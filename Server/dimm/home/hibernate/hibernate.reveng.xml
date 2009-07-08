@@ -2,19 +2,19 @@
 <!DOCTYPE hibernate-reverse-engineering PUBLIC "-//Hibernate/Hibernate Reverse Engineering DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-reverse-engineering-3.0.dtd">
 <hibernate-reverse-engineering>
   <schema-selection match-catalog="datavault"/>
-  <table-filter match-name="account_connector"/>
-  <table-filter match-name="disk_archive"/>
-  <table-filter match-name="disk_space"/>
-  <table-filter match-name="hotfolder"/>
-  <table-filter match-name="hotfolder_exclude"/>
-  <table-filter match-name="imap_fetcher"/>
-  <table-filter match-name="mail"/>
-  <table-filter match-name="mail_header"/>
-  <table-filter match-name="mail_header_variable"/>
   <table-filter match-name="mail_recipient"/>
-  <table-filter match-name="mail_recipient_link"/>
-  <table-filter match-name="mandant"/>
-  <table-filter match-name="milter"/>
-  <table-filter match-name="proxy"/>
+  <table-filter match-name="hotfolder_exclude"/>
+  <table-filter match-name="account_connector"/>
+  <table-filter match-name="hotfolder"/>
   <table-filter match-name="role"/>
+  <table-filter match-name="disk_space"/>
+  <table-filter match-name="imap_fetcher"/>
+  <table-filter match-name="proxy"/>
+  <table-filter match-name="mail_recipient_link"/>
+  <table-filter match-name="mail"/>
+  <table-filter match-name="mail_header_variable"/>
+  <table-filter match-name="mandant"/>
+  <table-filter match-name="disk_archive"/>
+  <table-filter match-name="milter"/>
+  <table-filter match-name="mail_header"/>
 </hibernate-reverse-engineering>
