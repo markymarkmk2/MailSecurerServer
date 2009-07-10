@@ -10,7 +10,6 @@
 package dimm.home.workers;
 
 
-import dimm.home.mailarchiv.Commands.IPConfig;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
@@ -18,7 +17,6 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -26,11 +24,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.StringTokenizer;
 import java.util.concurrent.Semaphore;
-import java.util.prefs.Preferences;
+import org.hibernate.HibernateException;
+import org.hibernate.cfg.AnnotationConfiguration;
+import org.hibernate.tool.hbm2ddl.SchemaExport;
 
 
 
@@ -51,9 +49,10 @@ MySQL root /eKmIklz37T
  */
     //private static final String db_server="thales.ebiz-webhosting.de";
     private static final String db_server="localhost";
-    private static final String db_user="postgres";
+    private static String db_user="postgres";
     private static final String db_pwd="12345";
-    private static final String connect = "jdbc:postgresql://localhost/datavault/";
+    private static final String postgres_connect = "jdbc:postgresql://localhost/datavault/";
+    private static final String derby_connect = "jdbc:derby:MailArchiv";
     private static final String local_connect = "jdbc:hsqldb:file:" + Main.DATABASEPATH;
     
     ArrayList<String> stmt_list;
@@ -79,7 +78,24 @@ MySQL root /eKmIklz37T
     static boolean driver_loaded = false;
     int conn_timeout_s = 10;
     private String PARAM_DB = "param_db";
-    
+
+    private static String connect = postgres_connect;
+
+    public static void set_to_derby_db()
+    {
+        connect = derby_connect;
+        db_user = "APP";
+    }
+    public static void set_to_postgres_db()
+    {
+        connect = postgres_connect;
+        db_user="postgres";
+    }
+    public static String get_db_connect_string()
+    {
+        return connect;
+    }
+
     
     /** Creates a new instance of SQLWorker */
     public SQLWorker()
@@ -135,8 +151,9 @@ MySQL root /eKmIklz37T
             if (!driver_loaded)
             {
                 Class.forName("com.mysql.jdbc.Driver").newInstance();
+                Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance();
                 String hsql_db_class_name = Main.get_prop(GeneralPreferences.DB_CLASSNAME, "org.hsqldb.jdbcDriver");
-                Class.forName(hsql_db_class_name);
+                Class.forName(hsql_db_class_name).newInstance();
 
                 driver_loaded = true;
             }
@@ -363,10 +380,12 @@ MySQL root /eKmIklz37T
 
 
 
+    @Override
     public boolean start_run_loop()
     {
         SwingWorker worker = new SwingWorker()
         {
+            @Override
             public Object construct()
             {
                 int ret = -1;
@@ -387,6 +406,7 @@ MySQL root /eKmIklz37T
         worker.start();
         return true;    }
 
+    @Override
     public boolean check_requirements(StringBuffer sb)
     {
         return true;
@@ -447,6 +467,29 @@ MySQL root /eKmIklz37T
             Main.info_msg("SQL statement buffer was flushed completely");
 
     }
+
+
+    public static void build_hibernate_tables()
+    {
+        SQLWorker sql = new SQLWorker();
+        if (sql.initialize())
+        {
+            Main.err_log("Database is valid, cannot rebuild");
+            return;
+        }
+
+        try
+        {
+            AnnotationConfiguration config = new AnnotationConfiguration().configure("/dimm/home/hibernate/hibernate.cfg.xml");
+            new SchemaExport(config).create(true, true);
+        }
+        catch (HibernateException hibernateException)
+        {
+            hibernateException.printStackTrace();
+        }
+    }
+
+
 
  
     

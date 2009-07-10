@@ -2,11 +2,11 @@
 <!DOCTYPE hibernate-configuration PUBLIC "-//Hibernate/Hibernate Configuration DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
 <hibernate-configuration>
   <session-factory>
-    <property name="hibernate.dialect">org.hibernate.dialect.DerbyDialect</property>
-    <property name="hibernate.connection.driver_class">org.apache.derby.jdbc.EmbeddedDriver</property>
-    <property name="hibernate.connection.url">jdbc:derby:MailArchiv;create=true</property>
-    <property name="hibernate.connection.username"/>
-    <property name="hibernate.connection.password"/>
+    <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+    <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+    <property name="hibernate.connection.url">jdbc:postgresql://localhost/datavault</property>
+    <property name="hibernate.connection.username">postgres</property>
+    <property name="hibernate.connection.password">12345</property>
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
     <mapping resource="dimm/home/hibernate/Mail.hbm.xml"/>
     <mapping resource="dimm/home/hibernate/MailRecipient.hbm.xml"/>
@@ -23,5 +23,6 @@
     <mapping resource="dimm/home/hibernate/Hotfolder.hbm.xml"/>
     <mapping resource="dimm/home/hibernate/Mandant.hbm.xml"/>
     <mapping resource="dimm/home/hibernate/HotfolderExclude.hbm.xml"/>
+    
   </session-factory>
 </hibernate-configuration>

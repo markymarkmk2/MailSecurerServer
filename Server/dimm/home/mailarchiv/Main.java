@@ -8,6 +8,7 @@ package dimm.home.mailarchiv;
 import dimm.home.Httpd.Httpd;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.workers.SQLWorker;
 import java.io.File;
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -114,6 +115,9 @@ public class Main
         
         info_msg("Starting " + APPNAME + " V" + VERSION );
 
+        // DEFAULT IS DERBY
+        SQLWorker.set_to_derby_db();
+
         // PREFS FOR ARGS, ARGS HABEN PRIO
         prefs = new GeneralPreferences();
         
@@ -132,6 +136,18 @@ public class Main
                 license_interface = args[i + 1];            
                 info_msg("Using interface license_interface for licensing");                
             }
+            if (args[i].compareTo("-init_db") == 0)
+            {
+                SQLWorker.build_hibernate_tables();
+            }
+            if (args[i].compareTo("-derby") == 0)
+            {
+                SQLWorker.set_to_derby_db();
+            }
+            if (args[i].compareTo("-postgres") == 0)
+            {
+                SQLWorker.set_to_postgres_db();
+            }
         }            
         try
         {            
@@ -148,6 +164,8 @@ public class Main
         {
             exc.printStackTrace();
         }
+
+        info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
 
         httpd = new Httpd(8100);
         try

@@ -796,6 +796,7 @@ public class LogicControl
             param_session = HibernateUtil.getSessionFactory().getCurrentSession();
             org.hibernate.Transaction tx = param_session.beginTransaction();
             org.hibernate.Query q = param_session.createQuery("from Mandant");
+            
             List l = q.list();
 
             if (!l.isEmpty() && l.get(0) instanceof Mandant)

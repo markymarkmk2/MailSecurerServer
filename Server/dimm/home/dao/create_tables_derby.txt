@@ -1,0 +1,435 @@
+
+CREATE TABLE account_connector (
+    id integer generated always as identity,
+    mid integer,
+    type character varying(80),
+    ip character varying(80),
+    port integer
+);
+
+
+
+
+CREATE TABLE disk_archive (
+    id integer  generated always as identity,
+    mid integer,
+    name character varying(255),
+    flags character varying(255)
+);
+
+
+
+CREATE TABLE disk_space (
+    id integer generated always as identity,
+    da_id integer NOT NULL,
+    path character varying(255) NOT NULL,
+    max_capacity character varying(80),
+    flags character varying(255),
+    status character varying(255)
+);
+
+
+
+CREATE TABLE hotfolder (
+    id integer generated always as identity,
+    mid integer NOT NULL,
+    usermailadress character varying(255) NOT NULL,
+    path character varying(255) NOT NULL,
+    flags character varying(255),
+    da_id integer NOT NULL
+);
+
+
+CREATE TABLE hotfolder_exclude (
+    id integer  generated always as identity,
+    hf_id integer,
+    name character varying(256),
+    flags integer
+);
+
+
+CREATE TABLE imap_fetcher (
+    id integer  generated always as identity,
+    mid integer NOT NULL,
+    server character varying(255) NOT NULL,
+    port integer,
+    da_id integer NOT NULL,
+    username character varying(80),
+    password character varying(80),
+    flags character varying(255),
+    type character varying(255)
+);
+
+
+
+--
+-- Name: mail; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail (
+    id bigint  generated always as identity,
+    mid integer,
+    "from" character varying(256),
+    rfc822_size integer,
+    subject character varying(256),
+    location character varying(256),
+    location_id integer,
+    flags character varying(256),
+    rcv_timestamp integer
+);
+
+
+
+--
+-- Name: mail_header; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_header (
+    mail_id bigint,
+    var_id integer,
+    var_value character varying(256),
+    id integer NOT NULL
+);
+
+
+CREATE TABLE mail_header_variable (
+    id integer generated always as identity,
+    var_name character varying(256)
+);
+
+
+--
+-- Name: mail_recipient; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_recipient (
+    id integer generated always as identity,
+    mail_adress character varying(256)
+);
+
+
+
+CREATE TABLE mail_recipient_link (
+    mail_id bigint,
+    mr_id integer,
+    type character varying(4),
+    id integer NOT NULL
+);
+
+
+
+CREATE TABLE mandant (
+    id integer generated always as identity,
+    name character varying(256) NOT NULL,
+    license character varying(100) NOT NULL,
+    password character varying(80) NOT NULL,
+    loginname character varying(80) NOT NULL,
+    flags character varying(80) NOT NULL
+);
+
+
+--
+-- Name: proxy; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE proxy (
+    id integer  generated always as identity,
+    mid integer,
+    local_server character varying(255),
+    local_port integer,
+    remote_server character varying(255),
+    remote_port integer,
+    type character varying(80),
+    da_id integer,
+    flags character varying(255)
+);
+
+
+
+CREATE TABLE milter (
+    id integer  generated always as identity,
+    mid integer,
+    in_server character varying(255),
+    in_port integer,
+    out_server character varying(255),
+    out_port integer,
+    type character varying(80),
+    da_id integer,
+    flags character varying(255)
+);
+
+
+
+CREATE TABLE role (
+    id integer  generated always as identity,
+    mid integer,
+    name character varying(255),
+    license integer
+);
+
+
+
+
+--
+-- Name: ac_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX ac_mid_key ON account_connector (mid);
+
+
+--
+-- Name: da_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX da_mid_key ON disk_archive (mid);
+
+
+--
+-- Name: ds_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX ds_da_key ON disk_space (da_id);
+
+
+--
+-- Name: hf_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX hf_mid_key ON hotfolder (mid);
+
+
+--
+-- Name: if_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX if_da_key ON imap_fetcher (da_id);
+
+
+--
+-- Name: if_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX if_mid_key ON imap_fetcher (mid);
+
+
+--
+-- Name: mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mail_key ON mail_header (mail_id);
+
+
+--
+-- Name: mh_mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mh_mail_key ON mail_header (mail_id, var_id);
+
+
+--
+-- Name: milter_da_id_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX milter_da_id_key ON milter (da_id);
+
+
+--
+-- Name: milter_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX milter_mid_key ON milter (mid);
+
+
+--
+-- Name: mrl_mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mrl_mail_key ON mail_recipient_link (mail_id);
+
+
+--
+-- Name: mrl_mr_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mrl_mr_key ON mail_recipient_link (mr_id);
+
+
+--
+-- Name: px_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX px_da_key ON proxy (da_id);
+
+
+--
+-- Name: px_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX px_mid_key ON proxy (mid);
+
+
+--
+-- Name: r_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX r_mid_key ON role (mid);
+
+
+--
+-- Name: var_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX var_key ON mail_header (var_id);
+
+
+--
+-- Name: var_name_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE UNIQUE INDEX var_name_key ON mail_header_variable (var_name);
+
+
+--
+-- Name: da_mr; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+--CREATE UNIQUE INDEX m_id_key ON mandant(id);
+ALTER TABLE mandant ADD CONSTRAINT m_uk unique(id);
+ALTER TABLE disk_archive ADD CONSTRAINT da_uk unique(id);
+ALTER TABLE hotfolder ADD CONSTRAINT hf_uk unique(id);
+ALTER TABLE mail ADD CONSTRAINT ml_uk unique(id);
+ALTER TABLE mail_recipient ADD CONSTRAINT mlr_uk unique(id);
+ALTER TABLE mail_header_variable ADD CONSTRAINT mhv_uk unique(id);
+
+ALTER TABLE disk_archive
+    ADD CONSTRAINT da_mr FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_ac_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE account_connector
+    ADD CONSTRAINT f_ac_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION;
+
+
+--
+-- Name: f_da; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE disk_space
+    ADD CONSTRAINT f_da FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE hotfolder
+    ADD CONSTRAINT f_hf_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE hotfolder_exclude
+    ADD CONSTRAINT f_hf_id FOREIGN KEY (hf_id) REFERENCES hotfolder(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE hotfolder
+    ADD CONSTRAINT f_hf_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_if_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE imap_fetcher
+    ADD CONSTRAINT f_if_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_if_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE imap_fetcher
+    ADD CONSTRAINT f_if_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_mailid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_header
+    ADD CONSTRAINT f_mailid FOREIGN KEY (mail_id) REFERENCES mail(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_mif; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE milter
+    ADD CONSTRAINT f_mif FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_milter_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE milter
+    ADD CONSTRAINT f_milter_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_mrl_mr_link; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_recipient_link
+    ADD CONSTRAINT f_mrl_mr_link FOREIGN KEY (mr_id) REFERENCES mail_recipient(id) ON DELETE CASCADE;
+
+
+--
+-- Name: f_px_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE proxy
+    ADD CONSTRAINT f_px_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_px_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE proxy
+    ADD CONSTRAINT f_px_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_ro_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE role
+    ADD CONSTRAINT f_ro_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: f_var_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_header
+    ADD CONSTRAINT f_var_id FOREIGN KEY (var_id) REFERENCES mail_header_variable(id) ON UPDATE NO ACTION ON DELETE CASCADE;
+
+
+--
+-- Name: mail_recipient_link_mail_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_recipient_link
+    ADD CONSTRAINT mail_recipient_link_mail_id_fkey FOREIGN KEY (mail_id) REFERENCES mail(id) ON DELETE CASCADE;
+
+
+

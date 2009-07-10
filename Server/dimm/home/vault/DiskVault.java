@@ -89,7 +89,8 @@ public class DiskVault implements Vault, StatusHandler
 
     private boolean test_flag( DiskSpace ds, int flag )
     {
-        return ((ds.getFlags() & flag) == flag);
+        int f = Integer.parseInt(ds.getFlags());
+        return ((f & flag) == flag);
     }
 
     DiskSpaceHandler get_next_active_diskspace(int index )
@@ -181,7 +182,7 @@ public class DiskVault implements Vault, StatusHandler
 
             status.set_status(StatusEntry.BUSY, "DiskSpace " + ds.getPath() + " is full" );
             Notification.throw_notification( disk_archive.getMandant(), Notification.NF_INFORMATIVE, status.get_status_txt() );
-            ds.setFlags(ds.getFlags() | DS_FULL);
+            ds.setFlags(Integer.toString(Integer.parseInt(ds.getFlags()) | DS_FULL));
 
             DiskSpaceDAO dao = new DiskSpaceDAO();
             dao.save(ds);

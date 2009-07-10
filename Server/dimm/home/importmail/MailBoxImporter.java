@@ -76,8 +76,9 @@ public class MailBoxImporter implements StatusHandler, WorkerParentChild
     public MailBoxImporter( ImapFetcher _imfetcher )
     {
         imfetcher = _imfetcher;
-        conn_mode = imfetcher.getFlags() & CONN_MODE_MASK;
-        flags = imfetcher.getFlags() & FLAG_MASK;
+        int i_flags = Integer.parseInt( imfetcher.getFlags() );
+        conn_mode = i_flags & CONN_MODE_MASK;
+        flags = i_flags & FLAG_MASK;
     }
 
 
