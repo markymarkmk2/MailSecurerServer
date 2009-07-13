@@ -62,7 +62,7 @@ public class LogicControl
     StatusDisplay sd;
     MilterServer ms;
     MailProxyServer ps;
-    HotfolderServer hf;
+    HotfolderServer hf_server;
     MailBoxImportServer mb;
     SQLWorker sql;
 
@@ -93,8 +93,8 @@ public class LogicControl
             ps = new MailProxyServer();
             worker_list.add(ps);
 
-            hf = new HotfolderServer();
-            worker_list.add(hf);
+            hf_server = new HotfolderServer();
+            worker_list.add(hf_server);
 
             mb = new MailBoxImportServer();
             worker_list.add(mb);
@@ -469,7 +469,7 @@ public class LogicControl
 
             while (it.hasNext())
             {
-                 hf.add_hfolder(it.next());
+                 hf_server.add_hfolder(it.next());
             }
         }
         for (int i = 0; i < mandanten_list.size(); i++)

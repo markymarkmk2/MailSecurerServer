@@ -387,8 +387,10 @@ public class MWWebService
         {
             try
             {
-                rs.close();
-                sta.close();
+                if (rs != null)
+                    rs.close();
+                if (sta != null)
+                    sta.close();
             }
             catch (SQLException sQLException)
             {
