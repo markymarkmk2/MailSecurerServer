@@ -9,7 +9,7 @@ package dimm.home.DAO;
  *
  * @author mw
  */
-import dimm.home.hibernate.*;
+import dimm.home.hibernate.HibernateUtil;
 import org.hibernate.SessionFactory;
 import org.hibernate.Session;
 

@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.Role;
+import home.shared.hibernate.Role;
 
 /**
  *

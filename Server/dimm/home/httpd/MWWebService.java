@@ -1,7 +1,7 @@
 package dimm.home.Httpd;
 
 import com.thoughtworks.xstream.XStream;
-import dimm.general.SQL.SQLArrayResult;
+import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.workers.SQLWorker;
 import java.sql.Connection;

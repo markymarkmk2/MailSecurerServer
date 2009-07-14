@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.Mandant;
+import home.shared.hibernate.Mandant;
 //import org.hibernate.Query;
 
 /**

@@ -5,8 +5,8 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.hibernate.DiskArchive;
-import dimm.home.hibernate.Mandant;
+import home.shared.hibernate.DiskArchive;
+import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import java.util.ArrayList;

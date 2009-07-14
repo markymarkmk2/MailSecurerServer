@@ -9,8 +9,8 @@
 
 package dimm.home.workers;
 
-import dimm.home.hibernate.Hotfolder;
-import dimm.home.hibernate.ImapFetcher;
+import home.shared.hibernate.Hotfolder;
+import home.shared.hibernate.ImapFetcher;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxImporter;
 import dimm.home.mailarchiv.*;

@@ -5,10 +5,10 @@
 
 package dimm.home.vault;
 
-import dimm.home.hibernate.DiskSpace;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.hibernate.DiskSpace;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.BufferedInputStream;

@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.Milter;
+import home.shared.hibernate.Milter;
 
 /**
  *

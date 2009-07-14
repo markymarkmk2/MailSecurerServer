@@ -10,7 +10,7 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.util.*;
 
 
-import dimm.home.hibernate.ImapFetcher;
+import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;

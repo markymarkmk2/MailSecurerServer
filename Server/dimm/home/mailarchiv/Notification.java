@@ -5,7 +5,7 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.hibernate.Mandant;
+import home.shared.hibernate.Mandant;
 
 /**
  *

@@ -8,13 +8,13 @@
  */
 package dimm.home.mailarchiv;
 
-import dimm.home.hibernate.DiskArchive;
 import dimm.home.hibernate.HibernateUtil;
-import dimm.home.hibernate.Hotfolder;
-import dimm.home.hibernate.ImapFetcher;
-import dimm.home.hibernate.Mandant;
-import dimm.home.hibernate.Milter;
-import dimm.home.hibernate.Proxy;
+import home.shared.hibernate.DiskArchive;
+import home.shared.hibernate.Hotfolder;
+import home.shared.hibernate.ImapFetcher;
+import home.shared.hibernate.Mandant;
+import home.shared.hibernate.Milter;
+import home.shared.hibernate.Proxy;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Exceptions.VaultException;

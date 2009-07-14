@@ -5,7 +5,7 @@
 
 package dimm.home.mailarchiv.Exceptions;
 
-import dimm.home.hibernate.DiskSpace;
+import home.shared.hibernate.DiskSpace;
 import dimm.home.mailarchiv.Utilities.LogManager;
 
 /**

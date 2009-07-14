@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.AccountConnector;
+import home.shared.hibernate.AccountConnector;
 
 /**
  *

@@ -5,23 +5,23 @@
     <property name="hibernate.dialect">org.hibernate.dialect.DerbyDialect</property>
     <property name="hibernate.connection.driver_class">org.apache.derby.jdbc.EmbeddedDriver</property>
     <property name="hibernate.connection.url">jdbc:derby:MailArchiv;create=true</property>
-    <property name="hibernate.connection.username"/>
+    <property name="hibernate.connection.username">APP</property>
     <property name="hibernate.connection.password"/>
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
-    <mapping resource="dimm/home/hibernate/Mail.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/MailRecipient.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/MailRecipientLink.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/MailHeader.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/MailHeaderVariable.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/ImapFetcher.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/Proxy.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/Role.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/DiskSpace.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/Milter.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/DiskArchive.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/AccountConnector.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/Hotfolder.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/Mandant.hbm.xml"/>
-    <mapping resource="dimm/home/hibernate/HotfolderExclude.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Mail.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailRecipient.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailRecipientLink.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailHeader.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailHeaderVariable.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/ImapFetcher.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Proxy.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Role.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/DiskSpace.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Milter.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/DiskArchive.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/AccountConnector.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Hotfolder.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/Mandant.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/HotfolderExclude.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>

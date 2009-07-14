@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.DiskSpace;
+import home.shared.hibernate.DiskSpace;
 
 
 /**

@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.ImapFetcher;
+import home.shared.hibernate.ImapFetcher;
 
 /**
  *

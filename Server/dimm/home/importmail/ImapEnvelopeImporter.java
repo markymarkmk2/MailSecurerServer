@@ -5,7 +5,7 @@
 
 package dimm.home.importmail;
 
-import dimm.home.hibernate.ImapFetcher;
+import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.IOException;

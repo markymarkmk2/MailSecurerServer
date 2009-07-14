@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.Hotfolder;
+import home.shared.hibernate.Hotfolder;
 
 /**
  *

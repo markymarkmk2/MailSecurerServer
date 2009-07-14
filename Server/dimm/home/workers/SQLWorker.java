@@ -16,6 +16,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -54,6 +55,7 @@ MySQL root /eKmIklz37T
     private static final String postgres_connect = "jdbc:postgresql://localhost/datavault/";
     private static final String derby_connect = "jdbc:derby:MailArchiv";
     private static final String local_connect = "jdbc:hsqldb:file:" + Main.DATABASEPATH;
+    private static final String SQL_UPD_PATH = "sql_update";
     
     ArrayList<String> stmt_list;
     Semaphore sql_mtx;
@@ -283,6 +285,121 @@ MySQL root /eKmIklz37T
         
         unlock_list();
     }
+    public boolean work_sql_update( File f )
+    {
+        Main.info_msg("Calling SQL statement updates");
+
+        Connection c = null;
+        Statement sta = null;
+        boolean  has_err = false;
+        try
+        {
+            c = open_db_connect();
+            sta = c.createStatement();
+
+            int len = (int)f.length();
+
+            char[] line_buf = new char[len];
+
+            FileReader fr = new FileReader(f);
+            fr.read(line_buf);
+            fr.close();
+
+            String line = new String(line_buf);
+
+            StringTokenizer str = new StringTokenizer(line, "\n\r");
+            while (str.hasMoreTokens())
+            {
+                String sql_st = str.nextToken().trim();
+                if (sql_st.length() == 0)
+                    continue;
+                if (sql_st.startsWith("#"))
+                    continue;
+
+                StringTokenizer line_str = new StringTokenizer(sql_st, ";");
+                String condition =      line_str.nextToken().trim().toLowerCase();
+                String check_sql_st = line_str.nextToken().trim();
+                String do_sql_st = line_str.nextToken().trim();
+
+
+                try
+                {
+                    // CHECK IF WE FAIL ON FIRST STATEMENT WITH EXCEPTION
+                    sta.execute(check_sql_st);
+                    if (condition.compareTo("if") == 0)
+                    {
+                        Main.info_msg("Calling statement: " + check_sql_st);
+                        sta.execute(do_sql_st);
+                    }
+                    else
+                    {
+                        Main.err_log("Statement <" + check_sql_st + "> passed, skipping <" + do_sql_st + ">");
+                    }
+                }
+                catch (Exception e)
+                {
+                    // THIS IS REGULAR ON UPDATE DB
+                    try
+                    {
+                        if (condition.compareTo("ifnot") == 0)
+                        {
+                            Main.info_msg("Calling statement: " + check_sql_st);
+                            sta.execute(do_sql_st);
+                        }
+                        else
+                        {
+                            Main.err_log("Statement <" + check_sql_st + "> failed, skipping <" + do_sql_st + ">");
+                        }
+                    }
+                    catch (Exception _exc)
+                    {
+                        Main.err_log("Statement <" + sql_st + "> gave exception: " + _exc.getMessage());
+                        has_err = true;
+                    }
+                }
+            }
+
+            if (!has_err)
+            {
+                File tmp = new File( f.getAbsolutePath() + "_ok");
+                f.renameTo(tmp);
+            }
+            else
+            {
+                File tmp = new File( f.getAbsolutePath() + "_err");
+                Main.err_log("Saving sql update file to <" + tmp.getPath() + ">");
+                f.renameTo(tmp);
+            }
+
+            return true;
+        }
+        catch (Exception exc)
+        {
+            Main.err_log("Error occured while updating database with " + f.getName() + ": " + exc.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                if (sta != null)
+                {
+                    sta.close();
+
+                }
+                if (c != null)
+                {
+                    c.close();
+
+                }
+            }
+            catch (SQLException sQLException)
+            {
+            }
+        }
+        return false;
+    }
+
+
     @Override
     public boolean initialize()
     {                
@@ -316,7 +433,27 @@ MySQL root /eKmIklz37T
             Main.err_log_fatal("Cannot initialize SQL-Worker: " + ex.getMessage() );
             ex.printStackTrace();            
             return false;
-        }        
+        }
+
+        File sql_upd = new File(SQL_UPD_PATH);
+
+        if (sql_upd.exists())
+        {
+            File[] sql_files = sql_upd.listFiles(new FileFilter()
+            {
+
+                @Override
+                public boolean accept( File pathname )
+                {
+                    return pathname.getName().endsWith(".sql");
+                }
+            });
+
+            for ( int i = 0; i < sql_files.length; i++)
+            {
+                work_sql_update( sql_files[i] );
+            }
+        }
                 
         return true;
     }
@@ -350,28 +487,28 @@ MySQL root /eKmIklz37T
             return txt;
         
         txt = txt.replaceAll("&amp;", "&");
-        txt = txt.replaceAll("&auml;", "�");
-        txt = txt.replaceAll("&ouml;", "�");
-        txt = txt.replaceAll("&uuml;", "�");
-        txt = txt.replaceAll("&Auml;", "�");
-        txt = txt.replaceAll("&Ouml;", "�");
-        txt = txt.replaceAll("&Uuml;", "�");
+        txt = txt.replaceAll("&auml;", "ä");
+        txt = txt.replaceAll("&ouml;", "ö");
+        txt = txt.replaceAll("&uuml;", "ü");
+        txt = txt.replaceAll("&Auml;", "Ä");
+        txt = txt.replaceAll("&Ouml;", "Ö");
+        txt = txt.replaceAll("&Uuml;", "Ü");
         txt = txt.replaceAll("&quot;", "\"");
         txt = txt.replaceAll("&lt;", "<");
         txt = txt.replaceAll("&gt;", ">");
-        txt = txt.replaceAll("&ccedil;", "�");
-        txt = txt.replaceAll("&eacute;", "�");
-        txt = txt.replaceAll("&egrave;", "�");
-        txt = txt.replaceAll("&aacute;", "�");
-        txt = txt.replaceAll("&agrave;", "�");
-        txt = txt.replaceAll("&ugrave;", "�");
-        txt = txt.replaceAll("&Egrave;", "�");
-        txt = txt.replaceAll("&Agrave;", "�");
-        txt = txt.replaceAll("&acute;", "�");
-        txt = txt.replaceAll("&szlig;", "�");
-        txt = txt.replaceAll("&euml;", "�");
-        txt = txt.replaceAll("&atilde;", "�" );
-        txt = txt.replaceAll("&aring;", "�" );
+        txt = txt.replaceAll("&ccedil;", "c");
+        txt = txt.replaceAll("&eacute;", "é");
+        txt = txt.replaceAll("&egrave;", "è");
+        txt = txt.replaceAll("&aacute;", "á");
+        txt = txt.replaceAll("&agrave;", "à");
+        txt = txt.replaceAll("&ugrave;", "ù");
+        txt = txt.replaceAll("&Egrave;", "È");
+        txt = txt.replaceAll("&Agrave;", "À");
+        txt = txt.replaceAll("&acute;", "á");
+        txt = txt.replaceAll("&szlig;", "ß");
+        txt = txt.replaceAll("&euml;", "e");
+        txt = txt.replaceAll("&atilde;", "a" );
+        txt = txt.replaceAll("&aring;", "a" );
                 
       
         return txt;

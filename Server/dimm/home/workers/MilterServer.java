@@ -9,7 +9,7 @@
 
 package dimm.home.workers;
 
-import dimm.home.hibernate.Milter;
+import home.shared.hibernate.Milter;
 import dimm.home.importmail.MilterImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;

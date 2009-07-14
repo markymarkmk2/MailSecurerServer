@@ -9,7 +9,7 @@
 
 package dimm.home.workers;
 
-import dimm.home.hibernate.Hotfolder;
+import home.shared.hibernate.Hotfolder;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;

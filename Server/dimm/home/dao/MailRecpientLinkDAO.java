@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.MailRecipientLink;
+import home.shared.hibernate.MailRecipientLink;
 
 /**
  *

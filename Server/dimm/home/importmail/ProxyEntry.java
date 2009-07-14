@@ -5,7 +5,7 @@
 
 package dimm.home.importmail;
 
-import dimm.home.hibernate.Proxy;
+import home.shared.hibernate.Proxy;
 
 /**
  *

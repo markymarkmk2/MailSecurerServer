@@ -6,8 +6,8 @@
 package dimm.home.vault;
 
 import dimm.home.DAO.DiskSpaceDAO;
-import dimm.home.hibernate.DiskArchive;
-import dimm.home.hibernate.DiskSpace;
+import home.shared.hibernate.DiskArchive;
+import home.shared.hibernate.DiskSpace;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;

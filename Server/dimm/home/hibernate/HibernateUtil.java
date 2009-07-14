@@ -8,7 +8,6 @@ package dimm.home.hibernate;
 
 import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.SessionFactory;
-import org.hibernate.tool.hbm2ddl.SchemaExport;
 
 /**
  * Hibernate Utility class with a convenient method to get Session Factory object.

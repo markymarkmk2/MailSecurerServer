@@ -5,7 +5,7 @@
 
 package dimm.home.DAO;
 
-import dimm.home.hibernate.DiskArchive;
+import home.shared.hibernate.DiskArchive;
 
 /**
  *

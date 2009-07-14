@@ -10,7 +10,7 @@ package dimm.home.workers;
  * @author Jocca Jocaf
  *
  */
-import dimm.home.hibernate.Proxy;
+import home.shared.hibernate.Proxy;
 import dimm.home.importmail.SMTPConnection;
 import dimm.home.importmail.POP3Connection;
 import dimm.home.importmail.ProxyConnection;

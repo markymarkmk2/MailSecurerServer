@@ -12,7 +12,7 @@ import com.sendmail.jilter.JilterHandler;
 
 import com.sendmail.jilter.JilterHandlerAdapter;
 import com.sendmail.jilter.JilterProcessor;
-import dimm.home.hibernate.Milter;
+import home.shared.hibernate.Milter;
 import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Main;
