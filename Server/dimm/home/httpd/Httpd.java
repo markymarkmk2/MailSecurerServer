@@ -238,7 +238,7 @@ public class Httpd
         m_executor = new ThreadPoolExecutor(5, 50, 15L, TimeUnit.SECONDS, m_arrayBlockingQueue);
 
         MWWebService calculator = new MWWebService();
-        Endpoint endpoint = Endpoint.publish("http://192.168.1.145:8050/1234", calculator);
+        Endpoint endpoint = Endpoint.publish("http://localhost:8050/1234", calculator);
         endpoint.setExecutor(m_executor);
 
     }

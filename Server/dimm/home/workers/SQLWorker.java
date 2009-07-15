@@ -316,17 +316,33 @@ MySQL root /eKmIklz37T
                 if (sql_st.startsWith("#"))
                     continue;
 
+                // FORMAT : CHECK-STATEMENT;[ONOK|ONFAIL];DO-STATEMENT
                 StringTokenizer line_str = new StringTokenizer(sql_st, ";");
-                String condition =      line_str.nextToken().trim().toLowerCase();
-                String check_sql_st = line_str.nextToken().trim();
-                String do_sql_st = line_str.nextToken().trim();
+                String check_sql_st = null;
+                String condition =    null;
+                String do_sql_st =    null;
+
+                try
+                {
+                    check_sql_st = line_str.nextToken().trim();
+                    condition = line_str.nextToken().trim().toLowerCase();
+                    do_sql_st = line_str.nextToken().trim();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Syntax error in sql update file " + f.getAbsolutePath() );
+                }
+                if (condition.compareTo("onok") != 0 && condition.compareTo("onfail") != 0 )
+                {
+                    throw new Exception("Syntax error in sql update file " + f.getAbsolutePath() );
+                }
 
 
                 try
                 {
                     // CHECK IF WE FAIL ON FIRST STATEMENT WITH EXCEPTION
                     sta.execute(check_sql_st);
-                    if (condition.compareTo("if") == 0)
+                    if (condition.compareTo("onok") == 0)
                     {
                         Main.info_msg("Calling statement: " + check_sql_st);
                         sta.execute(do_sql_st);
@@ -341,7 +357,7 @@ MySQL root /eKmIklz37T
                     // THIS IS REGULAR ON UPDATE DB
                     try
                     {
-                        if (condition.compareTo("ifnot") == 0)
+                        if (condition.compareTo("onfail") == 0)
                         {
                             Main.info_msg("Calling statement: " + check_sql_st);
                             sta.execute(do_sql_st);
@@ -362,11 +378,20 @@ MySQL root /eKmIklz37T
             if (!has_err)
             {
                 File tmp = new File( f.getAbsolutePath() + "_ok");
+                while (tmp.exists())
+                {
+                    tmp = new File( tmp.getAbsolutePath() + "x");
+                }
+
                 f.renameTo(tmp);
             }
             else
             {
                 File tmp = new File( f.getAbsolutePath() + "_err");
+                while (tmp.exists())
+                {
+                    tmp = new File( tmp.getAbsolutePath() + "x");
+                }
                 Main.err_log("Saving sql update file to <" + tmp.getPath() + ">");
                 f.renameTo(tmp);
             }
