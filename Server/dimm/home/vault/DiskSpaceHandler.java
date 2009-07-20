@@ -7,6 +7,9 @@ package dimm.home.vault;
 
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.hibernate.DiskSpace;
 import java.beans.XMLDecoder;
@@ -16,6 +19,13 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexWriter;
+
+
 
 /**
  *
@@ -27,12 +37,14 @@ class DiskSpaceInfo
     private long capacity;
     private long firstEntryTS;
     private long lastEntryTS;
+    private String language;
 
     DiskSpaceInfo()
     {
         capacity = 0;
         firstEntryTS = 0;
         lastEntryTS = 0;
+        language = "de";
     }
     /**
      * @return the capacity
@@ -81,14 +93,30 @@ class DiskSpaceInfo
     {
         this.lastEntryTS = lastEntryTS;
     }
+
+    /**
+     * @return the language
+     */
+    public String getLanguage()
+    {
+        return language;
+    }
+
+    /**
+     * @param language the language to set
+     */
+    public void setLanguage( String language )
+    {
+        this.language = language;
+    }
 }
-
-
 public class DiskSpaceHandler
 {
     DiskSpace ds;
     DiskSpaceInfo dsi;
     boolean _open;
+    IndexWriter read_index;
+    IndexWriter write_index;
 
     public DiskSpaceHandler( DiskSpace _ds )
     {
@@ -96,16 +124,112 @@ public class DiskSpaceHandler
         _open = false;
     }
 
-     public boolean is_open()
+    public boolean is_open()
     {
         return _open;
     }
 
+    public IndexWriter get_read_index()
+    {
+        return read_index;
+    }
+    public IndexWriter get_write_index()
+    {
+        return write_index;
+    }
+    public void commit_index()
+    {
+        try
+        {
+            write_index.commit();
+        }
+        catch (CorruptIndexException ex)
+        {
+            Logger.getLogger(DiskSpaceHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(DiskSpaceHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+
+
     public void open() throws VaultException
     {
         read_info();
-        _open = true;
+        try
+        {
+            read_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
+            write_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot open index: " + iex);
+        }
+       _open = true;
     }
+
+    public void create() throws VaultException
+    {
+        File path = new File( ds.getPath() );
+        if (!path.getParentFile().exists())
+        {
+            throw new VaultException( ds, "Missing parent directory");
+        }
+
+        path.mkdir();
+
+        try
+        {
+            read_info();
+            if (dsi.getCapacity() > 0)
+                throw new VaultException( ds, "Contains data and info, should be empty" );
+
+        }
+        catch (Exception ex)
+        {
+            // REGULAR EXIT OF CHECK
+        }
+
+        MandantContext m_ctx = Main.get_control().get_m_context( ds.getDiskArchive().getMandant() );
+
+        dsi = new DiskSpaceInfo();
+        dsi.setLanguage( m_ctx.getPrefs().get_language());
+
+        try
+        {
+            write_index = Main.get_control().get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+            write_index.commit();
+
+            read_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot create index: " + iex);
+        }
+
+
+        update_info();
+
+        try
+        {
+            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ds.xml")));
+            e.writeObject(ds);
+            e.close();
+            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/da.xml")));
+            e.writeObject(ds.getDiskArchive());
+            e.close();
+            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ma.xml")));
+            e.writeObject(ds.getDiskArchive().getMandant());
+            e.close();
+        }
+        catch (Exception ex)
+        {
+            throw new VaultException( ds, "Cannot write XML params: " + ex.getMessage());
+        }
+    }
+
 
     
     void read_info() throws VaultException
@@ -128,6 +252,17 @@ public class DiskSpaceHandler
     public void close() throws VaultException
     {
         update_info();
+        try
+        {
+            read_index.close();
+            write_index.commit();
+            write_index.close();
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot close index: " + iex);
+        }
+
         _open = false;
     }
 
@@ -188,7 +323,7 @@ public class DiskSpaceHandler
 
     public long build_time_from_path( String absolutePath )
     {
-        String rel_path = absolutePath.substring( ds.getPath().length());
+        String rel_path = absolutePath.substring( getMailPath().length());
 
         return RFCFileMail.get_time_from_mailfile(rel_path);
     }
@@ -299,49 +434,6 @@ public class DiskSpaceHandler
         del_recursive( path );
     }
 
-
-    public void create() throws VaultException
-    {
-        File path = new File( ds.getPath() );
-        if (!path.getParentFile().exists())
-        {
-            throw new VaultException( ds, "Missing parent directory");
-        }
-
-        path.mkdir();
-
-        try
-        {
-            read_info();
-            if (dsi.getCapacity() > 0)
-                throw new VaultException( ds, "Contains data and info, should be empty" );
-
-        }
-        catch (Exception ex)
-        {
-            // REGULAR EXIT OF CHECK
-        }
-
-        dsi = new DiskSpaceInfo();
-        update_info();
-        
-        try
-        {
-            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ds.xml")));
-            e.writeObject(ds);
-            e.close();
-            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/da.xml")));
-            e.writeObject(ds.getDiskArchive());
-            e.close();
-            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ma.xml")));
-            e.writeObject(ds.getDiskArchive().getMandant());
-            e.close();
-        }
-        catch (Exception ex)
-        {
-            throw new VaultException( ds, "Cannot write XML params: " + ex.getMessage());
-        }
-    }
 
     public static long parse_capacity( String s )
     {
@@ -476,4 +568,12 @@ public class DiskSpaceHandler
         return cap;
     }
 */
+    public String getMailPath()
+    {
+        return ds.getPath() + "/mail";
+    }
+    public String getIndexPath()
+    {
+        return ds.getPath() + "/index";
+    }
 }

@@ -5,10 +5,16 @@
 package dimm.home.mail;
 
 import dimm.home.mailarchiv.Main;
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Enumeration;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
+import javax.mail.Header;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
@@ -27,18 +33,19 @@ public class RFCMimeMail
 {
 
     private Message msg;
+    private Session session;
 
     public RFCMimeMail()
     {
         java.util.Properties props = new java.util.Properties();
         props.put("mail.smtp.host", "localhost");
-        Session session = Session.getDefaultInstance(props, null);
+        session = Session.getDefaultInstance(props, null);
         msg = new MimeMessage(session);
     }
 
     public RFCMimeMail( java.util.Properties props )
     {
-        Session session = Session.getDefaultInstance(props, null);
+        session = Session.getDefaultInstance(props, null);
         msg = new MimeMessage(session);
     }
 
@@ -66,6 +73,31 @@ public class RFCMimeMail
         multipart.addBodyPart(dataBodyPart);
         // ADD MULTIPART TO MESSAGE
         getMsg().setContent(multipart);
+
+    }
+
+    public void parse(RFCFileMail mail_file )
+    {
+        try
+        {
+            
+            
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(mail_file.getFile()));
+            msg = new MimeMessage(session, bis);
+            
+            bis.close();
+        }
+
+        catch (FileNotFoundException fileNotFoundException)
+        {
+        }
+        catch (IOException iox)
+        {
+        }
+        catch (MessagingException messagingException)
+        {
+        }
+
 
     }
 

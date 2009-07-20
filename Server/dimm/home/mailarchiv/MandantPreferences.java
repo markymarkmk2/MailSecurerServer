@@ -32,6 +32,7 @@ public class MandantPreferences extends Preferences
     
     public static final String DEBUG = "Debug";
     public static final String TEMPFILEDIR ="TempFileDir";
+    public static final String LANG = "Language";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
 /*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
@@ -109,8 +110,16 @@ public class MandantPreferences extends Preferences
     {
         if (password == null)
             return DFLT_PASSWORD;
-        
+
         return password;
+    }
+    public String get_language()
+    {
+        String lang =  get_prop( LANG);
+        if (lang == null)
+            lang = "de";
+
+        return lang;
     }
 
 

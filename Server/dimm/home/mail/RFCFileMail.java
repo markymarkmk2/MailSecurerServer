@@ -49,7 +49,7 @@ public class RFCFileMail
 
         do
         {
-            trg_file = new File( parent_path + sdf.format(date) );
+            trg_file = new File( parent_path + "/data" + sdf.format(date) );
 
             if (!trg_file.exists())
             {
@@ -77,6 +77,11 @@ public class RFCFileMail
         {
         }
         return 0;
+    }
+
+    public String get_unique_id()
+    {
+        return sdf.format(date);
     }
 
 

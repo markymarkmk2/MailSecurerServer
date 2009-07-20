@@ -6,12 +6,15 @@
 package dimm.home.vault;
 
 import dimm.home.DAO.DiskSpaceDAO;
+import dimm.home.index.IndexManager;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.DiskSpace;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
@@ -30,6 +33,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.IIOException;
+import javax.mail.MessagingException;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexWriter;
 
 /**
  *
@@ -48,6 +54,7 @@ public class DiskVault implements Vault, StatusHandler
     ArrayList<DiskSpaceHandler> dsh_list;
 
 
+
     public DiskVault( MandantContext _context, DiskArchive da )
     {
         disk_archive = da;
@@ -64,6 +71,9 @@ public class DiskVault implements Vault, StatusHandler
             dsh_list.add( new DiskSpaceHandler(it.next()));
         }
     }
+
+  
+
     public DiskArchive get_da()
     {
         return disk_archive;
@@ -196,7 +206,7 @@ public class DiskVault implements Vault, StatusHandler
         }
 
 
-        write_mail_file( context, dsh.getDs(), msg );
+        write_mail_file( context, dsh, msg );
 
         // ADD CAPACITY COUNTER
         dsh.add_message_info(msg);
@@ -204,14 +214,14 @@ public class DiskVault implements Vault, StatusHandler
         return true;
     }
 
-    void write_mail_file( MandantContext context, DiskSpace ds, RFCFileMail msg ) throws ArchiveMsgException, IOException
+    void write_mail_file( MandantContext context, DiskSpaceHandler dsh, RFCFileMail msg ) throws ArchiveMsgException, IOException
     {
         OutputStream bos = null;
         byte[] buff = new byte[8192];
 
         // NOW WE HAVE A FILE ON E FREE DISKSPACE
 
-        File out_file = msg.create_unique_mailfile(ds.getPath());
+        File out_file = msg.create_unique_mailfile(dsh.getMailPath());
         CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
 
         try
@@ -249,6 +259,23 @@ public class DiskVault implements Vault, StatusHandler
             catch (IOException ex)
             {
             }
+        }
+
+        Document doc = new Document();
+        IndexManager idx = Main.get_control().get_index_manager();
+        try
+        {
+            idx.index_mail_file(msg, doc);
+            IndexWriter writer = dsh.get_write_index();
+            writer.addDocument(doc);
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IndexException ex)
+        {
+            Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }

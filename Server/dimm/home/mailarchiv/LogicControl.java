@@ -9,6 +9,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.hibernate.HibernateUtil;
+import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
@@ -70,6 +71,7 @@ public class LogicControl
     ArrayList<MandantContext> mandanten_list;
 
     LicenseChecker lic_checker;
+    IndexManager idx_util;
 
     /** Creates a new instance of LogicControl */
     public LogicControl()
@@ -103,6 +105,7 @@ public class LogicControl
             worker_list.add(sql);
             
 
+            idx_util = new IndexManager(null);
 
         }
         catch (Exception ex)
@@ -110,13 +113,18 @@ public class LogicControl
             LogManager.err_log_fatal("Constructor failed", ex);
         }
     }
+    public IndexManager get_index_manager()
+    {
+        return idx_util;
+    }
+
 
     public void add_mandant( MandantPreferences prefs, Mandant m )
     {
         mandanten_list.add(new MandantContext(prefs, m));
     }
 
-    MandantContext get_m_context( Mandant m )
+    public MandantContext get_m_context( Mandant m )
     {
         for (int i = 0; i < mandanten_list.size(); i++)
         {
