@@ -6,6 +6,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.Httpd.Httpd;
+import dimm.home.importmail.MBoxImporter;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
@@ -243,6 +244,9 @@ public class Main
     public static void main(String[] args)
     {        
         Main m = new Main(args);
+
+        String[] _args = new String[0];
+        MBoxImporter.main(_args);
         
         m.work();
      

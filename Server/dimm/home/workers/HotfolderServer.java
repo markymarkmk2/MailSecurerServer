@@ -154,7 +154,7 @@ public class HotfolderServer extends WorkerParent
 
     }
 
-    public String get_milter_status_txt()
+    public String get_hf_status_txt()
     {
         StringBuffer stb = new StringBuffer();
 
