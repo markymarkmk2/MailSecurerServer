@@ -143,7 +143,6 @@ public class MBoxImportServer extends WorkerParent
     {
         MBoxImporter mbi = mbie.mbi;
 
-
         try
         {
             if (!mbi.get_msg_file().exists())
@@ -177,7 +176,6 @@ public class MBoxImportServer extends WorkerParent
             mbie.err = 3;
             return;
         }
-
     }
   
 
@@ -196,11 +194,9 @@ public class MBoxImportServer extends WorkerParent
         {
             MBoxImporterEntry pe = import_list.get(i);
             
-            stb.append("MBIO"); stb.append(i); stb.append(":"); stb.append(pe..getProtokoll());
-            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
-            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
-            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
-            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );*/
+            stb.append("MBISI"); stb.append(i); stb.append(":"); stb.append(pe.size);
+            stb.append(" MBIST"); stb.append(i); stb.append(":"); stb.append(pe.status );
+            stb.append(" MBITM"); stb.append(i); stb.append(":"); stb.append(pe.total_msg );
         }
 
         return stb.toString();

@@ -9,10 +9,8 @@
 
 package dimm.home.workers;
 
-import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
-import dimm.home.importmail.HotFolderImport;
-import dimm.home.importmail.MailBoxImporter;
+import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import java.util.ArrayList;
@@ -25,25 +23,25 @@ import javax.swing.Timer;
  *
  * @author Administrator
  */
-public class MailBoxImportServer extends WorkerParent
+public class MailBoxFetcherServer extends WorkerParent
 {
     
     
-    public static final String NAME = "MailboxImportServer";
+    public static final String NAME = "MailBoxFetcherServer";
 
     
     Timer timer;
-    final ArrayList<MailBoxImporter> fetcher_list;
+    final ArrayList<MailBoxFetcher> fetcher_list;
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
     
     
     /** Creates a new instance of StatusDisplay */
-    public MailBoxImportServer()
+    public MailBoxFetcherServer()
     {        
         super(NAME);
-        fetcher_list = new ArrayList<MailBoxImporter>();
+        fetcher_list = new ArrayList<MailBoxFetcher>();
     }
     
     @Override
@@ -61,7 +59,7 @@ public class MailBoxImportServer extends WorkerParent
         fetcher_list.clear();
         for (int i = 0; i < if_array.length; i++)
         {
-            fetcher_list.add( new MailBoxImporter( if_array[i] ) );
+            fetcher_list.add( new MailBoxFetcher( if_array[i] ) );
         }
     }
     public void add_fetcher(ImapFetcher ife)
@@ -70,7 +68,7 @@ public class MailBoxImportServer extends WorkerParent
         // TODO:
         // STOP OLD PROCESSES, RESTART NEW
 
-            fetcher_list.add( new MailBoxImporter( ife ) );
+            fetcher_list.add( new MailBoxFetcher( ife ) );
     }
 
     @Override
@@ -89,7 +87,7 @@ public class MailBoxImportServer extends WorkerParent
 
         for (int i = 0; i < fetcher_list.size(); i++)
         {
-            final MailBoxImporter hf = fetcher_list.get(i);
+            final MailBoxFetcher hf = fetcher_list.get(i);
 
             SwingWorker worker = new SwingWorker()
             {
@@ -139,7 +137,7 @@ public class MailBoxImportServer extends WorkerParent
 
                 for (int i = 0; i < fetcher_list.size(); i++)
                 {
-                    MailBoxImporter hf = fetcher_list.get(i);
+                    MailBoxFetcher hf = fetcher_list.get(i);
                     hf.idle_check();
                 }
                 if (this.isGoodState())
@@ -150,7 +148,7 @@ public class MailBoxImportServer extends WorkerParent
         }
         for (int i = 0; i < fetcher_list.size(); i++)
         {
-            MailBoxImporter hf = fetcher_list.get(i);
+            MailBoxFetcher hf = fetcher_list.get(i);
             hf.finish();
         }
 
@@ -163,7 +161,7 @@ public class MailBoxImportServer extends WorkerParent
         // CLEAN UP LIST OF FINISHED CONNECTIONS
         for (int i = 0; i < fetcher_list.size(); i++)
         {
-            MailBoxImporter hf = fetcher_list.get(i);
+            MailBoxFetcher hf = fetcher_list.get(i);
 
             stb.append("HFST"); stb.append(i); stb.append(":"); stb.append(hf.get_status_txt() );
 /*            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );

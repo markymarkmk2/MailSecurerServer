@@ -35,7 +35,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
-import dimm.home.workers.MailBoxImportServer;
+import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import dimm.home.workers.SQLWorker;
@@ -64,7 +64,7 @@ public class LogicControl
     MilterServer ms;
     MailProxyServer ps;
     HotfolderServer hf_server;
-    MailBoxImportServer mb;
+    MailBoxFetcherServer mb;
     SQLWorker sql;
 
     ArrayList<WorkerParent> worker_list;
@@ -98,7 +98,7 @@ public class LogicControl
             hf_server = new HotfolderServer();
             worker_list.add(hf_server);
 
-            mb = new MailBoxImportServer();
+            mb = new MailBoxFetcherServer();
             worker_list.add(mb);
 
             sql = new SQLWorker();

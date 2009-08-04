@@ -33,7 +33,7 @@ import javax.mail.event.MessageCountEvent;
 
 
 
-public class MailBoxImporter implements StatusHandler, WorkerParentChild
+public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 {
 
     public static final int WAIT_PERIOD_S = 60;
@@ -73,7 +73,7 @@ public class MailBoxImporter implements StatusHandler, WorkerParentChild
         }
     }
 
-    public MailBoxImporter( ImapFetcher _imfetcher )
+    public MailBoxFetcher( ImapFetcher _imfetcher )
     {
         imfetcher = _imfetcher;
         int i_flags = Integer.parseInt( imfetcher.getFlags() );

@@ -5,12 +5,22 @@
 
 package dimm.home.mailarchiv;
 
+import com.moonrug.exchange.ExchangeException;
+import com.moonrug.exchange.IAttachment;
+import com.moonrug.exchange.IContentItem;
+import com.moonrug.exchange.IFolder;
+import com.moonrug.exchange.IMessage;
+import com.moonrug.exchange.IStore;
+import com.moonrug.exchange.Recipient;
+import com.moonrug.exchange.Session;
 import dimm.home.Httpd.Httpd;
 import dimm.home.importmail.MBoxImporter;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -18,6 +28,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -244,6 +256,8 @@ public class Main
     public static void main(String[] args)
     {        
         Main m = new Main(args);
+
+        m.import_moonrug();
 
         String[] _args = new String[0];
         MBoxImporter.main(_args);
@@ -521,5 +535,77 @@ public class Main
         return key;
     }
 
+    void import_moonrug()
+    {
+        try
+        {
+            import_moonrug_exc();
+        }
+        catch (ExchangeException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
+    void import_moonrug_exc() throws ExchangeException, FileNotFoundException, IOException
+    {
+        Map<String, String> map = new HashMap<String, String> ();
+        map.put (Session.USERNAME, "EXJournal");
+        map.put (Session.PASSWORD, "12345");
+        map.put (Session.DOMAIN, "dimm.home");
+        map.put (Session.SERVER, "192.168.1.120");
+        System.setProperty("moonrug.license","J:\\Develop\\Java\\JMailArchiv\\Packages\\moonrug-0.8\\license\\License.xml");
+        Session session = Session.create (map);
+        IStore store = session.getStore();
+        IFolder inbox = store.getInbox();
+        IContentItem[] imails = inbox.getItems();
+
+        for (int i = 0; i < imails.length; i++)
+        {
+            IContentItem iContentItem = imails[i];
+            if (iContentItem instanceof IMessage)
+            {
+                IMessage msg = (IMessage)iContentItem;
+
+
+                Recipient[] recp = msg.getRecipients();
+
+                String body = msg.getBody();
+                FileOutputStream bfos = new FileOutputStream("c:\\tmp\\Mail_" + i + ".txt" );
+
+                bfos.write( body.getBytes() );
+                bfos.close();
+
+
+                if (msg.hasAttachments())
+                {
+                    IAttachment[] atts = msg.getAttachments();
+                    for (int j = 0; j < atts.length; j++)
+                    {
+                        IAttachment iAttachment = atts[j];
+
+                        Class cl = iAttachment.getClass();
+                        String name = iAttachment.getName();
+                        String cont_id = iAttachment.getContentId();
+                        String longname = iAttachment.getLongName();
+                        String mimetag = iAttachment.getMimeTag();
+
+                 /*       FileOutputStream fos = new FileOutputStream("c:\\tmp\\Mail_" + i + "_att_" + j + ".att" );
+                        iAttachment.writeTo( fos );
+                        fos.close();*/
+                    }
+                }
+
+            }
+        }
+    }
 }
+

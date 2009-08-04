@@ -24,9 +24,9 @@ import javax.mail.internet.MimeMessage;
  *
  * @author mw
  */
-public class ImapEnvelopeImporter extends MailBoxImporter
+public class ImapEnvelopeFetcher extends MailBoxFetcher
 {
-    public ImapEnvelopeImporter( ImapFetcher _imfetcher )
+    public ImapEnvelopeFetcher( ImapFetcher _imfetcher )
     {
         super( _imfetcher );
     }
@@ -66,13 +66,13 @@ public class ImapEnvelopeImporter extends MailBoxImporter
                 }
                 set_msg_deleted(message);
             }
+
             catch (IOException ex)
             {
-                Logger.getLogger(ImapEnvelopeImporter.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            catch (MessagingException ex)
+                Logger.getLogger(ImapEnvelopeFetcher.class.getName()).log(Level.SEVERE, null, ex);
+            }            catch (MessagingException ex)
             {
-                Logger.getLogger(ImapEnvelopeImporter.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(ImapEnvelopeFetcher.class.getName()).log(Level.SEVERE, null, ex);
             }
 
         }
