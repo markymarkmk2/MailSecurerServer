@@ -1,9 +1,19 @@
 package dimm.home.Httpd;
 
 import com.thoughtworks.xstream.XStream;
+import dimm.home.mailarchiv.Commands.AbstractCommand;
+import dimm.home.mailarchiv.Communicator;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.workers.SQLWorker;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -51,12 +61,42 @@ class ResultEntry
     }
 }
 
+class OutputStreamEntry
+{
+    public OutputStream os;
+    public int id;
+    public File file;
+
+    OutputStreamEntry( OutputStream _os, File _file, int _id )
+    {
+        os = _os;
+        file = _file;
+        id = _id;
+    }
+}
+class InputStreamEntry
+{
+    public InputStream is;
+    public int id;
+    public File file;
+
+    InputStreamEntry( InputStream _is, File _file, int _id )
+    {
+        is = _is;
+        file = _file;
+        id = _id;
+    }
+}
+
 @WebService
 public class MWWebService
 {
     static ArrayList<ConnEntry> conn_list = new ArrayList<ConnEntry>();
     static ArrayList<StatementEntry> sta_list = new ArrayList<StatementEntry>();
     static ArrayList<ResultEntry> rs_list = new ArrayList<ResultEntry>();
+
+    static ArrayList<InputStreamEntry> istream_list = new ArrayList<InputStreamEntry>();
+    static ArrayList<OutputStreamEntry> ostream_list = new ArrayList<OutputStreamEntry>();
 
 
     ConnEntry get_conn( int id )
@@ -89,6 +129,27 @@ public class MWWebService
         }
         return null;
     }
+    InputStreamEntry get_istream( int id )
+    {
+        for (int i = 0; i < istream_list.size(); i++)
+        {
+            InputStreamEntry rsEntry = istream_list.get(i);
+            if (rsEntry.id == id)
+                return rsEntry;
+        }
+        return null;
+    }
+    OutputStreamEntry get_ostream( int id )
+    {
+        for (int i = 0; i < ostream_list.size(); i++)
+        {
+            OutputStreamEntry rsEntry = ostream_list.get(i);
+            if (rsEntry.id == id)
+                return rsEntry;
+        }
+        return null;
+    }
+
     void drop_conn( int id )
     {
         ConnEntry c = get_conn(id);
@@ -103,6 +164,16 @@ public class MWWebService
     {
         ResultEntry c = get_rs(id);
         rs_list.remove(c);
+    }
+    void drop_istream( int id )
+    {
+        InputStreamEntry c = get_istream(id);
+        istream_list.remove(c);
+    }
+    void drop_ostream( int id )
+    {
+        OutputStreamEntry c = get_ostream(id);
+        ostream_list.remove(c);
     }
 
     @WebMethod(operationName = "open")
@@ -399,5 +470,264 @@ public class MWWebService
         }
         return "2: no data";
     }
+    @WebMethod(operationName = "TXTFunctionCall")
+    public String TXTFunctionCall( @WebParam(name = "func_name") String func_name, @WebParam(name = "args") String args  )
+    {
+        Communicator comm = Main.get_control().get_communicator();
+        ArrayList<AbstractCommand> cmd_list = comm.get_cmd_array();
+
+        // STRIP OFF STATION ID, ONLY REST TO FUNCS
+        for (int i = 0; i < cmd_list.size(); i++)
+        {
+            AbstractCommand cmd = cmd_list.get(i);
+            if (cmd.is_cmd( func_name ))
+            {
+                boolean ok = cmd.do_command( args );
+
+                if (ok)
+                {
+                    return "0: " + cmd.get_answer();
+                }
+                else
+                {
+                    return "1: " + cmd.get_answer();
+                }
+            }
+       }
+       return "2: unknown function";
+    }
+
+    @WebMethod(operationName = "OpenOutStream")
+    public String OpenOutStream( @WebParam(name = "stream_name") String stream_name, @WebParam(name = "args") String args  )
+    {
+        try
+        {
+            File f = null;
+            String filename = null;
+            if (args.length() == 0)
+            {
+                filename = stream_name;                
+            }
+            if (filename.compareTo("TEMP") == 0)
+            {
+                f = File.createTempFile("os_", ".dat");
+                f.deleteOnExit();
+            }
+            else
+            {
+                f = new File(filename);
+            }
+            FileOutputStream fos = new FileOutputStream(f);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+            int id = ostream_list.size();
+            ostream_list.add(new OutputStreamEntry(bos, f, id));
+
+            return "0: o" + id;
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "CloseOutStream")
+    public String CloseOutStream( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+            os.close();
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "WriteOutStream")
+    public String WriteOutStream( @WebParam(name = "stream_id") String stream_id, byte[] data  )
+    {
+        try
+        {
+            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+            os.write(data);
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "DropOutStreamFile")
+    public String DropOutStream( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+            os.close();
+
+            drop_ostream(get_id(stream_id));
+
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+    @WebMethod(operationName = "DeleteOutStreamFile")
+    public String DeleteOutStreamFile( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+            os.close();
+
+            File f = get_ostream( get_id(stream_id) ).file;
+            if (f != null)
+                f.delete();
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "OpenInStream")
+    public String OpenInStream( @WebParam(name = "stream_name") String stream_name, @WebParam(name = "args") String args  )
+    {
+        try
+        {
+            File f = null;
+            String filename = null;
+            if (args.length() == 0)
+            {
+                filename = stream_name;
+            }
+            f = new File(filename);
+            if (!f.exists())
+            {
+                return "2: not exists";
+            }
+            if (!f.isFile())
+            {
+                return "2: not isfile";
+            }
+            long len = f.length();
+
+            FileInputStream fis = new FileInputStream(f);
+            BufferedInputStream bis = new BufferedInputStream(fis);
+
+            int id = istream_list.size();
+            istream_list.add(new InputStreamEntry(bis, f, id));
+
+            return "0: i" + id + " LEN:" + len;
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "CloseInStream")
+    public String CloseInStream( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            InputStream is = get_istream( get_id(stream_id) ).is;
+
+            is.close();
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
+    @WebMethod(operationName = "ReadInStream")
+    public byte[] ReadInStream( @WebParam(name = "stream_id") String stream_id, int len )
+    {
+        try
+        {
+            InputStream is = get_istream( get_id(stream_id) ).is;
+
+            byte [] data = new byte[len + 3];
+            int rlen = is.read( data, 3, len );
+            if (rlen == -1)
+            {
+                return new String("1: eof").getBytes();
+            }
+
+            data[0] = '0';
+            data[1] = ':';
+            data[2] = ' ';
+
+            if (rlen != len)
+            {
+                byte [] rdata = new byte[rlen + 3];
+                System.arraycopy(data, 0, rdata, 0, rlen + 3);
+                return rdata;
+            }
+            return data;
+        }
+        catch (IOException iOException)
+        {
+            return new String("1: Exception: " + iOException.getMessage()).getBytes();
+        }
+    }
+
+    @WebMethod(operationName = "DropInStream")
+    public String DropInStream( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            InputStream is = get_istream( get_id(stream_id) ).is;
+
+            is.close();
+
+            drop_istream(get_id(stream_id));
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+    @WebMethod(operationName = "DeleteInStreamFile")
+    public String DeleteInStreamFile( @WebParam(name = "stream_id") String stream_id  )
+    {
+        try
+        {
+            InputStream is = get_istream( get_id(stream_id) ).is;
+
+            is.close();
+
+            File f = get_istream( get_id(stream_id) ).file;
+            if (f != null)
+                f.delete();
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
+
 
 }
