@@ -850,4 +850,9 @@ public class LogicControl
             e.printStackTrace();
         }
     }
+
+    public Communicator get_communicator()
+    {
+        return comm;
+    }
 }

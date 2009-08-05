@@ -546,6 +546,10 @@ public class MWWebService
         {
             return "1: Exception: " + iOException.getMessage();
         }
+        finally
+        {
+            drop_ostream(get_id(stream_id));
+        }
     }
 
     @WebMethod(operationName = "WriteOutStream")
@@ -565,45 +569,8 @@ public class MWWebService
         }
     }
 
-    @WebMethod(operationName = "DropOutStreamFile")
-    public String DropOutStream( @WebParam(name = "stream_id") String stream_id  )
-    {
-        try
-        {
-            OutputStream os = get_ostream( get_id(stream_id) ).os;
-
-            os.close();
-
-            drop_ostream(get_id(stream_id));
-
-
-            return "0: ";
-        }
-        catch (IOException iOException)
-        {
-            return "1: Exception: " + iOException.getMessage();
-        }
-    }
-    @WebMethod(operationName = "DeleteOutStreamFile")
-    public String DeleteOutStreamFile( @WebParam(name = "stream_id") String stream_id  )
-    {
-        try
-        {
-            OutputStream os = get_ostream( get_id(stream_id) ).os;
-
-            os.close();
-
-            File f = get_ostream( get_id(stream_id) ).file;
-            if (f != null)
-                f.delete();
-
-            return "0: ";
-        }
-        catch (IOException iOException)
-        {
-            return "1: Exception: " + iOException.getMessage();
-        }
-    }
+   
+   
 
     @WebMethod(operationName = "OpenInStream")
     public String OpenInStream( @WebParam(name = "stream_name") String stream_name, @WebParam(name = "args") String args  )
@@ -656,6 +623,10 @@ public class MWWebService
         {
             return "1: Exception: " + iOException.getMessage();
         }
+        finally
+        {
+            drop_istream(get_id(stream_id));
+        }
     }
 
     @WebMethod(operationName = "ReadInStream")
@@ -686,48 +657,10 @@ public class MWWebService
         }
         catch (IOException iOException)
         {
-            return new String("1: Exception: " + iOException.getMessage()).getBytes();
+            return new String("2: Exception: " + iOException.getMessage()).getBytes();
         }
     }
 
-    @WebMethod(operationName = "DropInStream")
-    public String DropInStream( @WebParam(name = "stream_id") String stream_id  )
-    {
-        try
-        {
-            InputStream is = get_istream( get_id(stream_id) ).is;
-
-            is.close();
-
-            drop_istream(get_id(stream_id));
-
-            return "0: ";
-        }
-        catch (IOException iOException)
-        {
-            return "1: Exception: " + iOException.getMessage();
-        }
-    }
-    @WebMethod(operationName = "DeleteInStreamFile")
-    public String DeleteInStreamFile( @WebParam(name = "stream_id") String stream_id  )
-    {
-        try
-        {
-            InputStream is = get_istream( get_id(stream_id) ).is;
-
-            is.close();
-
-            File f = get_istream( get_id(stream_id) ).file;
-            if (f != null)
-                f.delete();
-
-            return "0: ";
-        }
-        catch (IOException iOException)
-        {
-            return "1: Exception: " + iOException.getMessage();
-        }
-    }
-
+    
 
 }

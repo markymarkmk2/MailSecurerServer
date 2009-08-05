@@ -72,7 +72,11 @@ public class Communicator extends WorkerParent
         cmd_list.add( new WriteFile() );
         cmd_list.add( new StartVPN() );
     }
-    
+
+    public ArrayList<AbstractCommand> get_cmd_array()
+    {
+        return cmd_list;
+    }
     public boolean initialize()
     {
         using_fallback = false;
