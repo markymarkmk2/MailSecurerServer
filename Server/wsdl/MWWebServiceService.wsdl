@@ -42,6 +42,48 @@
   <message name="getSQLFirstRowFieldResponse">
     <part name="parameters" element="tns:getSQLFirstRowFieldResponse"/>
   </message>
+  <message name="TXTFunctionCall">
+    <part name="parameters" element="tns:TXTFunctionCall"/>
+  </message>
+  <message name="TXTFunctionCallResponse">
+    <part name="parameters" element="tns:TXTFunctionCallResponse"/>
+  </message>
+  <message name="OpenOutStream">
+    <part name="parameters" element="tns:OpenOutStream"/>
+  </message>
+  <message name="OpenOutStreamResponse">
+    <part name="parameters" element="tns:OpenOutStreamResponse"/>
+  </message>
+  <message name="CloseOutStream">
+    <part name="parameters" element="tns:CloseOutStream"/>
+  </message>
+  <message name="CloseOutStreamResponse">
+    <part name="parameters" element="tns:CloseOutStreamResponse"/>
+  </message>
+  <message name="WriteOutStream">
+    <part name="parameters" element="tns:WriteOutStream"/>
+  </message>
+  <message name="WriteOutStreamResponse">
+    <part name="parameters" element="tns:WriteOutStreamResponse"/>
+  </message>
+  <message name="OpenInStream">
+    <part name="parameters" element="tns:OpenInStream"/>
+  </message>
+  <message name="OpenInStreamResponse">
+    <part name="parameters" element="tns:OpenInStreamResponse"/>
+  </message>
+  <message name="CloseInStream">
+    <part name="parameters" element="tns:CloseInStream"/>
+  </message>
+  <message name="CloseInStreamResponse">
+    <part name="parameters" element="tns:CloseInStreamResponse"/>
+  </message>
+  <message name="ReadInStream">
+    <part name="parameters" element="tns:ReadInStream"/>
+  </message>
+  <message name="ReadInStreamResponse">
+    <part name="parameters" element="tns:ReadInStreamResponse"/>
+  </message>
   <message name="close">
     <part name="parameters" element="tns:close"/>
   </message>
@@ -84,6 +126,34 @@
     <operation name="getSQLFirstRowField">
       <input message="tns:getSQLFirstRowField"/>
       <output message="tns:getSQLFirstRowFieldResponse"/>
+    </operation>
+    <operation name="TXTFunctionCall">
+      <input message="tns:TXTFunctionCall"/>
+      <output message="tns:TXTFunctionCallResponse"/>
+    </operation>
+    <operation name="OpenOutStream">
+      <input message="tns:OpenOutStream"/>
+      <output message="tns:OpenOutStreamResponse"/>
+    </operation>
+    <operation name="CloseOutStream">
+      <input message="tns:CloseOutStream"/>
+      <output message="tns:CloseOutStreamResponse"/>
+    </operation>
+    <operation name="WriteOutStream">
+      <input message="tns:WriteOutStream"/>
+      <output message="tns:WriteOutStreamResponse"/>
+    </operation>
+    <operation name="OpenInStream">
+      <input message="tns:OpenInStream"/>
+      <output message="tns:OpenInStreamResponse"/>
+    </operation>
+    <operation name="CloseInStream">
+      <input message="tns:CloseInStream"/>
+      <output message="tns:CloseInStreamResponse"/>
+    </operation>
+    <operation name="ReadInStream">
+      <input message="tns:ReadInStream"/>
+      <output message="tns:ReadInStreamResponse"/>
     </operation>
     <operation name="close">
       <input message="tns:close"/>
@@ -154,6 +224,69 @@
         <soap:body use="literal"/>
       </output>
     </operation>
+    <operation name="TXTFunctionCall">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="OpenOutStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="CloseOutStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="WriteOutStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="OpenInStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="CloseInStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+    <operation name="ReadInStream">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
     <operation name="close">
       <soap:operation soapAction=""/>
       <input>
@@ -184,7 +317,7 @@
   </binding>
   <service name="MWWebServiceService">
     <port name="MWWebServicePort" binding="tns:MWWebServicePortBinding">
-      <soap:address location="http://localhost:8050/1234"/>
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
     </port>
   </service>
 </definitions>

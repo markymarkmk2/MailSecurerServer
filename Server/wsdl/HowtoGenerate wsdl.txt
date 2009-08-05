@@ -1,4 +1,4 @@
 cd /d J:\Develop\Java\JMailArchiv\Server\src>
-
+Bereinigen & Erstellen
 C:\Programme\Java\jdk1.6.0_13\bin\wsgen.exe -cp ../build/classes;../dist/MailArchiv.jar;../dist/lib/hibernate3.jar:../dist/lib/hibernate-annotations.jar dimm.home.Httpd.MWWebService  -keep -wsdl -verbose -r wsdl
 Anschliessend in wsdl -> Services -> Service -> Port -> http://localhost:8050/1234
