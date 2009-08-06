@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.StringTokenizer;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
+import org.apache.commons.codec.binary.Base64;
 
 class ConnEntry
 {
@@ -388,65 +389,6 @@ public class TCPCallConnect extends WorkerParent
     void write_tcp_answer( boolean ok, String result, OutputStream out, long len ) throws IOException
     {
             write_tcp_answer( ok, result, out );
-    }
-
-    public static String decode_pipe( String s )
-    {
-        int idx = s.indexOf("^");
-        if (idx == -1)
-            return s;
-
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < s.length(); i++)
-        {
-            char ch = s.charAt(i);
-            if (ch != '^')
-            {
-                sb.append(ch);
-                continue;
-            }
-            if (i +2 < s.length())
-            {
-                if (s.charAt(i + 1) == '7' && s.charAt(i + 2) == 'C' )
-                {
-                    sb.append('|');
-                    i+= 2;
-                }
-                if (s.charAt(i + 1) == '5' && s.charAt(i + 2) == 'E' )
-                {
-                    sb.append('^');
-                    i+= 2;
-                }
-            }
-        }
-        return sb.toString();
-    }
-    public static String encode_pipe( String s )
-    {
-        int idx = s.indexOf("|");
-        if (idx == -1)
-            return s;
-
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < s.length(); i++)
-        {
-            char ch = s.charAt(i);
-            if (ch != '^' && ch != '|')
-            {
-                sb.append(ch);
-                continue;
-            }
-            sb.append('^');
-            if (ch == '^')
-            {
-                sb.append("5E");
-            }
-            else if (ch == '|')
-            {
-                sb.append("7C");
-            }
-        }
-        return sb.toString();
     }
 
 
@@ -1063,6 +1005,28 @@ public class TCPCallConnect extends WorkerParent
             return "1: Exception: " + iOException.getMessage();
         }
     }
+public String RMX_WriteOut( Socket s, String stream_id, String sdata  )
+    {
+        try
+        {
+            sdata = decode_pipe(sdata);
+            byte[] data = Base64.decodeBase64(sdata.getBytes());
+
+            
+
+            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+
+            os.write(data);
+
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+    }
 
    
     public String RMX_OpenInStream( String stream_name, String args  )
@@ -1148,6 +1112,25 @@ public class TCPCallConnect extends WorkerParent
         {
             return new String("2: Exception: " + iOException.getMessage());
         }
+    }public String RMX_ReadIn(String stream_id, String slen )
+    {
+        try
+        {
+            int len = Integer.parseInt(slen);
+
+            byte [] data = new byte[len];
+
+            InputStream is = get_istream( get_id(stream_id) ).is;
+
+            is.read(data);
+            String ret = "0: " + new String( Base64.encodeBase64(data) );
+
+            return ret;
+        }
+        catch (IOException iOException)
+        {
+            return new String("2: Exception: " + iOException.getMessage());
+        }
     }
 
     @Override
@@ -1162,6 +1145,68 @@ public class TCPCallConnect extends WorkerParent
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+        public static String decode_pipe( String s )
+    {
+        int idx = s.indexOf("^");
+        if ( idx == -1 )
+        {
+            return s;
+        }
+        StringBuffer sb = new StringBuffer();
+        for ( int i = 0; i < s.length(); i++ )
+        {
+            char ch = s.charAt(i);
+            if ( ch != '^' )
+            {
+                sb.append(ch);
+                continue;
+            }
+            if ( i + 2 < s.length() )
+            {
+                if ( s.charAt(i + 1) == '7' && s.charAt(i + 2) == 'C' )
+                {
+                    sb.append('|');
+                    i += 2;
+                }
+                if ( s.charAt(i + 1) == '5' && s.charAt(i + 2) == 'E' )
+                {
+                    sb.append('^');
+                    i += 2;
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    public static String encode_pipe( String s )
+    {
+        int idx = s.indexOf("|");
+        if ( idx == -1 )
+        {
+            return s;
+        }
+        StringBuffer sb = new StringBuffer();
+        for ( int i = 0; i < s.length(); i++ )
+        {
+            char ch = s.charAt(i);
+            if ( ch != '^' && ch != '|' )
+            {
+                sb.append(ch);
+                continue;
+            }
+            sb.append('^');
+            if ( ch == '^' )
+            {
+                sb.append("5E");
+            }
+            else if ( ch == '|' )
+            {
+                sb.append("7C");
+            }
+        }
+        return sb.toString();
+    }
+
 
     
 
