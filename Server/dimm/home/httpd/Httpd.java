@@ -7,16 +7,20 @@ package dimm.home.Httpd;
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
+import com.sun.net.httpserver.spi.HttpServerProvider;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -28,13 +32,65 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.net.ServerSocketFactory;
+import javax.xml.ws.soap.SOAPBinding;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManagerFactory;
+import javax.xml.soap.SOAPFactory;
 import javax.xml.ws.Endpoint;
 
+
+
+ class ServerSocketFactoryWrapper extends ServerSocketFactory
+ {
+
+     protected ServerSocketFactory ssf;
+
+     public ServerSocketFactoryWrapper()
+     {
+
+         ssf = ServerSocketFactory.getDefault();
+     }
+
+     public ServerSocketFactoryWrapper( ServerSocketFactory sf )
+     {
+
+         ssf = sf;
+     }
+
+     @Override
+     public ServerSocket createServerSocket( int port )
+             throws IOException
+     {
+         ServerSocket s = ssf.createServerSocket(port);
+         s.setPerformancePreferences(0, 2, 2);
+         return s;
+     }
+
+     @Override
+     public ServerSocket createServerSocket( int port, int backlog )
+             throws IOException
+     {
+         ServerSocket s = ssf.createServerSocket(port, backlog);
+         s.setPerformancePreferences(0, 2, 2);
+         return s;
+     }
+
+     @Override
+     public ServerSocket createServerSocket( int port, int backlog,
+             InetAddress ifAddress )
+             throws IOException
+     {
+         ServerSocket s = ssf.createServerSocket(port, backlog, ifAddress);
+         s.setPerformancePreferences(0, 2, 2);
+         return s;
+     }
+
+
+ }
 /**
  *
  * @author mw
@@ -79,6 +135,9 @@ class MyHandler implements HttpHandler
         os.close();
     }
 }
+
+
+
 
 public class Httpd
 {
@@ -231,15 +290,48 @@ public class Httpd
         //endpoint.publish(s);
 
     }
-    public void start_regular() throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException
+    public void start_regular(String ip, String port) throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, ClassNotFoundException, InstantiationException, IllegalAccessException
     {
+        
+        System.setProperty("com.sun.net.httpserver.HttpServerProvider", "dimm.net.httpserver.MyHttpServerProvider");
+
+        HttpServerProvider pr = HttpServerProvider.provider();
+
+        HttpServer hs = pr.createHttpServer(new InetSocketAddress( ip, Integer.parseInt(port)), 0 );
+
+        HttpContext hc = hs.createContext("/1234" );
+        
+
         // create and publish an endpoint
         m_arrayBlockingQueue = new ArrayBlockingQueue(10000);
         m_executor = new ThreadPoolExecutor(5, 50, 15L, TimeUnit.SECONDS, m_arrayBlockingQueue);
 
+        
+
         MWWebService calculator = new MWWebService();
-        Endpoint endpoint = Endpoint.publish("http://localhost:8050/1234", calculator);
+        Endpoint endpoint = Endpoint.create(calculator);
+ 
+        //Endpoint endpoint = Endpoint.publish("http://" + ip + ":" + port + "/1234", calculator);
         endpoint.setExecutor(m_executor);
+
+        endpoint.publish(hc);
+
+        HttpHandler hd = hc.getHandler();
+        hs.start();
+
+        
+        SOAPBinding binding = (SOAPBinding)endpoint.getBinding();
+        binding.setMTOMEnabled(true);
+        SOAPFactory sf = binding.getSOAPFactory();
+        javax.xml.ws.spi.Provider pro = javax.xml.ws.spi.Provider.provider();
+        //com.sun.xml.internal.ws.spi.ProviderImpl pi = (com.sun.xml.internal.ws.spi.ProviderImpl)pr;
+
+
+
+
+
+        
+
 
     }
 
@@ -281,4 +373,136 @@ public class Httpd
   */
     }
 
+    /*
+     *
+     *
+     *
+package samples.services;
+
+import org.apache.axiom.om.OMText;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMFactory;
+import org.apache.axiom.om.OMNamespace;
+import org.apache.axiom.attachments.Attachments;
+import org.apache.axis2.context.MessageContext;
+import org.apache.axis2.wsdl.WSDLConstants;
+
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
+import javax.xml.namespace.QName;
+import java.io.*;
+
+    public class MTOMSwASampleService
+     {
+
+    private static final int BUFFER = 2048;
+
+    public OMElement uploadFileUsingMTOM(OMElement request) throws Exception
+     {
+
+    OMText binaryNode = (OMText) request.
+    getFirstChildWithName(new QName("http://www.apache-synapse.org/test", "request")).
+    getFirstChildWithName(new QName("http://www.apache-synapse.org/test", "image")).
+    getFirstOMChild();
+    DataHandler dataHandler = (DataHandler) binaryNode.getDataHandler();
+    InputStream is = dataHandler.getInputStream();
+
+    File tempFile = File.createTempFile("mtom-", ".gif");
+    FileOutputStream fos = new FileOutputStream(tempFile);
+    BufferedOutputStream dest = new BufferedOutputStream(fos, BUFFER);
+
+    byte data[] = new byte[BUFFER];
+    int count;
+    while ((count = is.read(data, 0, BUFFER)) != -1) {
+    dest.write(data, 0, count);
+    }
+
+    dest.flush();
+    dest.close();
+    System.out.println("Wrote MTOM content to temp file : " + tempFile.getAbsolutePath());
+
+    OMFactory factory = request.getOMFactory();
+    OMNamespace ns = factory.createOMNamespace("http://www.apache-synapse.org/test", "m0");
+    OMElement payload  = factory.createOMElement("uploadFileUsingMTOMResponse", ns);
+    OMElement response = factory.createOMElement("response", ns);
+    OMElement image    = factory.createOMElement("image", ns);
+
+    FileDataSource fileDataSource = new FileDataSource(tempFile);
+    dataHandler = new DataHandler(fileDataSource);
+    OMText textData = factory.createOMText(dataHandler, true);
+    image.addChild(textData);
+    response.addChild(image);
+    payload.addChild(response);
+
+    MessageContext outMsgCtx = MessageContext.getCurrentMessageContext()
+    .getOperationContext().getMessageContext(WSDLConstants.MESSAGE_LABEL_OUT_VALUE);
+    outMsgCtx.setProperty(
+    org.apache.axis2.Constants.Configuration.ENABLE_MTOM,
+    org.apache.axis2.Constants.VALUE_TRUE);
+
+    return payload;
+    }
+
+    public OMElement uploadFileUsingSwA(OMElement request) throws Exception {
+
+    String imageContentId = request.
+    getFirstChildWithName(new QName("http://www.apache-synapse.org/test", "request")).
+    getFirstChildWithName(new QName("http://www.apache-synapse.org/test", "imageId")).
+    getText();
+
+    MessageContext msgCtx   = MessageContext.getCurrentMessageContext();
+    Attachments attachment  = msgCtx.getAttachmentMap();
+    DataHandler dataHandler = attachment.getDataHandler(imageContentId);
+    File tempFile = File.createTempFile("swa-", ".gif");
+    FileOutputStream fos = new FileOutputStream(tempFile);
+    dataHandler.writeTo(fos);
+    fos.flush();
+    fos.close();
+    System.out.println("Wrote SwA attachment to temp file : " + tempFile.getAbsolutePath());
+
+    MessageContext outMsgCtx = msgCtx.getOperationContext().
+    getMessageContext(WSDLConstants.MESSAGE_LABEL_OUT_VALUE);
+    outMsgCtx.setProperty(
+    org.apache.axis2.Constants.Configuration.ENABLE_SWA,
+    org.apache.axis2.Constants.VALUE_TRUE);
+
+    OMFactory factory = request.getOMFactory();
+    OMNamespace ns = factory.createOMNamespace("http://www.apache-synapse.org/test", "m0");
+    OMElement payload  = factory.createOMElement("uploadFileUsingSwAResponse", ns);
+    OMElement response = factory.createOMElement("response", ns);
+    OMElement imageId  = factory.createOMElement("imageId", ns);
+
+    FileDataSource fileDataSource = new FileDataSource(tempFile);
+    dataHandler = new DataHandler(fileDataSource);
+    imageContentId = outMsgCtx.addAttachment(dataHandler);
+    imageId.setText(imageContentId);
+    response.addChild(imageId);
+    payload.addChild(response);
+
+    return payload;
+    }
+
+    public void oneWayUploadUsingMTOM(OMElement element) throws Exception {
+
+    OMText binaryNode = (OMText) element.getFirstOMChild();
+    DataHandler dataHandler = (DataHandler) binaryNode.getDataHandler();
+    InputStream is = dataHandler.getInputStream();
+
+    File tempFile = File.createTempFile("mtom-", ".gif");
+    FileOutputStream fos = new FileOutputStream(tempFile);
+    BufferedOutputStream dest = new BufferedOutputStream(fos, BUFFER);
+
+    byte data[] = new byte[BUFFER];
+    int count;
+    while ((count = is.read(data, 0, BUFFER)) != -1) {
+    dest.write(data, 0, count);
+    }
+
+    dest.flush();
+    dest.close();
+    System.out.println("Wrote to file : " + tempFile.getAbsolutePath());
+    }
+    }
+*
+     * */
 }

@@ -19,9 +19,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.List;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebService;
+import org.apache.commons.codec.binary.Base64;
 
 class ConnEntry
 {
@@ -518,10 +520,9 @@ public class MWWebService
                 f = new File(filename);
             }
             FileOutputStream fos = new FileOutputStream(f);
-            BufferedOutputStream bos = new BufferedOutputStream(fos);
-
+            
             int id = ostream_list.size();
-            ostream_list.add(new OutputStreamEntry(bos, f, id));
+            ostream_list.add(new OutputStreamEntry(fos, f, id));
 
             return "0: o" + id;
         }
@@ -558,6 +559,15 @@ public class MWWebService
         try
         {
             OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+
+            if (!(os instanceof BufferedOutputStream) && data.length > 1024)
+            {
+
+                BufferedOutputStream bos = new BufferedOutputStream(os, data.length);
+                get_ostream( get_id(stream_id) ).os = bos;
+                os = bos;
+            }
 
             os.write(data);
 
