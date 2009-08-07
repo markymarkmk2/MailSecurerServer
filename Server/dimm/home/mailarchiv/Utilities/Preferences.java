@@ -77,6 +77,19 @@ public class Preferences
         String ret = props.getProperty(p);
         return ret;
     }
+    public String get_prop( String p, String def )
+    {
+        if (!check_prop(p))
+        {
+            Main.err_log_warn("Unbekannte property <" + p + ">");
+            return null;
+        }
+        String ret = props.getProperty(p);
+        if (ret == null)
+            ret = def;
+        
+        return ret;
+    }
 
     public ArrayList<String> get_prop_list()
     {

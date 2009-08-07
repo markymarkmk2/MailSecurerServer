@@ -9,6 +9,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.hibernate.HibernateUtil;
+import dimm.home.httpd.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
@@ -73,6 +74,8 @@ public class LogicControl
     LicenseChecker lic_checker;
     IndexManager idx_util;
 
+    TCPCallConnect tcp_conn;
+
     /** Creates a new instance of LogicControl */
     public LogicControl()
     {
@@ -85,6 +88,9 @@ public class LogicControl
 
             comm = new Communicator();
             worker_list.add(comm);
+
+            tcp_conn = new TCPCallConnect();
+            worker_list.add(tcp_conn);
 
             sd = new StatusDisplay();
             worker_list.add(sd);
@@ -327,7 +333,7 @@ public class LogicControl
         File directory = null;
         try
         {
-            String tmp_dir = Main.get_prop(MandantPreferences.TEMPFILEDIR);
+            String tmp_dir = this.get_m_context(mandant).getPrefs().get_prop(MandantPreferences.TEMPFILEDIR);
             if (tmp_dir != null && tmp_dir.length() > 0)
             {
                 directory = new File(tmp_dir);
@@ -570,7 +576,7 @@ public class LogicControl
 
             for (int idx = 0; idx < ntp_server_list.length; idx++)
             {
-                String rdate_cmd = Main.get_prop(GeneralPreferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
+                String rdate_cmd = Main.prefs.get_prop(GeneralPreferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
                 String[] cmd =
                 {
                     rdate_cmd

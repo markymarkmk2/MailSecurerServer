@@ -75,6 +75,8 @@ public class Main
     
     public static boolean create_licensefile = false;
     public static String license_interface = "eth0";
+    public static String ws_ip = "127.0.0.1";
+    public static String ws_port = "8050";
 
     Httpd httpd;
     
@@ -146,8 +148,18 @@ public class Main
             
             if (args[i].compareTo("-e") == 0 && args[i + 1] != null)
             {
-                license_interface = args[i + 1];            
-                info_msg("Using interface license_interface for licensing");                
+                license_interface = args[i + 1];
+                info_msg("Using interface license_interface for licensing");
+            }
+            if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
+            {
+                ws_ip = args[i + 1];
+
+            }
+            if (args[i].compareTo("-server_port") == 0 && args[i + 1] != null)
+            {
+                ws_port = args[i + 1];
+                info_msg("Using interface license_interface for licensing");
             }
             if (args[i].compareTo("-init_db") == 0)
             {
@@ -180,12 +192,33 @@ public class Main
 
         info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
 
-        httpd = new Httpd(8100);
+       /* httpd = new Httpd(8100);
         try
         {
-            httpd.start_regular();
+            httpd.start_regular(ws_ip, ws_port);
+            while (true)
+            {
+                try
+                {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException interruptedException)
+                {
+                }
+            }
         }
-        catch (IOException ex)
+        catch (ClassNotFoundException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (InstantiationException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IllegalAccessException ex)
+        {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }        catch (IOException ex)
         {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -208,7 +241,7 @@ public class Main
         catch (KeyManagementException ex)
         {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        }*/
         
         
     }
@@ -257,10 +290,10 @@ public class Main
     {        
         Main m = new Main(args);
 
-        m.import_moonrug();
+      /*  m.import_moonrug();
 
         String[] _args = new String[0];
-        MBoxImporter.main(_args);
+        MBoxImporter.main(_args);*/
         
         m.work();
      
