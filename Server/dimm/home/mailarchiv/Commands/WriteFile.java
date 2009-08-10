@@ -31,12 +31,14 @@ public class WriteFile extends AbstractCommand
         super("WRITEFILE");
         dump = null;
     }
+    @Override
     public boolean do_command(String data)
     {
         // NOT CALLED
         return false;
     }
 
+    @Override
     public boolean do_command(byte[] data)
     {
         answer = "";

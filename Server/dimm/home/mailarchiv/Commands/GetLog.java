@@ -31,6 +31,7 @@ public class GetLog extends AbstractCommand
         dump = null;
     }
 
+    @Override
     public boolean do_command(String data)
     {
         answer = "";

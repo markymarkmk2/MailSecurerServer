@@ -2,6 +2,20 @@ package dimm.home.httpd;
 
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
+import dimm.home.mailarchiv.Commands.GetLog;
+import dimm.home.mailarchiv.Commands.GetSetOption;
+import dimm.home.mailarchiv.Commands.GetStatus;
+import dimm.home.mailarchiv.Commands.HelloCommand;
+import dimm.home.mailarchiv.Commands.IPConfig;
+import dimm.home.mailarchiv.Commands.ListOptions;
+import dimm.home.mailarchiv.Commands.Ping;
+import dimm.home.mailarchiv.Commands.ReadLog;
+import dimm.home.mailarchiv.Commands.Reboot;
+import dimm.home.mailarchiv.Commands.Restart;
+import dimm.home.mailarchiv.Commands.SetStation;
+import dimm.home.mailarchiv.Commands.ShellCmd;
+import dimm.home.mailarchiv.Commands.StartVPN;
+import dimm.home.mailarchiv.Commands.WriteFile;
 import dimm.home.mailarchiv.Communicator;
 import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
@@ -28,23 +42,24 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-import javax.jws.WebMethod;
-import javax.jws.WebParam;
 import org.apache.commons.codec.binary.Base64;
 
 class ConnEntry
 {
+
     public Connection conn;
     public int id;
-    
+
     ConnEntry( Connection _c, int _id )
     {
         conn = _c;
         id = _id;
     }
 }
+
 class StatementEntry
 {
+
     public Statement sta;
     public int id;
     public ConnEntry ce;
@@ -56,8 +71,10 @@ class StatementEntry
         ce = _ce;
     }
 }
+
 class ResultEntry
 {
+
     public ResultSet rs;
     public int id;
     public ConnEntry ce;
@@ -72,6 +89,7 @@ class ResultEntry
 
 class OutputStreamEntry
 {
+
     public OutputStream os;
     public int id;
     public File file;
@@ -83,8 +101,10 @@ class OutputStreamEntry
         id = _id;
     }
 }
+
 class InputStreamEntry
 {
+
     public InputStream is;
     public int id;
     public File file;
@@ -97,24 +117,26 @@ class InputStreamEntry
     }
 }
 
+
+
+
+
+
 public class TCPCallConnect extends WorkerParent
 {
+    ArrayList<AbstractCommand> cmd_list;
+
     static ArrayList<ConnEntry> conn_list = new ArrayList<ConnEntry>();
     static ArrayList<StatementEntry> sta_list = new ArrayList<StatementEntry>();
     static ArrayList<ResultEntry> rs_list = new ArrayList<ResultEntry>();
-
     static ArrayList<InputStreamEntry> istream_list = new ArrayList<InputStreamEntry>();
     static ArrayList<OutputStreamEntry> ostream_list = new ArrayList<OutputStreamEntry>();
-
     // 10 Agents parallel
     private static final int backlog = 10;
-    
     private static final int TCPCMDBUFF_LEN = 80;
     byte[] tcp_cmd_buff;
     private static final int TCP_LEN = 64;
-    
     public static final String HELLO_CMD = "HELLO";
-
     ServerSocket tcp_s;
     String server_ip;
     int server_port;
@@ -125,8 +147,29 @@ public class TCPCallConnect extends WorkerParent
         server_ip = Main.ws_ip;
         server_port = Integer.parseInt(Main.ws_port);
         tcp_cmd_buff = new byte[TCPCMDBUFF_LEN];
+
+        cmd_list = new ArrayList<AbstractCommand>();
+
+        cmd_list.add( new HelloCommand() );
+        cmd_list.add( new GetSetOption() );
+        cmd_list.add( new ListOptions() );
+        cmd_list.add( new IPConfig() );
+        cmd_list.add( new Ping() );
+        cmd_list.add( new ReadLog() );
+        cmd_list.add( new Reboot() );
+        cmd_list.add( new Restart() );
+        cmd_list.add( new GetStatus() );
+        cmd_list.add( new ShellCmd() );
+        cmd_list.add( new GetLog() );
+        cmd_list.add( new SetStation() );
+        cmd_list.add( new WriteFile() );
+        cmd_list.add( new StartVPN() );
     }
 
+    public ArrayList<AbstractCommand> get_cmd_array()
+    {
+        return cmd_list;
+    }
 
     ConnEntry get_conn( int id )
     {
@@ -134,47 +177,61 @@ public class TCPCallConnect extends WorkerParent
         {
             ConnEntry connEntry = conn_list.get(i);
             if (connEntry.id == id)
+            {
                 return connEntry;
+            }
         }
         return null;
     }
+
     StatementEntry get_sta( int id )
     {
         for (int i = 0; i < sta_list.size(); i++)
         {
             StatementEntry staEntry = sta_list.get(i);
             if (staEntry.id == id)
+            {
                 return staEntry;
+            }
         }
         return null;
     }
+
     ResultEntry get_rs( int id )
     {
         for (int i = 0; i < rs_list.size(); i++)
         {
             ResultEntry rsEntry = rs_list.get(i);
             if (rsEntry.id == id)
+            {
                 return rsEntry;
+            }
         }
         return null;
     }
+
     InputStreamEntry get_istream( int id )
     {
         for (int i = 0; i < istream_list.size(); i++)
         {
             InputStreamEntry rsEntry = istream_list.get(i);
             if (rsEntry.id == id)
+            {
                 return rsEntry;
+            }
         }
         return null;
     }
+
     OutputStreamEntry get_ostream( int id )
     {
         for (int i = 0; i < ostream_list.size(); i++)
         {
             OutputStreamEntry rsEntry = ostream_list.get(i);
             if (rsEntry.id == id)
+            {
                 return rsEntry;
+            }
         }
         return null;
     }
@@ -184,33 +241,47 @@ public class TCPCallConnect extends WorkerParent
         ConnEntry c = get_conn(id);
         conn_list.remove(c);
     }
+
     void drop_sta( int id )
     {
         StatementEntry c = get_sta(id);
         sta_list.remove(c);
     }
+
     void drop_rs( int id )
     {
         ResultEntry c = get_rs(id);
         rs_list.remove(c);
     }
+
     void drop_istream( int id )
     {
         InputStreamEntry c = get_istream(id);
         istream_list.remove(c);
     }
+
     void drop_ostream( int id )
     {
         OutputStreamEntry c = get_ostream(id);
         ostream_list.remove(c);
     }
 
+    /* WE HAVE THE FOLLOWING RESTRIUCTIONS FOR REMOTE CALLABLE FUNCTIONS:
+     *
+     *  - NAME STARTS WITH RMX_
+     *  - TWO TYPES OF PARAMETERS:
+     *      1. 0 - 5 STRING PARAMETERS
+     *      2. FIRST PARAM IS SOCKET, SECOND IS LONG, REST 0 - 3 STRING PARAMETERS
+     *
+     *  RETURN SHOULD BE "0: [optional text] OR <ERROR>: [optional text]
+     *
+     * */
     Object call_method( Socket s, long stream_len, String cmf, ArrayList<String> params ) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     {
         Method[] list = this.getClass().getDeclaredMethods();
-        String str="";
+        String str = "";
         ArrayList<String> args = new ArrayList<String>();
-        Long s_len = new Long( stream_len);
+        Long s_len = new Long(stream_len);
 
 
         for (int i = 0; i < list.length; i++)
@@ -218,7 +289,9 @@ public class TCPCallConnect extends WorkerParent
             Method method = list[i];
             String name = method.getName();
             if (!name.startsWith("RMX_"))
+            {
                 continue;
+            }
 
             // RICHTIGE FUNKTION ?
             if (name.compareTo(cmf) == 0)
@@ -228,24 +301,27 @@ public class TCPCallConnect extends WorkerParent
                 {
                     Class[] paramc = method.getParameterTypes();
 
-                    // WE HAVE SOCKET AS FIRST PARAM ?, THEN WE DO NOT ACCEPT OTHER PARAMS
+                    // WE HAVE SOCKET AS FIRST PARAM ?, THEN WE HAVE LEN AS SECOND (WLEN OR RLEN)
                     boolean with_socket = false;
                     if (paramc.length >= 2 && paramc[0] == s.getClass() && paramc[1] == s_len.getClass())
                     {
                         with_socket = true;
                     }
 
-                    int j =  0;
+                    int j = 0;
                     int k = 0;
 
                     // CHECK CORRECT ARGS AND STORE ARS IN LIST
                     for (j = 0; j < paramc.length; j++)
                     {
+                        // SKIP SOCK PARAMS (2)
                         if (with_socket && j < 2)
+                        {
                             continue;
+                        }
 
 
-
+                        // WE ONLY ACCEPT STRINGS RIGHT NOW
                         Class class1 = paramc[j];
                         if ((class1 != str.getClass()))
                         {
@@ -253,10 +329,15 @@ public class TCPCallConnect extends WorkerParent
                         }
 
                         String arg = null;
-                        if (params.size() > k)
-                            arg = params.get(k);
 
-                        args.add( arg );
+                        // ADD ARGUMENT TO ARGLIST IF AVAILABLETO
+                        if (params.size() > k)
+                        {
+                            arg = params.get(k);
+                        }
+
+                        // ARGS CONTAINS EXACTLY paramc.length ENTRIES
+                        args.add(arg);
                         k++;
                     }
 
@@ -266,26 +347,52 @@ public class TCPCallConnect extends WorkerParent
 
                         switch (paramc.length)
                         {
-                            case 2: ret = method.invoke( this, s, s_len); break;
-                            case 3: ret = method.invoke( this, s, s_len, args.get(0)); break;
-                            case 4: ret = method.invoke( this, s, s_len, args.get(0), args.get(1)); break;
-                            case 5: ret = method.invoke( this, s, s_len, args.get(0), args.get(1), args.get(2)); break;
-                            case 6: ret = method.invoke( this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3)); break;
-                            case 7: ret = method.invoke( this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)); break;
-                            default: ret =  null;
+                            case 2:
+                                ret = method.invoke(this, s, s_len);
+                                break;
+                            case 3:
+                                ret = method.invoke(this, s, s_len, args.get(0));
+                                break;
+                            case 4:
+                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1));
+                                break;
+                            case 5:
+                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2));
+                                break;
+                            case 6:
+                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3));
+                                break;
+                            case 7:
+                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
+                                break;
+                            default:
+                                ret = null;
                         }
                     }
                     else
                     {
                         switch (paramc.length)
                         {
-                            case 0: ret = method.invoke( this ); break;
-                            case 1: ret = method.invoke( this, args.get(0)); break;
-                            case 2: ret = method.invoke( this, args.get(0), args.get(1)); break;
-                            case 3: ret = method.invoke( this, args.get(0), args.get(1), args.get(2)); break;
-                            case 4: ret = method.invoke( this, args.get(0), args.get(1), args.get(2), args.get(3)); break;
-                            case 5: ret = method.invoke( this, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)); break;
-                            default: ret =  null;
+                            case 0:
+                                ret = method.invoke(this);
+                                break;
+                            case 1:
+                                ret = method.invoke(this, args.get(0));
+                                break;
+                            case 2:
+                                ret = method.invoke(this, args.get(0), args.get(1));
+                                break;
+                            case 3:
+                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2));
+                                break;
+                            case 4:
+                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2), args.get(3));
+                                break;
+                            case 5:
+                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
+                                break;
+                            default:
+                                ret = null;
                         }
                     }
 
@@ -296,8 +403,8 @@ public class TCPCallConnect extends WorkerParent
         return "9: cmd not found";
     }
 
-   private boolean handle_ip_command(Socket s) throws IOException
-   {
+    private boolean handle_ip_command( Socket s ) throws IOException
+    {
         InputStream in = s.getInputStream();
 
         OutputStream out = s.getOutputStream();
@@ -305,12 +412,14 @@ public class TCPCallConnect extends WorkerParent
         // TCP-PACKET HAS AT LEAST TCP_LEN BYTE
         byte[] buff = new byte[TCP_LEN];
 
-        in.read( buff );
+        in.read(buff);
         if (buff[0] == 0)
+        {
             return false;
+        }
 
-        String data = new String( buff, "UTF-8");
-        ParseToken pt = new ParseToken( data );
+        String data = new String(buff, "UTF-8");
+        ParseToken pt = new ParseToken(data);
         String cmd = pt.GetString("CMD:");
         long slen = pt.GetLongValue("SLEN:");
         int len = pt.GetLong("PLEN:").intValue();
@@ -328,12 +437,12 @@ public class TCPCallConnect extends WorkerParent
             int rlen = 0;
             while (rlen < len)
             {
-                int llen = in.read( add_data, rlen, len - rlen );
+                int llen = in.read(add_data, rlen, len - rlen);
                 rlen += llen;
             }
         }
 
-        dispatch_tcp_command( s, cmd, slen, add_data, out );
+        dispatch_tcp_command(s, cmd, slen, add_data, out);
 
         return true;
     }
@@ -343,9 +452,13 @@ public class TCPCallConnect extends WorkerParent
         StringBuffer answer = new StringBuffer();
 
         if (ok)
-            answer.append( "OK:LEN:");
+        {
+            answer.append("OK:LEN:");
+        }
         else
-            answer.append( "NOK:LEN:");
+        {
+            answer.append("NOK:LEN:");
+        }
 
         int alen = 0;
 
@@ -354,17 +467,19 @@ public class TCPCallConnect extends WorkerParent
             alen = ret.getBytes("UTF-8").length;
         }
 
-        answer.append(  Integer.toString(alen) );
+        answer.append(Integer.toString(alen));
         while (answer.length() < TCP_LEN)
         {
             answer.append(" ");
         }
 
 
-        out.write(answer.toString().getBytes() );
+        out.write(answer.toString().getBytes());
 
         if (alen > 0)
-            out.write( ret.getBytes("UTF-8") );
+        {
+            out.write(ret.getBytes("UTF-8"));
+        }
 
         out.flush();
     }
@@ -374,19 +489,23 @@ public class TCPCallConnect extends WorkerParent
         StringBuffer answer = new StringBuffer();
 
         if (ok)
-            answer.append( "OK:LEN:");
+        {
+            answer.append("OK:LEN:");
+        }
         else
-            answer.append( "NOK:LEN:");
+        {
+            answer.append("NOK:LEN:");
+        }
 
 
-        answer.append(  Long.toString(alen) );
+        answer.append(Long.toString(alen));
         while (answer.length() < TCP_LEN)
         {
             answer.append(" ");
         }
 
 
-        out.write(answer.toString().getBytes("UTF-8"), 0, TCP_LEN );
+        out.write(answer.toString().getBytes("UTF-8"), 0, TCP_LEN);
 
         // PUSH DATA OVER BUFFER
         int buff_len = 8192;
@@ -396,10 +515,12 @@ public class TCPCallConnect extends WorkerParent
         {
             long blen = alen;
             if (blen > buff_len)
+            {
                 blen = buff_len;
+            }
 
-            int rlen = in.read( buff, 0, (int)blen );
-            out.write( buff, 0, rlen );
+            int rlen = in.read(buff, 0, (int) blen);
+            out.write(buff, 0, rlen);
             alen -= rlen;
         }
 
@@ -408,52 +529,91 @@ public class TCPCallConnect extends WorkerParent
         out.flush();
     }
 
-    void write_tcp_answer( boolean ok, InputStream is, long len , OutputStream out ) throws IOException
+    void write_tcp_answer( boolean ok, InputStream is, long len, OutputStream out ) throws IOException
     {
-        write_tcp_answer( ok, len, is, out );
+        write_tcp_answer(ok, len, is, out);
     }
+
     void write_tcp_answer( boolean ok, String result, OutputStream out, long len ) throws IOException
     {
-            write_tcp_answer( ok, result, out );
+        write_tcp_answer(ok, result, out);
+    }
+    void write_tcp_answer( boolean ok, AbstractCommand cmd, OutputStream out ) throws IOException
+    {
+        if (cmd.has_stream())
+        {
+            write_tcp_answer( ok, cmd.get_data_len(), cmd.get_stream(), out );
+        }
+        else
+        {
+            write_tcp_answer( ok, cmd.get_answer(), out );
+        }
     }
 
 
     void dispatch_tcp_command( Socket s, String cmd, long stream_len, byte[] add_data, OutputStream out ) throws IOException
     {
-        Main.debug_msg( 5, "Received ip command <" + cmd + "> " );
+        Main.debug_msg(5, "Received ip command <" + cmd + "> ");
 
-        if (cmd.equals("?") || cmd.equals("help") )
+        if (cmd.equals("?") || cmd.equals("help"))
         {
             String answer = "Help!";
 
-            write_tcp_answer( true, answer, out );
+            write_tcp_answer(true, answer, out);
             return;
         }
         else
         {
+            // BUILD ARGLIST (...)
             ArrayList<String> params = new ArrayList<String>();
             if (add_data != null)
             {
-                String add_str = new String ( add_data, "UTF-8" );
-                StringTokenizer str = new StringTokenizer( add_str, "|");
-                while ( str.hasMoreTokens())
+                String add_str = new String(add_data, "UTF-8");
+                StringTokenizer str = new StringTokenizer(add_str, "|");
+                while (str.hasMoreTokens())
                 {
                     String arg = str.nextToken();
-                    arg = decode_pipe( arg );
+                    arg = decode_pipe(arg);
                     params.add(arg);
                 }
             }
 
-
-            try
+            // call_ ARE THE OLDSTYLE FUNCS
+            if (cmd.substring(0,4).compareTo("call_") == 0 )
             {
-                Object ret = call_method(s, stream_len, cmd, params);
+                try
+                {
+                    String cmd_name = cmd.substring(5);
+                    for (int i = 0; i < cmd_list.size(); i++)
+                    {
+                        AbstractCommand cmd_func = cmd_list.get(i);
+                        if (cmd_func.is_cmd(cmd_name))
+                        {
+                            boolean ok = cmd_func.do_command(add_data);
 
-                write_tcp_answer( true, ret.toString(), out );
+                            write_tcp_answer(ok, cmd_func, out);
+                            return;
+                        }
+                    }
+                }
+                catch (Exception iOException)
+                {
+                    write_tcp_answer(false, iOException.getMessage(), out);
+                    return;
+                }
             }
-            catch (Exception exc)
+            else  // LOOK FOR NEW RMX_ INTERFACE
             {
-                write_tcp_answer( false, exc.getMessage(), out );
+                try
+                {
+                    Object ret = call_method(s, stream_len, cmd, params);
+
+                    write_tcp_answer(true, ret.toString(), out);
+                }
+                catch (Exception exc)
+                {
+                    write_tcp_answer(false, exc.getMessage(), out);
+                }
             }
         }
     }
@@ -461,12 +621,13 @@ public class TCPCallConnect extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting communicator tasks" );
+        Main.debug_msg(1, "Starting communicator tasks");
 
         start_tcpip_task();
 
         SwingWorker worker = new SwingWorker()
         {
+
             @Override
             public Object construct()
             {
@@ -478,7 +639,6 @@ public class TCPCallConnect extends WorkerParent
 
         worker.start();
         return true;
-
 
     }
 
@@ -493,15 +653,15 @@ public class TCPCallConnect extends WorkerParent
             // TRY EVERY MINUTE TO CHANGE FROM FALLBACK TO VALID IP
 /*            if (using_fallback)
             {
-                fallback_cnt++;
-                if (fallback_cnt == 60)
-                {
-                    fallback_cnt = 0;
-                    if (set_ipconfig())
-                    {
-                        using_fallback = false;
-                    }
-                }
+            fallback_cnt++;
+            if (fallback_cnt == 60)
+            {
+            fallback_cnt = 0;
+            if (set_ipconfig())
+            {
+            using_fallback = false;
+            }
+            }
             }*/
         }
 
@@ -511,6 +671,7 @@ public class TCPCallConnect extends WorkerParent
     {
         SwingWorker worker = new SwingWorker()
         {
+
             @Override
             public Object construct()
             {
@@ -533,98 +694,99 @@ public class TCPCallConnect extends WorkerParent
         return true;
     }
 
-
     void tcpip_listener()
     {
         while (!isShutdown())
         {
-             try
-             {
-                 this.setStatusTxt("");
-                 this.setGoodState( true );
-                 tcp_s = new ServerSocket(server_port, backlog);
-                 tcp_s.setReuseAddress(true );
-                 tcp_s.setReceiveBufferSize( 60000 );
+            try
+            {
+                this.setStatusTxt("");
+                this.setGoodState(true);
+                tcp_s = new ServerSocket(server_port, backlog);
+                tcp_s.setReuseAddress(true);
+                tcp_s.setReceiveBufferSize(60000);
 
-                 final Socket s = tcp_s.accept();
-                 s.setTcpNoDelay( true );
+                final Socket s = tcp_s.accept();
+                s.setTcpNoDelay(true);
 
-                 SwingWorker work = new SwingWorker()
-                 {
+                SwingWorker work = new SwingWorker()
+                {
 
-                     @Override
-                     public Object construct()
-                     {
-                         try
-                         {
+                    @Override
+                    public Object construct()
+                    {
+                        try
+                        {
 
-                             while( !isShutdown() )
-                             {
-                                 // HELLO CLIENT...
-   
-                                 if (!handle_ip_command( s ))
-                                 {
-                                     //System.out.println("Closing socket" );
-                                     //if (in.available() == 0)
-                                     {
-                                         s.close();
-                                         break;
-                                     }
-                                 }
-                             }
-                         }
-                         catch ( Exception exc )
-                         {
-                             try
-                             {
-                                 if (!s.isClosed())
-                                     s.close();
-                             }
-                            catch ( Exception lexc )
-                            {}
+                            while (!isShutdown())
+                            {
+                                // HELLO CLIENT...
+                                if (!handle_ip_command(s))
+                                {
+                                    // ON ERROR CLOSE
+                                    s.close();
+                                    break;
+                                }
+                            }
+                        }
+                        catch (Exception exc)
+                        {
 
-                             if (!isShutdown())
-                             {
-                                 exc.printStackTrace();
-                                 setStatusTxt( "Communication aborted: "  + exc.getMessage());
-                                 setGoodState( false );
-                                 Main.err_log( getStatusTxt() );
-                             }
-                         }
-                         return null;
-                     }
+                            if (!isShutdown())
+                            {
+                                exc.printStackTrace();
+                                setStatusTxt("Communication aborted: " + exc.getMessage());
+                                setGoodState(false);
+                                Main.err_log(getStatusTxt());
+                            }
+                        }
+                        finally
+                        {
+                            try
+                            {
+                                if (!s.isClosed())
+                                {
+                                    s.close();
+                                }
+                            }
+                            catch (Exception lexc)
+                            {
+                            }
+                        }
+                        return null;
+                    }
+                };
 
-                 };
+                work.start();
 
-                 work.start();
-
-             }
-             catch ( Exception exc )
-             {
-                 if (!isShutdown())
-                 {
-                     exc.printStackTrace();
-                     Main.err_log("Kommunikationsport geschlossen: "  + exc.getMessage() );
-                     this.setStatusTxt( "Communication is closed (2 processes?): "  + exc.getMessage());
-                     this.setGoodState( false );
-                     LogicControl.sleep(5000);
-                 }
-             }
-             if (tcp_s != null)
-             {
+            }
+            catch (Exception exc)
+            {
+                if (!isShutdown())
+                {
+                    exc.printStackTrace();
+                    Main.err_log("Kommunikationsport geschlossen: " + exc.getMessage());
+                    this.setStatusTxt("Communication is closed (2 processes?): " + exc.getMessage());
+                    this.setGoodState(false);
+                    LogicControl.sleep(5000);
+                }
+            }
+            if (tcp_s != null)
+            {
                 try
                 {
                     tcp_s.close();
-                } catch (IOException ex)
+                }
+                catch (IOException ex)
                 {
                     ex.printStackTrace();
                 }
-             }
+            }
         }
     }
 
     @Override
-    public void setShutdown(boolean shutdown)
+    public void setShutdown( boolean shutdown )
     {
 
 
@@ -633,14 +795,9 @@ public class TCPCallConnect extends WorkerParent
             tcp_s.close();
         }
         catch (Exception exc)
-        {}
+        {
+        }
     }
-
-
-
-
-
-
 
     public String RMX_open( String db_name )
     {
@@ -650,7 +807,7 @@ public class TCPCallConnect extends WorkerParent
             Connection con = sql.open_db_connect();
 
             int id = conn_list.size();
-            conn_list.add( new ConnEntry( con, id ) );
+            conn_list.add(new ConnEntry(con, id));
 
             return "0: c" + id;
         }
@@ -659,6 +816,7 @@ public class TCPCallConnect extends WorkerParent
             return "1: " + exception.getMessage();
         }
     }
+
     int get_id( String s )
     {
         try
@@ -670,6 +828,7 @@ public class TCPCallConnect extends WorkerParent
         }
         return -1;
     }
+
     char get_type( String s )
     {
         return s.charAt(0);
@@ -679,12 +838,12 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            ConnEntry conn = get_conn( get_id(conn_id) );
+            ConnEntry conn = get_conn(get_id(conn_id));
             Statement sta = conn.conn.createStatement();
-            
+
             int id = conn_list.size();
 
-            sta_list.add( new StatementEntry( conn, sta, id ) );
+            sta_list.add(new StatementEntry(conn, sta, id));
 
             return "0: s" + id;
         }
@@ -698,14 +857,16 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            int id = get_id( conn_txt);
-            int type = get_type( conn_txt );
+            int id = get_id(conn_txt);
+            int type = get_type(conn_txt);
 
             if (type == 'c')
             {
-                ConnEntry conn = get_conn( id );
+                ConnEntry conn = get_conn(id);
                 if (conn != null)
+                {
                     conn.conn.close();
+                }
 
                 drop_conn(id);
 
@@ -716,7 +877,9 @@ public class TCPCallConnect extends WorkerParent
                     if (ste.ce == conn)
                     {
                         if (!ste.sta.isClosed())
+                        {
                             ste.sta.close();
+                        }
                         drop_sta(ste.id);
                         i--;
                     }
@@ -727,26 +890,32 @@ public class TCPCallConnect extends WorkerParent
                     if (rse.ce == conn)
                     {
                         if (!rse.rs.isClosed())
+                        {
                             rse.rs.close();
+                        }
                         drop_rs(rse.id);
                         i--;
                     }
                 }
             }
-            
+
             if (type == 's')
             {
-                StatementEntry sta = get_sta( id );
+                StatementEntry sta = get_sta(id);
                 if (sta != null)
+                {
                     sta.sta.close();
+                }
 
                 drop_sta(id);
             }
             if (type == 'r')
             {
-                ResultEntry rs = get_rs( id );
+                ResultEntry rs = get_rs(id);
                 if (rs != null)
+                {
                     rs.rs.close();
+                }
 
                 drop_rs(id);
             }
@@ -763,7 +932,7 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            Statement sta = get_sta( get_id(stmt_txt) ).sta;
+            Statement sta = get_sta(get_id(stmt_txt)).sta;
 
             boolean ret = sta.execute(cmd);
 
@@ -781,7 +950,7 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            Statement sta = get_sta( get_id(stmt_txt) ).sta;
+            Statement sta = get_sta(get_id(stmt_txt)).sta;
 
             int ret = sta.executeUpdate(cmd);
 
@@ -799,12 +968,12 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            StatementEntry ste = get_sta( get_id(stmt_txt) );
+            StatementEntry ste = get_sta(get_id(stmt_txt));
 
             ResultSet rs = ste.sta.executeQuery(cmd);
 
             int id = rs_list.size();
-            rs_list.add( new ResultEntry( ste.ce, rs, id ) );
+            rs_list.add(new ResultEntry(ste.ce, rs, id));
 
             return "0: r" + id;
         }
@@ -819,7 +988,7 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            ResultSet rs = get_rs( get_id(resultset) ).rs;
+            ResultSet rs = get_rs(get_id(resultset)).rs;
 
             XStream xstream = new XStream();
             String xml = xstream.toXML(rs.getMetaData());
@@ -840,7 +1009,7 @@ public class TCPCallConnect extends WorkerParent
 
         try
         {
-            ResultSet rs = get_rs( get_id(resultset) ).rs;
+            ResultSet rs = get_rs(get_id(resultset)).rs;
 
             while (rs.next() == true)
             {
@@ -887,13 +1056,13 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_getSQLFirstRowField( String conn_text, String qry, int field  )
+    public String RMX_getSQLFirstRowField( String conn_text, String qry, int field )
     {
         Statement sta = null;
         ResultSet rs = null;
         try
         {
-            ConnEntry conn = get_conn( get_id(conn_text) );
+            ConnEntry conn = get_conn(get_id(conn_text));
             sta = conn.conn.createStatement();
 
             rs = sta.executeQuery(qry);
@@ -914,9 +1083,13 @@ public class TCPCallConnect extends WorkerParent
             try
             {
                 if (rs != null)
+                {
                     rs.close();
+                }
                 if (sta != null)
+                {
                     sta.close();
+                }
             }
             catch (SQLException sQLException)
             {
@@ -926,7 +1099,7 @@ public class TCPCallConnect extends WorkerParent
         return "2: no data";
     }
 
-    public String RMX_TXTFunctionCall( String func_name, String args  )
+    public String RMX_TXTFunctionCall( String func_name, String args )
     {
         Communicator comm = Main.get_control().get_communicator();
         ArrayList<AbstractCommand> cmd_list = comm.get_cmd_array();
@@ -935,9 +1108,9 @@ public class TCPCallConnect extends WorkerParent
         for (int i = 0; i < cmd_list.size(); i++)
         {
             AbstractCommand cmd = cmd_list.get(i);
-            if (cmd.is_cmd( func_name ))
+            if (cmd.is_cmd(func_name))
             {
-                boolean ok = cmd.do_command( args );
+                boolean ok = cmd.do_command(args);
 
                 if (ok)
                 {
@@ -948,19 +1121,19 @@ public class TCPCallConnect extends WorkerParent
                     return "1: " + cmd.get_answer();
                 }
             }
-       }
-       return "2: unknown function";
+        }
+        return "2: unknown function";
     }
 
-    public String RMX_OpenOutStream( String stream_name, String args  )
+    public String RMX_OpenOutStream( String stream_name, String args )
     {
         try
         {
             File f = null;
             String filename = null;
-            if ( args == null || args.length() == 0)
+            if (args == null || args.length() == 0)
             {
-                filename = stream_name;                
+                filename = stream_name;
             }
             if (filename.compareTo("TEMP") == 0)
             {
@@ -972,7 +1145,7 @@ public class TCPCallConnect extends WorkerParent
                 f = new File(filename);
             }
             FileOutputStream fos = new FileOutputStream(f);
-            BufferedOutputStream bos = new BufferedOutputStream(fos, 1024*1024);
+            BufferedOutputStream bos = new BufferedOutputStream(fos, 1024 * 1024);
 
             int id = ostream_list.size();
             ostream_list.add(new OutputStreamEntry(bos, f, id));
@@ -985,11 +1158,11 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_CloseOutStream( String stream_id  )
+    public String RMX_CloseOutStream( String stream_id )
     {
         try
         {
-            OutputStream os = get_ostream( get_id(stream_id) ).os;
+            OutputStream os = get_ostream(get_id(stream_id)).os;
 
             os.close();
 
@@ -1005,22 +1178,24 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_WriteOutStream( Socket s, Long slen, String stream_id  )
+    public String RMX_WriteOutStream( Socket s, Long slen, String stream_id )
     {
         try
         {
             long len = slen.longValue();
 
-            OutputStream os = get_ostream( get_id(stream_id) ).os;
+            OutputStream os = get_ostream(get_id(stream_id)).os;
 
 
-            byte[] buff = new byte[64*1024];
+            byte[] buff = new byte[64 * 1024];
 
-            while( len > 0)
+            while (len > 0)
             {
                 int rlen = buff.length;
                 if (len < rlen)
-                    rlen = (int)len;
+                {
+                    rlen = (int) len;
+                }
 
                 int rrlen = s.getInputStream().read(buff, 0, rlen);
                 os.write(buff, 0, rrlen);
@@ -1036,16 +1211,17 @@ public class TCPCallConnect extends WorkerParent
             return "1: Exception: " + iOException.getMessage();
         }
     }
-public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata  )
+
+    public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata )
     {
         try
         {
             sdata = decode_pipe(sdata);
             byte[] data = Base64.decodeBase64(sdata.getBytes());
 
-            
 
-            OutputStream os = get_ostream( get_id(stream_id) ).os;
+
+            OutputStream os = get_ostream(get_id(stream_id)).os;
 
 
             os.write(data);
@@ -1059,8 +1235,7 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
         }
     }
 
-   
-    public String RMX_OpenInStream( String stream_name, String args  )
+    public String RMX_OpenInStream( String stream_name, String args )
     {
         try
         {
@@ -1095,11 +1270,11 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
         }
     }
 
-    public String RMX_CloseInStream( String stream_id  )
+    public String RMX_CloseInStream( String stream_id )
     {
         try
         {
-            InputStream is = get_istream( get_id(stream_id) ).is;
+            InputStream is = get_istream(get_id(stream_id)).is;
 
             is.close();
 
@@ -1115,22 +1290,24 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
         }
     }
 
-    public String RMX_ReadInStream( Socket s,  Long slen, String stream_id )
+    public String RMX_ReadInStream( Socket s, Long slen, String stream_id )
     {
         try
         {
-            InputStream is = get_istream( get_id(stream_id) ).is;
+            InputStream is = get_istream(get_id(stream_id)).is;
 
             long len = slen.longValue();
 
-            byte[] buff = new byte[64*1024];
+            byte[] buff = new byte[64 * 1024];
 
 
-            while( len > 0)
+            while (len > 0)
             {
                 int rlen = buff.length;
                 if (len < rlen)
-                    rlen = (int)len;
+                {
+                    rlen = (int) len;
+                }
 
                 int rrlen = is.read(buff, 0, rlen);
                 s.getOutputStream().write(buff, 0, rrlen);
@@ -1143,18 +1320,20 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
         {
             return new String("2: Exception: " + iOException.getMessage());
         }
-    }public String RMX_ReadIn(String stream_id, String slen )
+    }
+
+    public String RMX_ReadIn( String stream_id, String slen )
     {
         try
         {
             int len = Integer.parseInt(slen);
 
-            byte [] data = new byte[len];
+            byte[] data = new byte[len];
 
-            InputStream is = get_istream( get_id(stream_id) ).is;
+            InputStream is = get_istream(get_id(stream_id)).is;
 
             is.read(data);
-            String ret = "0: " + new String( Base64.encodeBase64(data) );
+            String ret = "0: " + new String(Base64.encodeBase64(data));
 
             return ret;
         }
@@ -1167,10 +1346,9 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
     @Override
     public boolean initialize()
     {
-       // throw new UnsupportedOperationException("Not supported yet.");
+        // throw new UnsupportedOperationException("Not supported yet.");
         return true;
     }
-
 
     @Override
     public boolean check_requirements( StringBuffer sb )
@@ -1178,30 +1356,31 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
 //        throw new UnsupportedOperationException("Not supported yet.");
         return true;
     }
-        public static String decode_pipe( String s )
+
+    public static String decode_pipe( String s )
     {
         int idx = s.indexOf("^");
-        if ( idx == -1 )
+        if (idx == -1)
         {
             return s;
         }
         StringBuffer sb = new StringBuffer();
-        for ( int i = 0; i < s.length(); i++ )
+        for (int i = 0; i < s.length(); i++)
         {
             char ch = s.charAt(i);
-            if ( ch != '^' )
+            if (ch != '^')
             {
                 sb.append(ch);
                 continue;
             }
-            if ( i + 2 < s.length() )
+            if (i + 2 < s.length())
             {
-                if ( s.charAt(i + 1) == '7' && s.charAt(i + 2) == 'C' )
+                if (s.charAt(i + 1) == '7' && s.charAt(i + 2) == 'C')
                 {
                     sb.append('|');
                     i += 2;
                 }
-                if ( s.charAt(i + 1) == '5' && s.charAt(i + 2) == 'E' )
+                if (s.charAt(i + 1) == '5' && s.charAt(i + 2) == 'E')
                 {
                     sb.append('^');
                     i += 2;
@@ -1214,33 +1393,29 @@ public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata 
     public static String encode_pipe( String s )
     {
         int idx = s.indexOf("|");
-        if ( idx == -1 )
+        if (idx == -1)
         {
             return s;
         }
         StringBuffer sb = new StringBuffer();
-        for ( int i = 0; i < s.length(); i++ )
+        for (int i = 0; i < s.length(); i++)
         {
             char ch = s.charAt(i);
-            if ( ch != '^' && ch != '|' )
+            if (ch != '^' && ch != '|')
             {
                 sb.append(ch);
                 continue;
             }
             sb.append('^');
-            if ( ch == '^' )
+            if (ch == '^')
             {
                 sb.append("5E");
             }
-            else if ( ch == '|' )
+            else if (ch == '|')
             {
                 sb.append("7C");
             }
         }
         return sb.toString();
     }
-
-
-    
-
 }
