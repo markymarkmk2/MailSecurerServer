@@ -9,6 +9,7 @@ import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -37,6 +38,18 @@ public class MandantContext
         return mandant;
     }
 
+    public DiskArchive get_da_by_id( long id )
+    {
+        Iterator <DiskArchive> it = getMandant().getDiskArchives().iterator();
+
+        while( it.hasNext() )
+        {
+            DiskArchive da =  it.next();
+            if (da.getId() == id)
+                return da;
+        }
+        return null;
+    }
     public void build_vault_list()
     {
         Iterator <DiskArchive> it = getMandant().getDiskArchives().iterator();
@@ -64,6 +77,14 @@ public class MandantContext
     void build_mandant_struct()
     {
 
+    }
+    public File get_tmp_path()
+    {
+        File tmp_path = new File( Main.TEMP_PATH + mandant.getId() );
+        if (tmp_path.exists() == false)
+            tmp_path.mkdirs();
+
+        return tmp_path;
     }
 
 

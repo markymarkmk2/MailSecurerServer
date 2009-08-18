@@ -13,8 +13,6 @@ import com.moonrug.exchange.IMessage;
 import com.moonrug.exchange.IStore;
 import com.moonrug.exchange.Recipient;
 import com.moonrug.exchange.Session;
-import dimm.home.Httpd.Httpd;
-import dimm.home.importmail.MBoxImporter;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
@@ -22,11 +20,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,18 +40,19 @@ public class Main
     public static final String LOG_WARN = "warn.log";
     
     public static final String PREFS_PATH = "preferences/";
+    public static final String TEMP_PATH = "temp/";
     public static final String LOG_PATH = "logs/";
     public static final String SCRIPT_PATH = "scripts/";
     public static final String DATABASEPATH = "db/";
     
     
-    public static final String PROGNAME = "MailProxy.jar";
-    public static final String PROGNAME_LASTVALID = "MailProxy.jar_last_valid";
+    public static final String PROGNAME = "MailArchiv.jar";
+    public static final String PROGNAME_LASTVALID = "MailArchiv.jar_last_valid";
     public static final String UPDATE_PATH = "update/";
     public static final String RFC_PATH = "rfc_temp/";
     
     public static String STARTED_OK = "started_ok";
-    public static String APPNAME = "BettyMailProxy";
+    public static String APPNAME = "MailSecurer";
     public static String DEFAULTSERVER = "www.gruppemedia.de";
     
     
@@ -77,8 +71,9 @@ public class Main
     public static String license_interface = "eth0";
     public static String ws_ip = "127.0.0.1";
     public static String ws_port = "8050";
+    public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
 
-    Httpd httpd;
+  
     
     
     static void print_system_property( String key )
@@ -118,6 +113,10 @@ public class Main
                 f.mkdirs();
             
             f = new File( DATABASEPATH );
+            if (!f.exists())
+                f.mkdirs();
+
+            f = new File( TEMP_PATH );
             if (!f.exists())
                 f.mkdirs();
         

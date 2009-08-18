@@ -41,6 +41,7 @@ public class MandantPreferences extends Preferences
 //    public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";
     
     String password;
+    String dec_password;
     public static final String ENC_PASSWORD = "EncryptionPassword";
     public static final String DFLT_PASSWORD = "12345";
     
@@ -56,6 +57,8 @@ public class MandantPreferences extends Preferences
     {
         super(_path);
 
+
+
         context = null;
         
         prop_names.add( DEBUG );
@@ -67,11 +70,11 @@ public class MandantPreferences extends Preferences
 //        prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );
         
                 
-        read_props();
     }
     public void setContext( MandantContext _context )
     {
         context = _context;
+
     }
 
     @Override
@@ -79,15 +82,24 @@ public class MandantPreferences extends Preferences
     {
         super.read_props();
         password = get_prop(ENC_PASSWORD);
-        
-        String str = CryptTools.crypt_internal(context, password, CryptTools.ENC_MODE.DECRYPT);
-        if (str == null)
-        {
-            LogManager.err_log_fatal("Cannot decrypt password from preferences");
-        }
+
+        if (password == null)
+            password = "12345";
         else
         {
-            password = str;
+
+            if (context == null)
+                LogManager.err_log_fatal("Missing context");
+
+            String str = CryptTools.crypt_internal(context, password, CryptTools.ENC_MODE.DECRYPT);
+            if (str == null)
+            {
+                LogManager.err_log_fatal("Cannot decrypt password from preferences");
+            }
+            else
+            {
+                password = str;
+            }
         }
     }
 

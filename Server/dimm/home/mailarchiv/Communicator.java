@@ -71,6 +71,8 @@ public class Communicator extends WorkerParent
         cmd_list.add( new SetStation() );
         cmd_list.add( new WriteFile() );
         cmd_list.add( new StartVPN() );
+        cmd_list.add( new ImportMailFile() );
+        cmd_list.add( new UploadMailFile() );
     }
 
     public ArrayList<AbstractCommand> get_cmd_array()

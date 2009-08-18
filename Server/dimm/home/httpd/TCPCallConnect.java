@@ -7,6 +7,7 @@ import dimm.home.mailarchiv.Commands.GetSetOption;
 import dimm.home.mailarchiv.Commands.GetStatus;
 import dimm.home.mailarchiv.Commands.HelloCommand;
 import dimm.home.mailarchiv.Commands.IPConfig;
+import dimm.home.mailarchiv.Commands.ImportMailFile;
 import dimm.home.mailarchiv.Commands.ListOptions;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Commands.ReadLog;
@@ -15,8 +16,8 @@ import dimm.home.mailarchiv.Commands.Restart;
 import dimm.home.mailarchiv.Commands.SetStation;
 import dimm.home.mailarchiv.Commands.ShellCmd;
 import dimm.home.mailarchiv.Commands.StartVPN;
+import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
-import dimm.home.mailarchiv.Communicator;
 import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
@@ -87,35 +88,8 @@ class ResultEntry
     }
 }
 
-class OutputStreamEntry
-{
 
-    public OutputStream os;
-    public int id;
-    public File file;
 
-    OutputStreamEntry( OutputStream _os, File _file, int _id )
-    {
-        os = _os;
-        file = _file;
-        id = _id;
-    }
-}
-
-class InputStreamEntry
-{
-
-    public InputStream is;
-    public int id;
-    public File file;
-
-    InputStreamEntry( InputStream _is, File _file, int _id )
-    {
-        is = _is;
-        file = _file;
-        id = _id;
-    }
-}
 
 
 
@@ -164,6 +138,8 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new SetStation() );
         cmd_list.add( new WriteFile() );
         cmd_list.add( new StartVPN() );
+        cmd_list.add( new ImportMailFile() );
+        cmd_list.add( new UploadMailFile() );
     }
 
     public ArrayList<AbstractCommand> get_cmd_array()
@@ -210,7 +186,7 @@ public class TCPCallConnect extends WorkerParent
         return null;
     }
 
-    InputStreamEntry get_istream( int id )
+    public InputStreamEntry get_istream( int id )
     {
         for (int i = 0; i < istream_list.size(); i++)
         {
@@ -223,7 +199,7 @@ public class TCPCallConnect extends WorkerParent
         return null;
     }
 
-    OutputStreamEntry get_ostream( int id )
+    public OutputStreamEntry get_ostream( int id )
     {
         for (int i = 0; i < ostream_list.size(); i++)
         {
@@ -579,7 +555,7 @@ public class TCPCallConnect extends WorkerParent
             }
 
             // call_ ARE THE OLDSTYLE FUNCS
-            if (cmd.substring(0,4).compareTo("call_") == 0 )
+            if (cmd.substring(0,5).compareTo("call_") == 0 )
             {
                 try
                 {
@@ -595,6 +571,7 @@ public class TCPCallConnect extends WorkerParent
                             return;
                         }
                     }
+                    throw new Exception( "Unknown function call " + cmd_name);
                 }
                 catch (Exception iOException)
                 {
@@ -817,7 +794,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    int get_id( String s )
+    public int get_id( String s )
     {
         try
         {
@@ -1098,16 +1075,16 @@ public class TCPCallConnect extends WorkerParent
         }
         return "2: no data";
     }
-
+/*
     public String RMX_TXTFunctionCall( String func_name, String args )
     {
         Communicator comm = Main.get_control().get_communicator();
-        ArrayList<AbstractCommand> cmd_list = comm.get_cmd_array();
+        ArrayList<AbstractCommand> txt_cmd_list = comm.get_cmd_array();
 
         // STRIP OFF STATION ID, ONLY REST TO FUNCS
-        for (int i = 0; i < cmd_list.size(); i++)
+        for (int i = 0; i < txt_cmd_list.size(); i++)
         {
-            AbstractCommand cmd = cmd_list.get(i);
+            AbstractCommand cmd = txt_cmd_list.get(i);
             if (cmd.is_cmd(func_name))
             {
                 boolean ok = cmd.do_command(args);
@@ -1124,7 +1101,7 @@ public class TCPCallConnect extends WorkerParent
         }
         return "2: unknown function";
     }
-
+*/
     public String RMX_OpenOutStream( String stream_name, String args )
     {
         try
@@ -1165,6 +1142,27 @@ public class TCPCallConnect extends WorkerParent
             OutputStream os = get_ostream(get_id(stream_id)).os;
 
             os.close();
+
+            return "0: ";
+        }
+        catch (IOException iOException)
+        {
+            return "1: Exception: " + iOException.getMessage();
+        }
+        finally
+        {
+            drop_ostream(get_id(stream_id));
+        }
+    }
+    public String RMX_CloseDeleteOutStream( String stream_id )
+    {
+        try
+        {
+            OutputStream os = get_ostream(get_id(stream_id)).os;
+
+            os.close();
+            
+            get_ostream(get_id(stream_id)).file.delete();
 
             return "0: ";
         }

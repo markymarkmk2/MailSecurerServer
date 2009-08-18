@@ -235,14 +235,29 @@ public class CryptTools
         String passPhrase = ctx.getPrefs().get_InternalPassPhrase();
         try
         {
-            // Encode the string into bytes using utf-8
-            byte[] utf8 = str.getBytes("UTF8");
+            byte[] src;
+            if (encrypt == ENC_MODE.DECRYPT)
+            {
+                src = Base64.decodeBase64(str.getBytes("UTF8"));
+            }
+            else
+            {
+                // Encode the string into bytes using utf-8
+                src = str.getBytes("UTF8");
+            }
 
             // Encrypt
-            byte[] enc = crypt( ctx, utf8, passPhrase, encrypt );
+            byte[] trg = crypt( ctx, src, passPhrase, encrypt );
+            if (trg == null)
+                return null;
 
-            // Encode bytes to base64 to get a string
-            return new String( Base64.encodeBase64(enc) );
+            if (encrypt == ENC_MODE.ENCRYPT)
+            {
+                // Encode bytes to base64 to get a string
+                return new String( Base64.encodeBase64(trg) );
+            }
+
+            return new String( trg, "UTF8" );
             //return new sun.misc.BASE64Encoder().encode(enc);
         }
         catch (UnsupportedEncodingException ex)

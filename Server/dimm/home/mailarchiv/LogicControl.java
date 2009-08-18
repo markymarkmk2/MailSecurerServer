@@ -36,6 +36,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
+import dimm.home.workers.MBoxImportServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
@@ -65,7 +66,7 @@ public class LogicControl
     MilterServer ms;
     MailProxyServer ps;
     HotfolderServer hf_server;
-    MailBoxFetcherServer mb;
+    MailBoxFetcherServer mb_fetcher_server;
     SQLWorker sql;
 
     ArrayList<WorkerParent> worker_list;
@@ -75,6 +76,7 @@ public class LogicControl
     IndexManager idx_util;
 
     TCPCallConnect tcp_conn;
+    MBoxImportServer mb_import_server;
 
     /** Creates a new instance of LogicControl */
     public LogicControl()
@@ -104,8 +106,11 @@ public class LogicControl
             hf_server = new HotfolderServer();
             worker_list.add(hf_server);
 
-            mb = new MailBoxFetcherServer();
-            worker_list.add(mb);
+            mb_fetcher_server = new MailBoxFetcherServer();
+            worker_list.add(mb_fetcher_server);
+
+            mb_import_server = new MBoxImportServer();
+            worker_list.add(mb_import_server);
 
             sql = new SQLWorker();
             worker_list.add(sql);
@@ -124,6 +129,15 @@ public class LogicControl
         return idx_util;
     }
 
+    public MBoxImportServer get_mb_import_server()
+    {
+        return mb_import_server;
+    }
+
+    public TCPCallConnect get_tcp_call_connect()
+    {
+        return tcp_conn;
+    }
 
     public void add_mandant( MandantPreferences prefs, Mandant m )
     {
@@ -495,7 +509,7 @@ public class LogicControl
 
             while (it.hasNext())
             {
-                 mb.add_fetcher(it.next());
+                 mb_fetcher_server.add_fetcher(it.next());
             }
         }
 
@@ -798,6 +812,10 @@ public class LogicControl
     private MandantPreferences read_mandant_prefs( Mandant m )
     {
         String prefs_path = Main.PREFS_PATH + m.getId() + "/";
+        File d = new File( prefs_path );
+        if (!d.exists())
+            d.mkdirs();
+        
         MandantPreferences prefs = new MandantPreferences(prefs_path);
         return prefs;
     }
@@ -838,18 +856,22 @@ public class LogicControl
 
                         // PREFS NEEDS CONTEXT FOR ENCRYPTION
                         prefs.setContext( get_m_context(m));
+                        prefs.read_props();
                         
                     }
                     catch (Exception ex )
                     {
+                        ex.printStackTrace();
                         LogManager.err_log_fatal("Cannot read preferences for Mandant " +  m.getName(), ex);
                     }
                 }
             }
+            /*
             tx = param_session.beginTransaction();
             q = param_session.createQuery("from Hotfolder");
             l = q.list();
             tx.commit();
+             * */
         }
         catch (Exception e)
         {
