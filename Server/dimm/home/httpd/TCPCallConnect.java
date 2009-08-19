@@ -25,6 +25,7 @@ import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.workers.SQLWorker;
+import home.shared.CS_Constants;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -484,7 +485,7 @@ public class TCPCallConnect extends WorkerParent
         out.write(answer.toString().getBytes("UTF-8"), 0, TCP_LEN);
 
         // PUSH DATA OVER BUFFER
-        int buff_len = 8192;
+        int buff_len = CS_Constants.STREAM_BUFFER_LEN;
         byte[] buff = new byte[buff_len];
 
         while (alen > 0)
@@ -571,10 +572,12 @@ public class TCPCallConnect extends WorkerParent
                             return;
                         }
                     }
+                    Main.err_log("Unknown funtion call " + cmd_name);
                     throw new Exception( "Unknown function call " + cmd_name);
                 }
                 catch (Exception iOException)
                 {
+                    iOException.printStackTrace();
                     write_tcp_answer(false, iOException.getMessage(), out);
                     return;
                 }
@@ -681,7 +684,7 @@ public class TCPCallConnect extends WorkerParent
                 this.setGoodState(true);
                 tcp_s = new ServerSocket(server_port, backlog);
                 tcp_s.setReuseAddress(true);
-                tcp_s.setReceiveBufferSize(60000);
+                tcp_s.setReceiveBufferSize(CS_Constants.STREAM_BUFFER_LEN * 2);
 
                 final Socket s = tcp_s.accept();
                 s.setTcpNoDelay(true);
@@ -1178,14 +1181,16 @@ public class TCPCallConnect extends WorkerParent
 
     public String RMX_WriteOutStream( Socket s, Long slen, String stream_id )
     {
+        int buff_len = CS_Constants.STREAM_BUFFER_LEN;
         try
         {
             long len = slen.longValue();
 
             OutputStream os = get_ostream(get_id(stream_id)).os;
+            BufferedOutputStream bos = new BufferedOutputStream(os,buff_len*2);
+            BufferedInputStream bis = new BufferedInputStream(s.getInputStream(),buff_len*2);
 
-
-            byte[] buff = new byte[64 * 1024];
+            byte[] buff = new byte[buff_len];
 
             while (len > 0)
             {
@@ -1195,13 +1200,12 @@ public class TCPCallConnect extends WorkerParent
                     rlen = (int) len;
                 }
 
-                int rrlen = s.getInputStream().read(buff, 0, rlen);
-                os.write(buff, 0, rrlen);
+                int rrlen = bis.read(buff, 0, rlen);
+                bos.write(buff, 0, rrlen);
 
                 len -= rrlen;
             }
-
-
+            bos.flush();
             return "0: ";
         }
         catch (IOException iOException)
@@ -1217,13 +1221,9 @@ public class TCPCallConnect extends WorkerParent
             sdata = decode_pipe(sdata);
             byte[] data = Base64.decodeBase64(sdata.getBytes());
 
-
-
             OutputStream os = get_ostream(get_id(stream_id)).os;
 
-
             os.write(data);
-
 
             return "0: ";
         }
@@ -1293,11 +1293,10 @@ public class TCPCallConnect extends WorkerParent
         try
         {
             InputStream is = get_istream(get_id(stream_id)).is;
+            BufferedInputStream bis = new BufferedInputStream(is, CS_Constants.STREAM_BUFFER_LEN * 2);
 
             long len = slen.longValue();
-
-            byte[] buff = new byte[64 * 1024];
-
+            byte[] buff = new byte[CS_Constants.STREAM_BUFFER_LEN ];
 
             while (len > 0)
             {

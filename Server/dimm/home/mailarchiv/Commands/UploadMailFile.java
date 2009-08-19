@@ -53,6 +53,12 @@ public class UploadMailFile extends AbstractCommand
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
 
         File tmp_dir =  m_ctx.get_tmp_path();
+        if (!tmp_dir.exists())
+        {
+            answer = "2: temp directory does not exist: " + tmp_dir.getAbsolutePath();
+            return true;
+        }
+
         long free_space = tmp_dir.getFreeSpace();
         if ( free_space - size < Main.MIN_FREE_SPACE)
         {

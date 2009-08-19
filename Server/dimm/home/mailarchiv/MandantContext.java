@@ -80,7 +80,9 @@ public class MandantContext
     }
     public File get_tmp_path()
     {
-        File tmp_path = new File( Main.TEMP_PATH + mandant.getId() );
+        String path = prefs.get_prop(MandantPreferences.TEMPFILEDIR, Main.get_prop(GeneralPreferences.TEMPFILEDIR, Main.TEMP_PATH));
+
+        File tmp_path = new File( path + mandant.getId() );
         if (tmp_path.exists() == false)
             tmp_path.mkdirs();
 
