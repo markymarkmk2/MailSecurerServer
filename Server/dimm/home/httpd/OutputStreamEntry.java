@@ -19,7 +19,7 @@ public class OutputStreamEntry
     public int id;
     public File file;
 
-    OutputStreamEntry( OutputStream _os, File _file, int _id )
+    public OutputStreamEntry( OutputStream _os, File _file, int _id )
     {
         os = _os;
         file = _file;

@@ -9,15 +9,14 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.httpd.TCPCallConnect;
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
-import home.shared.hibernate.DiskArchive;
-import home.shared.hibernate.Mandant;
 import java.io.File;
-import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.StringTokenizer;
 
 /**
  *
@@ -28,12 +27,53 @@ import java.io.IOException;
 public class UploadMailFile extends AbstractCommand
 {
 
+    public static final String IMPMAIL_PREFIX = "mailimp";
     
     /** Creates a new instance of HelloCommand */
     public UploadMailFile()
     {
         super("upload_mail_file");
         
+    }
+
+    public static String create_imp_mail_path( String dir, String ip, String suffix )
+    {
+
+        String name = dir + "/" + IMPMAIL_PREFIX + "_" + ip + "_" + System.currentTimeMillis() + "." + suffix;
+        return name;
+    }
+    private static String get_ip_mail_path( File f, int n )
+    {
+        try
+        {
+            StringTokenizer sto = new StringTokenizer(f.getName(), "_");
+
+            while (n > 0)
+            {
+                sto.nextToken();
+                n--;
+            }
+            return sto.nextToken();
+        }
+        catch (Exception e)
+        {
+        }
+        return null;
+    }
+    public static String get_ip_from_mail_path( File f )
+    {
+        return get_ip_mail_path(f, 1);
+    }
+    public static long get_time_from_mail_path( File f )
+    {
+        try
+        {
+            return Long.parseLong(get_ip_mail_path(f, 2));
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        return 0;
     }
 
 
@@ -55,33 +95,45 @@ public class UploadMailFile extends AbstractCommand
         File tmp_dir =  m_ctx.get_tmp_path();
         if (!tmp_dir.exists())
         {
-            answer = "2: temp directory does not exist: " + tmp_dir.getAbsolutePath();
+            answer = "1: " + Main.Txt("temp_filesystem_does_not_exist:") + " " + tmp_dir.getAbsolutePath();
             return true;
         }
 
         long free_space = tmp_dir.getFreeSpace();
         if ( free_space - size < Main.MIN_FREE_SPACE)
         {
-            answer = "2: not enough space left on disk: " + tmp_dir.getAbsolutePath();
+            answer = "2: " + Main.Txt("not enough space left on temp filesystem:") + " " + tmp_dir.getAbsolutePath();
             return true;
         }
 
-        try
+        String source_ip = "127.0.0.1";
+        if (sock != null)
         {
-            File mbox_file = File.createTempFile("mailimp", suffix, tmp_dir);
+            InetSocketAddress adr = (InetSocketAddress)sock.getRemoteSocketAddress();
+            source_ip = adr.getHostName();
+        }
 
-            String ret = Main.get_control().get_tcp_call_connect().RMX_OpenOutStream(mbox_file.getAbsolutePath(), "");
-
-            answer = ret;
-
+        // CREATE UNIQUE BUT STRUCTURED NAME -> PREFIX, IP, TIME, SUFFIX
+        String name = create_imp_mail_path( tmp_dir.getAbsolutePath(), source_ip, suffix );
+        File mbox_file = new File( name );
+        int r = 10;
+        while (mbox_file.exists() && r > 0)
+        {
+            LogicControl.sleep(10);
+            name = create_imp_mail_path( tmp_dir.getAbsolutePath(), source_ip, suffix );
+            mbox_file = new File( name );
+            r--;
+        }
+        if (mbox_file.exists())
+        {
+            answer = "3: " + Main.Txt("cannot create temp file:") + " " + mbox_file.getAbsolutePath();
             return true;
         }
-        catch (IOException iOException)
-        {
-            answer = "3: cannot create temp file: " + iOException.getMessage();
-        }
-        
+
+        String ret = Main.get_control().get_tcp_call_connect().RMX_OpenOutStream(mbox_file.getAbsolutePath(), "");
+
+        answer = ret;
+
         return true;
-
     }        
 }

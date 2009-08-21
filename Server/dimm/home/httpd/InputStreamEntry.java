@@ -19,7 +19,7 @@ public class InputStreamEntry
     public int id;
     public File file;
 
-    InputStreamEntry( InputStream _is, File _file, int _id )
+    public InputStreamEntry( InputStream _is, File _file, int _id )
     {
         is = _is;
         file = _file;

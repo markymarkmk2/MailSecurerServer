@@ -44,6 +44,7 @@ public class Main
     public static final String LOG_PATH = "logs/";
     public static final String SCRIPT_PATH = "scripts/";
     public static final String DATABASEPATH = "db/";
+    public static final String IMPORTRELPATH = "import/";
     
     
     public static final String PROGNAME = "MailArchiv.jar";
@@ -72,7 +73,6 @@ public class Main
     public static String ws_ip = "127.0.0.1";
     public static String ws_port = "8050";
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
-
   
     
     

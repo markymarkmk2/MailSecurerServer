@@ -17,7 +17,7 @@ import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
-import java.io.IOException;
+import java.io.File;
 
 /**
  *
@@ -71,12 +71,35 @@ public class ImportMailFile extends AbstractCommand
         // NOW CLOSE THE STREAM
         conn.RMX_CloseOutStream(oid);
 
-        // THIS FILE CONTAINS THE MAIL FILE
-        String path = ose.file.getAbsolutePath();
 
+        // MOVE TO IMPORT PATH
+        String new_path = m_ctx.get_tmp_path() + Main.IMPORTRELPATH + ose.file.getName();
+        File nf = new File(new_path);
+        
+        // VERY UNLIKELY THERE IS ALREADY A FILE WITH SAME NAME...
+        int i = 10;
+        while (nf.exists() && i > 0)
+        {
+            new_path += Long.toString(System.currentTimeMillis() % 10000);
+            nf = new File(new_path);
+            i--;
+        }
+
+        if (!ose.file.renameTo( nf ))
+        {
+            answer = "3: " + Main.Txt("cannot rename") + " " + ose.file.getName() + " -> " + new_path;
+            return true;
+        }
+
+        // THIS FILE CONTAINS THE MAIL FILE
+        String path = ose.file.getAbsolutePath();  // == new_path
+
+
+        // PREFIX IS UploadMailFile.IMPMAIL_PREFIX, SUFFIX DEPENDS ON SOURCE
         // REGISTER AT TASK
         Main.get_control().get_mb_import_server().add_mbox_import(m, da, path);
-        
+
+        // YEEHAW, WE'RE DONE
         answer = "0: ok";
                 
         return true;

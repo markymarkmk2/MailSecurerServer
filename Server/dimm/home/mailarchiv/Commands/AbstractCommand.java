@@ -10,7 +10,7 @@
 package dimm.home.mailarchiv.Commands;
 
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.net.Socket;
 
 /**
  *
@@ -20,6 +20,7 @@ public abstract class AbstractCommand
 {
     String token;
     String answer;
+    Socket sock;
     
     
     public static final String MISS_ARGS = "missing args";
@@ -38,6 +39,10 @@ public abstract class AbstractCommand
     String get_opts( String data )
     {
         return data.substring( token.length() + 1 );  // WG DOPPELPUNKT !!!!!!
+    }
+    public void set_socket( Socket s )
+    {
+        sock = s;
     }
     
     public boolean is_cmd( String data )

@@ -566,6 +566,7 @@ public class TCPCallConnect extends WorkerParent
                         AbstractCommand cmd_func = cmd_list.get(i);
                         if (cmd_func.is_cmd(cmd_name))
                         {
+                            cmd_func.set_socket(s);
                             boolean ok = cmd_func.do_command(add_data);
 
                             write_tcp_answer(ok, cmd_func, out);
