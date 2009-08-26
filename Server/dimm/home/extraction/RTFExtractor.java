@@ -2,6 +2,7 @@
 
 package dimm.home.extraction;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import javax.swing.text.rtf.RTFEditorKit;
 
@@ -10,9 +11,14 @@ import java.nio.charset.Charset;
 
 public class RTFExtractor implements TextExtractor,Serializable
 {
+    MandantContext m_ctx;
+
+    public RTFExtractor( MandantContext m_ctx )
+    {
+        this.m_ctx = m_ctx;
+    }
 
 
-	public RTFExtractor() {}
 
     @Override
 	public Reader getText(InputStream is,  Charset charset) throws ExtractionException {
@@ -22,8 +28,8 @@ public class RTFExtractor implements TextExtractor,Serializable
 	        File file = null;
 	        try {
 	            reader = new InputStreamReader(is);
-	            file = File.createTempFile("extract", ".tmp");
-	            file.deleteOnExit();
+                    file = m_ctx.getTempFileHandler().create_temp_file("RTFExtract", "ex", "tmp");
+
 	            writer = new FileWriter(file);
 	            DefaultStyledDocument doc = new DefaultStyledDocument();
 	            new RTFEditorKit().read(reader, doc, 0);

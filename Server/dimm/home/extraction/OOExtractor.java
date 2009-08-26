@@ -1,6 +1,7 @@
 package dimm.home.extraction;
 
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.MandantContext;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Text;
@@ -17,6 +18,13 @@ import java.nio.charset.Charset;
 
 public class OOExtractor implements TextExtractor, Serializable
 {
+    MandantContext m_ctx;
+
+    public OOExtractor( MandantContext m_ctx )
+    {
+        this.m_ctx = m_ctx;
+    }
+
 
   
     public void processElement( StringBuffer textBuffer, Object o )
@@ -85,7 +93,9 @@ public class OOExtractor implements TextExtractor, Serializable
         {
             StringBuffer textBuffer = new StringBuffer();
 
-            ZipFile zipFile = new ZipFile(Extractor.writeTemp(is));
+
+            File f = m_ctx.getTempFileHandler().writeTemp("Extract", "OO", "tmp", is);
+            ZipFile zipFile = new ZipFile( f );
             Enumeration entries = zipFile.entries();
             ZipEntry entry;
             while (entries.hasMoreElements())

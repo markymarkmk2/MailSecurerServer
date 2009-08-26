@@ -14,7 +14,6 @@ import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
-import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
@@ -54,7 +53,6 @@ public class DiskVault implements Vault, StatusHandler
     ArrayList<DiskSpaceHandler> dsh_list;
 
 
-
     public DiskVault( MandantContext _context, DiskArchive da )
     {
         disk_archive = da;
@@ -71,8 +69,6 @@ public class DiskVault implements Vault, StatusHandler
             dsh_list.add( new DiskSpaceHandler(it.next()));
         }
     }
-
-  
 
     public DiskArchive get_da()
     {
@@ -93,8 +89,6 @@ public class DiskVault implements Vault, StatusHandler
 
         return null;
     }
-
-
 
 
     private boolean test_flag( DiskSpace ds, int flag )
@@ -205,7 +199,6 @@ public class DiskVault implements Vault, StatusHandler
             }
         }
 
-
         write_mail_file( context, dsh, msg );
 
         // ADD CAPACITY COUNTER
@@ -214,7 +207,7 @@ public class DiskVault implements Vault, StatusHandler
         return true;
     }
 
-    void write_mail_file( MandantContext context, DiskSpaceHandler dsh, RFCFileMail msg ) throws ArchiveMsgException, IOException
+    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler dsh, RFCFileMail msg ) throws ArchiveMsgException, IOException
     {
         OutputStream bos = null;
         byte[] buff = new byte[8192];
@@ -228,7 +221,7 @@ public class DiskVault implements Vault, StatusHandler
         {
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(msg.getFile()));
             OutputStream os = new FileOutputStream(out_file);
-            bos = CryptTools.create_crypt_outstream(context, os, password, encrypt);
+            bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
 
 
             while (true)
@@ -262,7 +255,7 @@ public class DiskVault implements Vault, StatusHandler
         }
 
         Document doc = new Document();
-        IndexManager idx = Main.get_control().get_index_manager();
+        IndexManager idx = m_ctx.get_index_manager();
         try
         {
             idx.index_mail_file(msg, doc);

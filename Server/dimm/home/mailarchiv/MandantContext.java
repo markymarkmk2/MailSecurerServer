@@ -5,6 +5,8 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.serverconnect.TCPCallConnect;
+import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
@@ -22,12 +24,16 @@ public class MandantContext
     private MandantPreferences prefs;
     private Mandant mandant;
     private ArrayList<Vault> vaultArray;
+    private TempFileHandler tempFileHandler;
+    private TCPCallConnect tcp_conn;
+    private IndexManager index_manager;
 
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
         prefs = _prefs;
         mandant = _m;
         vaultArray = new ArrayList<Vault>();
+        tempFileHandler = new TempFileHandler( this );
     }
 
     /**
@@ -37,6 +43,12 @@ public class MandantContext
     {
         return mandant;
     }
+
+    public TempFileHandler getTempFileHandler()
+    {
+        return tempFileHandler;
+    }
+    
 
     public DiskArchive get_da_by_id( long id )
     {
@@ -89,6 +101,24 @@ public class MandantContext
         return tmp_path;
     }
 
+    void set_tcp_conn( TCPCallConnect _tcp_conn )
+    {
+        tcp_conn = _tcp_conn;
+    }
+
+    public TCPCallConnect get_tcp_call_connect()
+    {
+        return tcp_conn;
+    }
+
+    void set_index_manager( IndexManager idx_util )
+    {
+        index_manager = idx_util;
+    }
+    public IndexManager get_index_manager()
+    {
+        return index_manager;
+    }
 
 
 

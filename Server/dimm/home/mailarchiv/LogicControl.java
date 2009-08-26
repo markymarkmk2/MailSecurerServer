@@ -9,7 +9,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.hibernate.HibernateUtil;
-import dimm.home.httpd.TCPCallConnect;
+import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
@@ -73,9 +73,7 @@ public class LogicControl
     ArrayList<MandantContext> mandanten_list;
 
     LicenseChecker lic_checker;
-    IndexManager idx_util;
-
-    TCPCallConnect tcp_conn;
+    
     MBoxImportServer mb_import_server;
 
     /** Creates a new instance of LogicControl */
@@ -91,8 +89,6 @@ public class LogicControl
             comm = new Communicator();
             worker_list.add(comm);
 
-            tcp_conn = new TCPCallConnect();
-            worker_list.add(tcp_conn);
 
             sd = new StatusDisplay();
             worker_list.add(sd);
@@ -116,7 +112,6 @@ public class LogicControl
             worker_list.add(sql);
             
 
-            idx_util = new IndexManager(null);
 
         }
         catch (Exception ex)
@@ -124,20 +119,12 @@ public class LogicControl
             LogManager.err_log_fatal("Constructor failed", ex);
         }
     }
-    public IndexManager get_index_manager()
-    {
-        return idx_util;
-    }
 
     public MBoxImportServer get_mb_import_server()
     {
         return mb_import_server;
     }
 
-    public TCPCallConnect get_tcp_call_connect()
-    {
-        return tcp_conn;
-    }
 
     public void add_mandant( MandantPreferences prefs, Mandant m )
     {
@@ -343,47 +330,7 @@ public class LogicControl
 
     public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
     {
-        File tmp_file = null;
-        File directory = null;
-        try
-        {
-            String tmp_dir = this.get_m_context(mandant).getPrefs().get_prop(MandantPreferences.TEMPFILEDIR);
-            if (tmp_dir != null && tmp_dir.length() > 0)
-            {
-                directory = new File(tmp_dir);
-                if (!directory.exists())
-                {
-                    directory.mkdirs();
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            directory = null;
-        }
-        try
-        {
-            tmp_file = File.createTempFile("mlt" + mandant.getId(), ".tmp", directory);
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        if (tmp_file == null)
-        {
-            try
-            {
-                tmp_file = File.createTempFile("mlt" + mandant.getId(), ".tmp", null);
-            }
-            catch (IOException ex)
-            {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-                throw new ArchiveMsgException("Cannot create temp file: " + ex.getMessage());
-            }
-        }
-
-        // GET RID OF FILE ON EXIT OF JVM
-        tmp_file.deleteOnExit();
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(/*SUBDIR*/"", "mlt", "tmp");
 
         return tmp_file;
     }
@@ -440,6 +387,15 @@ public class LogicControl
         for (int i = 0; i < mandanten_list.size(); i++)
         {
             MandantContext ctx = mandanten_list.get(i);
+
+            TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
+            worker_list.add(tcp_conn);
+            ctx.set_tcp_conn( tcp_conn );
+
+            IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null);
+            ctx.set_index_manager( idx_util );
+
+
             Set<Milter> milters = ctx.getMandant().getMilters();
 
             Iterator<Milter> it = milters.iterator();

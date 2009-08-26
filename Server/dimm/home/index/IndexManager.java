@@ -9,7 +9,9 @@ import com.ice.tar.TarInputStream;
 import dimm.home.extraction.Extractor;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMimeMail;
+import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.MandantContext;
 import home.shared.hibernate.MailHeaderVariable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -61,12 +63,9 @@ class MyMimetype
  */
 public class IndexManager
 {
-    // protected static LanguageIdentifier languageIdentifier = new LanguageIdentifier();
-    // protected static final Logger logger = Logger.getLogger(VolumeIndex.class.getName());
-    // protected Indexer indexer;
-
     protected Charset utf8_charset = Charset.forName("UTF-8");
     ArrayList<MailHeaderVariable> header_list;
+
     boolean do_index_body = false;
     boolean do_index_attachments = false;
     boolean do_detect_lang = false;
@@ -76,11 +75,16 @@ public class IndexManager
 
     Map<String,String> analyzerMap;
 
-    //Analyzer analyzer;
+    Extractor extractor;
+    MandantContext m_ctx;
 
-    public IndexManager( ArrayList<MailHeaderVariable> _header_list )
+    
+    public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list )
     {
+        m_ctx = _m_ctx;
         header_list = _header_list;
+
+        extractor = new Extractor( m_ctx);
 
         analyzerMap = new LinkedHashMap<String,String>();
         analyzerMap.put("en","org.apache.lucene.analysis.StandardAnanlyzer");
@@ -340,7 +344,7 @@ public class IndexManager
                     }
                     else
                     {
-                        Reader textReader = Extractor.getText(p.getInputStream(), mimetype, charset);
+                        Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                         if (textReader != null)
                         {
                             doc.add(new Field(FLD_ATTACHMENT, textReader));
@@ -357,11 +361,11 @@ public class IndexManager
             }
             else
             {
-                Reader textReader = Extractor.getText(p.getInputStream(), mimetype, charset);
+                Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field("body", textReader));
-                    Reader detectReader = Extractor.getText(p.getInputStream(), mimetype, charset);
+                    Reader detectReader = extractor.getText(p.getInputStream(), mimetype, charset);
                     String[] languages = ((MimePart) p).getContentLanguage();
                     addLanguage(languages, doc, detectReader);
                     //detectReader.close();
@@ -411,7 +415,7 @@ public class IndexManager
                     continue;
                 }
                 String extention = name.substring(dot + 1, name.length());
-                Reader textReader = Extractor.getText(gis, extention, charset);
+                Reader textReader = extractor.getText(gis, extention, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));
@@ -432,7 +436,7 @@ public class IndexManager
         }
     }
 
-    protected void extract_octet_stream( InputStream is, Document doc, String filename, Charset charset )
+    protected void extract_octet_stream( InputStream is, Document doc, String filename, Charset charset ) throws ExtractionException
     {
         int dot = filename.lastIndexOf('.');
         if (dot == -1)
@@ -457,7 +461,7 @@ public class IndexManager
         {
             try
             {
-                Reader textReader = Extractor.getText(is, extension, charset);
+                Reader textReader = extractor.getText(is, extension, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));
@@ -496,7 +500,7 @@ public class IndexManager
             }
             else
             {
-                Reader textReader = Extractor.getText(gis, extension, charset);
+                Reader textReader = extractor.getText(gis, extension, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));
@@ -512,7 +516,7 @@ public class IndexManager
         }
     }
 
-    protected void extract_zip_file( InputStream is, Document doc, Charset charset )
+    protected void extract_zip_file( InputStream is, Document doc, Charset charset ) throws ExtractionException
     {
         try
         {
@@ -527,7 +531,7 @@ public class IndexManager
                     continue;
                 }
                 String extention = name.substring(dot + 1, name.length());
-                Reader textReader = Extractor.getText(zis, extention, charset);
+                Reader textReader = extractor.getText(zis, extention, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));

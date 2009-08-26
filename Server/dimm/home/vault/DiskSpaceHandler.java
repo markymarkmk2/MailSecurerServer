@@ -9,7 +9,6 @@ import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.hibernate.DiskSpace;
 import java.beans.XMLDecoder;
@@ -160,8 +159,10 @@ public class DiskSpaceHandler
         read_info();
         try
         {
-            read_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
-            write_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+            MandantContext m_ctx = Main.get_control().get_m_context( ds.getDiskArchive().getMandant() );
+            
+            read_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
+            write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
         }
         catch (IOException iex)
         {
@@ -199,10 +200,10 @@ public class DiskSpaceHandler
 
         try
         {
-            write_index = Main.get_control().get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+            write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
             write_index.commit();
 
-            read_index = Main.get_control().get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
+            read_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
         }
         catch (IOException iex)
         {

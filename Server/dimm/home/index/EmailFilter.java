@@ -70,17 +70,17 @@ public class EmailFilter extends TokenFilter implements Serializable
     private String[] extractWhitespaceParts( String email )
     {
         String[] whitespaceParts = email.split(" ");
-        ArrayList<String> partsList = new ArrayList<String>();
+/*        ArrayList<String> partsList = new ArrayList<String>();
         for (int i = 0; i < whitespaceParts.length; i++)
         {
             partsList.add(whitespaceParts[i]);
         }
+ * */
         return whitespaceParts;
     }
 
     private String[] extractEmailParts( String email )
     {
-
         if (email.indexOf('@') == -1)
         {
             return extractWhitespaceParts(email);

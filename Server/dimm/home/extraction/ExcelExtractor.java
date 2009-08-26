@@ -46,7 +46,7 @@ public class ExcelExtractor implements TextExtractor, Serializable
         }
         catch (Exception ee)
         {
-            throw new ExtractionException("failed to extract excel document");
+            throw new ExtractionException("failed to extract excel document: " + ee.getMessage());
         }
 
     }

@@ -101,6 +101,7 @@ public class DBXImporter implements WorkerParentChild
         'F', 'r', 'o', 'm', ' '
     };
     File dbx_file;
+    dbx_s dbx;
 
     public DBXImporter( String p ) throws Exception
     {
@@ -134,10 +135,12 @@ public class DBXImporter implements WorkerParentChild
         return dbx_file;
     }
 
-    public Message get_message( int idx ) throws ExtractionException, MessagingException
+    public Message get_message( int idx ) throws ExtractionException, MessagingException, IOException
     {
-        int msg_len = 0;
-        byte[] buff = null;
+        byte[] buff = dbx_message(dbx, idx);
+
+        int msg_len = buff.length;
+
         ByteArrayInputStream byais = new ByteArrayInputStream(buff, 0, msg_len);
         Properties props = new Properties();
         Session sess = Session.getDefaultInstance(props);
@@ -149,15 +152,17 @@ public class DBXImporter implements WorkerParentChild
 
     int get_message_count()
     {
-        return 0;
+        return dbx.message_count;
     }
 
-    void open() throws ExtractionException
+    void open() throws ExtractionException, FileNotFoundException, IOException
     {
+        dbx = dbx_open();      
     }
 
     void close()
     {
+        dbx_close( dbx );
     }
     private static final int INDEX_POINTER = 0xE4;
     private static final int ITEM_COUNT = 0xC4;
@@ -185,9 +190,9 @@ public class DBXImporter implements WorkerParentChild
         {
             rlen = file.read(c, 0, 255);
             String s = new String(c, 0, rlen, "Cp1250");
-            if (s.indexOf('0') < 255)
+            if (s.indexOf('\0') < 255)
             {
-                sb.append(s.trim());
+                sb.append(s.substring(0, s.indexOf('\0')));
                 break;
             }
             sb.append(s);
@@ -199,15 +204,15 @@ public class DBXImporter implements WorkerParentChild
 
     static long dbx_read_date( RandomAccessFile file ) throws IOException
     {
-        long filetime = 0;
+        long v = 0;
         byte[] b = new byte[8];
         file.read(b);
-        for (int i = 0; i < b.length; i++)
+        for (int i = b.length - 1; i >= 0; i--)
         {
-            filetime += b[i];
-            filetime <<= 8;
+            v <<= 8;
+            v += (int)(b[i] & 0xFF);
         }
-        return filetime;
+        return v;
     }
 
     static long dbx_read_date( RandomAccessFile file, long offset ) throws IOException
@@ -221,10 +226,11 @@ public class DBXImporter implements WorkerParentChild
         int v = 0;
         byte[] b = new byte[4];
         file.read(b);
-        for (int i = 0; i < b.length; i++)
+        for (int i = b.length - 1; i >= 0; i--)
         {
-            v += b[i];
             v <<= 8;
+            v += (int)(b[i] & 0xFF);
+            
         }
         return v;
     }
@@ -234,10 +240,10 @@ public class DBXImporter implements WorkerParentChild
         short v = 0;
         byte[] b = new byte[2];
         file.read(b);
-        for (int i = 0; i < b.length; i++)
+        for (int i = b.length - 1; i >= 0; i--)
         {
-            v += b[i];
             v <<= 8;
+            v += (int)(b[i] & 0xFF);
         }
         return v;
     }
@@ -269,10 +275,10 @@ public class DBXImporter implements WorkerParentChild
         int v = 0;
         byte[] b = new byte[3];
         file.read(b);
-        for (int i = 0; i < b.length; i++)
+        for (int i = b.length - 1; i >= 0; i--)
         {
-            v += b[i];
             v <<= 8;
+            v += (int)(b[i] & 0xFF);
         }
         return v;
     }
@@ -512,8 +518,10 @@ public class DBXImporter implements WorkerParentChild
         }
     }
 
-    dbx_s dbx_open( String filename ) throws FileNotFoundException, IOException
+    dbx_s dbx_open( /*String filename*/ ) throws FileNotFoundException, IOException
     {
+        String filename = dbx_file.getAbsolutePath();
+        
         dbx_s dbx = new dbx_s();
 
         File file = new File(filename);
@@ -522,7 +530,7 @@ public class DBXImporter implements WorkerParentChild
             return null;
         }
 
-        dbx.file = new RandomAccessFile(filename, "rb");
+        dbx.file = new RandomAccessFile(filename, "r");
         dbx.file_size = file.length();
         _dbx_init(dbx);
 
@@ -551,7 +559,7 @@ public class DBXImporter implements WorkerParentChild
     }
     int psize;
 
-    String dbx_message( dbx_s dbx, int msg_number/*, unsigned  int *psize*/ ) throws IOException
+    byte[] dbx_message( dbx_s dbx, int msg_number/*, unsigned  int *psize*/ ) throws IOException
     {
         int index = 0;
         int size = 0;
@@ -601,9 +609,11 @@ public class DBXImporter implements WorkerParentChild
             msg_offset = dbx_read_int(dbx.file, msg_offset_ptr, 0);
         }
 
-        buf = null;
+        int message_size = dbx.info[msg_number].message_size;
+        buf = new byte[message_size];
         i = msg_offset;
         total_size = 0;
+
 
         while (i != 0)
         {
@@ -611,41 +621,53 @@ public class DBXImporter implements WorkerParentChild
             dbx.file.skipBytes(2);
             i = dbx_read_int(dbx.file);
             total_size += block_size;
+            if (total_size > message_size)
+            {
+                break;
+            }
+            /*byte [] tmp = buf;
             buf = new byte[total_size + 1];
+            if (tmp != null)
+            {
+                System.arraycopy(tmp, 0, buf, 0, tmp.length);
+            }*/
             dbx.file.read(buf, total_size - block_size, block_size);
         }
 
-        if (buf != null)
+       /* if (buf != null)
         {
             buf[total_size] = '\0';
-        }
+        }*/
 
         psize = total_size;
 
-        return new String(buf, "Cp1250");
+        return buf;
     }
 
-    public static void main( String[] args )
+    public static void main( String[] args ) throws Exception
     {
-        String arg = "Z:\\Mail_lokales_Konto\\Thunderbird\\Profiles\\p27621i7.default\\Mail\\localhost\\InBox";
-        if (args.length > 0)
+        String arg = "C:\\tmp\\MS_TMP_mandant11\\mailimp_localhost_1250780534531.dbx";
+      /*  if (args.length > 0)
         {
             arg = args[0];
         }
+        */
+        DBXImporter dbx = new DBXImporter( arg );
+
 
         final String cs_token = "charset=";
         String type;
 
         try
         {
-            DBXImporter mbi = new DBXImporter(arg);
 
-            int cnt = mbi.get_message_count();
-            mbi.open();
+            dbx.open();
+
+            int cnt = dbx.get_message_count();
 
             for (int i = 0; i < cnt; i++)
             {
-                Message msg = mbi.get_message(i);
+                Message msg = dbx.get_message(i);
                 System.out.println("Betreff: " + msg.getSubject());
                 type = msg.getContentType();
                 System.out.println("Type   : " + type);
@@ -656,7 +678,7 @@ public class DBXImporter implements WorkerParentChild
                     StringTokenizer str = new StringTokenizer(type.substring(idx + cs_token.length()), "\"\';\n\r,");
                     if (str.hasMoreElements())
                     {
-                        charset = mbi.detect_charset(str.nextToken());
+                        charset = dbx.detect_charset(str.nextToken());
                     }
                     else
                     {
@@ -693,10 +715,11 @@ public class DBXImporter implements WorkerParentChild
                 //System.gc();
 
             }
-            mbi.close();
+            dbx.close();
         }
         catch (Exception iOException)
         {
+            iOException.printStackTrace();
             iOException.printStackTrace();
         }
     }

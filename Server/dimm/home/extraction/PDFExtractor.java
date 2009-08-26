@@ -5,15 +5,19 @@ import org.pdfbox.pdfparser.PDFParser;
 import org.pdfbox.pdmodel.PDDocument;
 import org.pdfbox.util.PDFTextStripper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import java.nio.charset.Charset;
 
 public class PDFExtractor implements TextExtractor, Serializable
 {
+    MandantContext m_ctx;
 
-    public PDFExtractor()
+    public PDFExtractor( MandantContext m_ctx )
     {
+        this.m_ctx = m_ctx;
     }
+
 
     @Override
     public Reader getText( InputStream is, Charset charset ) throws ExtractionException
@@ -31,8 +35,8 @@ public class PDFExtractor implements TextExtractor, Serializable
                 DocumentEncryption decryptor = new DocumentEncryption(document);
                 decryptor.decryptDocument("");
             }
-            file = File.createTempFile("extract", ".tmp");
-            file.deleteOnExit();
+            file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "ex", "tmp");
+
             Writer output = null;
             output = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
             PDFTextStripper stripper = new PDFTextStripper();

@@ -1,18 +1,19 @@
 package dimm.home.extraction;
 
-import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.MandantContext;
 import java.util.*;
 import java.nio.charset.Charset;
 import java.io.*;
 
 public class Extractor implements Serializable
 {
+    MandantContext m_ctx;
+    protected Map<String, TextExtractor> handlers;
 
-    protected static final Map<String, TextExtractor> handlers;
-    protected ArrayList<String> fileDeleteList = new ArrayList<String>();
-
-    static
+    public Extractor( MandantContext m_ctx )
     {
+        this.m_ctx = m_ctx;
         handlers = new HashMap<String, TextExtractor>();
         TextExtractor plain = new PlainTextExtractor();
         handlers.put("text/plain", plain);
@@ -20,10 +21,10 @@ public class Extractor implements Serializable
         TextExtractor html = new HTMLExtractor();
         handlers.put("text/html", html);
         handlers.put("html", html);
-        TextExtractor pdf = new PDFExtractor();
+        TextExtractor pdf = new PDFExtractor(m_ctx);
         handlers.put("application/pdf", pdf);
         handlers.put("pdf", pdf);
-        TextExtractor word = new WordExtractor();
+        TextExtractor word = new WordExtractor(m_ctx);
         handlers.put("application/msword", word);
         handlers.put("application/vnd.ms-word", word);
         handlers.put("application/vnd.msword", word);
@@ -33,35 +34,34 @@ public class Extractor implements Serializable
         handlers.put("application/msexcel", excel);
         handlers.put("application/vnd.ms-excel", excel);
         handlers.put("xls", excel);
-        TextExtractor ppt = new PowerpointExtractor();
+        TextExtractor ppt = new PowerpointExtractor(m_ctx);
         handlers.put("application/vnd.ms-powerpoint", ppt);
         handlers.put("application/mspowerpoint", ppt);
         handlers.put("application/powerpoint", ppt);
         handlers.put("ppt", ppt);
-        TextExtractor rtf = new RTFExtractor();
+        TextExtractor rtf = new RTFExtractor(m_ctx);
         handlers.put("application/rtf", rtf);
         handlers.put("rtf", rtf);
-        TextExtractor oo = new OOExtractor();
+        TextExtractor oo = new OOExtractor(m_ctx);
         handlers.put("application/vnd.oasis.opendocument.text", oo);
         handlers.put("application/vnd.oasis.opendocument.spreadsheet", oo);
         handlers.put("application/vnd.oasis.opendocument.presentation", oo);
         handlers.put("odt", oo);
         handlers.put("ods", oo);
         handlers.put("odp", oo);
+
     }
 
-    public Extractor()
-    {
-    }
 
-    public static Reader getText( InputStream is, String mimetype, Charset fromCharset )
+
+
+    public Reader getText( InputStream is, String mimetype, Charset fromCharset ) throws ExtractionException
     {
         TextExtractor extractor;
         extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
         if (extractor == null)
         {
-            //throw new ExtractionException("failed to extract text (mimetype not supported) {mimetype='"+mimetype+"'}",logger);
-            return null;
+            throw new ExtractionException("Cannot get text handler from document of this type: " + mimetype);
         }
         else
         {
@@ -71,26 +71,11 @@ public class Extractor implements Serializable
             }
             catch (Exception ee)
             {
-                LogManager.debug("failed to extract text from document:" + ee.getMessage(), ee);
-                return new StringReader("");
+                throw new ExtractionException("Extraction failed from document of this type: " + mimetype);
+//                return new StringReader("");
             }
         }
     }
 
-    // helper
-    public static String writeTemp( InputStream is ) throws IOException
-    {
-        File file = File.createTempFile("extract", ".tmp");
-        file.deleteOnExit();
-        //logger.debug("writing temporary file for text extraction {filename='"+file.getPath()+"'}");
-        OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
-        BufferedInputStream bis = new BufferedInputStream(is);
-        int c;
-        while ((c = bis.read()) != -1)
-        {
-            os.write(c);
-        }
-        os.close();
-        return file.getPath();
-    }
+    
 }
