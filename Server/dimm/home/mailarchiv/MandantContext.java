@@ -120,6 +120,15 @@ public class MandantContext
         return index_manager;
     }
 
+    void flush_index()
+    {
+        for (int i = 0; i < vaultArray.size(); i++)
+        {
+            Vault vault = vaultArray.get(i);
+            vault.flush();
+        }        
+    }
+
 
 
 

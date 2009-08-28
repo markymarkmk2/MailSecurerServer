@@ -5,9 +5,12 @@
 
 package dimm.home.mail;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.text.ParseException;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -34,10 +37,16 @@ public class RFCFileMail
         this( _msg, new Date() );
     }
 
-    public File getFile()
+    public long get_length()
     {
-        return msg;
+        return msg.length();
     }
+
+    public InputStream open_inputstream() throws FileNotFoundException
+    {
+        return new BufferedInputStream( new FileInputStream( msg));
+    }
+
     public Date getDate()
     {
         return date;
@@ -53,6 +62,10 @@ public class RFCFileMail
 
             if (!trg_file.exists())
             {
+                File parent = trg_file.getParentFile();
+                if (!parent.exists())
+                    parent.mkdirs();
+                
                 break;
             }
             try

@@ -63,7 +63,7 @@ public class CryptTools
         }
         catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -79,7 +79,7 @@ public class CryptTools
         }
         catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -145,7 +145,7 @@ public class CryptTools
         }
         catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
 
@@ -187,25 +187,25 @@ public class CryptTools
 
         catch (NoSuchPaddingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidKeySpecException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (IllegalBlockSizeException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (BadPaddingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidKeyException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidAlgorithmParameterException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -226,7 +226,7 @@ public class CryptTools
         }
         catch (UnsupportedEncodingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -262,7 +262,7 @@ public class CryptTools
         }
         catch (UnsupportedEncodingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -293,19 +293,19 @@ public class CryptTools
 
         catch (InvalidKeyException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidAlgorithmParameterException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (NoSuchPaddingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidKeySpecException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -336,19 +336,19 @@ public class CryptTools
 
         catch (InvalidKeyException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidAlgorithmParameterException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (NoSuchPaddingException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (InvalidKeySpecException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }        catch (NoSuchAlgorithmException ex)
         {
-            Logger.getLogger(CryptTools.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return null;
     }

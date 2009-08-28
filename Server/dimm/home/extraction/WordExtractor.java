@@ -22,7 +22,7 @@ public class WordExtractor implements TextExtractor, Serializable
     {
         try
         {
-            File file = m_ctx.getTempFileHandler().create_temp_file("WordExtract", "ex", "tmp");
+            File file = m_ctx.getTempFileHandler().create_temp_file("WordExtract", "extract", "tmp");
             Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
             WordTextExtractorFactory wtef = new WordTextExtractorFactory();
             wtef.textExtractor(is).getText(out);

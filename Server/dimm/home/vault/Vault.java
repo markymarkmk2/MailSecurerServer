@@ -18,4 +18,6 @@ import dimm.home.mailarchiv.MandantContext;
 public interface Vault
 {
     boolean archive_mail( RFCFileMail msg, MandantContext mandant, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException;
+
+    void flush();
 }

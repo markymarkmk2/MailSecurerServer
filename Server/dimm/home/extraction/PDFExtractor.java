@@ -35,7 +35,7 @@ public class PDFExtractor implements TextExtractor, Serializable
                 DocumentEncryption decryptor = new DocumentEncryption(document);
                 decryptor.decryptDocument("");
             }
-            file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "ex", "tmp");
+            file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "extract", "tmp");
 
             Writer output = null;
             output = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");

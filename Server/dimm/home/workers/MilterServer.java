@@ -51,7 +51,7 @@ public class MilterServer extends WorkerParent
         return true;
     }
 
-    public void set_milter_list(Milter[] milter_array) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
+    public void set_milter_list(Milter[] milter_array) throws IOException
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:
@@ -63,7 +63,7 @@ public class MilterServer extends WorkerParent
             milter_list.add( new MilterImporter( milter_array[i] ));
         }
     }
-    public void add_milter(Milter milter) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
+    public void add_milter(Milter milter) throws IOException
     {
         // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
         // TODO:

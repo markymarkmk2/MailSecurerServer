@@ -7,9 +7,10 @@ package dimm.home.vault;
 
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
-import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.CryptTools;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.CS_Constants;
 import home.shared.hibernate.DiskSpace;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
@@ -17,11 +18,14 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 
 
@@ -31,94 +35,28 @@ import org.apache.lucene.index.IndexWriter;
  * @author mw
  */
 
-class DiskSpaceInfo
-{
-    private long capacity;
-    private long firstEntryTS;
-    private long lastEntryTS;
-    private String language;
 
-    DiskSpaceInfo()
-    {
-        capacity = 0;
-        firstEntryTS = 0;
-        lastEntryTS = 0;
-        language = "de";
-    }
-    /**
-     * @return the capacity
-     */
-    public long getCapacity()
-    {
-        return capacity;
-    }
-
-    /**
-     * @param capacity the capacity to set
-     */
-    public void setCapacity( long capacity )
-    {
-        this.capacity = capacity;
-    }
-
-    /**
-     * @return the firstEntryTS
-     */
-    public long getFirstEntryTS()
-    {
-        return firstEntryTS;
-    }
-
-    /**
-     * @param firstEntryTS the firstEntryTS to set
-     */
-    public void setFirstEntryTS( long firstEntryTS )
-    {
-        this.firstEntryTS = firstEntryTS;
-    }
-
-    /**
-     * @return the lastEntryTS
-     */
-    public long getLastEntryTS()
-    {
-        return lastEntryTS;
-    }
-
-    /**
-     * @param lastEntryTS the lastEntryTS to set
-     */
-    public void setLastEntryTS( long lastEntryTS )
-    {
-        this.lastEntryTS = lastEntryTS;
-    }
-
-    /**
-     * @return the language
-     */
-    public String getLanguage()
-    {
-        return language;
-    }
-
-    /**
-     * @param language the language to set
-     */
-    public void setLanguage( String language )
-    {
-        this.language = language;
-    }
-}
 public class DiskSpaceHandler
 {
+    public static final int DS_FULL = 0x0001;
+    public static final int DS_ERROR = 0x0002;
+    public static final int DS_OFFLINE = 0x0004;
+
+
+    public static final int DS_MODE_MASK  = 0x00f0;
+    public static final int DS_MODE_DATA  = 0x0010;
+    public static final int DS_MODE_INDEX = 0x0020;
+
     DiskSpace ds;
     DiskSpaceInfo dsi;
     boolean _open;
-    IndexWriter read_index;
+    IndexReader read_index;
     IndexWriter write_index;
+    MandantContext m_ctx;
 
-    public DiskSpaceHandler( DiskSpace _ds )
+    public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
     {
+        m_ctx = _m_ctx;
         ds = _ds;
         _open = false;
     }
@@ -128,7 +66,7 @@ public class DiskSpaceHandler
         return _open;
     }
 
-    public IndexWriter get_read_index()
+    public IndexReader get_read_index()
     {
         return read_index;
     }
@@ -138,31 +76,44 @@ public class DiskSpaceHandler
     }
     public void commit_index()
     {
-        try
+        if (test_flag( ds, DS_MODE_INDEX))
         {
-            write_index.commit();
-        }
-        catch (CorruptIndexException ex)
-        {
-            Logger.getLogger(DiskSpaceHandler.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(DiskSpaceHandler.class.getName()).log(Level.SEVERE, null, ex);
+            try
+            {
+                write_index.commit();
+            }
+            catch (CorruptIndexException ex)
+            {
+                LogManager.log(Level.SEVERE, null, ex);
+            }
+            catch (IOException ex)
+            {
+                LogManager.log(Level.SEVERE, null, ex);
+            }
         }
     }
 
-
+    boolean test_flag( DiskSpace ds, int flag )
+    {
+        int f = Integer.parseInt(ds.getFlags());
+        return ((f & flag) == flag);
+    }
 
     public void open() throws VaultException
     {
+        if (is_open())
+        {
+            close();
+        }
+
         read_info();
         try
         {
-            MandantContext m_ctx = Main.get_control().get_m_context( ds.getDiskArchive().getMandant() );
-            
-            read_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
-            write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+            if (test_flag( ds, DS_MODE_INDEX))
+            {
+                write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
+            }
         }
         catch (IOException iex)
         {
@@ -193,17 +144,23 @@ public class DiskSpaceHandler
             // REGULAR EXIT OF CHECK
         }
 
-        MandantContext m_ctx = Main.get_control().get_m_context( ds.getDiskArchive().getMandant() );
-
         dsi = new DiskSpaceInfo();
         dsi.setLanguage( m_ctx.getPrefs().get_language());
 
         try
         {
-            write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
-            write_index.commit();
+            if (test_flag( ds, DS_MODE_INDEX))
+            {
 
-            read_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/false);
+                write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+                write_index.commit();
+
+
+                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
+
+                write_index.close();
+                read_index.close();
+            }
         }
         catch (IOException iex)
         {
@@ -215,15 +172,9 @@ public class DiskSpaceHandler
 
         try
         {
-            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ds.xml")));
-            e.writeObject(ds);
-            e.close();
-            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/da.xml")));
-            e.writeObject(ds.getDiskArchive());
-            e.close();
-            e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/ma.xml")));
-            e.writeObject(ds.getDiskArchive().getMandant());
-            e.close();
+            write_info_object( ds, "ds.xml" );
+            write_info_object( ds.getDiskArchive(), "da.xml" );
+            write_info_object( ds.getDiskArchive().getMandant(), "ma.xml" );
         }
         catch (Exception ex)
         {
@@ -231,15 +182,33 @@ public class DiskSpaceHandler
         }
     }
 
+    private void write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
+    {
+        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/" + filename));
+        XMLEncoder e = new XMLEncoder(bos);
+        e.writeObject(o);
+        e.close();
+        bos.close();
+    }
+
+    private Object read_info_object( String filename ) throws FileNotFoundException, IOException
+    {
+        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(ds.getPath() + "/" + filename));
+        XMLDecoder e = new XMLDecoder(bis);
+        Object o = e.readObject();
+        e.close();
+        bis.close();
+        return o;
+    }
+
 
     
-    void read_info() throws VaultException
+    private void read_info() throws VaultException
     {
         try
         {
-            XMLDecoder e = new XMLDecoder(new BufferedInputStream(new FileInputStream(ds.getPath() + "/dsinfo.xml")));
-            Object o = e.readObject();
-            e.close();
+            Object o = read_info_object( "dsinfo.xml" );
+
             if (o instanceof DiskSpaceInfo)
                 dsi = (DiskSpaceInfo)o;
             else
@@ -255,9 +224,12 @@ public class DiskSpaceHandler
         update_info();
         try
         {
-            read_index.close();
-            write_index.commit();
-            write_index.close();
+            if (test_flag( ds, DS_MODE_INDEX))
+            {
+                read_index.close();
+                write_index.commit();
+                write_index.close();
+            }
         }
         catch (IOException iex)
         {
@@ -267,13 +239,11 @@ public class DiskSpaceHandler
         _open = false;
     }
 
-    void update_info() throws VaultException
+    private void update_info() throws VaultException
     {
         try
         {
-            XMLEncoder e = new XMLEncoder(new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/dsinfo.xml")));
-            e.writeObject(dsi);
-            e.close();
+            write_info_object( dsi, "dsinfo.xml" );
         }
         catch (Exception ex)
         {
@@ -289,7 +259,7 @@ public class DiskSpaceHandler
 
     public void add_message_info( RFCFileMail msg ) throws VaultException
     {
-        dsi.setCapacity( dsi.getCapacity() + msg.getFile().length());
+        dsi.setCapacity( dsi.getCapacity() + msg.get_length());
         dsi.setLastEntryTS(msg.getDate().getTime());
         if (dsi.getFirstEntryTS() == 0)
             dsi.setFirstEntryTS(dsi.getLastEntryTS());
@@ -316,9 +286,11 @@ public class DiskSpaceHandler
     }
 
 
+    // THIS IS THE FIXED MAIL UID STRUCT
+    // MA_ID.DA_ID.DS_ID.Messagedate(long)
     public String get_message_uuid( RFCFileMail msg )
     {
-        String ret = ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime();
+        String ret = m_ctx.getMandant().getId() + "." + ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime();
         return ret;
     }
 
@@ -329,53 +301,68 @@ public class DiskSpaceHandler
         return RFCFileMail.get_time_from_mailfile(rel_path);
     }
     
-    public static long get_da_id_from_uuid( String uuid )
+    public static int get_da_id_from_uuid( String uuid ) throws VaultException
     {
-        long id = -1;
+        int id = -1;
 
         try
         {
-            int pos = uuid.indexOf('.');
-            id = Long.parseLong(uuid.substring(0, pos));
+            String[] arr = uuid.split(".");
+            id =  Integer.parseInt(arr[1]);
         }
         catch (Exception numberFormatException)
         {
+            throw new VaultException(  "Invalid format in uuid " + uuid);
         }
 
         return id;
     }
 
-    public static long get_ds_id_from_uuid( String uuid )
+    public static int get_ma_id_from_uuid( String uuid ) throws VaultException
     {
-        long id = -1;
+        int id = -1;
 
         try
         {
-            int pos = uuid.indexOf('.');
-            pos++;
-            int pos2 = uuid.substring(pos).indexOf('.');
-            id = Long.parseLong(uuid.substring(pos, pos2));
+            String[] arr = uuid.split(".");
+            id =  Integer.parseInt(arr[0]);
         }
         catch (Exception numberFormatException)
         {
+            throw new VaultException(  "Invalid format in get_ds_id_from_uuid for uuid " + uuid);
         }
 
         return id;
     }
-    public static long get_time_from_uuid( String uuid )
+
+    public static int get_ds_id_from_uuid( String uuid ) throws VaultException
+    {
+        int id = -1;
+
+        try
+        {
+            String[] arr = uuid.split(".");
+            id =  Integer.parseInt(arr[2]);
+        }
+        catch (Exception numberFormatException)
+        {
+            throw new VaultException(  "Invalid format in get_ds_id_from_uuid for uuid " + uuid);
+        }
+
+        return id;
+    }
+    public static long get_time_from_uuid( String uuid ) throws VaultException
     {
         long id = -1;
 
         try
         {
-            int pos = uuid.indexOf('.');
-            pos++;
-            int pos2 = uuid.substring(pos).indexOf('.');
-            pos2++;
-            id = Long.parseLong(uuid.substring(pos2));
+            String[] arr = uuid.split(".");
+            id =  Long.parseLong(arr[3]);
         }
         catch (Exception numberFormatException)
         {
+            throw new VaultException(  "Invalid format in get_time_from_uuid for uuid " + uuid);
         }
 
         return id;
@@ -503,21 +490,21 @@ public class DiskSpaceHandler
     }
 
 
-    public boolean checkCapacity(  File msg )
+    public boolean checkCapacity(  long len )
     {
         File path = new File( ds.getPath() );
 
         long allowed_cap = parse_capacity(ds.getMaxCapacity());
 
         // TEST IF FS IS FULL ANYWAY
-        if (path.getFreeSpace() < msg.length() + 1024*1024)  // AT LEAST 1MB ON FS
+        if (path.getFreeSpace() < len + 1024*1024)  // AT LEAST 1MB ON FS
             return false;
 
         // READ SIZE FROM DISK
         long act_cap = dsi.getCapacity();
 
         // CHECK IF OKAY
-        if (allowed_cap > 0 && act_cap + msg.length() > allowed_cap)
+        if (allowed_cap > 0 && act_cap + len > allowed_cap)
             return false;
 
         return true;
@@ -569,12 +556,101 @@ public class DiskSpaceHandler
         return cap;
     }
 */
-    public String getMailPath()
+    private String getMailPath()
     {
         return ds.getPath() + "/mail";
     }
-    public String getIndexPath()
+    private String getIndexPath()
     {
         return ds.getPath() + "/index";
+    }
+
+    public void write_encrypted_file(RFCFileMail msg, String password ) throws  VaultException
+    {
+        OutputStream bos = null;
+        InputStream bis = null;
+        byte[] buff = new byte[ CS_Constants.STREAM_BUFFER_LEN ];
+
+        try
+        {
+            File out_file = msg.create_unique_mailfile(getMailPath());
+            CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
+
+            bis = msg.open_inputstream();
+            OutputStream os = new FileOutputStream(out_file);
+
+            bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
+
+
+            while (true)
+            {
+                int rlen = bis.read(buff);
+                if (rlen == -1)
+                {
+                    break;
+                }
+                bos.write(buff, 0, rlen);
+            }
+
+            dsi.setCapacity( dsi.getCapacity() + msg.get_length());
+            
+        }
+        catch (Exception e)
+        {
+            throw new VaultException(ds, e.getMessage());
+        }
+        finally
+        {
+            if (bos != null)
+            {
+                try
+                {
+                    bos.close();
+                }
+                catch (IOException ex)
+                {
+                }
+            }
+            if (bis != null)
+            {
+                try
+                {
+                    bis.close();
+                }
+                catch (IOException ex)
+                {
+                }
+            }
+        }
+    }
+
+    void flush()
+    {
+        if (test_flag( ds, DS_MODE_INDEX))
+        {
+            try
+            {
+                write_index.commit();
+            }
+            catch (CorruptIndexException ex)
+            {
+                LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " is corrupted: ", ex);
+            }
+            catch (IOException ex)
+            {
+                LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " cannot be accessed: ", ex);
+            }
+        }
+        if (test_flag( ds, DS_MODE_INDEX))
+        {
+            try
+            {
+                update_info();
+            }
+            catch (VaultException ex)
+            {
+                LogManager.log(Level.SEVERE, "Update info failed on Diskspace " + ds.getPath() + ": ", ex);
+            }
+        }
     }
 }

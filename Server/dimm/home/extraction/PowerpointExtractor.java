@@ -29,7 +29,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
         try
         {
             POIFSReader reader = new POIFSReader();
-            file = m_ctx.getTempFileHandler().create_temp_file("PPExtract", "ex", "tmp");
+            file = m_ctx.getTempFileHandler().create_temp_file("PPExtract", "extract", "tmp");
             
             output = new FileOutputStream(file);
             reader.registerListener(this);

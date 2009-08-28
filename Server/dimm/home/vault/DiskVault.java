@@ -7,33 +7,26 @@ package dimm.home.vault;
 
 import dimm.home.DAO.DiskSpaceDAO;
 import dimm.home.index.IndexManager;
-import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.DiskSpace;
 import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
-import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
-import dimm.home.mailarchiv.Utilities.CryptTools;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.imageio.IIOException;
-import javax.mail.MessagingException;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 
 /**
@@ -43,14 +36,12 @@ import org.apache.lucene.index.IndexWriter;
 public class DiskVault implements Vault, StatusHandler
 {
 
-    public static final int DS_FULL = 0x0001;
-    public static final int DS_ERROR = 0x0002;
-    public static final int DS_OFFLINE = 0x0004;
 
     MandantContext context;
     DiskArchive disk_archive;
     String password;
     ArrayList<DiskSpaceHandler> dsh_list;
+
 
 
     public DiskVault( MandantContext _context, DiskArchive da )
@@ -66,7 +57,7 @@ public class DiskVault implements Vault, StatusHandler
 
         while (it.hasNext())
         {
-            dsh_list.add( new DiskSpaceHandler(it.next()));
+            dsh_list.add( new DiskSpaceHandler( context, it.next()));
         }
     }
 
@@ -91,13 +82,17 @@ public class DiskVault implements Vault, StatusHandler
     }
 
 
-    private boolean test_flag( DiskSpace ds, int flag )
+    
+    DiskSpaceHandler get_next_active_data_diskspace(int index)
     {
-        int f = Integer.parseInt(ds.getFlags());
-        return ((f & flag) == flag);
+        return get_next_active_diskspace(index, true);
+    }
+    DiskSpaceHandler get_next_active_index_diskspace(int index )
+    {
+        return get_next_active_diskspace(index, false);
     }
 
-    DiskSpaceHandler get_next_active_diskspace(int index )
+    private DiskSpaceHandler get_next_active_diskspace(int index, boolean is_data )
     {
 
         Iterator<DiskSpaceHandler> it = dsh_list.iterator();
@@ -106,7 +101,14 @@ public class DiskVault implements Vault, StatusHandler
         {
             DiskSpaceHandler dsh = it.next();
             DiskSpace ds = dsh.getDs();
-            if (test_flag( ds, DS_FULL) || test_flag(ds, DS_ERROR) || test_flag(ds, DS_OFFLINE))
+            if (dsh.test_flag( ds, DiskSpaceHandler.DS_FULL) || dsh.test_flag(ds, DiskSpaceHandler.DS_ERROR) || dsh.test_flag(ds, DiskSpaceHandler.DS_OFFLINE))
+                continue;
+
+            // CHECK FOR CORRECT MODE
+            if (is_data && !dsh.test_flag(ds, DiskSpaceHandler.DS_MODE_DATA))
+                continue;
+
+            if (!is_data && !dsh.test_flag(ds, DiskSpaceHandler.DS_MODE_INDEX))
                 continue;
 
             File dsf = new File( ds.getPath() );
@@ -169,106 +171,127 @@ public class DiskVault implements Vault, StatusHandler
         return ret;
     }
 
-    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException
+    DiskSpaceHandler open_data_dsh( int ds_idx, long free_space) throws VaultException
     {
-        int ds_idx = 0;
+        return open_dsh(ds_idx, true, free_space);
+    }
+    DiskSpaceHandler open_index_dsh( int ds_idx) throws VaultException
+    {
+        // HOW BIG IS INDEX COMPARED TO FILESIZE???? I DO IT SIMPLE, KEEP AT LEAST 1 MB FREE
+        return open_dsh(ds_idx, false, 1024*1024);
+    }
 
-        DiskSpaceHandler dsh = get_next_active_diskspace( ds_idx );
+    DiskSpaceHandler open_dsh( int ds_idx, boolean is_data, long free_space) throws VaultException
+    {
+        DiskSpaceHandler dsh = get_next_active_data_diskspace( ds_idx);
 
         if (dsh == null)
         {
-            throw new ArchiveMsgException("No Diskspace found" );
+            throw new VaultException("No diskspace for data found" );
         }
 
-        while (!dsh.checkCapacity(msg.getFile()))
+        try
+        {
+            if (!dsh.is_open())
+            {
+                dsh.open();
+            }
+        }
+        catch (VaultException vaultException)
+        {
+            dsh.create();
+            dsh.open();
+        }
+
+
+        while (!dsh.checkCapacity(free_space))
         {
             DiskSpace ds = dsh.getDs();
 
             status.set_status(StatusEntry.BUSY, "DiskSpace " + ds.getPath() + " is full" );
             Notification.throw_notification( disk_archive.getMandant(), Notification.NF_INFORMATIVE, status.get_status_txt() );
-            ds.setFlags(Integer.toString(Integer.parseInt(ds.getFlags()) | DS_FULL));
+            ds.setFlags(Integer.toString(Integer.parseInt(ds.getFlags()) | DiskSpaceHandler.DS_FULL));
 
             DiskSpaceDAO dao = new DiskSpaceDAO();
             dao.save(ds);
 
-            dsh = get_next_active_diskspace( ds_idx );
+            dsh = get_next_active_data_diskspace( ds_idx );
 
             if (dsh == null)
             {
-                throw new ArchiveMsgException("No Diskspace found" );
+                throw new VaultException("No Diskspace found" );
             }
         }
+        return dsh;
+    }
 
-        write_mail_file( context, dsh, msg );
+
+    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException
+    {
+        int ds_idx = 0;
+
+        DiskSpaceHandler data_dsh = open_data_dsh( ds_idx, msg.get_length() );
+
+        DiskSpaceHandler index_dsh = open_index_dsh( ds_idx );
+
+
+
+        write_mail_file( context, data_dsh, index_dsh, msg );
 
         // ADD CAPACITY COUNTER
-        dsh.add_message_info(msg);
+        data_dsh.add_message_info(msg);
 
         return true;
     }
 
-    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler dsh, RFCFileMail msg ) throws ArchiveMsgException, IOException
+    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCFileMail msg ) throws ArchiveMsgException
     {
-        OutputStream bos = null;
-        byte[] buff = new byte[8192];
-
-        // NOW WE HAVE A FILE ON E FREE DISKSPACE
-
-        File out_file = msg.create_unique_mailfile(dsh.getMailPath());
-        CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
-
         try
         {
-            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(msg.getFile()));
-            OutputStream os = new FileOutputStream(out_file);
-            bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
-
-
-            while (true)
-            {
-                int rlen = bis.read(buff);
-                if (rlen == -1)
-                    break;
-
-                bos.write(buff, 0, rlen);
-            }
-
+            data_dsh.write_encrypted_file(msg, password);
         }
-        catch (IIOException ex)
+        catch (Exception ex)
         {
-            throw new IOException("Cannot write to mail file: " + ex.getMessage());
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-            throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
-        }
-        finally
-        {
-            try
-            {
-                bos.close();
-            }
-            catch (IOException ex)
-            {
-            }
+            LogManager.log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Cannot write data file: " + ex.getMessage());
         }
 
         Document doc = new Document();
         IndexManager idx = m_ctx.get_index_manager();
         try
         {
-            idx.index_mail_file(msg, doc);
-            IndexWriter writer = dsh.get_write_index();
+            // WE USE data_dsh BECAUSE WE ADD PARAMS OF IT TO INDEX (DA, DS, MA)
+            idx.index_mail_file(m_ctx, data_dsh, msg, doc);
+
+            IndexWriter writer = index_dsh.get_write_index();
             writer.addDocument(doc);
+
+            // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
+            List field_list  = doc.getFields();
+            for (int i = 0; i < field_list.size(); i++)
+            {
+                if (field_list.get(i) instanceof Field)
+                {
+                    Field field = (Field)field_list.get(i);
+                    Reader rdr = field.readerValue();
+                    rdr.close();
+                }
+            }
+            
         }
-        catch (MessagingException ex)
+        catch (Exception ex)
         {
-            Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE,  "Error occured while indexing message:" , ex);
         }
-        catch (IndexException ex)
+    }
+
+    @Override
+    public void flush()
+    {
+        for (int i = 0; i < dsh_list.size(); i++)
         {
-            Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
+            DiskSpaceHandler dsh = dsh_list.get(i);
+            dsh.flush();
         }
     }
 }

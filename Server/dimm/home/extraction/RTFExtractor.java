@@ -28,7 +28,7 @@ public class RTFExtractor implements TextExtractor,Serializable
 	        File file = null;
 	        try {
 	            reader = new InputStreamReader(is);
-                    file = m_ctx.getTempFileHandler().create_temp_file("RTFExtract", "ex", "tmp");
+                    file = m_ctx.getTempFileHandler().create_temp_file("RTFExtract", "extract", "tmp");
 
 	            writer = new FileWriter(file);
 	            DefaultStyledDocument doc = new DefaultStyledDocument();

@@ -9,6 +9,8 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.hibernate.HibernateUtil;
+import dimm.home.importmail.DBXImporter;
+import dimm.home.importmail.MBoxImporter;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
@@ -41,6 +43,7 @@ import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import dimm.home.workers.SQLWorker;
+import home.shared.CS_Constants;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -58,6 +61,8 @@ import javax.mail.MessagingException;
  *
  * @author Administrator
  */
+
+
 public class LogicControl
 {
 
@@ -75,11 +80,12 @@ public class LogicControl
     LicenseChecker lic_checker;
     
     MBoxImportServer mb_import_server;
+    private boolean shutdown;
 
     /** Creates a new instance of LogicControl */
     public LogicControl()
     {
-        lic_checker = new LicenseChecker( Main.license_interface, Main.create_licensefile );
+        lic_checker = new LicenseChecker( Main.APPNAME + ".license",  Main.license_interface, Main.create_licensefile );
 
         mandanten_list = new ArrayList<MandantContext>();
         worker_list = new ArrayList<WorkerParent>();
@@ -161,20 +167,28 @@ public class LogicControl
     {
         return lic_checker.is_licensed();
     }
+    public boolean check_licensed()
+    {
+        return lic_checker.check_licensed();
+    }
 
     public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
     {
         // TODO: background
         if (mail == null)
         {
-            throw new ArchiveMsgException("Mail input file is null");
+            throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_null"));
+        }
+        if (!mail.exists())
+        {
+            throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_missing"));
         }
         RFCFileMail mf = new RFCFileMail( mail );
 
         MandantContext context = get_m_context(mandant);
         if (context == null)
         {
-            throw new ArchiveMsgException("Invalid context for mail");
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
         }
 
         ArrayList<Vault> vault_list = context.getVaultArray();
@@ -182,7 +196,18 @@ public class LogicControl
         for (int i = 0; i < vault_list.size(); i++)
         {
             Vault vault = vault_list.get(i);
-            vault.archive_mail(mf, context, da);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault)vault;
+                if (dv.get_da() == da)
+                {
+                    vault.archive_mail(mf, context, da);
+                }
+            }
+            else
+            {
+                vault.archive_mail(mf, context, da);
+            }
         }
     }
 
@@ -200,8 +225,8 @@ public class LogicControl
             }
             catch (FileNotFoundException ex)
             {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-                throw new ArchiveMsgException("Mail file disappeared: " + ex.getMessage());
+                LogManager.log(Level.SEVERE, null, ex);
+                throw new ArchiveMsgException(Main.Txt("Mail_file_disappeared") + ": " + ex.getMessage());
             }
         }
         else
@@ -209,18 +234,7 @@ public class LogicControl
             add_mail_file(rfc_dump, mandant, da, false);
         }
 
-    /*        FileInputStream rfc_is;
-    try
-    {
-    rfc_is = new FileInputStream(rfc_dump);
-    }
-    catch (FileNotFoundException ex)
-    {
-    Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-    throw new ArchiveMsgException("Mail file disappeared: " + ex.getMessage());
-    }
-    add_new_mail( rfc_is, mandant, da, background );
-     * */
+   
     }
 
     public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
@@ -254,12 +268,12 @@ public class LogicControl
         }
         catch (IOException ex)
         {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
             throw new ArchiveMsgException("Message Inputstream exception: " + ex.getMessage());
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
             throw new ArchiveMsgException("Messaging exception: " + ex.getMessage());
         }
     }
@@ -269,7 +283,7 @@ public class LogicControl
         add_new_mail(mail.getInputStream(), mandant, da, background);
     }
 
-    public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException
+    public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, VaultException
     {
         long ds_id = DiskSpaceHandler.get_ds_id_from_uuid(mail_uuid);
         long da_id = DiskSpaceHandler.get_da_id_from_uuid(mail_uuid);
@@ -277,10 +291,6 @@ public class LogicControl
 
 
         MandantContext context = get_m_context(mandant);
-        if (context == null)
-        {
-            throw new ArchiveMsgException("Invalid context for mail");
-        }
 
         DiskSpaceHandler found_ds = null;
         ArrayList<Vault> vault_list = context.getVaultArray();
@@ -378,6 +388,65 @@ public class LogicControl
         return tmp_file;
     }
 
+    void initialize_mandant( MandantContext ctx )
+    {
+        // ATTACH COMM
+        TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
+        worker_list.add(tcp_conn);
+        ctx.set_tcp_conn( tcp_conn );
+
+        // ATTACH INDEXMANAGER
+        IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null, /*index_attachments*/ true);
+        ctx.set_index_manager( idx_util );
+
+
+        // BUILD VAULT LIST FROM DISKARRAYS
+        ctx.build_vault_list();
+
+
+        Set<Milter> milters = ctx.getMandant().getMilters();
+        Iterator<Milter> milter_it = milters.iterator();
+
+        while (milter_it.hasNext())
+        {
+            try
+            {
+                ms.add_milter(milter_it.next());
+            }
+            catch (IOException ex)
+            {
+                ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
+                ms.setGoodState(false);
+                LogManager.err_log_fatal(ms.getStatusTxt(), ex);
+            }
+        }
+
+        Set<Proxy> proxies = ctx.getMandant().getProxies();
+        Iterator<Proxy> proxy_it = proxies.iterator();
+
+        while (proxy_it.hasNext())
+        {
+             ps.add_proxy(proxy_it.next());
+        }
+
+        Set<Hotfolder> hfs = ctx.getMandant().getHotfolders();
+        Iterator<Hotfolder> hf_it = hfs.iterator();
+
+        while (hf_it.hasNext())
+        {
+             hf_server.add_hfolder(hf_it.next());
+        }
+
+        Set<ImapFetcher> ifs = ctx.getMandant().getImapFetchers();
+        Iterator<ImapFetcher> if_it = ifs.iterator();
+
+        while (if_it.hasNext())
+        {
+             mb_fetcher_server.add_fetcher(if_it.next());
+        }
+
+
+    }
 
     void initialize()
     {
@@ -388,85 +457,7 @@ public class LogicControl
         {
             MandantContext ctx = mandanten_list.get(i);
 
-            TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
-            worker_list.add(tcp_conn);
-            ctx.set_tcp_conn( tcp_conn );
-
-            IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null);
-            ctx.set_index_manager( idx_util );
-
-
-            Set<Milter> milters = ctx.getMandant().getMilters();
-
-            Iterator<Milter> it = milters.iterator();
-
-            while (it.hasNext())
-            {
-                try
-                {
-                    ms.add_milter(it.next());
-                }
-                catch (IOException ex)
-                {
-                    ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
-                    ms.setGoodState(false);
-                    LogManager.err_log_fatal(ms.getStatusTxt(), ex);
-                }
-                catch (ClassNotFoundException ex)
-                {
-                    ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
-                    ms.setGoodState(false);
-                    LogManager.err_log_fatal(ms.getStatusTxt(), ex);
-                }
-                catch (InstantiationException ex)
-                {
-                    ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
-                    ms.setGoodState(false);
-                    LogManager.err_log_fatal(ms.getStatusTxt(), ex);
-                }
-                catch (IllegalAccessException ex)
-                {
-                    ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
-                    ms.setGoodState(false);
-                    LogManager.err_log_fatal(ms.getStatusTxt(), ex);
-                }
-            }
-        }
-        for (int i = 0; i < mandanten_list.size(); i++)
-        {
-            MandantContext ctx = mandanten_list.get(i);
-            Set<Proxy> proxies = ctx.getMandant().getProxies();
-
-            Iterator<Proxy> it = proxies.iterator();
-
-            while (it.hasNext())
-            {
-                 ps.add_proxy(it.next());
-            }
-        }
-        for (int i = 0; i < mandanten_list.size(); i++)
-        {
-            MandantContext ctx = mandanten_list.get(i);
-            Set<Hotfolder> proxies = ctx.getMandant().getHotfolders();
-
-            Iterator<Hotfolder> it = proxies.iterator();
-
-            while (it.hasNext())
-            {
-                 hf_server.add_hfolder(it.next());
-            }
-        }
-        for (int i = 0; i < mandanten_list.size(); i++)
-        {
-            MandantContext ctx = mandanten_list.get(i);
-            Set<ImapFetcher> proxies = ctx.getMandant().getImapFetchers();
-
-            Iterator<ImapFetcher> it = proxies.iterator();
-
-            while (it.hasNext())
-            {
-                 mb_fetcher_server.add_fetcher(it.next());
-            }
+            initialize_mandant( ctx );
         }
 
 
@@ -475,13 +466,13 @@ public class LogicControl
         if (comm != null)
         {
             comm.setStatusTxt("Checking internet...");
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 3; i++)
             {
                 if (do_server_ping())
                 {
                     break;
                 }
-                sleep(1000);
+                sleep(500);
             }
 
             if (!do_server_ping())
@@ -493,7 +484,6 @@ public class LogicControl
             }
             else
             {
-
                 if (!comm.isGoodState())
                 {
                     comm.setStatusTxt("Internet reachable");
@@ -534,7 +524,7 @@ public class LogicControl
         }
     }
 
-    void set_system_time()
+    boolean set_system_time()
     {
         try
         {
@@ -572,13 +562,14 @@ public class LogicControl
                 else
                 {
                     LogManager.debug_msg(1, "Systemtime was synchronized");
-                    break;
+                    return true;
                 }
             }
         }
         catch (Exception exc)
         {
         }
+        return false;
     }
 
     boolean do_server_ping()
@@ -620,6 +611,7 @@ public class LogicControl
     void run()
     {
         long last_date_set = 0;
+        long last_index_flush = 0;
         long last_ping = 0;
         boolean last_start_written = false;
         long started = System.currentTimeMillis();
@@ -644,7 +636,7 @@ public class LogicControl
             }
 
 
-            while (true)
+            while (!shutdown)
             {
                 sleep(1000);
 
@@ -656,6 +648,14 @@ public class LogicControl
                     set_system_time();
                     last_date_set = now;
                 }
+
+                // ALLE MINUTE INDEX FLUSHEN SETZEN
+                if ((now - last_index_flush) > 60 * 1000)
+                {
+                    flush_index();
+                    last_index_flush = now;
+                }
+
 
                 // ALLE 10 SEKUNDEN INET PINGENSETZEN
                 if ((now - last_ping) > 10 * 1000)
@@ -690,7 +690,7 @@ public class LogicControl
 
 
         LogManager.info_msg("Closing down " + Main.APPNAME);
-        System.exit(0);
+        //System.exit(0);
     }
 
     public void set_shutdown( boolean b )
@@ -699,6 +699,7 @@ public class LogicControl
         {
             worker_list.get(i).setShutdown(b);
         }
+        shutdown = b;
     }
 
     static public Date get_actual_rel_date()
@@ -714,6 +715,7 @@ public class LogicControl
         catch (Exception ex)
         {
             System.out.println("Cannot retreive get_actual_rel_date " + ex.getMessage());
+            return null;
         }
 
         return now;
@@ -777,15 +779,16 @@ public class LogicControl
     }
 
     org.hibernate.classic.Session param_session;
+    org.hibernate.Query read_param_db_qry;
     private void read_param_db()
     {
         try
         {
             param_session = HibernateUtil.getSessionFactory().getCurrentSession();
             org.hibernate.Transaction tx = param_session.beginTransaction();
-            org.hibernate.Query q = param_session.createQuery("from Mandant");
+            read_param_db_qry = param_session.createQuery("from Mandant");
             
-            List l = q.list();
+            List l = read_param_db_qry.list();
 
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
@@ -838,5 +841,141 @@ public class LogicControl
     public Communicator get_communicator()
     {
         return comm;
+    }
+
+    public void register_new_import( MandantContext m_ctx, DiskArchive da, String path )
+    {
+        int itype = CS_Constants.get_itype_from_name(path);
+        switch (itype)
+        {
+            case CS_Constants.ITYPE_TBIRD: 
+            {
+                try
+                {
+                    MBoxImporter mbi = new MBoxImporter(path);
+                    get_mb_import_server().add_mbox_import(m_ctx, da, mbi);
+                }
+                catch (Exception exception)
+                {
+                    get_mb_import_server().setStatusTxt("Error opening MBox " + path + ": " + exception.getMessage());
+                    get_mb_import_server().setGoodState(false);
+                }
+                
+                break;
+            }
+            case CS_Constants.ITYPE_OLEXP: 
+            {
+                try
+                {
+                    DBXImporter mbi = new DBXImporter(path);
+                    get_mb_import_server().add_mbox_import(m_ctx, da, mbi);
+                }
+                catch (Exception exception)
+                {
+                    get_mb_import_server().setStatusTxt("Error opening MBox " + path + ": " + exception.getMessage());
+                    get_mb_import_server().setGoodState(false);
+                }
+                
+                break;
+            }
+            case CS_Constants.ITYPE_EML:
+            {
+                try
+                {
+                    add_mail_file(new File(path), m_ctx.getMandant(), da, true);
+                }
+                catch (ArchiveMsgException ex)
+                {
+                    LogManager.log(Level.SEVERE, null, ex);
+                    try
+                    {
+                        move_mail_to_quarantine(m_ctx, da, path);
+                    }
+                    catch (IOException ex1)
+                    {
+                        Main.err_log_fatal(Main.Txt("Cannot_store_mail_file_to_quarantine"));
+                        LogManager.log(Level.SEVERE, null, ex1);
+                    }
+                }
+                catch (VaultException ex)
+                {
+                    LogManager.log(Level.SEVERE, null, ex);
+                    try
+                    {
+                        move_mail_to_hold_buffer(m_ctx, da, path);
+                    }
+                    catch (IOException ex1)
+                    {
+                        Main.err_log_fatal(Main.Txt("Cannot_store_mail_file_to_holdbuffer"));
+                        LogManager.log(Level.SEVERE, null, ex1);
+                    }
+                }
+            }
+        }
+
+
+    }
+
+   /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args)
+    {
+        DiskArchive da = null;
+        Main m = new Main(args);
+        LogicControl instance = new LogicControl();
+        instance.initialize();
+
+        MandantContext m_ctx = instance.get_mandant_by_id(1);
+        da = m_ctx.get_da_by_id(1);
+        String path = "z:\\Mailtest\\test2.eml";
+        instance.register_new_import(m_ctx, da, path);
+    }
+    public String get_suffix( String p )
+    {
+        int idx = p.lastIndexOf('.');
+        if (idx >= 0 && idx < p.length())
+            return p.substring(idx+1);
+
+        return p;
+    }
+
+    private synchronized void move_mail_to_quarantine( MandantContext m_ctx, DiskArchive da, String path ) throws IOException
+    {
+        File dir = m_ctx.getTempFileHandler().get_quarantine_mail_path();
+        File file = new File(path);
+        File new_file = new File( dir, file.getName() );
+        if (new_file.exists())
+        {
+            File.createTempFile("tmp", get_suffix(path), dir);
+            if (new_file.exists())
+                new_file.delete();
+        }
+        
+        file.renameTo(new_file);        
+    }
+
+    private void move_mail_to_hold_buffer( MandantContext m_ctx, DiskArchive da, String path ) throws IOException
+    {
+        File dir = m_ctx.getTempFileHandler().get_hold_mail_path();
+        File file = new File(path);
+        File new_file = new File( dir, file.getName() );
+        if (new_file.exists())
+        {
+            File.createTempFile("tmp", get_suffix(path), dir);
+            if (new_file.exists())
+                new_file.delete();
+        }
+
+        file.renameTo(new_file);
+    }
+
+    private void flush_index()
+    {
+        for (int i = 0; i < mandanten_list.size(); i++)
+        {
+            MandantContext ctx = mandanten_list.get(i);
+            ctx.flush_index();
+        }
     }
 }

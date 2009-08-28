@@ -12,6 +12,7 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ZipUtilities;
 import dimm.home.mailarchiv.WorkerParentChild;
 import java.io.File;
@@ -199,7 +200,7 @@ class DirectoryEntry
             }
             catch (IOException ex)
             {
-                Logger.getLogger(DirectoryEntry.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }            
             finally
             {
@@ -211,7 +212,7 @@ class DirectoryEntry
                     }
                     catch (IOException ex)
                     {
-                        Logger.getLogger(DirectoryEntry.class.getName()).log(Level.SEVERE, null, ex);
+                        LogManager.log(Level.SEVERE, null, ex);
                     }
                 }
             }
@@ -415,7 +416,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(HotFolderImport.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
 
         // TODO: QUARANTINE FOR FAILED OBJECTS

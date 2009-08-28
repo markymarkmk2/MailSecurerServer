@@ -12,6 +12,9 @@ import dimm.home.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.MailHeaderVariable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -23,6 +26,8 @@ import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -38,6 +43,7 @@ import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.FSDirectory;
 
@@ -66,12 +72,20 @@ public class IndexManager
     protected Charset utf8_charset = Charset.forName("UTF-8");
     ArrayList<MailHeaderVariable> header_list;
 
-    boolean do_index_body = false;
+    //boolean do_index_body = false;
     boolean do_index_attachments = false;
     boolean do_detect_lang = false;
     
     public static final String FLD_ATTACHMENT = "FLDN_ATTACHMENT";
     public static final String FLD_ATTACHMENT_NAME = "FLDN_ATTNAME";
+    public static final String FLD_BODY = "FLDN_BODY";
+    public static final String FLD_UID_NAME = "FLDN_UID";
+    public static final String FLD_LANG = "FLDN_LANG";
+    public static final String FLD_HEADERVAR_VALUE = "FLDN_HEADERVAR_VALUE";
+    public static final String FLD_HEADERVAR_NAME = "FLDN_HEADERVAR_NAME";
+    public static final String FLD_MA = "FLDN_MA";
+    public static final String FLD_DA = "FLDN_DA";
+    public static final String FLD_DS = "FLDN_DS";
 
     Map<String,String> analyzerMap;
 
@@ -79,10 +93,11 @@ public class IndexManager
     MandantContext m_ctx;
 
     
-    public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list )
+    public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
         m_ctx = _m_ctx;
         header_list = _header_list;
+        do_index_attachments = _do_index_attachments;
 
         extractor = new Extractor( m_ctx);
 
@@ -108,9 +123,25 @@ public class IndexManager
         FSDirectory dir = FSDirectory.getDirectory(path);
 
         Analyzer analyzer = create_analyzer( language, do_index );
+
+        if (IndexWriter.isLocked(dir))
+        {
+            Main.err_log("Unlocking already locked IndexWriter");
+            IndexWriter.unlock(dir);
+        }
+
         IndexWriter writer = new IndexWriter(dir, analyzer, false, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
 
         return writer;
+    }
+    public IndexReader open_read_index( String path ) throws IOException
+    {
+        FSDirectory dir = FSDirectory.getDirectory(path);
+
+
+        IndexReader reader = IndexReader.open(dir, /*rd_only*/ true );
+
+        return reader;
     }
     public IndexWriter create_index( String path, String language  ) throws IOException
     {
@@ -177,19 +208,25 @@ public class IndexManager
         return wrapper;
     }
 
-    public void index_mail_file( RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
+    public void index_mail_file( MandantContext m_ctx, DiskSpaceHandler dsh, RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
     {
-        RFCMimeMail mime_msg = new RFCMimeMail(null);
+        RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
 
-        String unique_id = mail_file.get_unique_id();
+        String unique_id = dsh.get_message_uuid(mail_file);  // MA.DA.DS.TIME
+        
+        doc.add( new Field(FLD_UID_NAME, unique_id,  Field.Store.YES, Field.Index.NOT_ANALYZED) );
+        doc.add( new Field(FLD_MA, Integer.toString( m_ctx.getMandant().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
+        doc.add( new Field(FLD_DA, Integer.toString( dsh.getDs().getDiskArchive().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
+        doc.add( new Field(FLD_DS, Integer.toString( dsh.getDs().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
+
 
         Message msg = mime_msg.getMsg();
         try
         {
             Enumeration mail_header_list = msg.getAllHeaders();
 
-            while (mail_header_list.hasMoreElements())
+/*            while (mail_header_list.hasMoreElements())
             {
                 Object h = mail_header_list.nextElement();
                 if (h instanceof Header)
@@ -197,8 +234,7 @@ public class IndexManager
                     Header ih = (Header) h;
                     System.out.println("N: " + ih.getName() + " V: " + ih.getValue());
                 }
-            }
-
+            }*/
             index_headers(doc, unique_id, msg.getAllHeaders());
 
             Object content = msg.getContent();
@@ -216,12 +252,15 @@ public class IndexManager
         }
         catch (FileNotFoundException fileNotFoundException)
         {
+            LogManager.log(Level.SEVERE, null, fileNotFoundException);
         }
         catch (IOException iox)
         {
+            LogManager.log(Level.SEVERE, null, iox);
         }
         catch (MessagingException messagingException)
         {
+            LogManager.log(Level.SEVERE, null, messagingException);
         }
 
 
@@ -236,6 +275,8 @@ public class IndexManager
             {
                 Header ih = (Header) h;
                 // STORE ALL HEADERS INTO INDEX DB, DO NOT ANALYZE, WE NEED ORIGINAL CONTENT FOR SEARCH
+                doc.add(new Field(FLD_HEADERVAR_NAME, ih.getName(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field(FLD_HEADERVAR_VALUE, ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
                 doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
             }
@@ -262,6 +303,7 @@ public class IndexManager
 
     protected void index_part_content( Document doc, String uid, Part p ) throws MessagingException, IOException
     {
+        // SELECT THE PLAIN PART OF AN ALTERNATIVE MP
         if (p.isMimeType("multipart/alternative"))
         {
             Multipart mp = (Multipart) p.getContent();
@@ -302,7 +344,7 @@ public class IndexManager
     protected void index_content( Document doc, String uid, Part p ) throws MessagingException
     {
         String disposition = p.getDisposition();
-        String mimetype = getNormalizedMimeType(p.getContentType());
+        String mimetype = normalize_mimetype(p.getContentType());
         String filename = p.getFileName();
         Charset charset = Charset.forName("UTF-8");
 
@@ -347,10 +389,7 @@ public class IndexManager
                         Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                         if (textReader != null)
                         {
-                            doc.add(new Field(FLD_ATTACHMENT, textReader));
-                            /* try { textReader.close(); } catch (Exception e) {
-                            logger.debug("failed to close extraction stream()");
-                            }*/
+                            doc.add(new Field(FLD_ATTACHMENT, textReader));                            
                         }
                     }
                 }
@@ -364,25 +403,17 @@ public class IndexManager
                 Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field("body", textReader));
+                    doc.add(new Field(FLD_BODY, textReader));
+                    // WE NEED A NEW READER FOR TEXT DETECTION -> STREAM IS NOT ATOMIC
                     Reader detectReader = extractor.getText(p.getInputStream(), mimetype, charset);
                     String[] languages = ((MimePart) p).getContentLanguage();
-                    addLanguage(languages, doc, detectReader);
-                    //detectReader.close();
-		              /*Reader test = Extractor.getText(getInputStreamFromPart((MimePart)p),mimetype,tempFiles);
-                    BufferedReader b = new BufferedReader(test);
-                    String line = b.readLine();
-                    while (line != null) {
-                    System.out.println("(" + line + ")");
-                    line = b.readLine();
-                    }   */
-
+                    add_lang_field(languages, doc, detectReader);
                 }
             }
         }
         catch (Exception ee)
         {
-//            logger.debug("failed to decode message part content (mimetype unsupported?) {mimetype='" + mimetype + "'}", ee);
+            LogManager.log(Level.SEVERE, "Error in index_content for mime_type <" + mimetype + ">: " , ee );
             return;
         }
 
@@ -396,7 +427,7 @@ public class IndexManager
         }
         catch (IOException io)
         {
-            //           logger.error(io.getMessage(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_tgz_file: " ,io );
         }
     }
 
@@ -418,21 +449,18 @@ public class IndexManager
                 Reader textReader = extractor.getText(gis, extention, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
-                    /*try { textReader.close(); } catch (Exception e) {
-                    logger.debug("failed to close extraction stream()");
-                    }*/
+                    doc.add(new Field(FLD_ATTACHMENT, textReader));                    
                 }
                 if (name != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
                 }
             }
-            //gis.close();
+            gis.close();
         }
         catch (Exception io)
         {
-//            logger.error(io.getMessage(), io);
+            LogManager.log(Level.SEVERE,  "Error in extract_tar_file: " , io );
         }
     }
 
@@ -464,15 +492,12 @@ public class IndexManager
                 Reader textReader = extractor.getText(is, extension, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
-                    /*try { textReader.close(); } catch (Exception e) {
-                    logger.debug("failed to close extraction stream()");
-                    }*/
+                    doc.add(new Field(FLD_ATTACHMENT, textReader));                    
                 }
             }
             catch (Exception io)
             {
-//                logger.error("failed to extract message: " + io.getMessage(), io);
+                LogManager.log(Level.SEVERE,  "Error in extract_octet_stream: " , io );
             }
         }
     }
@@ -504,15 +529,12 @@ public class IndexManager
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));
-                }
-                /*try { textReader.close(); } catch (Exception e) {
-                logger.debug("failed to close extraction stream()");
-                }*/
+                }                
             }
         }
         catch (Exception io)
         {
-            //           logger.error("failed to extract gzipped message: " + io.getMessage(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " , io );
         }
     }
 
@@ -548,41 +570,39 @@ public class IndexManager
                 {
                     doc.add(new Field(FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
                 }
-            }
-            //zis.close();
+            }            
         }
         catch (IOException io)
         {
-//            logger.error(io.getMessage(), io);
+            LogManager.log(Level.SEVERE,  "Error in extract_octet_stream: " , io );
         }
     }
 
-    protected void addLanguage( String[] languages, Document doc, Reader detectReader )
+    protected void add_lang_field( String[] languages, Document doc, Reader detectReader )
     {
         String lang = null;
-        if (do_detect_lang && doc.get("lang") == null)
+        if (do_detect_lang && doc.get(FLD_LANG) == null)
         {
             try
             {
                 if (languages != null && languages.length > 0)
                 {
                     lang = languages[0].trim().toLowerCase(Locale.ENGLISH);
-//                    logger.debug("detected language from the email header. {language='" + lang + "'}");
                 }
             }
             catch (Exception e)
             {
-//                logger.debug("exception occurred while detecting indexing language.", e);
+                LogManager.log(Level.WARNING,  "Error while detecting language: " , e );
                 return;
             }
             if (lang != null)
             {
-                doc.add(new Field("lang", lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field(FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
         }
     }
 
-    protected String getNormalizedMimeType( String mimeType )
+    protected String normalize_mimetype( String mimeType )
     {
         // check this code may be a dodgy
         int index = mimeType.indexOf(";");

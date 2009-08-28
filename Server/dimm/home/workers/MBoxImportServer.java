@@ -10,6 +10,7 @@
 package dimm.home.workers;
 
 import dimm.home.importmail.MBoxImporter;
+import dimm.home.importmail.MultipleMailImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
@@ -29,12 +30,12 @@ class MBoxImporterEntry
     String status;
     int err;
 
-    MBoxImporter mbi;
+    MultipleMailImporter mbi;
     Mandant mandant;
     DiskArchive da;
 
 
-    MBoxImporterEntry( Mandant m, DiskArchive da, MBoxImporter mbi )
+    MBoxImporterEntry( Mandant m, DiskArchive da, MultipleMailImporter mbi )
     {
         this.mbi = mbi;
         this.da = da;
@@ -81,20 +82,10 @@ public class MBoxImportServer extends WorkerParent
     }
 
    
-    public void add_mbox_import(Mandant m, DiskArchive da, String path)
+    public void add_mbox_import(MandantContext m_ctx, DiskArchive da, MultipleMailImporter mbi)
     {
-        try
-        {
-            MBoxImporter mbi = new MBoxImporter(path);
-            MBoxImporterEntry mbie = new MBoxImporterEntry(m, da, mbi);
-
-            import_list.add(mbie);
-        }
-        catch (Exception exception)
-        {
-            this.setStatusTxt("Error opening MBox " + path);
-            this.setGoodState(false);
-        }
+        MBoxImporterEntry mbie = new MBoxImporterEntry(m_ctx.getMandant(), da, mbi);
+        import_list.add(mbie);
     }
 
     @Override
@@ -141,7 +132,7 @@ public class MBoxImportServer extends WorkerParent
 
     void run_import( MBoxImporterEntry mbie )
     {
-        MBoxImporter mbi = mbie.mbi;
+        MultipleMailImporter mbi = mbie.mbi;
 
         try
         {
@@ -154,7 +145,7 @@ public class MBoxImportServer extends WorkerParent
             mbie.size = mbi.get_msg_file().length();
             mbie.total_msg = mbi.get_message_count();
         }
-        catch (ExtractionException extractionException)
+        catch (Exception extractionException)
         {
             mbie.status = "Error while parsing mbox file " + mbi.get_msg_file().getAbsolutePath() + ": " + extractionException.getMessage();
             mbie.err = 2;

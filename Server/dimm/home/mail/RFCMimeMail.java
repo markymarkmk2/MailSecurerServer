@@ -5,16 +5,15 @@
 package dimm.home.mail;
 
 import dimm.home.mailarchiv.Main;
-import java.io.BufferedInputStream;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Enumeration;
+import java.io.InputStream;
+import java.util.logging.Level;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
-import javax.mail.Header;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
@@ -80,9 +79,7 @@ public class RFCMimeMail
     {
         try
         {
-            
-            
-            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(mail_file.getFile()));
+            InputStream bis = mail_file.open_inputstream();
             msg = new MimeMessage(session, bis);
             
             bis.close();
@@ -90,15 +87,16 @@ public class RFCMimeMail
 
         catch (FileNotFoundException fileNotFoundException)
         {
+            LogManager.log(Level.SEVERE, "Parse error in parse MimeMail", fileNotFoundException);
         }
         catch (IOException iox)
         {
+            LogManager.log(Level.SEVERE, "IO error in parse MimeMail", iox);
         }
         catch (MessagingException messagingException)
         {
+            LogManager.log(Level.SEVERE, "Message error in parse MimeMail", messagingException);
         }
-
-
     }
 
     public void send() throws MessagingException

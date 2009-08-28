@@ -28,8 +28,11 @@ public class LicenseChecker
     boolean _create_licensefile;
     String license_interface;
 
-    public LicenseChecker(String intf, boolean crt_lf)
+    String lic_file_name;
+
+    public LicenseChecker(String file_name, String intf, boolean crt_lf)
     {
+        lic_file_name = file_name;
         license_interface = intf;
         _is_licensed = false;
         _create_licensefile = crt_lf;
@@ -40,9 +43,14 @@ public class LicenseChecker
     {
         return _is_licensed;
     }
+    public File get_license_file()
+    {
+        return new File(lic_file_name);
+    }
 
     public boolean check_licensed()
     {
+        _is_licensed = false;
         NetworkInterface ni;
         {
             FileReader fr = null;
@@ -70,16 +78,18 @@ public class LicenseChecker
 
                 if (_create_licensefile)
                 {
-                    File licfile = new File("mailproxy.license");
+                    File licfile = new File(lic_file_name);
                     FileWriter fw = new FileWriter(licfile);
                     fw.write(hexString.toString());
                     fw.close();
                     LogManager.info_msg("License file was created");
+
+                    _is_licensed = true;
                     return true;
                 }
                 else
                 {
-                    File licfile = new File("mailproxy.license");
+                    File licfile = new File(lic_file_name);
                     fr = new FileReader(licfile);
 
                     char[] buff = new char[40];
@@ -91,6 +101,7 @@ public class LicenseChecker
 
                     if (lic_string.equals(hexString.toString()))
                     {
+                        _is_licensed = true;
                         return true;
                     }
 
@@ -99,7 +110,7 @@ public class LicenseChecker
             }
             catch (NoSuchAlgorithmException ex)
             {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }
             catch (FileNotFoundException ex2)
             {

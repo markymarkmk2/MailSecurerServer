@@ -8,6 +8,7 @@
     <property name="hibernate.connection.username">APP</property>
     <property name="hibernate.connection.password"/>
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
+    <property name="hibernate.show_sql">true</property>
     <mapping resource="home/shared/hibernate/Mail.hbm.xml"/>
     <mapping resource="home/shared/hibernate/MailRecipient.hbm.xml"/>
     <mapping resource="home/shared/hibernate/MailRecipientLink.hbm.xml"/>

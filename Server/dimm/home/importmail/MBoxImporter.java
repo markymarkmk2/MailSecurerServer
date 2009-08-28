@@ -25,6 +25,7 @@ import java.util.StringTokenizer;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
 
@@ -32,7 +33,7 @@ import javax.mail.internet.MimeMessage;
  *
  * @author mw
  */
-public class MBoxImporter implements WorkerParentChild
+public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
 {
 
     Long[] message_positions;
@@ -98,11 +99,21 @@ public class MBoxImporter implements WorkerParentChild
         return act_pos + rpos;
     }
 
-    public int get_message_count() throws ExtractionException
+    @Override
+    public int get_message_count()
     {
-        get_message_positions();
-        return message_positions.length;
+        try
+        {
+            get_message_positions();
+            return message_positions.length;
+        }
+        catch (ExtractionException extractionException)
+        {
+            return 0;
+        }
+        
     }
+    @Override
     public File get_msg_file()
     {
         return msg_file;
@@ -205,16 +216,19 @@ public class MBoxImporter implements WorkerParentChild
         return message_positions;
     }
 
+    @Override
     public void open() throws FileNotFoundException
     {
          raf = new RandomAccessFile( msg_file, "r");
     }
+    @Override
     public void close() throws IOException
     {
          raf.close();
     }
 
-    public Message get_message( int idx ) throws Exception
+    @Override
+    public Message get_message( int idx ) throws ExtractionException, IOException, MessagingException
     {
         if (idx >= get_message_count())
             throw new ExtractionException("Invalid Message id " + idx + " during extraction of mbox <" + msg_file.getAbsolutePath() + ">");

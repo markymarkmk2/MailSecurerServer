@@ -7,6 +7,7 @@ package dimm.home.mailarchiv;
 
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -26,6 +27,8 @@ import java.util.logging.Logger;
 public class TempFileHandler
 {
     public static final String IMPMAIL_PREFIX = "mailimp";
+    public static final String QUARANTINE_PREFIX = "quarantine";
+    public static final String HOLD_PREFIX = "hold";
 
     MandantContext ctx;
 
@@ -55,15 +58,15 @@ public class TempFileHandler
 
     public String create_imp_mail_path( String ip, String suffix )
     {
-        String name = ctx.get_tmp_path() + "/" + IMPMAIL_PREFIX + "_" + ip + "_" + System.currentTimeMillis() + "." + suffix;
+        String name = ctx.get_tmp_path() + "/" + IMPMAIL_PREFIX + "." + ip + "." + System.currentTimeMillis() + "." + suffix;
         return name;
     }
 
-    public String get_ip_mail_path( File f, int n )
+    private String get_ip_mail_path( File f, int n ) throws VaultException
     {
         try
         {
-            StringTokenizer sto = new StringTokenizer(f.getName(), "_");
+            StringTokenizer sto = new StringTokenizer(f.getName(), ".");
 
             while (n > 0)
             {
@@ -74,23 +77,24 @@ public class TempFileHandler
         }
         catch (Exception e)
         {
-        }
-        return null;
+            throw new VaultException( "Invalid ip_mail_path: " + f.getName() );
+        }        
     }
-    public String get_ip_from_mail_path( File f )
+    public String get_ip_from_mail_path( File f ) throws VaultException
     {
         return get_ip_mail_path(f, 1);
     }
-    public long get_time_from_mail_path( File f )
+    public long get_time_from_mail_path( File f ) throws VaultException
     {
+        String tm = get_ip_mail_path(f, 2);
         try
         {
-            return Long.parseLong(get_ip_mail_path(f, 2));
+            return Long.parseLong(tm);
         }
         catch (NumberFormatException numberFormatException)
         {
+            throw new VaultException( "Invalid time format in ip_mail_path: " + f.getName() );
         }
-        return 0;
     }
 
     public File create_new_import_file( String name )
@@ -109,6 +113,7 @@ public class TempFileHandler
         }
         return nf;
     }
+    
     public void clean_up()
     {
         for (int i = 0; i < delete_list.size(); i++)
@@ -116,7 +121,8 @@ public class TempFileHandler
             File file = delete_list.get(i);
             try
             {
-                file.delete();
+                if (file.exists())
+                    file.delete();
             }
             catch (Exception e)
             {
@@ -128,21 +134,36 @@ public class TempFileHandler
     {
         File tmp_file = null;
         File directory = null;
+
         directory = ctx.get_tmp_path();
+
+        // WE NEED 3 CHAR PREFIX
+        if (prefix.length() < 3)
+            prefix += "___".substring(prefix.length());
+
+        // WE NEED VALID DOT-LEADING SUFFIX
+        if (suffix == null || suffix.length() == 0)
+            suffix = ".tmp";
+
+        if (suffix.charAt(0) != '.')
+            suffix = "." + suffix;
 
         try
         {
-            if (suffix != null && suffix.length() > 0)
+            if (subdir != null && subdir.length() > 0)
             {
-                directory = new File( directory.getAbsolutePath() + suffix + "/");
-                directory.mkdir();
+                directory = new File( directory.getAbsolutePath() + "/" + subdir );
+                if (!directory.exists())
+                    directory.mkdir();
             }
             tmp_file = File.createTempFile(prefix, suffix, directory);
         }
         catch (IOException ex)
         {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
+
+        // IF THIS FAILS WE TRY TO USE DEFAULT TEMP DIR, THIS IS ACCEPTABLE FOR TMP FILES
         if (tmp_file == null)
         {
             try
@@ -151,9 +172,14 @@ public class TempFileHandler
             }
             catch (IOException ex)
             {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
                 throw new ArchiveMsgException("Cannot create temp file: " + ex.getMessage());
             }
+        }
+
+        if (tmp_file.getParentFile().getFreeSpace() < Main.MIN_FREE_SPACE)
+        {
+            throw new ArchiveMsgException(Main.Txt( "No_disk_space_left_in_temp_dir") + ": " + tmp_file.getParent());
         }
 
         // GET RID OF FILE ON EXIT OF JVM
@@ -165,7 +191,7 @@ public class TempFileHandler
 
     public File writeTemp( String subdir, String prefix, String suffix, InputStream is ) throws IOException, ArchiveMsgException
     {
-        File file = ctx.getTempFileHandler().create_temp_file("Extract", "ex", "tmp");
+        File file = ctx.getTempFileHandler().create_temp_file(subdir, prefix, suffix);
 
         OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
         BufferedInputStream bis = new BufferedInputStream(is);
@@ -176,6 +202,32 @@ public class TempFileHandler
         }
         os.close();
         return file;
+    }
+
+    public File get_quarantine_mail_path( )
+    {
+        File d = new File( ctx.get_tmp_path() , QUARANTINE_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
+    }
+    public File get_hold_mail_path( )
+    {
+        File d = new File( ctx.get_tmp_path() , HOLD_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
+    }
+
+    public File get_import_mail_path( )
+    {
+        File d = new File( ctx.get_tmp_path() , IMPMAIL_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
     }
 
 

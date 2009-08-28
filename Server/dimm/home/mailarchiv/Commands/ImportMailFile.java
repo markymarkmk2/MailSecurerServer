@@ -86,7 +86,7 @@ public class ImportMailFile extends AbstractCommand
 
             // PREFIX IS UploadMailFile.IMPMAIL_PREFIX, SUFFIX DEPENDS ON SOURCE
             // REGISTER AT TASK
-            Main.get_control().get_mb_import_server().add_mbox_import(m, da, path);
+            Main.get_control().register_new_import( m_ctx, da, path );
 
             // YEEHAW, WE'RE DONE
             answer = "0: ok";

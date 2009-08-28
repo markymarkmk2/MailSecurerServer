@@ -1,5 +1,6 @@
 package dimm.home.mailproxy;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -10,7 +11,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class IMAPConnection extends MailConnection
 {
@@ -178,7 +178,7 @@ public class IMAPConnection extends MailConnection
             }
             catch (IOException ex)
             {
-                Logger.getLogger(IMAPConnection.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
                 trace_writer = null;
             }
         }

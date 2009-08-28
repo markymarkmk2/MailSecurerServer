@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.logging.Level;
 
 /**
  *
@@ -114,6 +115,35 @@ public class LogManager
 
         log( "error.log", string );
 
+    }
+
+    public static void log( Level level, String msg, Throwable ex )
+    {
+        String text = "";
+        if ( msg != null)
+            text += msg;
+
+        if (ex != null)
+        {
+            text += ": " + ex.getMessage();
+        }
+        if (level == Level.SEVERE)
+        {
+            ex.printStackTrace();
+            err_log( text );
+        }
+        else if (level == Level.WARNING)
+        {
+            err_log_warn( text );
+        }
+        else if (level == Level.INFO)
+        {
+            info_msg( text );
+        }
+        else if (dbg_level > 0)
+        {
+            debug_msg( text );
+        }
     }
 
 

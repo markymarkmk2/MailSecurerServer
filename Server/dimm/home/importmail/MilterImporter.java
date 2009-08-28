@@ -14,7 +14,6 @@ import com.sendmail.jilter.JilterHandlerAdapter;
 import com.sendmail.jilter.JilterProcessor;
 import home.shared.hibernate.Milter;
 import dimm.home.mail.RFCMailStream;
-import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
@@ -222,7 +221,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         catch (Exception ex)
         {
             // TODO: ARCHIVE FAILED
-            Logger.getLogger(MailImportJilterHandler.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
         return JilterStatus.SMFIS_CONTINUE;
         
@@ -267,8 +266,7 @@ public class MilterImporter implements WorkerParentChild
     }
 
 
-    public MilterImporter( Milter _milter)
-        throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException
+    public MilterImporter( Milter _milter) throws IOException
     {
         milter = _milter;
         adress = new InetSocketAddress(milter.getOutServer(), milter.getOutPort()) ;
@@ -299,6 +297,7 @@ public class MilterImporter implements WorkerParentChild
 
     boolean do_finish;
 
+    @Override
     public void finish()
     {
         do_finish = true;
@@ -311,6 +310,7 @@ public class MilterImporter implements WorkerParentChild
         }
     }
 
+    @Override
     public void run_loop()
     {
         while (!do_finish)
@@ -351,6 +351,7 @@ public class MilterImporter implements WorkerParentChild
             }
         }
     }
+    @Override
     public void idle_check()
     {
         synchronized(active_milter_list)
@@ -377,6 +378,5 @@ public class MilterImporter implements WorkerParentChild
         }
         return r;
     }
-
 }
 

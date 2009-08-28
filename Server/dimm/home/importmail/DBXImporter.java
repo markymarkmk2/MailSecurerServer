@@ -5,20 +5,16 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PushbackInputStream;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
@@ -85,7 +81,7 @@ class dbx_s
  *
  * @author mw
  */
-public class DBXImporter implements WorkerParentChild
+public class DBXImporter implements WorkerParentChild, MultipleMailImporter
 {
 
     public static final int DBX_MASK_INDEX = 0x01;
@@ -130,11 +126,13 @@ public class DBXImporter implements WorkerParentChild
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public File get_msg_file()
     {
         return dbx_file;
     }
 
+    @Override
     public Message get_message( int idx ) throws ExtractionException, MessagingException, IOException
     {
         byte[] buff = dbx_message(dbx, idx);
@@ -150,17 +148,20 @@ public class DBXImporter implements WorkerParentChild
         return msg;
     }
 
-    int get_message_count()
+    @Override
+    public int get_message_count()
     {
         return dbx.message_count;
     }
 
-    void open() throws ExtractionException, FileNotFoundException, IOException
+    @Override
+    public void open() throws ExtractionException, FileNotFoundException, IOException
     {
         dbx = dbx_open();      
     }
 
-    void close()
+    @Override
+    public void close()
     {
         dbx_close( dbx );
     }
@@ -522,7 +523,7 @@ public class DBXImporter implements WorkerParentChild
     {
         String filename = dbx_file.getAbsolutePath();
         
-        dbx_s dbx = new dbx_s();
+        dbx = new dbx_s();
 
         File file = new File(filename);
         if (!file.exists())
@@ -553,7 +554,7 @@ public class DBXImporter implements WorkerParentChild
             }
             catch (IOException ex)
             {
-                Logger.getLogger(DBXImporter.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }
         }
     }

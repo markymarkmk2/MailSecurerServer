@@ -9,6 +9,7 @@
 
 package dimm.home.mailproxy;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -24,7 +25,6 @@ import java.io.FileReader;
 import java.net.NetworkInterface;
 import java.security.MessageDigest;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -129,7 +129,7 @@ public class LogicControl
             }
             catch (NoSuchAlgorithmException ex)
             {
-                Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }            
             catch (FileNotFoundException ex2)
             {

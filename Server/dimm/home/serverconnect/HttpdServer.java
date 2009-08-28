@@ -12,6 +12,7 @@ import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 import com.sun.net.httpserver.spi.HttpServerProvider;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -219,7 +220,7 @@ public class HttpdServer
         }
         catch (Exception ex)
         {
-            Logger.getLogger(HttpdServer.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.log(Level.SEVERE, null, ex);
         }
 
     }
@@ -325,13 +326,6 @@ public class HttpdServer
         SOAPFactory sf = binding.getSOAPFactory();
         javax.xml.ws.spi.Provider pro = javax.xml.ws.spi.Provider.provider();
         //com.sun.xml.internal.ws.spi.ProviderImpl pi = (com.sun.xml.internal.ws.spi.ProviderImpl)pr;
-
-
-
-
-
-        
-
 
     }
 

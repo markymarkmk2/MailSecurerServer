@@ -8,6 +8,7 @@ package dimm.home.importmail;
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -69,10 +70,10 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
 
             catch (IOException ex)
             {
-                Logger.getLogger(ImapEnvelopeFetcher.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }            catch (MessagingException ex)
             {
-                Logger.getLogger(ImapEnvelopeFetcher.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.log(Level.SEVERE, null, ex);
             }
 
         }
