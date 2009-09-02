@@ -34,6 +34,8 @@ public class MandantPreferences extends Preferences
     public static final String TEMPFILEDIR ="TempFileDir";
     public static final String LANG = "Language";
     public static final String INDEX_TASK = "IndexTask";
+    public static final String SERVER_PORT = "ServerPort";
+    public static final String SERVER_IP = "ServerIP";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
 /*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
@@ -52,26 +54,23 @@ public class MandantPreferences extends Preferences
     public MandantPreferences(MandantContext _context)
     {
         this( Main.PREFS_PATH );
+        context = _context;
     }
 
     public MandantPreferences( String _path)
     {
         super(_path);
 
-
-
         context = null;
         
         prop_names.add( DEBUG );
-//        prop_names.add( MAIL_ARCHIVA_URL );
         prop_names.add( TEMPFILEDIR );
         prop_names.add( ENC_PASSWORD );
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
         prop_names.add( INDEX_TASK );
-//        prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );
-        
-                
+        prop_names.add( SERVER_PORT );
+        prop_names.add( SERVER_IP );
     }
     public void setContext( MandantContext _context )
     {

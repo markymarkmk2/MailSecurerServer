@@ -336,7 +336,7 @@ public class DiskSpaceHandler
 
         try
         {
-            String[] arr = uuid.split(".");
+            String[] arr = uuid.split("\\.");
             id =  Integer.parseInt(arr[1]);
         }
         catch (Exception numberFormatException)
@@ -353,7 +353,7 @@ public class DiskSpaceHandler
 
         try
         {
-            String[] arr = uuid.split(".");
+            String[] arr = uuid.split("\\.");
             id =  Integer.parseInt(arr[0]);
         }
         catch (Exception numberFormatException)
@@ -370,7 +370,7 @@ public class DiskSpaceHandler
 
         try
         {
-            String[] arr = uuid.split(".");
+            String[] arr = uuid.split("\\.");
             id =  Integer.parseInt(arr[2]);
         }
         catch (Exception numberFormatException)
@@ -386,7 +386,7 @@ public class DiskSpaceHandler
 
         try
         {
-            String[] arr = uuid.split(".");
+            String[] arr = uuid.split("\\.");
             id =  Long.parseLong(arr[3]);
         }
         catch (Exception numberFormatException)
@@ -485,7 +485,7 @@ public class DiskSpaceHandler
 
         try
         {
-            cap = Long.parseLong(s);
+            cap = Long.parseLong(s.trim());
             cap *= f;
         }
         catch (Exception ex)

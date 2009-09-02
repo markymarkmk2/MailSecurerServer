@@ -708,7 +708,9 @@ public class IndexManager extends WorkerParent
                     int ds_id = DiskSpaceHandler.get_ds_id_from_uuid(uuid);
 
                     DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
-                    DiskSpaceHandler index_dsh = dv.open_dsh(ds_id, /*is_data*/ false, file.length());
+                    DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
+                    index_dsh = dv.open_dsh(index_dsh, 1024*1024);
+                    
                     if (index_dsh != null)
                     {
                         RFCFileMail msg = new RFCFileMail(file);
@@ -730,6 +732,8 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception e)
         {
+            LogManager.err_log("Error while cleaning up index holf buffer", e);
+            e.printStackTrace();
         }
 
         idle_worker = new SwingWorker()

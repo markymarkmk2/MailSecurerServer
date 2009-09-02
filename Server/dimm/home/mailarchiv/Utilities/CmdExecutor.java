@@ -300,6 +300,7 @@ public class CmdExecutor
         }
         catch (Exception e )
         {
+            e.printStackTrace();
             System.out.println(e.toString());
         }
         stdout = null;

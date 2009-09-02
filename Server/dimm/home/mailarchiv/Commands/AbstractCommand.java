@@ -19,8 +19,8 @@ import java.net.Socket;
 public abstract class AbstractCommand
 {
     String token;
-    String answer;
-    Socket sock;
+    protected String answer;
+    protected Socket sock;
     
     
     public static final String MISS_ARGS = "missing args";
@@ -36,7 +36,7 @@ public abstract class AbstractCommand
     
     public String get_answer()  { return answer; }
        
-    String get_opts( String data )
+    public String get_opts( String data )
     {
         return data.substring( token.length() + 1 );  // WG DOPPELPUNKT !!!!!!
     }

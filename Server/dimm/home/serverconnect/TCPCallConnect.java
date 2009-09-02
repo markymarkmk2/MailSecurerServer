@@ -25,6 +25,8 @@ import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.MandantPreferences;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
@@ -76,8 +78,16 @@ public class TCPCallConnect extends WorkerParent
     {
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
-        server_ip = Main.ws_ip;
-        server_port = Integer.parseInt(Main.ws_port);
+        server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
+
+        try
+        {
+            server_port = Integer.parseInt(m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT, Main.ws_port));
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+            LogManager.err_log_fatal("Invalid Port for TCP-Server");
+        }
         tcp_cmd_buff = new byte[TCPCMDBUFF_LEN];
 
         cmd_list = new ArrayList<AbstractCommand>();

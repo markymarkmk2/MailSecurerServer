@@ -79,17 +79,17 @@ public class DiskVault implements Vault, StatusHandler
         return null;
     }
 
-
     
     DiskSpaceHandler get_next_active_data_diskspace(int index)
     {
         return get_next_active_diskspace(index, true);
     }
+
     DiskSpaceHandler get_next_active_index_diskspace(int index )
     {
         return get_next_active_diskspace(index, false);
     }
-
+    
     private DiskSpaceHandler get_next_active_diskspace(int index, boolean is_data )
     {
 
@@ -166,30 +166,11 @@ public class DiskVault implements Vault, StatusHandler
                 throw new ArchiveMsgException("Error while writing to disk" + _ex.getMessage()  );
             }
         }
-
-
         return ret;
     }
 
-    DiskSpaceHandler open_data_dsh( int ds_idx, long free_space) throws VaultException
-    {
-        return open_dsh(ds_idx, true, free_space);
-    }
-    DiskSpaceHandler open_index_dsh( int ds_idx) throws VaultException
-    {
-        // HOW BIG IS INDEX COMPARED TO FILESIZE???? I DO IT SIMPLE, KEEP AT LEAST 1 MB FREE
-        return open_dsh(ds_idx, false, 1024*1024);
-    }
-
-    public DiskSpaceHandler open_dsh( int ds_idx, boolean is_data, long free_space) throws VaultException
-    {
-        DiskSpaceHandler dsh = get_next_active_diskspace( ds_idx, is_data);
-
-        if (dsh == null)
-        {
-            throw new VaultException("No diskspace for " + (is_data ? "data" : "index") + " found" );
-        }
-
+    public DiskSpaceHandler open_dsh( DiskSpaceHandler dsh, long free_space) throws VaultException
+    {      
         try
         {
             if (!dsh.is_open())
@@ -215,12 +196,13 @@ public class DiskVault implements Vault, StatusHandler
             DiskSpaceDAO dao = new DiskSpaceDAO();
             dao.save(ds);
 
-            dsh = get_next_active_diskspace( ds_idx, is_data );
+            DiskSpaceHandler new_dsh = get_next_active_diskspace( 0, dsh.is_data() );
 
-            if (dsh == null)
+            if (new_dsh == null)
             {
-                throw new VaultException("No diskspace for " + (is_data ? "data" : "index") + " found" );
+                throw new VaultException("No diskspace for " + (dsh.is_data() ? "data" : "index") + " found" );
             }
+            dsh = new_dsh;
         }
         return dsh;
     }
@@ -228,11 +210,14 @@ public class DiskVault implements Vault, StatusHandler
 
     boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
-        int ds_idx = 0;
+        int index = 0;
+
+        DiskSpaceHandler data_dsh = get_next_active_data_diskspace( index );
+        DiskSpaceHandler index_dsh = get_next_active_index_diskspace( index );
 
         // GET THE DISKSPACES FOR DATA AND INDEX
-        DiskSpaceHandler data_dsh = open_data_dsh( ds_idx, msg.get_length() );
-        DiskSpaceHandler index_dsh = open_index_dsh( ds_idx );
+        data_dsh = open_dsh( data_dsh, msg.get_length() );
+        index_dsh = open_dsh( index_dsh, 1024*1024 );
 
 
         // AND SHOVE IT RIGHT IN!!!!
