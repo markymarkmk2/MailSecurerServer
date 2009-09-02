@@ -14,6 +14,7 @@ import dimm.home.importmail.MBoxImporter;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
+import dimm.home.index.SearchCall;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
@@ -395,6 +396,9 @@ public class LogicControl
         TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
         worker_list.add(tcp_conn);
         ctx.set_tcp_conn( tcp_conn );
+
+        // ADD COMMANDLISTS
+        tcp_conn.add_command_list( SearchCall.command_list );
 
         // ATTACH INDEXMANAGER
         IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null, /*index_attachments*/ true);

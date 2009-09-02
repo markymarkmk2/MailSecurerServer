@@ -3,6 +3,7 @@ package dimm.home.serverconnect;
 
 
 import com.thoughtworks.xstream.XStream;
+import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
@@ -97,6 +98,15 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new StartVPN() );
         cmd_list.add( new ImportMailFile() );
         cmd_list.add( new UploadMailFile() );
+    }
+    public void add_command_list( ArrayList<AbstractCommand> list )
+    {
+        for (int i = 0; i < list.size(); i++)
+        {
+            AbstractCommand abstractCommand = list.get(i);
+            if (!cmd_list.contains(abstractCommand))
+                cmd_list.add(abstractCommand);
+        }
     }
 
     public ArrayList<AbstractCommand> get_cmd_array()
