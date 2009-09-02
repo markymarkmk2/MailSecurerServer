@@ -66,12 +66,16 @@ public class Preferences
         }
         return false;
     }
+    private void warn_unknown( String p)
+    {
+        Main.err_log_warn(Main.Txt("Unknown_property") + " <" + p + ">");
+    }
 
     public String get_prop( String p )
     {
         if (!check_prop(p))
         {
-            Main.err_log_warn("Unbekannte property <" + p + ">");
+            warn_unknown(p);
             return null;
         }
         String ret = props.getProperty(p);
@@ -81,7 +85,7 @@ public class Preferences
     {
         if (!check_prop(p))
         {
-            Main.err_log_warn("Unbekannte property <" + p + ">");
+            warn_unknown(p);
             return null;
         }
         String ret = props.getProperty(p);
@@ -90,6 +94,36 @@ public class Preferences
         
         return ret;
     }
+
+    public boolean get_boolean_prop( String p, boolean  def )
+    {
+        if (!check_prop(p))
+        {
+            warn_unknown(p);
+            return false;
+        }
+        String ret = props.getProperty(p);
+
+        if (ret == null || ret.length() == 0)
+            return def;
+
+        try
+        {
+            if (ret.charAt(0) == '1' || ret.toLowerCase().charAt(0) == 'j' ||ret.toLowerCase().charAt(0) == 'y' )
+                return true;
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log( Main.Txt("Cannot_read_boolean_property") + ": ", exc);
+        }
+
+        return false;
+    }
+    public boolean get_boolean_prop( String p)
+    {
+        return get_boolean_prop(p, false);
+    }
+
 
     public ArrayList<String> get_prop_list()
     {
@@ -108,7 +142,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            System.out.println("Kann Properties nicht lesen: " + exc.getMessage());
+            LogManager.err_log( Main.Txt("Cannot_read_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
         }
     }
 
@@ -116,7 +150,7 @@ public class Preferences
     {
         if (!check_prop(p))
         {
-            Main.err_log_warn("Unbekannte property <" + p + ">");
+            warn_unknown(p);
         }
         props.setProperty(p, v);
     }
@@ -127,13 +161,13 @@ public class Preferences
         try
         {
             FileOutputStream ostr = new FileOutputStream(prop_file);
-            props.store(ostr, "JMailProxy Properties, please do not edit");
+            props.store(ostr, Main.APPNAME + " Properties, please do not edit");
             ostr.close();
             return true;
         }
         catch (Exception exc)
         {
-            Main.err_log("Kann Properties nicht schreiben: " + exc.getMessage());
+            LogManager.err_log( Main.Txt("Cannot_write_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
         }
         return false;
     }

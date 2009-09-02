@@ -18,7 +18,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -29,6 +28,7 @@ public class TempFileHandler
     public static final String IMPMAIL_PREFIX = "mailimp";
     public static final String QUARANTINE_PREFIX = "quarantine";
     public static final String HOLD_PREFIX = "hold";
+    public static final String INDEX_BUFFER_PREFIX = "indexbuffer";
 
     MandantContext ctx;
 
@@ -215,6 +215,14 @@ public class TempFileHandler
     public File get_hold_mail_path( )
     {
         File d = new File( ctx.get_tmp_path() , HOLD_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
+    }
+    public File get_index_buffer_mail_path( )
+    {
+        File d = new File( ctx.get_tmp_path() , INDEX_BUFFER_PREFIX );
         if (!d.exists())
             d.mkdirs();
 

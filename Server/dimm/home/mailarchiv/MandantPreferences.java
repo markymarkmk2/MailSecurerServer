@@ -33,6 +33,7 @@ public class MandantPreferences extends Preferences
     public static final String DEBUG = "Debug";
     public static final String TEMPFILEDIR ="TempFileDir";
     public static final String LANG = "Language";
+    public static final String INDEX_TASK = "IndexTask";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
 /*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
@@ -67,6 +68,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( ENC_PASSWORD );
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
+        prop_names.add( INDEX_TASK );
 //        prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );
         
                 

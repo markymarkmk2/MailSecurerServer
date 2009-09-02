@@ -11,11 +11,16 @@ import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.vault.DiskSpaceHandler;
+import dimm.home.vault.DiskVault;
 import home.shared.hibernate.MailHeaderVariable;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,10 +29,10 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -63,19 +68,80 @@ class MyMimetype
     }
 }
 
+class IndexJobEntry
+{
+
+    private MandantContext m_ctx;
+    String unique_id;
+    int da_id;
+    int ds_id;
+    private DiskSpaceHandler index_dsh;
+    RFCFileMail msg;
+    boolean delete_after_index;
+
+    public IndexJobEntry( MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index )
+    {
+        this.m_ctx = m_ctx;
+        this.unique_id = unique_id;
+        this.da_id = da_id;
+        this.ds_id = ds_id;
+        this.index_dsh = index_dsh;
+        this.msg = msg;
+        this.delete_after_index = delete_after_index;
+    }
+
+    void handle_index()
+    {
+        Document doc = new Document();
+        IndexManager idx = m_ctx.get_index_manager();
+        try
+        {
+            // WE USE data_dsh BECAUSE WE ADD PARAMS OF IT TO INDEX (DA, DS, MA)
+            idx.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, doc);
+
+            IndexWriter writer = index_dsh.get_write_index();
+            writer.addDocument(doc);
+
+            // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
+            List field_list = doc.getFields();
+            for (int i = 0; i < field_list.size(); i++)
+            {
+                if (field_list.get(i) instanceof Field)
+                {
+                    Field field = (Field) field_list.get(i);
+                    Reader rdr = field.readerValue();
+                    if (rdr != null)
+                    {
+                        rdr.close();
+                    }
+                }
+            }
+
+            if (delete_after_index)
+            {
+                msg.delete_msg();
+            }
+        }
+        catch (Exception ex)
+        {
+            LogManager.log(Level.SEVERE, "Error occured while indexing message: ", ex);
+        }
+    }
+}
+
 /**
  *
  * @author mw
  */
-public class IndexManager
+public class IndexManager extends WorkerParent
 {
+
     protected Charset utf8_charset = Charset.forName("UTF-8");
     ArrayList<MailHeaderVariable> header_list;
-
+    final ArrayList<IndexJobEntry> index_job_list;
     //boolean do_index_body = false;
     boolean do_index_attachments = false;
     boolean do_detect_lang = false;
-    
     public static final String FLD_ATTACHMENT = "FLDN_ATTACHMENT";
     public static final String FLD_ATTACHMENT_NAME = "FLDN_ATTNAME";
     public static final String FLD_BODY = "FLDN_BODY";
@@ -86,43 +152,44 @@ public class IndexManager
     public static final String FLD_MA = "FLDN_MA";
     public static final String FLD_DA = "FLDN_DA";
     public static final String FLD_DS = "FLDN_DS";
-
-    Map<String,String> analyzerMap;
-
+    public static final String FLD_TM = "FLDN_TM";
+    Map<String, String> analyzerMap;
     Extractor extractor;
     MandantContext m_ctx;
+    private SwingWorker idle_worker;
 
-    
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
+        super("Indexmanager");
         m_ctx = _m_ctx;
         header_list = _header_list;
         do_index_attachments = _do_index_attachments;
 
-        extractor = new Extractor( m_ctx);
+        extractor = new Extractor(m_ctx);
 
-        analyzerMap = new LinkedHashMap<String,String>();
-        analyzerMap.put("en","org.apache.lucene.analysis.StandardAnanlyzer");
-        analyzerMap.put("pt","org.apache.lucene.analysis.br.BrazilianAnalyzer");
-        analyzerMap.put("zh","org.apache.lucene.analysis.cn.ChineseAnalyzer");
-        analyzerMap.put("cs","org.apache.lucene.analysis.cz.CzechAnalyzer");
-        analyzerMap.put("de","org.apache.lucene.analysis.de.GermanAnalyzer");
-        analyzerMap.put("el","org.apache.lucene.analysis.el.GreekAnalyzer");
-        analyzerMap.put("fr","org.apache.lucene.analysis.fr.FrenchAnalyzer");
-        analyzerMap.put("nl","org.apache.lucene.analysis.nl.DutchAnalyzer");
-        analyzerMap.put("ru","org.apache.lucene.analysis.ru.RussianAnalyzer");
-        analyzerMap.put("ja","org.apache.lucene.analysis.cjk.CJKAnalyzer");
-        analyzerMap.put("ko","org.apache.lucene.analysis.cjk.CJKAnalyzer");
-        analyzerMap.put("th","org.apache.lucene.analysis.th.ThaiAnalyzer");
-        analyzerMap.put("tr","org.apache.lucene.analysis.tr.TurkishAnalyzer");
+        analyzerMap = new LinkedHashMap<String, String>();
+        analyzerMap.put("en", "org.apache.lucene.analysis.StandardAnanlyzer");
+        analyzerMap.put("pt", "org.apache.lucene.analysis.br.BrazilianAnalyzer");
+        analyzerMap.put("zh", "org.apache.lucene.analysis.cn.ChineseAnalyzer");
+        analyzerMap.put("cs", "org.apache.lucene.analysis.cz.CzechAnalyzer");
+        analyzerMap.put("de", "org.apache.lucene.analysis.de.GermanAnalyzer");
+        analyzerMap.put("el", "org.apache.lucene.analysis.el.GreekAnalyzer");
+        analyzerMap.put("fr", "org.apache.lucene.analysis.fr.FrenchAnalyzer");
+        analyzerMap.put("nl", "org.apache.lucene.analysis.nl.DutchAnalyzer");
+        analyzerMap.put("ru", "org.apache.lucene.analysis.ru.RussianAnalyzer");
+        analyzerMap.put("ja", "org.apache.lucene.analysis.cjk.CJKAnalyzer");
+        analyzerMap.put("ko", "org.apache.lucene.analysis.cjk.CJKAnalyzer");
+        analyzerMap.put("th", "org.apache.lucene.analysis.th.ThaiAnalyzer");
+        analyzerMap.put("tr", "org.apache.lucene.analysis.tr.TurkishAnalyzer");
+
+        index_job_list = new ArrayList<IndexJobEntry>();
     }
 
-   
     public IndexWriter open_index( String path, String language, boolean do_index ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
-        Analyzer analyzer = create_analyzer( language, do_index );
+        Analyzer analyzer = create_analyzer(language, do_index);
 
         if (IndexWriter.isLocked(dir))
         {
@@ -134,31 +201,32 @@ public class IndexManager
 
         return writer;
     }
+
     public IndexReader open_read_index( String path ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
 
-        IndexReader reader = IndexReader.open(dir, /*rd_only*/ true );
+        IndexReader reader = IndexReader.open(dir, /*rd_only*/ true);
 
         return reader;
     }
-    public IndexWriter create_index( String path, String language  ) throws IOException
+
+    public IndexWriter create_index( String path, String language ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
-        Analyzer analyzer = create_analyzer( language, true );
+        Analyzer analyzer = create_analyzer(language, true);
         IndexWriter writer = new IndexWriter(dir, analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
         return writer;
     }
-    public void close_index(IndexWriter writer ) throws IOException
+
+    public void close_index( IndexWriter writer ) throws IOException
     {
         writer.commit();
         writer.close();
     }
 
-
-  
     protected Analyzer create_analyzer( String language, boolean do_index )
     {
         Analyzer analyzer = null;
@@ -166,7 +234,7 @@ public class IndexManager
         {
             language = "en";
         }
-        
+
         String className = null;
 
         try
@@ -176,7 +244,9 @@ public class IndexManager
                 className = (String) analyzerMap.get(language);
             }
             if (className == null)
+            {
                 className = (String) analyzerMap.get("en");
+            }
 
             Class analyzerClass = Class.forName(className);
             analyzer = (Analyzer) analyzerClass.newInstance();
@@ -208,17 +278,19 @@ public class IndexManager
         return wrapper;
     }
 
-    public void index_mail_file( MandantContext m_ctx, DiskSpaceHandler dsh, RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
+    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
     {
         RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
 
-        String unique_id = dsh.get_message_uuid(mail_file);  // MA.DA.DS.TIME
-        
-        doc.add( new Field(FLD_UID_NAME, unique_id,  Field.Store.YES, Field.Index.NOT_ANALYZED) );
-        doc.add( new Field(FLD_MA, Integer.toString( m_ctx.getMandant().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
-        doc.add( new Field(FLD_DA, Integer.toString( dsh.getDs().getDiskArchive().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
-        doc.add( new Field(FLD_DS, Integer.toString( dsh.getDs().getId() ),  Field.Store.YES, Field.Index.NOT_ANALYZED) );
+
+        doc.add(new Field(FLD_UID_NAME, unique_id, Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(FLD_MA, Integer.toString(m_ctx.getMandant().getId()), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(FLD_DA, Integer.toString(da_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(FLD_DS, Integer.toString(ds_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
+
+        // TIME AS HEX
+        doc.add(new Field(FLD_TM, Long.toString(mail_file.getDate().getTime(), 16), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
 
         Message msg = mime_msg.getMsg();
@@ -226,14 +298,14 @@ public class IndexManager
         {
             Enumeration mail_header_list = msg.getAllHeaders();
 
-/*            while (mail_header_list.hasMoreElements())
+            /*            while (mail_header_list.hasMoreElements())
             {
-                Object h = mail_header_list.nextElement();
-                if (h instanceof Header)
-                {
-                    Header ih = (Header) h;
-                    System.out.println("N: " + ih.getName() + " V: " + ih.getValue());
-                }
+            Object h = mail_header_list.nextElement();
+            if (h instanceof Header)
+            {
+            Header ih = (Header) h;
+            System.out.println("N: " + ih.getName() + " V: " + ih.getValue());
+            }
             }*/
             index_headers(doc, unique_id, msg.getAllHeaders());
 
@@ -389,7 +461,7 @@ public class IndexManager
                         Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                         if (textReader != null)
                         {
-                            doc.add(new Field(FLD_ATTACHMENT, textReader));                            
+                            doc.add(new Field(FLD_ATTACHMENT, textReader));
                         }
                     }
                 }
@@ -413,7 +485,7 @@ public class IndexManager
         }
         catch (Exception ee)
         {
-            LogManager.log(Level.SEVERE, "Error in index_content for mime_type <" + mimetype + ">: " , ee );
+            LogManager.log(Level.SEVERE, "Error in index_content for mime_type <" + mimetype + ">: ", ee);
             return;
         }
 
@@ -427,7 +499,7 @@ public class IndexManager
         }
         catch (IOException io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tgz_file: " ,io );
+            LogManager.log(Level.SEVERE, "Error in extract_tgz_file: ", io);
         }
     }
 
@@ -449,7 +521,7 @@ public class IndexManager
                 Reader textReader = extractor.getText(gis, extention, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));                    
+                    doc.add(new Field(FLD_ATTACHMENT, textReader));
                 }
                 if (name != null)
                 {
@@ -460,7 +532,7 @@ public class IndexManager
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE,  "Error in extract_tar_file: " , io );
+            LogManager.log(Level.SEVERE, "Error in extract_tar_file: ", io);
         }
     }
 
@@ -492,12 +564,12 @@ public class IndexManager
                 Reader textReader = extractor.getText(is, extension, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));                    
+                    doc.add(new Field(FLD_ATTACHMENT, textReader));
                 }
             }
             catch (Exception io)
             {
-                LogManager.log(Level.SEVERE,  "Error in extract_octet_stream: " , io );
+                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
             }
         }
     }
@@ -529,12 +601,12 @@ public class IndexManager
                 if (textReader != null)
                 {
                     doc.add(new Field(FLD_ATTACHMENT, textReader));
-                }                
+                }
             }
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " , io );
+            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
         }
     }
 
@@ -570,11 +642,11 @@ public class IndexManager
                 {
                     doc.add(new Field(FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
                 }
-            }            
+            }
         }
         catch (IOException io)
         {
-            LogManager.log(Level.SEVERE,  "Error in extract_octet_stream: " , io );
+            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
         }
     }
 
@@ -592,7 +664,7 @@ public class IndexManager
             }
             catch (Exception e)
             {
-                LogManager.log(Level.WARNING,  "Error while detecting language: " , e );
+                LogManager.log(Level.WARNING, "Error while detecting language: ", e);
                 return;
             }
             if (lang != null)
@@ -614,4 +686,164 @@ public class IndexManager
         mimeType.trim();
         return mimeType;
     }
+
+    @Override
+    public boolean start_run_loop()
+    {
+        Main.debug_msg(1, "Starting Indexmanager");
+
+
+        try
+        {
+            File index_file_dir = m_ctx.getTempFileHandler().get_index_buffer_mail_path();
+            if (index_file_dir.exists() && index_file_dir.listFiles().length > 0)
+            {
+                File[] flist = index_file_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String uuid = file.getName();
+                    int da_id = DiskSpaceHandler.get_da_id_from_uuid(uuid);
+                    int ds_id = DiskSpaceHandler.get_ds_id_from_uuid(uuid);
+
+                    DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+                    DiskSpaceHandler index_dsh = dv.open_dsh(ds_id, /*is_data*/ false, file.length());
+                    if (index_dsh != null)
+                    {
+                        RFCFileMail msg = new RFCFileMail(file);
+
+                        // NO, DO RIGHT HERE
+                        handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
+                    }
+
+
+
+                    if (da_id == -1)
+                    {
+                    }
+
+
+                }
+
+            }
+        }
+        catch (Exception e)
+        {
+        }
+
+        idle_worker = new SwingWorker()
+        {
+
+            @Override
+            public Object construct()
+            {
+                do_idle();
+
+                return null;
+            }
+        };
+
+        idle_worker.start();
+
+        this.setStatusTxt("Running");
+        this.setGoodState(true);
+        return true;
+    }
+
+    void work_index_jobs()
+    {
+        while (true)
+        {
+            IndexJobEntry ije = null;
+            synchronized (index_job_list)
+            {
+                if (index_job_list.size() > 0)
+                {
+                    ije = index_job_list.get(0);
+                }
+            }
+
+            if (ije == null)
+            {
+                break;
+            }
+
+            // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
+            ije.handle_index();
+
+            // READY WITH THIS ONE, GET RID OF IT
+            synchronized (index_job_list)
+            {
+                index_job_list.remove(ije);
+            }
+        }
+    }
+
+    void do_idle()
+    {
+        long last_index_flush = 0;
+
+        while (!this.isShutdown())
+        {
+            LogicControl.sleep(1000);
+            long now = System.currentTimeMillis();
+
+            work_index_jobs();
+
+            // ALLE MINUTE INDEX FLUSHEN SETZEN
+            if ((now - last_index_flush) > 60 * 1000)
+            {
+                m_ctx.flush_index();
+                last_index_flush = now;
+            }
+
+        }
+    }
+
+    public String get_status_txt()
+    {
+        StringBuffer stb = new StringBuffer();
+
+        return stb.toString();
+    }
+
+    @Override
+    public boolean check_requirements( StringBuffer sb )
+    {
+        return true;
+    }
+
+    @Override
+    public boolean initialize()
+    {
+        return true;
+    }
+
+    public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index ) throws IndexException
+    {
+        IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+
+        File index_path = m_ctx.getTempFileHandler().get_index_buffer_mail_path();
+
+
+        File index_msg = new File(index_path, uuid);
+        if (index_msg.exists())
+        {
+            throw new IndexException("Index file exists already: " + index_msg.getAbsolutePath());
+        }
+        msg.rename_to(index_msg);
+
+        synchronized (index_job_list)
+        {
+            index_job_list.add(ije);
+        }
+    }
+
+    public void handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index )
+    {
+        IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+        ije.handle_index();
+    }
 }
+

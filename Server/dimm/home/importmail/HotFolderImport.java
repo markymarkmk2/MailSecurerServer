@@ -4,6 +4,7 @@
  */
 package dimm.home.importmail;
 
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.HotfolderExclude;
 import dimm.home.mail.RFCMimeMail;
@@ -23,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.MessagingException;
 
 class HFFilenameFilter implements FilenameFilter
@@ -364,7 +364,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         }
     }
 
-    private void handle_hotfolder_entry( DirectoryEntry entry ) throws ArchiveMsgException, VaultException
+    private void handle_hotfolder_entry( DirectoryEntry entry ) throws ArchiveMsgException, VaultException, IndexException
     {
         File arch_file = entry.getFile();
         File zipfile = null;
@@ -402,7 +402,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         }
     }
 
-    private boolean handle_hotfolder_file( File arch_file ) throws ArchiveMsgException, VaultException
+    private boolean handle_hotfolder_file( File arch_file ) throws ArchiveMsgException, VaultException, IndexException
     {
         try
         {

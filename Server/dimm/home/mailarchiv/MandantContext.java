@@ -27,6 +27,9 @@ public class MandantContext
     private TempFileHandler tempFileHandler;
     private TCPCallConnect tcp_conn;
     private IndexManager index_manager;
+    
+    
+    
 
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
@@ -62,6 +65,23 @@ public class MandantContext
         }
         return null;
     }
+    public DiskVault get_vault_by_da_id( long id )
+    {
+        getVaultArray().iterator();
+
+        for (int i = 0; i < vaultArray.size(); i++)
+        {
+            Vault vault = vaultArray.get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault)vault;
+                if (dv.get_da().getId() == id)
+                    return dv;
+            }
+        }
+        return null;
+    }
+    
     public void build_vault_list()
     {
         Iterator <DiskArchive> it = getMandant().getDiskArchives().iterator();
@@ -114,13 +134,15 @@ public class MandantContext
     void set_index_manager( IndexManager idx_util )
     {
         index_manager = idx_util;
+        
+    
     }
     public IndexManager get_index_manager()
     {
         return index_manager;
     }
 
-    void flush_index()
+    public void flush_index()
     {
         for (int i = 0; i < vaultArray.size(); i++)
         {

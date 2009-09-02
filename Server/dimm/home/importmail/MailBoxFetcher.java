@@ -6,6 +6,7 @@ package dimm.home.importmail;
 
 import com.sun.mail.imap.IMAPFolder;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.util.*;
 
@@ -453,7 +454,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
         return s;
     }
-    protected void archive_message( Message message ) throws ArchiveMsgException, VaultException
+    protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
          status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
 

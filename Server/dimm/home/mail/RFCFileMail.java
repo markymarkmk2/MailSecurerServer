@@ -5,6 +5,8 @@
 
 package dimm.home.mail;
 
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -95,6 +97,31 @@ public class RFCFileMail
     public String get_unique_id()
     {
         return sdf.format(date);
+    }
+
+    public void delete_msg()
+    {
+        try
+        {
+            msg.delete();
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log("Cannot delete mail after index: ", exc);
+        }
+    }
+
+    public void rename_to( File index_msg ) throws IndexException
+    {
+        try
+        {
+            msg.renameTo(index_msg);
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log("Cannot rename mail for index: ", exc);
+            throw new IndexException("Cannot rename mail for index: " + exc.getMessage());
+        }
     }
 
 

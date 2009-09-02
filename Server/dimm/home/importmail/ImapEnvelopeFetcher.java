@@ -5,6 +5,7 @@
 
 package dimm.home.importmail;
 
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
@@ -13,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -33,7 +33,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
     }
 
     @Override
-    protected void archive_message( Message message ) throws ArchiveMsgException, VaultException
+    protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
         if ( message instanceof MimeMessage)
         {

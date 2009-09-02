@@ -12,4 +12,10 @@ package dimm.home.mailarchiv.Exceptions;
 public class IndexException extends Exception
 {
 
+    public IndexException(String txt)
+    {
+        super(txt);
+    }
+
+
 }

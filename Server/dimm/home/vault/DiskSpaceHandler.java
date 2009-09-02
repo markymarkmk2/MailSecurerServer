@@ -38,14 +38,6 @@ import org.apache.lucene.index.IndexWriter;
 
 public class DiskSpaceHandler
 {
-    public static final int DS_FULL = 0x0001;
-    public static final int DS_ERROR = 0x0002;
-    public static final int DS_OFFLINE = 0x0004;
-
-
-    public static final int DS_MODE_MASK  = 0x00f0;
-    public static final int DS_MODE_DATA  = 0x0010;
-    public static final int DS_MODE_INDEX = 0x0020;
 
     DiskSpace ds;
     DiskSpaceInfo dsi;
@@ -76,7 +68,7 @@ public class DiskSpaceHandler
     }
     public void commit_index()
     {
-        if (test_flag( ds, DS_MODE_INDEX))
+        if (is_index())
         {
             try
             {
@@ -99,6 +91,43 @@ public class DiskSpaceHandler
         return ((f & flag) == flag);
     }
 
+    public IndexReader open_read_index() throws VaultException
+    {
+        if (!is_open())
+        {
+            open();
+        }
+        try
+        {
+            if (is_index())
+            {
+                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
+                return read_index;
+            }
+            else
+                throw new VaultException( ds, "Cannot open read index on non-index ds: " + ds.getPath());
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot open read index: " + iex);
+        }
+    }
+    public void close_read_index() throws VaultException
+    {
+        try
+        {
+            if (is_index())
+            {
+                read_index.close();
+            }
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot close read index: " + iex);
+        }
+    }
+
+
     public void open() throws VaultException
     {
         if (is_open())
@@ -109,10 +138,9 @@ public class DiskSpaceHandler
         read_info();
         try
         {
-            if (test_flag( ds, DS_MODE_INDEX))
+            if (is_index())
             {
                 write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
-                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
             }
         }
         catch (IOException iex)
@@ -149,17 +177,11 @@ public class DiskSpaceHandler
 
         try
         {
-            if (test_flag( ds, DS_MODE_INDEX))
+            if (is_index())
             {
-
                 write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
                 write_index.commit();
-
-
-                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
-
                 write_index.close();
-                read_index.close();
             }
         }
         catch (IOException iex)
@@ -202,6 +224,14 @@ public class DiskSpaceHandler
     }
 
 
+    public boolean is_data()
+    {
+        return test_flag( ds, CS_Constants.DS_MODE_DATA);
+    }
+    public boolean is_index()
+    {
+        return test_flag( ds, CS_Constants.DS_MODE_INDEX);
+    }
     
     private void read_info() throws VaultException
     {
@@ -224,9 +254,8 @@ public class DiskSpaceHandler
         update_info();
         try
         {
-            if (test_flag( ds, DS_MODE_INDEX))
+            if (is_index())
             {
-                read_index.close();
                 write_index.commit();
                 write_index.close();
             }
@@ -427,6 +456,7 @@ public class DiskSpaceHandler
     {
         long cap = 0;
         long f = 1;
+        s = s.trim();
 
         int idx = s.toUpperCase().indexOf("K");
         if (idx > 0)
@@ -441,6 +471,12 @@ public class DiskSpaceHandler
             f = 1024*1024;
         }
         idx = s.toUpperCase().indexOf("G");
+        if (idx > 0)
+        {
+            s = s.substring(0, idx);
+            f = 1024*1024*1024;
+        }
+        idx = s.toUpperCase().indexOf("T");
         if (idx > 0)
         {
             s = s.substring(0, idx);
@@ -464,7 +500,7 @@ public class DiskSpaceHandler
         String dim = "";
         if (size > 1024)
         {
-            dim = "k";
+            dim = "K";
             size /= 1024;
         }
         if (size > 1024)
@@ -626,7 +662,10 @@ public class DiskSpaceHandler
 
     void flush()
     {
-        if (test_flag( ds, DS_MODE_INDEX))
+        if (!is_open())
+            return;
+        
+        if (is_index())
         {
             try
             {
@@ -641,7 +680,7 @@ public class DiskSpaceHandler
                 LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " cannot be accessed: ", ex);
             }
         }
-        if (test_flag( ds, DS_MODE_INDEX))
+        if (is_data())
         {
             try
             {

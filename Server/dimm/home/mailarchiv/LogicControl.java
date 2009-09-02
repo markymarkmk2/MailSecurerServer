@@ -11,6 +11,7 @@ package dimm.home.mailarchiv;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.importmail.DBXImporter;
 import dimm.home.importmail.MBoxImporter;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
@@ -172,7 +173,7 @@ public class LogicControl
         return lic_checker.check_licensed();
     }
 
-    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         // TODO: background
         if (mail == null)
@@ -211,7 +212,7 @@ public class LogicControl
         }
     }
 
-    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         if (background)
         {
@@ -237,7 +238,7 @@ public class LogicControl
    
     }
 
-    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         if (true/*background*/)
         {
@@ -250,17 +251,17 @@ public class LogicControl
     }*/
     }
 
-    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
 
-    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
 
-    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         try
         {
@@ -278,7 +279,7 @@ public class LogicControl
         }
     }
 
-    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException
+    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         add_new_mail(mail.getInputStream(), mandant, da, background);
     }
@@ -399,6 +400,9 @@ public class LogicControl
         IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null, /*index_attachments*/ true);
         ctx.set_index_manager( idx_util );
 
+        idx_util.initialize();
+        worker_list.add(idx_util);
+
 
         // BUILD VAULT LIST FROM DISKARRAYS
         ctx.build_vault_list();
@@ -444,8 +448,6 @@ public class LogicControl
         {
              mb_fetcher_server.add_fetcher(if_it.next());
         }
-
-
     }
 
     void initialize()
@@ -607,11 +609,11 @@ public class LogicControl
         return ok;
     }
 
+
     // MAIN WORK LOOP
     void run()
     {
         long last_date_set = 0;
-        long last_index_flush = 0;
         long last_ping = 0;
         boolean last_start_written = false;
         long started = System.currentTimeMillis();
@@ -649,12 +651,6 @@ public class LogicControl
                     last_date_set = now;
                 }
 
-                // ALLE MINUTE INDEX FLUSHEN SETZEN
-                if ((now - last_index_flush) > 60 * 1000)
-                {
-                    flush_index();
-                    last_index_flush = now;
-                }
 
 
                 // ALLE 10 SEKUNDEN INET PINGENSETZEN
@@ -738,7 +734,6 @@ public class LogicControl
             {
                 return worker_list.get(i);
             }
-
         }
         return null;
     }
@@ -889,7 +884,7 @@ public class LogicControl
                     LogManager.log(Level.SEVERE, null, ex);
                     try
                     {
-                        move_mail_to_quarantine(m_ctx, da, path);
+                        move_mail_to_quarantine(m_ctx, path);
                     }
                     catch (IOException ex1)
                     {
@@ -902,7 +897,7 @@ public class LogicControl
                     LogManager.log(Level.SEVERE, null, ex);
                     try
                     {
-                        move_mail_to_hold_buffer(m_ctx, da, path);
+                        move_mail_to_hold_buffer(m_ctx, path);
                     }
                     catch (IOException ex1)
                     {
@@ -910,10 +905,12 @@ public class LogicControl
                         LogManager.log(Level.SEVERE, null, ex1);
                     }
                 }
+                catch (IndexException ex)
+                {
+                    LogManager.log(Level.SEVERE, "Index generation failed", ex);
+                }
             }
         }
-
-
     }
 
    /**
@@ -931,6 +928,7 @@ public class LogicControl
         String path = "z:\\Mailtest\\test2.eml";
         instance.register_new_import(m_ctx, da, path);
     }
+    
     public String get_suffix( String p )
     {
         int idx = p.lastIndexOf('.');
@@ -939,43 +937,35 @@ public class LogicControl
 
         return p;
     }
-
-    private synchronized void move_mail_to_quarantine( MandantContext m_ctx, DiskArchive da, String path ) throws IOException
+    
+    private synchronized void move_mail_to_dir( String path, File dir ) throws IOException
     {
-        File dir = m_ctx.getTempFileHandler().get_quarantine_mail_path();
         File file = new File(path);
         File new_file = new File( dir, file.getName() );
-        if (new_file.exists())
+        while (new_file.exists())
         {
-            File.createTempFile("tmp", get_suffix(path), dir);
-            if (new_file.exists())
-                new_file.delete();
+            String tmp_name = file.getName();
+            int idx = tmp_name.lastIndexOf('.');
+            if (idx > 0)
+            {
+                tmp_name = tmp_name.substring(0, idx) + "_" + System.currentTimeMillis() + file.getName().substring(idx);
+            }
+            new_file = new File( dir, tmp_name );
         }
-        
-        file.renameTo(new_file);        
-    }
-
-    private void move_mail_to_hold_buffer( MandantContext m_ctx, DiskArchive da, String path ) throws IOException
-    {
-        File dir = m_ctx.getTempFileHandler().get_hold_mail_path();
-        File file = new File(path);
-        File new_file = new File( dir, file.getName() );
-        if (new_file.exists())
-        {
-            File.createTempFile("tmp", get_suffix(path), dir);
-            if (new_file.exists())
-                new_file.delete();
-        }
-
         file.renameTo(new_file);
     }
 
-    private void flush_index()
+    private void move_mail_to_quarantine( MandantContext m_ctx, String path ) throws IOException
     {
-        for (int i = 0; i < mandanten_list.size(); i++)
-        {
-            MandantContext ctx = mandanten_list.get(i);
-            ctx.flush_index();
-        }
+        move_mail_to_dir( path, m_ctx.getTempFileHandler().get_quarantine_mail_path());
+    }
+
+    public void move_mail_to_hold_buffer( MandantContext m_ctx, String path ) throws IOException
+    {
+        move_mail_to_dir( path, m_ctx.getTempFileHandler().get_hold_mail_path());
+    }
+    public void move_mail_to_index_buffer( MandantContext m_ctx, String path ) throws IOException
+    {
+        move_mail_to_dir( path, m_ctx.getTempFileHandler().get_index_buffer_mail_path());
     }
 }
