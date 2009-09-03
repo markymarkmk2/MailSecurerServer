@@ -3,7 +3,6 @@ package dimm.home.serverconnect;
 
 
 import com.thoughtworks.xstream.XStream;
-import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
@@ -58,11 +57,12 @@ public class TCPCallConnect extends WorkerParent
 {
     ArrayList<AbstractCommand> cmd_list;
 
-    static ArrayList<ConnEntry> conn_list = new ArrayList<ConnEntry>();
-    static ArrayList<StatementEntry> sta_list = new ArrayList<StatementEntry>();
-    static ArrayList<ResultEntry> rs_list = new ArrayList<ResultEntry>();
-    static ArrayList<InputStreamEntry> istream_list = new ArrayList<InputStreamEntry>();
-    static ArrayList<OutputStreamEntry> ostream_list = new ArrayList<OutputStreamEntry>();
+    final ArrayList<ConnEntry> conn_list = new ArrayList<ConnEntry>();
+    final ArrayList<StatementEntry> sta_list = new ArrayList<StatementEntry>();
+    final ArrayList<ResultEntry> rs_list = new ArrayList<ResultEntry>();
+    final ArrayList<InputStreamEntry> istream_list = new ArrayList<InputStreamEntry>();
+    final ArrayList<OutputStreamEntry> ostream_list = new ArrayList<OutputStreamEntry>();
+
     // 10 Agents parallel
     private static final int backlog = 10;
     private static final int TCPCMDBUFF_LEN = 80;
@@ -126,6 +126,8 @@ public class TCPCallConnect extends WorkerParent
 
     ConnEntry get_conn( int id )
     {
+        synchronized( conn_list )
+        {
         for (int i = 0; i < conn_list.size(); i++)
         {
             ConnEntry connEntry = conn_list.get(i);
@@ -135,10 +137,12 @@ public class TCPCallConnect extends WorkerParent
             }
         }
         return null;
-    }
+        }    }
 
     StatementEntry get_sta( int id )
     {
+        synchronized( sta_list )
+        {
         for (int i = 0; i < sta_list.size(); i++)
         {
             StatementEntry staEntry = sta_list.get(i);
@@ -148,10 +152,12 @@ public class TCPCallConnect extends WorkerParent
             }
         }
         return null;
-    }
+    }}
 
     ResultEntry get_rs( int id )
     {
+        synchronized( rs_list )
+        {
         for (int i = 0; i < rs_list.size(); i++)
         {
             ResultEntry rsEntry = rs_list.get(i);
@@ -161,10 +167,12 @@ public class TCPCallConnect extends WorkerParent
             }
         }
         return null;
-    }
+    }}
 
     public InputStreamEntry get_istream( int id )
     {
+        synchronized( istream_list )
+        {
         for (int i = 0; i < istream_list.size(); i++)
         {
             InputStreamEntry rsEntry = istream_list.get(i);
@@ -173,11 +181,14 @@ public class TCPCallConnect extends WorkerParent
                 return rsEntry;
             }
         }
+        }
         return null;
     }
 
     public OutputStreamEntry get_ostream( int id )
     {
+        synchronized( ostream_list )
+        {
         for (int i = 0; i < ostream_list.size(); i++)
         {
             OutputStreamEntry rsEntry = ostream_list.get(i);
@@ -186,8 +197,57 @@ public class TCPCallConnect extends WorkerParent
                 return rsEntry;
             }
         }
+        }
         return null;
     }
+    String new_conn_entry( Connection c )
+    {
+        synchronized( conn_list )
+        {
+            int id = conn_list.size();
+            conn_list.add(new ConnEntry( c, id));
+            return "c" + id;
+        }
+    }
+
+    String new_statement_entry( ConnEntry conn, Statement s )
+    {
+        synchronized( ostream_list )
+        {
+            int id = sta_list.size();
+            sta_list.add(new StatementEntry(conn, s, id));
+            return "s" + id;
+        }
+    }
+    String new_result_entry( ConnEntry conn,  ResultSet rs )
+    {
+        synchronized( rs_list )
+        {
+            int id = rs_list.size();
+            rs_list.add(new ResultEntry(conn, rs, id));
+            return "r" + id;
+        }
+    }
+
+    String new_outstream_entry( OutputStream is, File f )
+    {
+        synchronized( ostream_list )
+        {
+            int id = ostream_list.size();
+            ostream_list.add(new OutputStreamEntry(is, f, id));
+            return "o" + id;
+        }
+    }
+    String new_instream_entry( InputStream is, File f )
+    {
+        synchronized( istream_list )
+        {
+            int id = istream_list.size();
+            istream_list.add(new InputStreamEntry(is, f, id));
+            return "i" + id;
+        }
+    }
+
 
     void drop_conn( int id )
     {
@@ -209,14 +269,20 @@ public class TCPCallConnect extends WorkerParent
 
     void drop_istream( int id )
     {
+        synchronized( istream_list )
+        {
         InputStreamEntry c = get_istream(id);
         istream_list.remove(c);
+        }
     }
 
     void drop_ostream( int id )
     {
-        OutputStreamEntry c = get_ostream(id);
-        ostream_list.remove(c);
+        synchronized( ostream_list )
+        {
+            OutputStreamEntry c = get_ostream(id);
+            ostream_list.remove(c);
+        }
     }
 
     /* WE HAVE THE FOLLOWING RESTRIUCTIONS FOR REMOTE CALLABLE FUNCTIONS:
@@ -402,6 +468,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, String ret, OutputStream out ) throws IOException
     {
+        Main.debug_msg(0, "Answer is <" + ret + ">");
         StringBuffer answer = new StringBuffer();
 
         if (ok)
@@ -439,6 +506,8 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, long alen, InputStream in, OutputStream out ) throws IOException
     {
+        Main.debug_msg(0, "Answer is stream with len " + alen + ">");
+
         StringBuffer answer = new StringBuffer();
 
         if (ok)
@@ -506,7 +575,7 @@ public class TCPCallConnect extends WorkerParent
 
     void dispatch_tcp_command( Socket s, String cmd, long stream_len, byte[] add_data, OutputStream out ) throws IOException
     {
-        Main.debug_msg(5, "Received ip command <" + cmd + "> ");
+        Main.debug_msg(0, "Received ip command <" + cmd + "> ");
 
         if (cmd.equals("?") || cmd.equals("help"))
         {
@@ -564,8 +633,11 @@ public class TCPCallConnect extends WorkerParent
                 try
                 {
                     Object ret = call_method(s, stream_len, cmd, params);
-
-                    write_tcp_answer(true, ret.toString(), out);
+                    
+                    if (ret != null)
+                    {
+                        write_tcp_answer(true, ret.toString(), out);
+                    }
                 }
                 catch (Exception exc)
                 {
@@ -763,10 +835,9 @@ public class TCPCallConnect extends WorkerParent
             SQLWorker sql = Main.get_control().get_sql_worker();
             Connection con = sql.open_db_connect();
 
-            int id = conn_list.size();
-            conn_list.add(new ConnEntry(con, id));
+            String id = new_conn_entry(con);
 
-            return "0: c" + id;
+            return "0: " + id;
         }
         catch (Exception exception)
         {
@@ -798,11 +869,9 @@ public class TCPCallConnect extends WorkerParent
             ConnEntry conn = get_conn(get_id(conn_id));
             Statement sta = conn.conn.createStatement();
 
-            int id = conn_list.size();
+            String id = new_statement_entry(conn, sta);
 
-            sta_list.add(new StatementEntry(conn, sta, id));
-
-            return "0: s" + id;
+            return "0: " + id;
         }
         catch (Exception exception)
         {
@@ -929,10 +998,9 @@ public class TCPCallConnect extends WorkerParent
 
             ResultSet rs = ste.sta.executeQuery(cmd);
 
-            int id = rs_list.size();
-            rs_list.add(new ResultEntry(ste.ce, rs, id));
+            String id = new_result_entry(ste.ce, rs);
 
-            return "0: r" + id;
+            return "0: " + id;
         }
         catch (Exception exc)
         {
@@ -1082,6 +1150,8 @@ public class TCPCallConnect extends WorkerParent
         return "2: unknown function";
     }
 */
+
+
     public String RMX_OpenOutStream( String stream_name, String args )
     {
         try
@@ -1103,10 +1173,9 @@ public class TCPCallConnect extends WorkerParent
             FileOutputStream fos = new FileOutputStream(f);
             BufferedOutputStream bos = new BufferedOutputStream(fos, 1024 * 1024);
 
-            int id = ostream_list.size();
-            ostream_list.add(new OutputStreamEntry(bos, f, id));
+            String id = new_outstream_entry(bos, f);
 
-            return "0: o" + id;
+            return "0: " + id;
         }
         catch (IOException iOException)
         {
@@ -1212,7 +1281,6 @@ public class TCPCallConnect extends WorkerParent
             return "1: Exception: " + iOException.getMessage();
         }
     }
-
     public String RMX_OpenInStream( String stream_name, String args )
     {
         try
@@ -1235,17 +1303,22 @@ public class TCPCallConnect extends WorkerParent
             long len = f.length();
 
             FileInputStream fis = new FileInputStream(f);
-            BufferedInputStream bis = new BufferedInputStream(fis);
+            BufferedInputStream bis = new BufferedInputStream(fis, CS_Constants.STREAM_BUFFER_LEN);
 
-            int id = istream_list.size();
-            istream_list.add(new InputStreamEntry(bis, f, id));
+            String id = new_instream_entry( bis, f );
 
-            return "0: i" + id + " LEN:" + len;
+            return "0: " + id + " LEN:" + len;
         }
         catch (IOException iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
+    }
+    
+    public String RMX_OpenInStream( InputStream is, long len )
+    {
+        String id = new_instream_entry( is, null );
+        return "0: " + id + " LEN:" + len;
     }
 
     public String RMX_CloseInStream( String stream_id )
@@ -1273,25 +1346,11 @@ public class TCPCallConnect extends WorkerParent
         try
         {
             InputStream is = get_istream(get_id(stream_id)).is;
-            BufferedInputStream bis = new BufferedInputStream(is, CS_Constants.STREAM_BUFFER_LEN * 2);
 
-            long len = slen.longValue();
-            byte[] buff = new byte[CS_Constants.STREAM_BUFFER_LEN ];
+            long len = slen.longValue();            
 
-            while (len > 0)
-            {
-                int rlen = buff.length;
-                if (len < rlen)
-                {
-                    rlen = (int) len;
-                }
-
-                int rrlen = is.read(buff, 0, rlen);
-                s.getOutputStream().write(buff, 0, rrlen);
-
-                len -= rrlen;
-            }
-            return "0: ";
+            write_tcp_answer( true, len, is, s.getOutputStream());
+            return null; // NO ANSWER NEEDE
         }
         catch (IOException iOException)
         {

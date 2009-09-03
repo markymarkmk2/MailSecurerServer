@@ -19,6 +19,7 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
+import home.shared.CS_Constants;
 import home.shared.hibernate.MailHeaderVariable;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,6 +28,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -142,17 +144,7 @@ public class IndexManager extends WorkerParent
     //boolean do_index_body = false;
     boolean do_index_attachments = false;
     boolean do_detect_lang = false;
-    public static final String FLD_ATTACHMENT = "FLDN_ATTACHMENT";
-    public static final String FLD_ATTACHMENT_NAME = "FLDN_ATTNAME";
-    public static final String FLD_BODY = "FLDN_BODY";
-    public static final String FLD_UID_NAME = "FLDN_UID";
-    public static final String FLD_LANG = "FLDN_LANG";
-    public static final String FLD_HEADERVAR_VALUE = "FLDN_HEADERVAR_VALUE";
-    public static final String FLD_HEADERVAR_NAME = "FLDN_HEADERVAR_NAME";
-    public static final String FLD_MA = "FLDN_MA";
-    public static final String FLD_DA = "FLDN_DA";
-    public static final String FLD_DS = "FLDN_DS";
-    public static final String FLD_TM = "FLDN_TM";
+
     Map<String, String> analyzerMap;
     Extractor extractor;
     MandantContext m_ctx;
@@ -278,35 +270,49 @@ public class IndexManager extends WorkerParent
         return wrapper;
     }
 
+    String to_field( int i )
+    {
+        return Integer.toString( i );
+    }
+    String to_hex_field( long l )
+    {
+        return Long.toString(l, 16);
+    }
+
     public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
     {
         RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
 
 
-        doc.add(new Field(FLD_UID_NAME, unique_id, Field.Store.YES, Field.Index.NOT_ANALYZED));
-        doc.add(new Field(FLD_MA, Integer.toString(m_ctx.getMandant().getId()), Field.Store.YES, Field.Index.NOT_ANALYZED));
-        doc.add(new Field(FLD_DA, Integer.toString(da_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
-        doc.add(new Field(FLD_DS, Integer.toString(ds_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_UID_NAME, unique_id, Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_MA, to_field(m_ctx.getMandant().getId()), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_DA, to_field(da_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_DS, to_field(ds_id), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_SIZE, to_hex_field(mail_file.get_length()), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
-        // TIME AS HEX
-        doc.add(new Field(FLD_TM, Long.toString(mail_file.getDate().getTime(), 16), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        // SUBJECT IS STORED AND ANALYZED
+        String subject = mime_msg.getMsg().getSubject();
+        if (subject == null)
+            subject = "";
+        doc.add(new Field(CS_Constants.FLD_SUBJECT, subject, Field.Store.YES, Field.Index.ANALYZED));
+
+        // LONGS AS HEX
+        Date d = mime_msg.getMsg().getReceivedDate();
+        if (d == null)
+            d = mime_msg.getMsg().getSentDate();
+        if (d == null)
+            d = mail_file.getDate();
+
+        doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
+        doc.add(new Field(CS_Constants.FLD_TM, to_hex_field(mail_file.getDate().getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
 
         Message msg = mime_msg.getMsg();
         try
         {
             Enumeration mail_header_list = msg.getAllHeaders();
-
-            /*            while (mail_header_list.hasMoreElements())
-            {
-            Object h = mail_header_list.nextElement();
-            if (h instanceof Header)
-            {
-            Header ih = (Header) h;
-            System.out.println("N: " + ih.getName() + " V: " + ih.getValue());
-            }
-            }*/
+            
             index_headers(doc, unique_id, msg.getAllHeaders());
 
             Object content = msg.getContent();
@@ -347,8 +353,8 @@ public class IndexManager extends WorkerParent
             {
                 Header ih = (Header) h;
                 // STORE ALL HEADERS INTO INDEX DB, DO NOT ANALYZE, WE NEED ORIGINAL CONTENT FOR SEARCH
-                doc.add(new Field(FLD_HEADERVAR_NAME, ih.getName(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-                doc.add(new Field(FLD_HEADERVAR_VALUE, ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field(CS_Constants.FLD_HEADERVAR_NAME, ih.getName(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field(CS_Constants.FLD_HEADERVAR_VALUE, ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
                 doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
             }
@@ -461,13 +467,13 @@ public class IndexManager extends WorkerParent
                         Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                         if (textReader != null)
                         {
-                            doc.add(new Field(FLD_ATTACHMENT, textReader));
+                            doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
                         }
                     }
                 }
                 if (filename != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT_NAME, filename, Field.Store.NO, Field.Index.ANALYZED));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT_NAME, filename, Field.Store.NO, Field.Index.ANALYZED));
                 }
             }
             else
@@ -475,7 +481,7 @@ public class IndexManager extends WorkerParent
                 Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_BODY, textReader));
+                    doc.add(new Field(CS_Constants.FLD_BODY, textReader));
                     // WE NEED A NEW READER FOR TEXT DETECTION -> STREAM IS NOT ATOMIC
                     Reader detectReader = extractor.getText(p.getInputStream(), mimetype, charset);
                     String[] languages = ((MimePart) p).getContentLanguage();
@@ -521,11 +527,11 @@ public class IndexManager extends WorkerParent
                 Reader textReader = extractor.getText(gis, extention, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
                 }
                 if (name != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
                 }
             }
             gis.close();
@@ -564,7 +570,7 @@ public class IndexManager extends WorkerParent
                 Reader textReader = extractor.getText(is, extension, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
                 }
             }
             catch (Exception io)
@@ -600,7 +606,7 @@ public class IndexManager extends WorkerParent
                 Reader textReader = extractor.getText(gis, extension, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
                 }
             }
         }
@@ -628,7 +634,7 @@ public class IndexManager extends WorkerParent
                 Reader textReader = extractor.getText(zis, extention, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT, textReader));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
                     try
                     {
                         textReader.close();
@@ -640,7 +646,7 @@ public class IndexManager extends WorkerParent
                 }
                 if (name != null)
                 {
-                    doc.add(new Field(FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
                 }
             }
         }
@@ -653,7 +659,7 @@ public class IndexManager extends WorkerParent
     protected void add_lang_field( String[] languages, Document doc, Reader detectReader )
     {
         String lang = null;
-        if (do_detect_lang && doc.get(FLD_LANG) == null)
+        if (do_detect_lang && doc.get(CS_Constants.FLD_LANG) == null)
         {
             try
             {
@@ -669,7 +675,7 @@ public class IndexManager extends WorkerParent
             }
             if (lang != null)
             {
-                doc.add(new Field(FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
+                doc.add(new Field(CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
         }
     }
@@ -717,15 +723,7 @@ public class IndexManager extends WorkerParent
 
                         // NO, DO RIGHT HERE
                         handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
-                    }
-
-
-
-                    if (da_id == -1)
-                    {
-                    }
-
-
+                    }                
                 }
 
             }

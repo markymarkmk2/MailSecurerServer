@@ -281,4 +281,10 @@ public class DiskVault implements Vault, StatusHandler
             dsh.close();
         }
     }
+
+    @Override
+    public String get_password()
+    {
+        return password;
+    }
 }

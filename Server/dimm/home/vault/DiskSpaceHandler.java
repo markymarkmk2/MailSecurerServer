@@ -23,6 +23,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.logging.Level;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
@@ -323,13 +325,34 @@ public class DiskSpaceHandler
         return ret;
     }
 
-    public long build_time_from_path( String absolutePath )
+    public long build_time_from_path( String absolutePath ) throws VaultException
     {
-        String rel_path = absolutePath.substring( getMailPath().length());
+        try
+        {
+            String rel_path = absolutePath.substring(getMailPath().length());
 
-        return RFCFileMail.get_time_from_mailfile(rel_path);
+            return RFCFileMail.get_time_from_mailfile(rel_path);
+        }
+        catch (ParseException parseException)
+        {
+            throw new VaultException("Invalid path for build_time_from_path: " + absolutePath,  parseException );
+        }
     }
     
+    public RFCFileMail get_mail_from_time( long time ) throws VaultException
+    {
+        String parent_path = getMailPath();
+        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time );
+
+        File mail_file = new File( absolutePath );
+        if (!mail_file.exists())
+            throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
+
+        Date d = new Date(time);
+        RFCFileMail mail = new RFCFileMail( mail_file, d );
+        return mail;
+    }
+
     public static int get_da_id_from_uuid( String uuid ) throws VaultException
     {
         int id = -1;
@@ -410,13 +433,26 @@ public class DiskSpaceHandler
         else
         {
             local_dsi.setCapacity( local_dsi.getCapacity() + f.length());
-            long time = build_time_from_path( f.getAbsolutePath() );
-            if (time > 0)
+            try
             {
-                if (time > local_dsi.getLastEntryTS())
-                    local_dsi.setLastEntryTS(time);
-                if (local_dsi.getFirstEntryTS() == 0 || time < local_dsi.getFirstEntryTS())
-                    local_dsi.setFirstEntryTS(time);
+                long time = build_time_from_path(f.getAbsolutePath());
+                if (time > 0)
+                {
+                    if (time > local_dsi.getLastEntryTS())
+                    {
+                        local_dsi.setLastEntryTS(time);
+
+                    }
+                    if (local_dsi.getFirstEntryTS() == 0 || time < local_dsi.getFirstEntryTS())
+                    {
+                        local_dsi.setFirstEntryTS(time);
+
+                    }
+                }
+            }
+            catch (VaultException vaultException)
+            {
+                LogManager.err_log("Invalid path in info_recursive", vaultException);
             }
         }
         return local_dsi;
@@ -657,6 +693,23 @@ public class DiskSpaceHandler
                 {
                 }
             }
+        }
+    }
+    public InputStream open_decrypted_mail_stream(RFCFileMail msg, String password ) throws  VaultException
+    {
+        try
+        {
+            CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.DECRYPT;
+
+            InputStream mis = msg.open_inputstream();
+
+            InputStream is = CryptTools.create_crypt_instream(m_ctx, mis, password, encrypt);
+
+            return is;
+        }
+        catch (Exception e)
+        {
+            throw new VaultException(ds, e.getMessage());
         }
     }
 

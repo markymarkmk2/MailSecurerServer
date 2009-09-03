@@ -22,4 +22,6 @@ public interface Vault
 
     void flush();
     void close() throws VaultException;
+
+    public String get_password();
 }

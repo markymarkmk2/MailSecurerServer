@@ -18,7 +18,7 @@ public class ResultEntry
     public int id;
     public ConnEntry ce;
 
-    ResultEntry( ConnEntry _ce, ResultSet _c, int _id )
+    public ResultEntry( ConnEntry _ce, ResultSet _c, int _id )
     {
         rs = _c;
         id = _id;

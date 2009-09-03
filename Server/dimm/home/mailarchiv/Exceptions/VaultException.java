@@ -26,8 +26,15 @@ public class VaultException extends Exception {
      * Constructs an instance of <code>VaultException</code> with the specified detail message.
      * @param msg the detail message.
      */
-    public VaultException(String msg) {
+    public VaultException(String msg)
+    {
         super(msg);
+    }
+    public VaultException(String msg, Exception exc)
+    {
+        super(msg);
+        exc.printStackTrace();
+        LogManager.err_log_fatal( "VaultException: " + msg + ": " + exc.getMessage());
     }
     public VaultException(DiskSpace ds, String msg )
     {

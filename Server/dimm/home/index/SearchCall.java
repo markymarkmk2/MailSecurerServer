@@ -6,6 +6,7 @@
 package dimm.home.index;
 
 import com.thoughtworks.xstream.XStream;
+import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
@@ -15,7 +16,9 @@ import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
+import home.shared.CS_Constants;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -43,8 +46,10 @@ class SearchResult
     int ds_id;
     String uuid;
     long time;
+    long size;
+    String subject;
 
-    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time )
+    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s )
     {
         this.searcher = searcher;
         this.doc_index = doc_index;
@@ -53,6 +58,8 @@ class SearchResult
         this.ds_id = ds_id;
         this.uuid = uuid;
         this.time = time;
+        this.size = size;
+        subject = s;
     }
 }
 
@@ -125,11 +132,20 @@ class SearchCommand extends AbstractCommand
         else if (command.compareTo("close") == 0)
         {
             String id = pt.GetString("ID:");
-            
+
             answer = SearchCall.close_search_call(id);
 
             return true;
         }
+        else if (command.compareTo("open_mail") == 0)
+        {
+            String id = pt.GetString("ID:");
+            int row = (int)pt.GetLongValue("ROW:");
+
+            answer = SearchCall.retrieve_mail(id, row);
+
+            return true;
+        }    
 
         answer = "1: Unknown subcommand: " + data;
         return false;
@@ -142,6 +158,7 @@ class SearchCommand extends AbstractCommand
  */
 public class SearchCall
 {
+
     MandantContext m_ctx;
     ArrayList<SearchResult> result;
 
@@ -250,6 +267,28 @@ public class SearchCall
 
         return "0: " + res;
     }
+    static String retrieve_mail( String id, int row )
+    {
+        String ret = null;
+
+        SearchCallEntry sce = get_sce( id );
+        if (sce == null)
+        {
+            return "1: invalid sce";
+        }
+        SearchResult result = sce.call.result.get(row);
+        if (result == null)
+        {
+            return "2: invalid result";
+        }
+
+        ret = sce.call.open_RMX_mail_stream( result );
+
+        if (ret == null)
+            return "3: cannot open mail for result" ;
+
+        return ret;
+    }
 
 
     public SearchCall( MandantContext m_ctx )
@@ -276,6 +315,26 @@ public class SearchCall
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
                     if (dsh.getDs().getId() == ds_idx)
                         return dsh;
+                }
+            }
+        }
+        return null;
+    }
+    Vault get_vault( int ds_idx )
+    {
+
+        for (int i = 0; i < m_ctx.getVaultArray().size(); i++)
+        {
+            Vault vault = m_ctx.getVaultArray().get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault) vault;
+                dv.get_dsh_list();
+                for (int j = 0; j < dv.get_dsh_list().size(); j++)
+                {
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
+                    if (dsh.getDs().getId() == ds_idx)
+                        return dv;
                 }
             }
         }
@@ -326,7 +385,7 @@ public class SearchCall
                                     filter.addTerm(new Term( "CC", mail_adress));
                                 }
 
-                                Sort sort = new Sort(IndexManager.FLD_TM);
+                                Sort sort = new Sort(CS_Constants.FLD_TM);
 
                                 // SSSSEEEEAAAARRRRCHHHHHHH
                                 TopDocs tdocs = searcher.search( qry, filter, n );
@@ -341,13 +400,15 @@ public class SearchCall
 
                                     Document doc = fir.document(doc_idx);
 
-                                    int da_id = doc_get_int( doc, IndexManager.FLD_DA );
-                                    int ds_id = doc_get_int( doc, IndexManager.FLD_DS );
+                                    int da_id = doc_get_int( doc, CS_Constants.FLD_DA );
+                                    int ds_id = doc_get_int( doc, CS_Constants.FLD_DS );
+                                    long size = doc_get_hex_long( doc, CS_Constants.FLD_SIZE );
                                     
-                                    String uuid = doc.get(IndexManager.FLD_UID_NAME);
-                                    long time = doc_get_hex_long( doc, IndexManager.FLD_TM ); // HEX!!!!!
+                                    String uuid = doc.get(CS_Constants.FLD_UID_NAME);
+                                    long time = doc_get_hex_long( doc, CS_Constants.FLD_DATE ); // HEX!!!!!
+                                    String subject  = doc.get( CS_Constants.FLD_SUBJECT );
 
-                                    SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time );
+                                    SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject );
                                     result.add(rs);
                                 }
                             }
@@ -409,6 +470,27 @@ public class SearchCall
         }
 
         return ret;
+    }
+
+    private String open_RMX_mail_stream( SearchResult result )
+    {
+        try
+        {
+            DiskSpaceHandler dsh = get_dsh( result.ds_id );
+            Vault vault = get_vault( result.ds_id );
+            long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
+            RFCFileMail mail = dsh.get_mail_from_time( time );
+            InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
+
+            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is , result.size);
+
+            return ret;
+        }
+        catch (VaultException ex)
+        {
+            LogManager.err_log("Cannot open mail stream", ex);
+            return "1: cannot open";
+        }
     }
 
 
