@@ -8,6 +8,7 @@ import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
 import dimm.home.extraction.Extractor;
 import dimm.home.mail.RFCFileMail;
+import dimm.home.mail.RFCGenericMail;
 import dimm.home.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
@@ -78,10 +79,10 @@ class IndexJobEntry
     int da_id;
     int ds_id;
     private DiskSpaceHandler index_dsh;
-    RFCFileMail msg;
+    RFCGenericMail msg;
     boolean delete_after_index;
 
-    public IndexJobEntry( MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index )
+    public IndexJobEntry( MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
     {
         this.m_ctx = m_ctx;
         this.unique_id = unique_id;
@@ -121,7 +122,7 @@ class IndexJobEntry
 
             if (delete_after_index)
             {
-                msg.delete_msg();
+                msg.delete();
             }
         }
         catch (Exception ex)
@@ -279,7 +280,7 @@ public class IndexManager extends WorkerParent
         return Long.toString(l, 16);
     }
 
-    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCFileMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
+    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, Document doc ) throws MessagingException, IOException, IndexException
     {
         RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
@@ -822,7 +823,7 @@ public class IndexManager extends WorkerParent
         return true;
     }
 
-    public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index ) throws IndexException
+    public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index ) throws IndexException
     {
         IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
 
@@ -834,7 +835,7 @@ public class IndexManager extends WorkerParent
         {
             throw new IndexException("Index file exists already: " + index_msg.getAbsolutePath());
         }
-        msg.rename_to(index_msg);
+        msg.move_to(index_msg);
 
         synchronized (index_job_list)
         {
@@ -842,7 +843,7 @@ public class IndexManager extends WorkerParent
         }
     }
 
-    public void handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCFileMail msg, boolean delete_after_index )
+    public void handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
     {
         IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
         ije.handle_index();

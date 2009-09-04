@@ -10,7 +10,7 @@ import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.DiskSpace;
-import dimm.home.mail.RFCFileMail;
+import dimm.home.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
@@ -146,7 +146,7 @@ public class DiskVault implements Vault, StatusHandler
     }
 
     @Override
-    public boolean archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException, IndexException
+    public boolean archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException, IndexException
     {
         boolean ret = false;
         try
@@ -208,7 +208,7 @@ public class DiskVault implements Vault, StatusHandler
     }
 
 
-    boolean low_level_archive_mail( RFCFileMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException, IndexException
+    boolean low_level_archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
         int index = 0;
 
@@ -229,7 +229,7 @@ public class DiskVault implements Vault, StatusHandler
         return true;
     }
 
-    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCFileMail msg ) throws ArchiveMsgException, IndexException
+    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCGenericMail msg ) throws ArchiveMsgException, IndexException
     {
         // WRITE OUT MAIL DATA
         try

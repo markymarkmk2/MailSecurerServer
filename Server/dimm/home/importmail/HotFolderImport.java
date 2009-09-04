@@ -4,26 +4,35 @@
  */
 package dimm.home.importmail;
 
+import dimm.home.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.IndexException;
+import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.HotfolderExclude;
 import dimm.home.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
+import dimm.home.mailarchiv.TempFileHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ZipUtilities;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.hibernate.Mandant;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
+import javax.mail.Message;
 import javax.mail.MessagingException;
 
 class HFFilenameFilter implements FilenameFilter
@@ -200,7 +209,8 @@ class DirectoryEntry
             }
             catch (IOException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
+                // NOT COMPLETE, WE FAIL
+                return false;
             }            
             finally
             {
@@ -211,25 +221,31 @@ class DirectoryEntry
                         raf.close();
                     }
                     catch (IOException ex)
-                    {
-                        LogManager.log(Level.SEVERE, null, ex);
+                    {                        
                     }
                 }
             }
         }
-        
-        // COMPARE CHILDREN COUNT
-        if (children.size() != de.getChildren().size())
+
+        if (children != null && de.getChildren() == null)
+            return false;
+        if (children == null && de.getChildren() != null)
             return false;
         
-        // RECURSIVELY CHECK CHILDREN
-        for (int i = 0; i < children.size(); i++)
+        // COMPARE CHILDREN COUNT
+        if (children != null)
         {
-            DirectoryEntry directoryEntry = children.get(i);
-            if (!directoryEntry.is_unchanged( de.getChildren().get(i) ))
-                return false;            
-        }
+            if ( children.size() != de.getChildren().size())
+            return false;
         
+            // RECURSIVELY CHECK CHILDREN
+            for (int i = 0; i < children.size(); i++)
+            {
+                DirectoryEntry directoryEntry = children.get(i);
+                if (!directoryEntry.is_unchanged( de.getChildren().get(i) ))
+                    return false;
+            }
+        }
         return true;
     }
 
@@ -311,6 +327,11 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
                 FilenameFilter filter = new HFFilenameFilter(hfolder);
 
                 File path = new File(hfolder.getPath());
+
+                if (!path.exists())
+                {
+                    throw new ImportException( Main.Txt("Hotfolder_path_does_not_exist")  + ": " + path.getAbsolutePath() );
+                }
                 
                 File[] flist = path.listFiles(filter);
                 
@@ -410,8 +431,30 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
             RFCMimeMail mm = new RFCMimeMail();
             mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
+        /*    MandantContext m_ctx = Main.get_control().get_mandant_by_id( hfolder.getMandant().getId());
+            long time = System.currentTimeMillis();
+            File mail_file = m_ctx.getTempFileHandler().create_new_import_file(Long.toString(time) + ".eml");
+            RFCFileMail mail = new RFCFileMail( mail_file, new Date(time) );
+          */
+            Message m = mm.getMsg();
+
+            MandantContext m_ctx = Main.get_control().get_mandant_by_id(hfolder.getMandant().getId());
+            File tmp_file = m_ctx.getTempFileHandler().create_temp_file(TempFileHandler.IMPMAIL_PREFIX, "hf_imp", "eml");
+
+            try
+            {
+                FileOutputStream fos = new FileOutputStream(tmp_file);
+                m.writeTo(fos);
+                fos.close();
+                RFCFileMail mail = new RFCFileMail( tmp_file, new Date(System.currentTimeMillis()) );
+                Main.get_control().add_mail_file(mail, hfolder.getMandant(), hfolder.getDiskArchive(), true);
+            }
+            catch (IOException iOException)
+            {
+                throw new ArchiveMsgException( Main.Txt("Cannot_write_temporary_file") + iOException.getMessage());
+            }
+
             
-            Main.get_control().add_new_outmail( mm.getMsg(), hfolder.getMandant(),  hfolder.getDiskArchive(), false );
             return true;
         }
         catch (MessagingException ex)
@@ -435,5 +478,6 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     {
         return status.get_status_code();
     }
+
 
 }

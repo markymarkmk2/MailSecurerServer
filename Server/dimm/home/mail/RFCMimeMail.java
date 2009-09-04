@@ -31,7 +31,7 @@ import javax.mail.internet.MimeMultipart;
 public class RFCMimeMail
 {
 
-    private Message msg;
+    private MimeMessage msg;
     private Session session;
 
     public RFCMimeMail()
@@ -51,9 +51,12 @@ public class RFCMimeMail
     public void create( String from, String to, String subject, String text, File attachment ) throws MessagingException
     {
         // Construct the message
-        getMsg().setFrom(new InternetAddress(from));
-        getMsg().setRecipient(Message.RecipientType.TO, new InternetAddress(to));
-        getMsg().setSubject("Hotfolder " + attachment.getName());
+        InternetAddress[] ia_from = {new InternetAddress(from)};
+        InternetAddress[] ia_to = {new InternetAddress(from)};
+ 
+        msg.addFrom(ia_from);
+        msg.addRecipients(Message.RecipientType.TO, ia_to);
+        msg.setSubject("Hotfolder " + attachment.getName());
         // CREATE MULTIPART
         Multipart multipart = new MimeMultipart();
         // CREATE MESSAGE PART
@@ -71,11 +74,11 @@ public class RFCMimeMail
         // ADD TO MULTIPART
         multipart.addBodyPart(dataBodyPart);
         // ADD MULTIPART TO MESSAGE
-        getMsg().setContent(multipart);
+        msg.setContent(multipart);
 
     }
 
-    public void parse(RFCFileMail mail_file )
+    public void parse(RFCGenericMail mail_file )
     {
         try
         {
@@ -101,14 +104,14 @@ public class RFCMimeMail
 
     public void send() throws MessagingException
     {
-        Transport.send(getMsg());
+        Transport.send(msg);
 
     }
 
     /**
      * @return the msg
      */
-    public Message getMsg()
+    public MimeMessage getMsg()
     {
         return msg;
     }

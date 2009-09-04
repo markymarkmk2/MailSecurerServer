@@ -6,6 +6,7 @@
 package dimm.home.vault;
 
 import dimm.home.mail.RFCFileMail;
+import dimm.home.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.CryptTools;
@@ -288,7 +289,7 @@ public class DiskSpaceHandler
     }
 
 
-    public void add_message_info( RFCFileMail msg ) throws VaultException
+    public void add_message_info( RFCGenericMail msg ) throws VaultException
     {
         dsi.setCapacity( dsi.getCapacity() + msg.get_length());
         dsi.setLastEntryTS(msg.getDate().getTime());
@@ -311,7 +312,7 @@ public class DiskSpaceHandler
         f.delete();
     }
 
-    public void delete_mail( RFCFileMail mail )
+    public void delete_mail( RFCGenericMail mail )
     {
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -319,7 +320,7 @@ public class DiskSpaceHandler
 
     // THIS IS THE FIXED MAIL UID STRUCT
     // MA_ID.DA_ID.DS_ID.Messagedate(long)
-    public String get_message_uuid( RFCFileMail msg )
+    public String get_message_uuid( RFCGenericMail msg )
     {
         String ret = m_ctx.getMandant().getId() + "." + ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime();
         return ret;
@@ -339,7 +340,7 @@ public class DiskSpaceHandler
         }
     }
     
-    public RFCFileMail get_mail_from_time( long time ) throws VaultException
+    public RFCGenericMail get_mail_from_time( long time ) throws VaultException
     {
         String parent_path = getMailPath();
         String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time );
@@ -349,7 +350,7 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
 
         Date d = new Date(time);
-        RFCFileMail mail = new RFCFileMail( mail_file, d );
+        RFCGenericMail mail = new RFCFileMail( mail_file, d );
         return mail;
     }
 
@@ -637,7 +638,7 @@ public class DiskSpaceHandler
         return ds.getPath() + "/index";
     }
 
-    public void write_encrypted_file(RFCFileMail msg, String password ) throws  VaultException
+    public void write_encrypted_file(RFCGenericMail msg, String password ) throws  VaultException
     {
         OutputStream bos = null;
         InputStream bis = null;
@@ -695,7 +696,7 @@ public class DiskSpaceHandler
             }
         }
     }
-    public InputStream open_decrypted_mail_stream(RFCFileMail msg, String password ) throws  VaultException
+    public InputStream open_decrypted_mail_stream(RFCGenericMail msg, String password ) throws  VaultException
     {
         try
         {

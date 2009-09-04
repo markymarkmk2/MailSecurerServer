@@ -158,7 +158,7 @@ public class MBoxImportServer extends WorkerParent
                 mbie.act_msg = i;
                 Message msg = mbi.get_message(i);
 
-                Main.get_control().add_new_mail( msg.getDataHandler().getInputStream(), mbie.mandant, mbie.da, false);
+                Main.get_control().add_new_mail_stream( msg.getDataHandler().getInputStream(), mbie.mandant, mbie.da, false);
             }
         }
         catch (Exception exception)

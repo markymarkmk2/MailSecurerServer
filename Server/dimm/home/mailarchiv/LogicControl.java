@@ -15,13 +15,13 @@ import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.index.SearchCall;
+import dimm.home.mail.RFCFileMail;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Mandant;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
-import dimm.home.mail.RFCFileMail;
 import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.File;
@@ -58,6 +58,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
 
 /**
  *
@@ -187,6 +188,11 @@ public class LogicControl
         }
         RFCFileMail mf = new RFCFileMail( mail );
 
+        add_mail_file(mf, mandant, da, background);
+    }
+    
+    public void add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
+    {
         MandantContext context = get_m_context(mandant);
         if (context == null)
         {
@@ -239,7 +245,7 @@ public class LogicControl
    
     }
 
-    public void add_new_mail( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
+    public void add_new_mail_stream( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         if (true/*background*/)
         {
@@ -261,12 +267,16 @@ public class LogicControl
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
-
-    public void add_new_outmail( Message msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException, IndexException
+/*
+    public void add_new_outmail( MimeMessage msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         try
         {
-            add_new_mail(msg.getInputStream(), mandant, diskArchive, background);
+            MandantContext m_ctx = get_m_context(mandant);
+            FileOutputStream fos = new FileOutputStream( m_ctx.getTempFileHandler().create_new_import_file(null))
+            msg.writeTo(null);
+            add_new_mail_stream( is, mandant, diskArchive, background);
+            is.close();
         }
         catch (IOException ex)
         {
@@ -279,10 +289,19 @@ public class LogicControl
             throw new ArchiveMsgException("Messaging exception: " + ex.getMessage());
         }
     }
-
+*/
     public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
-        add_new_mail(mail.getInputStream(), mandant, da, background);
+        try
+        {
+            InputStream is = mail.getInputStream();
+            add_new_mail_stream(is, mandant, da, background);
+            is.close();
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, VaultException
@@ -356,7 +375,6 @@ public class LogicControl
 
         try
         {
-
             BufferedInputStream bis = new BufferedInputStream(is);
             bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
 
@@ -368,9 +386,8 @@ public class LogicControl
                     break;
                 }
 
-                bos.write(buff, 0, rlen);
+                bos.write(buff, 0, rlen);                
             }
-
         }
         catch (IOException ex)
         {

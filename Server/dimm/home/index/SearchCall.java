@@ -6,7 +6,7 @@
 package dimm.home.index;
 
 import com.thoughtworks.xstream.XStream;
-import dimm.home.mail.RFCFileMail;
+import dimm.home.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
@@ -479,7 +479,7 @@ public class SearchCall
             DiskSpaceHandler dsh = get_dsh( result.ds_id );
             Vault vault = get_vault( result.ds_id );
             long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
-            RFCFileMail mail = dsh.get_mail_from_time( time );
+            RFCGenericMail mail = dsh.get_mail_from_time( time );
             InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
 
             String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is , result.size);
