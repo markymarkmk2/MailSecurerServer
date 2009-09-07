@@ -15,7 +15,7 @@ import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.index.SearchCall;
-import dimm.home.mail.RFCFileMail;
+import home.shared.mail.RFCFileMail;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;

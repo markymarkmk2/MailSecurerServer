@@ -8,6 +8,7 @@ import com.sun.mail.imap.IMAPFolder;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import java.io.IOException;
 import java.util.*;
 
 
@@ -18,6 +19,8 @@ import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import java.net.UnknownHostException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.mail.AuthenticationFailedException;
 import javax.mail.Flags;
 import javax.mail.Folder;
@@ -456,11 +459,21 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     }
     protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
-         status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
-
-         Main.get_control().add_new_outmail(message, imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
-         
-         set_msg_deleted( message );
+        try
+        {
+            status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
+            Main.get_control().add_new_mail_stream(message.getInputStream(), imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
+            message.getInputStream().close();
+            set_msg_deleted(message);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(MailBoxFetcher.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MailBoxFetcher.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
 
     }

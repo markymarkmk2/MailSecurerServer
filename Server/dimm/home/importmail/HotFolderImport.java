@@ -4,12 +4,12 @@
  */
 package dimm.home.importmail;
 
-import dimm.home.mail.RFCFileMail;
+import home.shared.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.HotfolderExclude;
-import dimm.home.mail.RFCMimeMail;
+import home.shared.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.VaultException;

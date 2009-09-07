@@ -10,7 +10,7 @@ import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.DiskSpace;
-import dimm.home.mail.RFCGenericMail;
+import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;

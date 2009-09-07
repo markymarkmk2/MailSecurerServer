@@ -6,7 +6,7 @@
 package dimm.home.index;
 
 import com.thoughtworks.xstream.XStream;
-import dimm.home.mail.RFCGenericMail;
+import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;

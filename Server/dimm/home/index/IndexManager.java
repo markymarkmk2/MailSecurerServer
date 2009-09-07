@@ -7,9 +7,9 @@ package dimm.home.index;
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
 import dimm.home.extraction.Extractor;
-import dimm.home.mail.RFCFileMail;
-import dimm.home.mail.RFCGenericMail;
-import dimm.home.mail.RFCMimeMail;
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
+import home.shared.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.LogicControl;
@@ -835,7 +835,14 @@ public class IndexManager extends WorkerParent
         {
             throw new IndexException("Index file exists already: " + index_msg.getAbsolutePath());
         }
-        msg.move_to(index_msg);
+        try
+        {
+            msg.move_to(index_msg);
+        }
+        catch (Exception exc)
+        {
+            throw new IndexException( exc.getMessage() );
+        }
 
         synchronized (index_job_list)
         {

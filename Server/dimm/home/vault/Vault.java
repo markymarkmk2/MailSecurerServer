@@ -6,7 +6,7 @@
 package dimm.home.vault;
 
 import home.shared.hibernate.DiskArchive;
-import dimm.home.mail.RFCGenericMail;
+import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;

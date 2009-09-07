@@ -5,8 +5,8 @@
 
 package dimm.home.vault;
 
-import dimm.home.mail.RFCFileMail;
-import dimm.home.mail.RFCGenericMail;
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.CryptTools;
