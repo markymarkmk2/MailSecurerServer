@@ -20,18 +20,24 @@ import home.shared.CS_Constants;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.FilterIndexReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.WildcardQuery;
 
 
 
@@ -372,12 +378,13 @@ public class SearchCall
 
                             try
                             {
-                                Term term = new Term( fld, val );
-                                TermQuery qry = new TermQuery( term );
-
+                                Analyzer anal = dsh.create_read_analyzer();
+                                QueryParser qp = new QueryParser(fld, anal );
+                                Query qry = qp.parse(val);
+                                
                                 TermsFilter filter = null;
                                 
-                                if (mail_adress != null)
+                                if (mail_adress != null && mail_adress.length() > 0)
                                 {
                                     filter = new TermsFilter();
                                     filter.addTerm(new Term( "To", mail_adress));
@@ -411,6 +418,10 @@ public class SearchCall
                                     SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject );
                                     result.add(rs);
                                 }
+                            }
+                            catch (ParseException ex)
+                            {
+                                LogManager.err_log("Cannot parse query" , ex);
                             }
                             catch (IOException exception)
                             {

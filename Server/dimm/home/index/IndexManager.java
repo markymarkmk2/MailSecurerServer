@@ -31,10 +31,13 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -81,9 +84,11 @@ class IndexJobEntry
     private DiskSpaceHandler index_dsh;
     RFCGenericMail msg;
     boolean delete_after_index;
+    IndexManager ixm;
 
-    public IndexJobEntry( MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
+    public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
     {
+        this.ixm = ixm;
         this.m_ctx = m_ctx;
         this.unique_id = unique_id;
         this.da_id = da_id;
@@ -96,13 +101,19 @@ class IndexJobEntry
     void handle_index()
     {
         Document doc = new Document();
-        IndexManager idx = m_ctx.get_index_manager();
+        
         try
         {
-            // WE USE data_dsh BECAUSE WE ADD PARAMS OF IT TO INDEX (DA, DS, MA)
-            idx.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, doc);
+            // DO THE REAL WORK (EXTRACT AND INDEX)
+            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, doc);
 
             IndexWriter writer = index_dsh.get_write_index();
+
+            // DETECT LANG OF INDEX AND PUT INTO LUCENE
+            String lang = ixm.get_lang_by_analyzer( writer.getAnalyzer() );
+            doc.add( new Field( CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED ) );
+
+            // SHOVE IT RIGHT OUT!!!
             writer.addDocument(doc);
 
             // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
@@ -220,12 +231,27 @@ public class IndexManager extends WorkerParent
         writer.close();
     }
 
-    protected Analyzer create_analyzer( String language, boolean do_index )
+    protected String get_lang_by_analyzer( Analyzer analyzer )
+    {
+        Set<Entry<String, String>> map_set = analyzerMap.entrySet();
+        Iterator<Entry<String, String>> it = map_set.iterator();
+        while (it.hasNext())
+        {
+            Entry<String, String> e = it.next();
+            if (e.getValue().compareTo(analyzer.getClass().getName()) == 0)
+            {
+                return e.getKey();
+            }
+        }
+        return null;
+    }
+    
+    public Analyzer create_analyzer( String language, boolean do_index )
     {
         Analyzer analyzer = null;
         if (language == null)
         {
-            language = "en";
+            language = "de";
         }
 
         String className = null;
@@ -328,6 +354,13 @@ public class IndexManager extends WorkerParent
                 Part p = (Part) content;
                 index_part_content(doc, unique_id, p);
             }
+
+            if (doc.getField( CS_Constants.FLD_ATTACHMENT_NAME) != null)
+            {
+                doc.add(new Field(CS_Constants.FLD_HAS_ATTACHMENT, "1", Field.Store.YES, Field.Index.NOT_ANALYZED));
+            }
+
+
         }
         catch (FileNotFoundException fileNotFoundException)
         {
@@ -358,6 +391,7 @@ public class IndexManager extends WorkerParent
                 doc.add(new Field(CS_Constants.FLD_HEADERVAR_VALUE, ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
                 doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
+                LogManager.log(Level.FINE, "Mail " + uid + " adding header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
             }
         }
     }
@@ -825,7 +859,7 @@ public class IndexManager extends WorkerParent
 
     public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index ) throws IndexException
     {
-        IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
 
         File index_path = m_ctx.getTempFileHandler().get_index_buffer_mail_path();
 
@@ -852,7 +886,7 @@ public class IndexManager extends WorkerParent
 
     public void handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
     {
-        IndexJobEntry ije = new IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
         ije.handle_index();
     }
 }

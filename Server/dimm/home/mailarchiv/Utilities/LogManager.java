@@ -7,7 +7,6 @@ package dimm.home.mailarchiv.Utilities;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 
@@ -25,7 +24,7 @@ public class LogManager
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
 
-    static long dbg_level = 0;
+    static long dbg_level = 5;
 
     public static void debug( String string )
     {
@@ -115,6 +114,10 @@ public class LogManager
 
         log( "error.log", string );
 
+    }
+    public static void log( Level level, String msg)
+    {
+        log(level, msg, null);
     }
 
     public static void log( Level level, String msg, Throwable ex )

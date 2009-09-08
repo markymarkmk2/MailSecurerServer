@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.logging.Level;
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
@@ -151,6 +152,11 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot open index: " + iex);
         }
        _open = true;
+    }
+
+    public Analyzer create_read_analyzer()
+    {
+        return m_ctx.get_index_manager().create_analyzer(dsi.getLanguage(), /*do_indexs*/ false);
     }
 
     public void create() throws VaultException
