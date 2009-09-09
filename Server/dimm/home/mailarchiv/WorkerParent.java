@@ -65,6 +65,8 @@ public abstract class WorkerParent
     {
         this.goodState = goodState;
     }
+
+    abstract public String get_task_status();
     
     
     

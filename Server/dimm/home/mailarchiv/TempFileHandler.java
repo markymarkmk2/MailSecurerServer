@@ -100,15 +100,18 @@ public class TempFileHandler
     public File create_new_import_file( String name )
     {
         // MOVE TO IMPORT PATH
-        String new_path = ctx.get_tmp_path() + Main.IMPORTRELPATH + name;
+        String new_path = ctx.get_tmp_path() + "/" + Main.IMPORTRELPATH + name;
+
         File nf = new File(new_path);
+
+        if (!nf.getParentFile().exists())
+            nf.getParentFile().mkdirs();
 
         // VERY UNLIKELY THERE IS ALREADY A FILE WITH SAME NAME...
         int i = 10;
         while (nf.exists() && i > 0)
-        {
-            new_path += Long.toString(System.currentTimeMillis() % 10000);
-            nf = new File(new_path);
+        {            
+            nf = new File(new_path + Long.toString(System.currentTimeMillis() % 10000));
             i--;
         }
         return nf;

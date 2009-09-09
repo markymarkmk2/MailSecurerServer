@@ -6,34 +6,33 @@
  * To change this template, choose Tools | Template Manager
  * and open the template in the editor.
  */
-
 package dimm.home.workers;
 
-import dimm.home.importmail.MBoxImporter;
 import dimm.home.importmail.MultipleMailImporter;
 import dimm.home.mailarchiv.*;
-import dimm.home.mailarchiv.Exceptions.ExtractionException;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
+import home.shared.mail.RFCFileMail;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import javax.mail.Message;
 import javax.swing.Timer;
 
-
 class MBoxImporterEntry
 {
+
     int total_msg;
     int act_msg;
     long size;
     float mb_per_s;
     String status;
     int err;
-
     MultipleMailImporter mbi;
     Mandant mandant;
     DiskArchive da;
-
 
     MBoxImporterEntry( Mandant m, DiskArchive da, MultipleMailImporter mbi )
     {
@@ -49,43 +48,39 @@ class MBoxImporterEntry
     }
 }
 
-
 /**
  *
  * @author Administrator
  */
 public class MBoxImportServer extends WorkerParent
 {
-    
-    
-    public static final String NAME = "MBoxImportServer";
 
-    
+    public static final String NAME = "MBoxImportServer";
     Timer timer;
     final ArrayList<MBoxImporterEntry> import_list;
     SwingWorker idle_worker;
-
     boolean m_Stop = false;
-    
-    
+
     /** Creates a new instance of StatusDisplay */
     public MBoxImportServer()
-    {        
+    {
         super(NAME);
         import_list = new ArrayList<MBoxImporterEntry>();
     }
-    
+
     @Override
     public boolean initialize()
     {
         return true;
     }
 
-   
-    public void add_mbox_import(MandantContext m_ctx, DiskArchive da, MultipleMailImporter mbi)
+    public void add_mbox_import( MandantContext m_ctx, DiskArchive da, MultipleMailImporter mbi )
     {
         MBoxImporterEntry mbie = new MBoxImporterEntry(m_ctx.getMandant(), da, mbi);
-        import_list.add(mbie);
+        synchronized (import_list)
+        {
+            import_list.add(mbie);
+        }
     }
 
     @Override
@@ -93,6 +88,7 @@ public class MBoxImportServer extends WorkerParent
     {
         idle_worker = new SwingWorker()
         {
+
             @Override
             public Object construct()
             {
@@ -104,9 +100,38 @@ public class MBoxImportServer extends WorkerParent
 
         idle_worker.start();
 
-       this.setStatusTxt("Running");
-       this.setGoodState(true);
-       return true;
+        this.setStatusTxt("Running");
+        this.setGoodState(true);
+        return true;
+    }
+
+    void work_jobs()
+    {
+        while (true)
+        {
+            MBoxImporterEntry mbie = null;
+
+            // GET FIFO ENTRY
+            synchronized (import_list)
+            {
+                if (m_Stop && import_list.isEmpty())
+                {
+                    break;
+                }
+
+                if (!import_list.isEmpty())
+                {
+                    mbie = import_list.remove(0);
+                }
+            }
+            // LIST EMPTY ?
+            if (mbie == null)
+                break;
+
+            setStatusTxt(Main.Txt("Importing_mailbox"));
+            run_import(mbie);
+            setStatusTxt("");
+        }
     }
 
     void do_idle()
@@ -115,20 +140,9 @@ public class MBoxImportServer extends WorkerParent
         {
             LogicControl.sleep(1000);
 
-            // CLEAN UP LIST OF FINISHED CONNECTIONS
-            synchronized(import_list)
-            {
-                if ( m_Stop && import_list.isEmpty())
-                    break;
-
-                if (import_list.isEmpty())
-                    continue;
-
-            }
-          }
- 
+            work_jobs();
+         }
     }
-
 
     void run_import( MBoxImporterEntry mbie )
     {
@@ -142,13 +156,26 @@ public class MBoxImportServer extends WorkerParent
                 mbie.err = 1;
                 return;
             }
+
+            mbi.open();
+
             mbie.size = mbi.get_msg_file().length();
             mbie.total_msg = mbi.get_message_count();
         }
         catch (Exception extractionException)
         {
+            try
+            {
+                mbi.close();
+            }
+            catch (IOException iOException)
+            {
+            }
+
             mbie.status = "Error while parsing mbox file " + mbi.get_msg_file().getAbsolutePath() + ": " + extractionException.getMessage();
             mbie.err = 2;
+
+            LogManager.err_log(mbie.status, extractionException);
             return;
         }
         try
@@ -158,40 +185,68 @@ public class MBoxImportServer extends WorkerParent
                 mbie.act_msg = i;
                 Message msg = mbi.get_message(i);
 
-                Main.get_control().add_new_mail_stream( msg.getDataHandler().getInputStream(), mbie.mandant, mbie.da, false);
+                File f = Main.get_control().dump_msg_to_temp_file( mbie.mandant, msg );
+
+                RFCFileMail mail = new RFCFileMail(f);
+                
+                Main.get_control().add_mail_file(mail, mbie.mandant, mbie.da, false);
             }
         }
         catch (Exception exception)
         {
+            exception.printStackTrace();
             mbie.status = "Error while extracting mbox file " + mbi.get_msg_file().getAbsolutePath() + " at message " + mbie.act_msg + ": " + exception.getMessage();
             mbie.err = 3;
+
+            LogManager.err_log(mbie.status, exception);
             return;
         }
+        finally
+        {
+            try
+            {
+                mbi.close();
+            }
+            catch (IOException iOException)
+            {
+            }
+        }
     }
-  
 
     @Override
-    public boolean check_requirements(StringBuffer sb)
+    public boolean check_requirements( StringBuffer sb )
     {
         return true;
     }
 
-    public String get_status_txt()
+   
+    @Override
+    public String get_task_status()
     {
         StringBuffer stb = new StringBuffer();
 
-        // CLEAN UP LIST OF FINISHED CONNECTIONS
-        for (int i = 0; i < import_list.size(); i++)
-        {
-            MBoxImporterEntry pe = import_list.get(i);
-            
-            stb.append("MBISI"); stb.append(i); stb.append(":"); stb.append(pe.size);
-            stb.append(" MBIST"); stb.append(i); stb.append(":"); stb.append(pe.status );
-            stb.append(" MBITM"); stb.append(i); stb.append(":"); stb.append(pe.total_msg );
-        }
 
+        synchronized (import_list)
+        {
+            for (int i = 0; i < import_list.size(); i++)
+            {
+                MBoxImporterEntry mbie = import_list.get(i);
+
+                stb.append("MBISI");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.size);
+                stb.append(" MBIST");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.status);
+                stb.append(" MBITM");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.total_msg);
+                stb.append("\n");
+            }
+        }
         return stb.toString();
     }
-
-
 }

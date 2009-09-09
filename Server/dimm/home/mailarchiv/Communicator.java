@@ -19,7 +19,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
-import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.*;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
@@ -79,6 +78,7 @@ public class Communicator extends WorkerParent
     {
         return cmd_list;
     }
+    @Override
     public boolean initialize()
     {
         using_fallback = false;
@@ -147,6 +147,7 @@ public class Communicator extends WorkerParent
                     
     }
     
+    @Override
     public boolean start_run_loop()
     {       
         Main.debug_msg(1, "Starting communicator tasks" );
@@ -156,6 +157,7 @@ public class Communicator extends WorkerParent
          
         SwingWorker worker = new SwingWorker()
         {
+            @Override
             public Object construct()
             {
                 run_loop();
@@ -175,6 +177,7 @@ public class Communicator extends WorkerParent
     {
         SwingWorker worker = new SwingWorker()
         {
+            @Override
             public Object construct()
             {
                 int ret = -1;
@@ -199,6 +202,7 @@ public class Communicator extends WorkerParent
     {
         SwingWorker worker = new SwingWorker()
         {
+            @Override
             public Object construct()
             {
                 int ret = -1;
@@ -585,6 +589,7 @@ public class Communicator extends WorkerParent
     
    
     
+    @Override
     public boolean check_requirements(StringBuffer sb)
     {
         boolean ok = true;        
@@ -769,6 +774,12 @@ public class Communicator extends WorkerParent
         }
         return false;
         
+    }
+
+    @Override
+    public String get_task_status()
+    {
+        return "";
     }
 }
  

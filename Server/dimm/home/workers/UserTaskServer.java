@@ -11,6 +11,8 @@ package dimm.home.workers;
 
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import javax.swing.Timer;
 
@@ -26,11 +28,15 @@ class UserTask
     String method;
     ArrayList params;
 
+    String result_text;
+    boolean result_ok;
+
     UserTask( int level, String description, Object o, String method, ArrayList params )
     {
         this.level = level;
         this.description = description;
         this.obj = o;
+        this.method = method;
         this.params = params;
     }
 
@@ -71,7 +77,10 @@ public class UserTaskServer extends WorkerParent
    
     public void add_usertask(int level, String description, Object o, String method, ArrayList params)
     {
-        task_list.add( new UserTask( level, description, o, method, params ) );
+        synchronized( task_list )
+        {
+            task_list.add( new UserTask( level, description, o, method, params ) );
+        }
     }
 
     @Override
@@ -95,21 +104,37 @@ public class UserTaskServer extends WorkerParent
        return true;
     }
 
+    void work_jobs()
+    {
+        while (true)
+        {
+            UserTask userTask = null;
+            synchronized (task_list)
+            {
+                if (task_list.size() > 0)
+                {
+                    userTask = task_list.remove(0);
+                }
+            }
+
+            if (userTask == null)
+            {
+                break;
+            }
+
+            // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
+            run_usertask(userTask);
+        }
+    }
+
     void do_idle()
     {
         while (!this.isShutdown())
         {
             LogicControl.sleep(1000);
 
-            // CLEAN UP LIST OF FINISHED CONNECTIONS
-            synchronized(task_list)
-            {
-                if ( m_Stop && task_list.isEmpty())
-                    break;
-
-            }
-          }
-  
+            work_jobs();
+        } 
     }
 
   
@@ -119,6 +144,86 @@ public class UserTaskServer extends WorkerParent
     {
         return true;
     }
+
+    @Override
+    public String get_task_status()
+    {
+        StringBuffer stb = new StringBuffer();
+
+        synchronized( task_list )
+        {
+            for (int i = 0; i < task_list.size(); i++)
+            {
+                UserTask userTask = task_list.get(i);
+                stb.append("UTD:" + userTask.description );
+            }
+        }
+
+        return stb.toString();
+
+    }
+
+    private void run_usertask( UserTask userTask )
+    {
+        Method[] m_list = userTask.obj.getClass().getDeclaredMethods();
+        for (int i = 0; i < m_list.length; i++)
+        {
+            Method method = m_list[i];
+            if (method.getName().compareTo(userTask.method) == 0)
+            {
+                boolean params_fit = true;
+                Class[] types = method.getParameterTypes();
+
+
+                // TYPE OF FIRST ARG IS USERTASK OBJECT
+                for (int j = 1; j < types.length; j++)
+                {
+                    Class class1 = types[j];
+                    if (class1.getName().compareTo(userTask.params.get(j).getClass().getName()) != 0)
+                    {
+                        params_fit = false;
+                        break;
+                    }
+                }
+                if (!params_fit)
+                    continue;
+
+                call_method( userTask, method );
+
+            }
+        }
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    private void call_method( UserTask userTask, Method method )
+    {
+        int arg_len = userTask.params.size();
+
+        try
+        {
+            switch (arg_len)
+            {
+                case 0:  method.invoke(userTask.obj);  break;
+                case 1:  method.invoke(userTask.obj, userTask.params.get(0));  break;
+                case 2:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0));  break;
+                case 3:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0), userTask.params.get(0));  break;
+                case 4:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0));  break;
+                case 5:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0));  break;
+                case 6:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0));  break;
+                case 7:  method.invoke(userTask.obj, userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0), userTask.params.get(0));  break;
+                default: userTask.result_text = "Too many params in usertask"; userTask.result_ok = false;
+            }
+        }
+        catch (IllegalAccessException illegalAccessException)
+        {
+        }
+        catch (IllegalArgumentException illegalArgumentException)
+        {
+        }
+        catch (InvocationTargetException invocationTargetException)
+        {
+        }
+   }
 
 
 }

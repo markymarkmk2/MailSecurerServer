@@ -58,7 +58,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
 
 /**
  *
@@ -70,7 +69,6 @@ public class LogicControl
 {
 
     Communicator comm;
-    StatusDisplay sd;
     MilterServer ms;
     MailProxyServer ps;
     HotfolderServer hf_server;
@@ -99,8 +97,6 @@ public class LogicControl
             worker_list.add(comm);
 
 
-            sd = new StatusDisplay();
-            worker_list.add(sd);
 
             ms = new MilterServer();
             worker_list.add(ms);
@@ -365,6 +361,41 @@ public class LogicControl
 
         return tmp_file;
     }
+    public File dump_msg_to_temp_file( Mandant mandant, Message msg ) throws ArchiveMsgException
+    {
+        BufferedOutputStream bos = null;
+        
+
+        File tmp_file = create_temp_file(mandant);
+
+        try
+        {
+            bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+            msg.writeTo(bos);
+        }
+        catch (MessagingException ex)
+        {
+            LogManager.log(Level.SEVERE, "Cannot extract message file", ex);
+            throw new ArchiveMsgException("Cannot extract message file: " + ex.getMessage());
+        }
+        catch (IOException ex)
+        {
+            LogManager.log(Level.SEVERE, "Cannot create duplicate temp file", ex);
+            throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                bos.close();
+            }
+            catch (IOException ex)
+            {
+            }
+        }
+        return tmp_file;
+    }
+
 
     public File create_dupl_temp_file( Mandant mandant, InputStream is ) throws ArchiveMsgException
     {
@@ -612,10 +643,6 @@ public class LogicControl
         catch (Exception exc)
         {
         }
-        if (sd != null)
-        {
-            this.sd.set_router_ok(ok);
-        }
 
         if (comm != null)
         {
@@ -738,10 +765,6 @@ public class LogicControl
         return now;
     }
 
-    public StatusDisplay get_status_display()
-    {
-        return sd;
-    }
     public SQLWorker get_sql_worker()
     {
         return sql;
@@ -859,7 +882,7 @@ public class LogicControl
         return comm;
     }
 
-    public void register_new_import( MandantContext m_ctx, DiskArchive da, String path )
+    public void register_new_import( MandantContext m_ctx, DiskArchive da, String path ) throws ArchiveMsgException
     {
         int itype = CS_Constants.get_itype_from_name(path);
         switch (itype)
@@ -931,6 +954,12 @@ public class LogicControl
                     LogManager.log(Level.SEVERE, "Index generation failed", ex);
                 }
             }
+            default:
+            {
+                Main.err_log_fatal(Main.Txt("Invalid_mailbox_type") + ": " + path);
+                throw new ArchiveMsgException(Main.Txt("Invalid_mailbox_type"));
+            }
+
         }
     }
 
@@ -947,7 +976,14 @@ public class LogicControl
         MandantContext m_ctx = instance.get_mandant_by_id(1);
         da = m_ctx.get_da_by_id(1);
         String path = "z:\\Mailtest\\test2.eml";
-        instance.register_new_import(m_ctx, da, path);
+        try
+        {
+            instance.register_new_import(m_ctx, da, path);
+        }
+        catch (ArchiveMsgException archiveMsgException)
+        {
+            System.out.println("Failed:" + archiveMsgException.getMessage());
+        }
     }
     
     public String get_suffix( String p )
@@ -988,5 +1024,13 @@ public class LogicControl
     public void move_mail_to_index_buffer( MandantContext m_ctx, String path ) throws IOException
     {
         move_mail_to_dir( path, m_ctx.getTempFileHandler().get_index_buffer_mail_path());
+    }
+
+    public void move_to_quarantine( RFCFileMail mail, Mandant mandant ) throws IOException
+    {
+        MandantContext m_ctx = get_mandant_by_id( mandant.getId());
+
+        move_mail_to_quarantine( m_ctx, mail.getFile().getAbsolutePath() );
+
     }
 }

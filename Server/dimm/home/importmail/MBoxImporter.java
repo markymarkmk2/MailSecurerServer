@@ -250,17 +250,29 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
 
         int msg_len = (int)(end - start);
         byte[] buff = new byte[msg_len];
-        int rlen = raf.read(buff);
-        if (rlen != msg_len)
-            throw new ExtractionException("Cannot read message during extraction of mbox <" + msg_file.getAbsolutePath() + "> at pos " + start + ": only " + rlen + " of " + msg_len + " were read");
+        int rest_len = msg_len;
+        int start_pos = 0;
+        while(rest_len > 0)
+        {
+            int rlen = raf.read(buff, start_pos, rest_len);
+            if (rlen < 0)
+                break;
 
-        if (buff[msg_len - 1] == '\r' || buff[msg_len - 1] == '\n')
+            start_pos += rlen;
+            rest_len -= rlen;
+        }
+
+        if (rest_len > 0)
+            throw new ExtractionException("Cannot read message during extraction of mbox <" + msg_file.getAbsolutePath() + "> at pos " + start + ": only " + (msg_len - rest_len) + " of " + msg_len + " were read");
+
+        while (buff[msg_len - 1] == '\r' || buff[msg_len - 1] == '\n')
             msg_len--;
  
         ByteArrayInputStream byais = new ByteArrayInputStream(buff, 0, msg_len);
         Properties props = new Properties();
         Session sess = Session.getDefaultInstance(props);
         MimeMessage msg = new MimeMessage( sess, byais);
+        String str_msg = new String(buff, "UTF-8" );
 
 
         return msg;

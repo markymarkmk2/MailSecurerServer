@@ -155,7 +155,16 @@ public class MilterServer extends WorkerParent
 
     }
 
-    public String get_milter_status_txt()
+
+
+    @Override
+    public boolean check_requirements(StringBuffer sb)
+    {
+        return true;
+    }
+
+    @Override
+    public String get_task_status()
     {
         StringBuffer stb = new StringBuffer();
 
@@ -171,13 +180,6 @@ public class MilterServer extends WorkerParent
         }
 
         return stb.toString();
-    }
-
-
-    @Override
-    public boolean check_requirements(StringBuffer sb)
-    {
-        return true;
     }
 
 

@@ -115,6 +115,7 @@ class IndexJobEntry
 
             // SHOVE IT RIGHT OUT!!!
             writer.addDocument(doc);
+            
 
             // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
             List field_list = doc.getFields();
@@ -161,6 +162,7 @@ public class IndexManager extends WorkerParent
     Extractor extractor;
     MandantContext m_ctx;
     private SwingWorker idle_worker;
+    ArrayList<String> allowed_headers;
 
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -187,6 +189,15 @@ public class IndexManager extends WorkerParent
         analyzerMap.put("tr", "org.apache.lucene.analysis.tr.TurkishAnalyzer");
 
         index_job_list = new ArrayList<IndexJobEntry>();
+
+        allowed_headers = new ArrayList<String>();
+
+        allowed_headers.add("From");
+        allowed_headers.add("To");
+        allowed_headers.add("CC");
+        allowed_headers.add("BCC");
+
+
     }
 
     public IndexWriter open_index( String path, String language, boolean do_index ) throws IOException
@@ -243,7 +254,7 @@ public class IndexManager extends WorkerParent
                 return e.getKey();
             }
         }
-        return null;
+        return "de";
     }
     
     public Analyzer create_analyzer( String language, boolean do_index )
@@ -374,8 +385,6 @@ public class IndexManager extends WorkerParent
         {
             LogManager.log(Level.SEVERE, null, messagingException);
         }
-
-
     }
 
     protected void index_headers( Document doc, String uid, Enumeration mail_header_list )
@@ -386,12 +395,31 @@ public class IndexManager extends WorkerParent
             if (h instanceof Header)
             {
                 Header ih = (Header) h;
-                // STORE ALL HEADERS INTO INDEX DB, DO NOT ANALYZE, WE NEED ORIGINAL CONTENT FOR SEARCH
-                doc.add(new Field(CS_Constants.FLD_HEADERVAR_NAME, ih.getName(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-                doc.add(new Field(CS_Constants.FLD_HEADERVAR_VALUE, ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-                doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                String name = ih.getName();
 
-                LogManager.log(Level.FINE, "Mail " + uid + " adding header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+
+                boolean found = false;
+                for (int i = 0; i < allowed_headers.size(); i++)
+                {
+                    String ah = allowed_headers.get(i);
+                    if (ah.compareToIgnoreCase(name) == 0)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found)
+                {
+                    // STORE ALL HEADERS INTO INDEX DB, DO NOT ANALYZE, WE NEED ORIGINAL CONTENT FOR SEARCH
+                    doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                    LogManager.log(Level.FINE, "Mail " + uid + " adding header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                }
+                else
+                {
+                    LogManager.log(Level.FINE, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                }
+                
             }
         }
     }
@@ -788,7 +816,7 @@ public class IndexManager extends WorkerParent
         return true;
     }
 
-    void work_index_jobs()
+    void work_jobs()
     {
         while (true)
         {
@@ -797,7 +825,7 @@ public class IndexManager extends WorkerParent
             {
                 if (index_job_list.size() > 0)
                 {
-                    ije = index_job_list.get(0);
+                    ije = index_job_list.remove(0);
                 }
             }
 
@@ -808,12 +836,6 @@ public class IndexManager extends WorkerParent
 
             // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
             ije.handle_index();
-
-            // READY WITH THIS ONE, GET RID OF IT
-            synchronized (index_job_list)
-            {
-                index_job_list.remove(ije);
-            }
         }
     }
 
@@ -826,7 +848,10 @@ public class IndexManager extends WorkerParent
             LogicControl.sleep(1000);
             long now = System.currentTimeMillis();
 
-            work_index_jobs();
+            setStatusTxt(Main.Txt("Updating_index"));
+            work_jobs();
+            setStatusTxt("");
+
 
             // ALLE MINUTE INDEX FLUSHEN SETZEN
             if ((now - last_index_flush) > 60 * 1000)
@@ -834,7 +859,6 @@ public class IndexManager extends WorkerParent
                 m_ctx.flush_index();
                 last_index_flush = now;
             }
-
         }
     }
 
@@ -888,6 +912,28 @@ public class IndexManager extends WorkerParent
     {
         IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
         ije.handle_index();
+    }
+
+    @Override
+    public String get_task_status()
+    {
+        StringBuffer stb = new StringBuffer();
+
+
+        synchronized (index_job_list)
+        {
+            for (int i = 0; i < index_job_list.size(); i++)
+            {
+                IndexJobEntry mbie = index_job_list.get(i);
+
+                stb.append("IJEID");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.unique_id);
+                stb.append("\n");
+            }
+        }
+        return stb.toString();
     }
 }
 

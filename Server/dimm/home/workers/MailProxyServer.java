@@ -361,23 +361,6 @@ public class MailProxyServer extends WorkerParent
         }
     }
     
-    public String get_proxy_status_txt()
-    {
-        StringBuffer stb = new StringBuffer();
-        
-        // CLEAN UP LIST OF FINISHED CONNECTIONS
-        for (int i = 0; i < proxy_list.size(); i++)
-        {
-            ProxyEntry pe = proxy_list.get(i);
-            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getType());
-            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
-            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
-            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );            
-            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );
-        }
-        
-        return stb.toString();
-    }
 
     @Override
     public boolean check_requirements(StringBuffer sb)
@@ -425,6 +408,25 @@ public class MailProxyServer extends WorkerParent
 
         }
         return bos;
+    }
+
+    @Override
+    public String get_task_status()
+    {
+        StringBuffer stb = new StringBuffer();
+
+        // CLEAN UP LIST OF FINISHED CONNECTIONS
+        for (int i = 0; i < proxy_list.size(); i++)
+        {
+            ProxyEntry pe = proxy_list.get(i);
+            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getType());
+            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
+            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
+            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
+            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );
+        }
+
+        return stb.toString();
     }
 
 } // POP3Server

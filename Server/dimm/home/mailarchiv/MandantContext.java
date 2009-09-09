@@ -110,11 +110,40 @@ public class MandantContext
     {
 
     }
+    public static boolean has_trail_slash( String path)
+    {
+        int len = path.length();
+        if (len > 0)
+        {
+            char lc = path.charAt(len - 1);
+            if (lc == '/' || lc == '\\')
+                return true;
+        }
+        return false;
+    }
+    public static String add_trail_slash( String path)
+    {
+        if (has_trail_slash(path))
+            return path;
+
+        return path + "/";
+    }
+    public static String del_trail_slash( String path)
+    {
+        if (!has_trail_slash(path))
+            return path;
+
+        return path.substring(0, path.length() - 1);
+    }
+
     public File get_tmp_path()
     {
         String path = prefs.get_prop(MandantPreferences.TEMPFILEDIR, Main.get_prop(GeneralPreferences.TEMPFILEDIR, Main.TEMP_PATH));
 
+        path = add_trail_slash(path);
+
         File tmp_path = new File( path + mandant.getId() );
+
         if (tmp_path.exists() == false)
             tmp_path.mkdirs();
 

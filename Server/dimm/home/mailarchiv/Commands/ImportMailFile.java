@@ -81,7 +81,7 @@ public class ImportMailFile extends AbstractCommand
             }
 
             // THIS FILE CONTAINS THE MAIL FILE
-            String path = ose.file.getAbsolutePath();  // == new_path
+            String path = nf.getAbsolutePath();  // == new_path
 
 
             // PREFIX IS UploadMailFile.IMPMAIL_PREFIX, SUFFIX DEPENDS ON SOURCE

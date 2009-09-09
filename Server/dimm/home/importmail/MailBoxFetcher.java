@@ -18,9 +18,9 @@ import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.mail.RFCFileMail;
+import java.io.File;
 import java.net.UnknownHostException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.AuthenticationFailedException;
 import javax.mail.Flags;
 import javax.mail.Folder;
@@ -459,23 +459,35 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     }
     protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
+        File f = null;
+        RFCFileMail mail = null;
         try
         {
             status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
-            Main.get_control().add_new_mail_stream(message.getInputStream(), imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
-            message.getInputStream().close();
+            f = Main.get_control().dump_msg_to_temp_file(imfetcher.getMandant(), message);
+
+            mail = new RFCFileMail(f);
+
+            Main.get_control().add_mail_file(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
+           
             set_msg_deleted(message);
         }
-        catch (IOException ex)
+        catch (ArchiveMsgException ex)
         {
-            Logger.getLogger(MailBoxFetcher.class.getName()).log(Level.SEVERE, null, ex);
+            status.set_status(StatusEntry.ERROR, "Cannot archive message from <" + imfetcher.getServer() + ">");
+            LogManager.err_log(status.get_status_txt(), ex);
+            if (mail != null)
+            {
+                try
+                {
+                    Main.get_control().move_to_quarantine(mail, imfetcher.getMandant());
+                }
+                catch (IOException iOException)
+                {
+                    LogManager.err_log("Cannot move mail to quarantine", iOException);
+                }
+            }
         }
-        catch (MessagingException ex)
-        {
-            Logger.getLogger(MailBoxFetcher.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-
     }
 
     void set_msg_deleted( Message message )

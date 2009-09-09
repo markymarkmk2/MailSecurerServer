@@ -113,7 +113,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot open read index: " + iex);
+            throw new VaultException( ds, "Cannot open read index: ", iex);
         }
     }
     public void close_read_index() throws VaultException
@@ -127,7 +127,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot close read index: " + iex);
+            throw new VaultException( ds, "Cannot close read index: " , iex);
         }
     }
 
@@ -195,7 +195,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot create index: " + iex);
+            throw new VaultException( ds, "Cannot create index: " , iex);
         }
 
 
@@ -209,7 +209,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot write XML params: " + ex.getMessage());
+            throw new VaultException( ds, "Cannot write XML params: " , ex);
         }
     }
 
@@ -255,7 +255,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot read info file: " + ex.getMessage() );
+            throw new VaultException( ds, "Cannot read info file: " , ex);
         }
     }
     public void close() throws VaultException
@@ -271,7 +271,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot close index: " + iex);
+            throw new VaultException( ds, "Cannot close index: " , iex);
         }
 
         _open = false;
@@ -285,7 +285,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot write info file: " + ex.getMessage() );
+            throw new VaultException( ds, "Cannot write info file: " , ex);
         }
     }
     
@@ -653,6 +653,11 @@ public class DiskSpaceHandler
         try
         {
             File out_file = msg.create_unique_mailfile(getMailPath());
+
+            if (out_file == null)
+            {
+                throw new VaultException( ds, "Cannot create unique mailpath" );
+            }
             CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
 
             bis = msg.open_inputstream();
@@ -676,7 +681,7 @@ public class DiskSpaceHandler
         }
         catch (Exception e)
         {
-            throw new VaultException(ds, e.getMessage());
+            throw new VaultException(ds, e);
         }
         finally
         {
@@ -716,7 +721,7 @@ public class DiskSpaceHandler
         }
         catch (Exception e)
         {
-            throw new VaultException(ds, e.getMessage());
+            throw new VaultException(ds, e);
         }
     }
 

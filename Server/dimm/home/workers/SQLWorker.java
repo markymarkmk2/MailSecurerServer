@@ -651,6 +651,16 @@ MySQL root /eKmIklz37T
         }
     }
 
+    @Override
+    public String get_task_status()
+    {
+        StringBuffer stb = new StringBuffer();
+
+        stb.append("TC:" + stmt_list.size());
+
+        return stb.toString();
+    }
+
 
 
  

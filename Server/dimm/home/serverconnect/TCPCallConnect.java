@@ -1454,4 +1454,10 @@ public class TCPCallConnect extends WorkerParent
         }
         return sb.toString();
     }
+
+    @Override
+    public String get_task_status()
+    {
+        return "";
+    }
 }

@@ -52,23 +52,21 @@ public class HotfolderServer extends WorkerParent
 
     public void set_hfolder_list(Hotfolder[] hf_array) throws Exception
     {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW
-
-        hfolder_list.clear();
-        for (int i = 0; i < hf_array.length; i++)
+        synchronized(hfolder_list)
         {
-            hfolder_list.add( new HotFolderImport( hf_array[i] ) );
+            hfolder_list.clear();
+            for (int i = 0; i < hf_array.length; i++)
+            {
+                hfolder_list.add( new HotFolderImport( hf_array[i] ) );
+            }
         }
     }
     public void add_hfolder(Hotfolder hf)
     {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW
-
+        synchronized(hfolder_list)
+        {
             hfolder_list.add( new HotFolderImport( hf ) );
+        }
     }
 
     @Override
@@ -151,10 +149,18 @@ public class HotfolderServer extends WorkerParent
             HotFolderImport hf = hfolder_list.get(i);
             hf.finish();
         }
-
     }
 
-    public String get_hf_status_txt()
+
+
+    @Override
+    public boolean check_requirements(StringBuffer sb)
+    {
+        return true;
+    }
+
+    @Override
+    public String get_task_status()
     {
         StringBuffer stb = new StringBuffer();
 
@@ -164,21 +170,8 @@ public class HotfolderServer extends WorkerParent
             HotFolderImport hf = hfolder_list.get(i);
 
             stb.append("HFST"); stb.append(i); stb.append(":"); stb.append(hf.get_status_txt() );
-/*            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
-            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
-            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
-            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );*/
         }
 
         return stb.toString();
     }
-
-
-    @Override
-    public boolean check_requirements(StringBuffer sb)
-    {
-        return true;
-    }
-
-
 }
