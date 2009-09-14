@@ -370,8 +370,6 @@ public class IndexManager extends WorkerParent
             {
                 doc.add(new Field(CS_Constants.FLD_HAS_ATTACHMENT, "1", Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
-
-
         }
         catch (FileNotFoundException fileNotFoundException)
         {
@@ -418,13 +416,12 @@ public class IndexManager extends WorkerParent
                 else
                 {
                     LogManager.log(Level.FINE, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
-                }
-                
+                }                
             }
         }
     }
 
-    protected void index_mp_content( Document doc, String uid, Multipart mp ) throws MessagingException, IOException
+    public  void index_mp_content( Document doc, String uid, Multipart mp ) throws MessagingException, IOException
     {
 
         for (int i = 0; i < mp.getCount(); i++)
@@ -438,11 +435,10 @@ public class IndexManager extends WorkerParent
             {
                 index_part_content(doc, uid, p);
             }
-
         }
     }
 
-    protected void index_part_content( Document doc, String uid, Part p ) throws MessagingException, IOException
+    public  void index_part_content( Document doc, String uid, Part p ) throws MessagingException, IOException
     {
         // SELECT THE PLAIN PART OF AN ALTERNATIVE MP
         if (p.isMimeType("multipart/alternative"))
@@ -527,7 +523,7 @@ public class IndexManager extends WorkerParent
                     }
                     else
                     {
-                        Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
+                        Reader textReader = extractor.getText(p.getInputStream(), doc, mimetype, charset);
                         if (textReader != null)
                         {
                             doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
@@ -541,12 +537,12 @@ public class IndexManager extends WorkerParent
             }
             else
             {
-                Reader textReader = extractor.getText(p.getInputStream(), mimetype, charset);
+                Reader textReader = extractor.getText(p.getInputStream(), doc, mimetype, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(CS_Constants.FLD_BODY, textReader));
                     // WE NEED A NEW READER FOR TEXT DETECTION -> STREAM IS NOT ATOMIC
-                    Reader detectReader = extractor.getText(p.getInputStream(), mimetype, charset);
+                    Reader detectReader = extractor.getText(p.getInputStream(), doc, mimetype, charset);
                     String[] languages = ((MimePart) p).getContentLanguage();
                     add_lang_field(languages, doc, detectReader);
                 }
@@ -587,7 +583,7 @@ public class IndexManager extends WorkerParent
                     continue;
                 }
                 String extention = name.substring(dot + 1, name.length());
-                Reader textReader = extractor.getText(gis, extention, charset);
+                Reader textReader = extractor.getText(gis, doc, extention, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
@@ -630,7 +626,7 @@ public class IndexManager extends WorkerParent
         {
             try
             {
-                Reader textReader = extractor.getText(is, extension, charset);
+                Reader textReader = extractor.getText(is, doc, extension, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
@@ -666,7 +662,7 @@ public class IndexManager extends WorkerParent
             }
             else
             {
-                Reader textReader = extractor.getText(gis, extension, charset);
+                Reader textReader = extractor.getText(gis, doc, extension, charset);
                 if (textReader != null)
                 {
                     doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
@@ -694,18 +690,10 @@ public class IndexManager extends WorkerParent
                     continue;
                 }
                 String extention = name.substring(dot + 1, name.length());
-                Reader textReader = extractor.getText(zis, extention, charset);
+                Reader textReader = extractor.getText(zis, doc, extention, charset);
                 if (textReader != null)
                 {
-                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
-                    try
-                    {
-                        textReader.close();
-                    }
-                    catch (Exception e)
-                    {
-//                        logger.debug("failed to close extraction stream()");
-                    }
+                    doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));                    
                 }
                 if (name != null)
                 {
@@ -782,7 +770,7 @@ public class IndexManager extends WorkerParent
                     
                     if (index_dsh != null)
                     {
-                        RFCFileMail msg = new RFCFileMail(file);
+                        RFCFileMail msg = new RFCFileMail(file, RFCFileMail.dflt_encoded);
 
                         // NO, DO RIGHT HERE
                         handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);

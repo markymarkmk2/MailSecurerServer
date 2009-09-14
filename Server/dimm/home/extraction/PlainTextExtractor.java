@@ -5,6 +5,7 @@ package dimm.home.extraction;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import java.io.*;
 import java.nio.charset.Charset;
+import org.apache.lucene.document.Document;
 
 public class PlainTextExtractor implements TextExtractor, Serializable
 {
@@ -15,7 +16,7 @@ public class PlainTextExtractor implements TextExtractor, Serializable
 	}
 
     @Override
-	public Reader getText(InputStream is,  Charset charset) throws ExtractionException
+	public Reader getText(InputStream is,  Document doc, Charset charset) throws ExtractionException
 	{
 	   Reader r = new InputStreamReader(is,charset);
 	   return r;

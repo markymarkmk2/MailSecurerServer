@@ -9,10 +9,10 @@
 
 package dimm.home.workers;
 
-import home.shared.hibernate.ImapFetcher;
-import dimm.home.importmail.MailBoxFetcher;
+import dimm.home.index.IMAP.IMAPBrowser;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import java.io.IOException;
 import java.util.ArrayList;
 import javax.swing.Timer;
 
@@ -23,25 +23,22 @@ import javax.swing.Timer;
  *
  * @author Administrator
  */
-public class MailBoxFetcherServer extends WorkerParent
+public class IMAPBrowserServer extends WorkerParent
 {
-    
-    
-    public static final String NAME = "MailBoxFetcherServer";
-
+    public static final String NAME = "IMAPBrowserServer";
     
     Timer timer;
-    final ArrayList<MailBoxFetcher> fetcher_list;
+    final ArrayList<IMAPBrowser> browser_list;
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
     
     
     /** Creates a new instance of StatusDisplay */
-    public MailBoxFetcherServer()
+    public IMAPBrowserServer()
     {        
         super(NAME);
-        fetcher_list = new ArrayList<MailBoxFetcher>();
+        browser_list = new ArrayList<IMAPBrowser>();
     }
     
     @Override
@@ -50,32 +47,17 @@ public class MailBoxFetcherServer extends WorkerParent
         return true;
     }
 
-    public void set_fetcher_list(ImapFetcher[] if_array) throws Exception
+   
+    public void add_browser(MandantContext m_ctx, String host, int port) throws IOException
     {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW
-
-        fetcher_list.clear();
-        for (int i = 0; i < if_array.length; i++)
-        {
-            ImapFetcher fetcher = if_array[i];
-            fetcher_list.add( MailBoxFetcher.mailbox_fetcher_factory(fetcher) );
-        }
-    }
-    public void add_fetcher(ImapFetcher fetcher)
-    {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW
-
-        fetcher_list.add( MailBoxFetcher.mailbox_fetcher_factory(fetcher) );
+        IMAPBrowser brw = new IMAPBrowser( m_ctx, host,  port);
+        browser_list.add( brw );
     }
 
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting " + fetcher_list.size() + " MailBoxImport tasks" );
+        Main.debug_msg(1, "Starting " + browser_list.size() + " milter tasks" );
 
         if (!Main.get_control().is_licensed())
         {
@@ -86,9 +68,9 @@ public class MailBoxFetcherServer extends WorkerParent
 
         m_Stop = false;
 
-        for (int i = 0; i < fetcher_list.size(); i++)
+        for (int i = 0; i < browser_list.size(); i++)
         {
-            final MailBoxFetcher hf = fetcher_list.get(i);
+            final IMAPBrowser pe = browser_list.get(i);
 
             SwingWorker worker = new SwingWorker()
             {
@@ -96,7 +78,7 @@ public class MailBoxFetcherServer extends WorkerParent
                 public Object construct()
                 {
 
-                    hf.run_loop();
+                    pe.run_loop();
 
                     return null;
                 }
@@ -130,16 +112,16 @@ public class MailBoxFetcherServer extends WorkerParent
             LogicControl.sleep(1000);
 
             // CLEAN UP LIST OF FINISHED CONNECTIONS
-            synchronized(fetcher_list)
+            synchronized(browser_list)
             {
-                if ( m_Stop && fetcher_list.isEmpty())
+                if ( m_Stop && browser_list.isEmpty())
                     break;
 
 
-                for (int i = 0; i < fetcher_list.size(); i++)
+                for (int i = 0; i < browser_list.size(); i++)
                 {
-                    MailBoxFetcher hf = fetcher_list.get(i);
-                    hf.idle_check();
+                    IMAPBrowser m = browser_list.get(i);
+                    m.idle_check();
                 }
                 if (this.isGoodState())
                 {
@@ -147,15 +129,15 @@ public class MailBoxFetcherServer extends WorkerParent
                 }
             }
         }
-        for (int i = 0; i < fetcher_list.size(); i++)
+        for (int i = 0; i < browser_list.size(); i++)
         {
-            MailBoxFetcher hf = fetcher_list.get(i);
-            hf.finish();
+            IMAPBrowser m = browser_list.get(i);
+            m.finish();
         }
 
     }
 
-  
+
 
     @Override
     public boolean check_requirements(StringBuffer sb)
@@ -169,12 +151,11 @@ public class MailBoxFetcherServer extends WorkerParent
         StringBuffer stb = new StringBuffer();
 
         // CLEAN UP LIST OF FINISHED CONNECTIONS
-        for (int i = 0; i < fetcher_list.size(); i++)
+        for (int i = 0; i < browser_list.size(); i++)
         {
-            MailBoxFetcher hf = fetcher_list.get(i);
-
-            stb.append("HFST"); stb.append(i); stb.append(":"); stb.append(hf.get_status_txt() );
-/*            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
+            IMAPBrowser pe = browser_list.get(i);
+  /*          stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getProtokoll());
+            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
             stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
             stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
             stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );*/

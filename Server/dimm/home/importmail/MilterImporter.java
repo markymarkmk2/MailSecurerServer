@@ -13,14 +13,18 @@ import com.sendmail.jilter.JilterHandler;
 import com.sendmail.jilter.JilterHandlerAdapter;
 import com.sendmail.jilter.JilterProcessor;
 import home.shared.hibernate.Milter;
-import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
-import java.io.ByteArrayInputStream;
+import home.shared.CS_Constants;
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -31,19 +35,14 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import javax.mail.Address;
+import javax.mail.Message.RecipientType;
+import javax.mail.MessagingException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 
 
-
-/*
- * Jiolter Samle Code
- * */
-
-
- /*
- * Copyright (c) 2001-2004 Sendmail, Inc. All Rights Reserved
- */
 
 
 /**
@@ -52,7 +51,7 @@ import java.util.logging.Logger;
  */
 
 
-class ServerRunnable implements Runnable
+class JilterServerRunnable implements Runnable
 {
 
     private SocketChannel socket = null;
@@ -66,7 +65,7 @@ class ServerRunnable implements Runnable
      * @param handler the handler containing callbacks for the milter protocol.
      */
 
-    public ServerRunnable(SocketChannel socket, JilterHandler handler)
+    public JilterServerRunnable(SocketChannel socket, JilterHandler handler)
         throws IOException
     {
         this.socket = socket;
@@ -78,7 +77,7 @@ class ServerRunnable implements Runnable
     @Override
     public void run()
     {
-        ByteBuffer dataBuffer = ByteBuffer.allocateDirect(4096);
+        ByteBuffer dataBuffer = ByteBuffer.allocateDirect(CS_Constants.STREAM_BUFFER_LEN);
 
         try
         {
@@ -131,8 +130,11 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     ArrayList<String>header_list;
     StringBuffer header_sb;
     String connect_host;
-    ByteArrayOutputStream out_stream;
     Milter milter;
+
+    File tmp_file;
+    OutputStream os;
+    byte[] tmp_buffer;
 
 
     public MailImportJilterHandler(Milter _milter)
@@ -147,9 +149,10 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         esmtp_rcpt_args = new ArrayList<String>();
         rcpt_list = new ArrayList<String>();
         header_sb = new StringBuffer();
-        out_stream = new ByteArrayOutputStream();
+        
         sender = null;
         connect_host = "localhost";
+        tmp_buffer = new byte[CS_Constants.STREAM_BUFFER_LEN];
     }
 
     @Override
@@ -161,16 +164,42 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     @Override
     public JilterStatus connect( String hostname, InetAddress hostaddr, Properties properties )
     {
-		if (hostaddr != null)
+        if (os != null)
         {
-			connect_host = hostaddr.toString();
-		} 
+            LogManager.log(Level.SEVERE, Main.Txt("removing_aborted_milter_import"));
+            try
+            {
+                os.close();
+                tmp_file.delete();
+            }
+            catch (Exception iOException)
+            {
+            }
+        }
+
+	if (hostaddr != null)
+        {
+            connect_host = hostaddr.toString();
+	} 
         else if (connect_host!=null)
         {
-			connect_host = hostname;
-		}
+            connect_host = hostname;
+	}
+        esmtp_from_args.clear();
+        esmtp_rcpt_args.clear();
 
-		return JilterStatus.SMFIS_CONTINUE;
+        MandantContext m_ctx = Main.get_control().get_m_context(milter.getMandant());
+
+        try
+        {
+            tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
+            os = RFCFileMail.open_outputstream(tmp_file, RFCFileMail.dflt_encoded);
+        }
+        catch (Exception archiveMsgException)
+        {
+            LogManager.log(Level.SEVERE, Main.Txt("cannot_create_temp_file"), archiveMsgException);
+        }
+	return JilterStatus.SMFIS_CONTINUE;
     }
 
     @Override
@@ -212,24 +241,60 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     @Override
     public JilterStatus eom( JilterEOMActions eomActions, Properties properties )
     {
-        ByteArrayInputStream mail_stream = new ByteArrayInputStream( out_stream.toByteArray() );
-        RFCMailStream mail = new RFCMailStream( mail_stream, this.getClass().getCanonicalName() );
         try
         {
-            Main.get_control().add_new_outmail(mail, milter.getMandant(), milter.getDiskArchive(), false);
+            if (os == null)
+            {
+                // TODO: ARCHIVE FAILED
+                LogManager.log(Level.SEVERE, "Got out-of-bound eom, discarding mail");
+                return JilterStatus.SMFIS_CONTINUE;
+            }
+            os.close();
+            os = null;
+            
+            RFCFileMail file_mail = new RFCFileMail(tmp_file, false);
+
+            RFCMimeMail mime_mail = new RFCMimeMail();
+            mime_mail.parse(file_mail);
+
+            add_bcc_recpients( mime_mail.getMsg() );
+
+            
+            Main.get_control().add_mail_file(tmp_file, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
         }
+
         catch (Exception ex)
         {
             // TODO: ARCHIVE FAILED
             LogManager.log(Level.SEVERE, null, ex);
         }
-        return JilterStatus.SMFIS_CONTINUE;
-        
+        return JilterStatus.SMFIS_CONTINUE;        
     }
 
     @Override
     public JilterStatus body( ByteBuffer bodyp )
     {
+        try
+        {
+            if (bodyp.hasArray())
+            {
+                os.write(bodyp.array());
+            }
+            else
+            {
+                if (tmp_buffer.length < bodyp.position())
+                {
+                    tmp_buffer = new byte[bodyp.limit()];
+                }
+                bodyp.get(tmp_buffer, 0, bodyp.position());
+
+                os.write(tmp_buffer, 0, bodyp.position());
+            }
+        }
+        catch (IOException iOException)
+        {
+            LogManager.log(Level.SEVERE, Main.Txt("Could_not_write_milter_body"), iOException);
+        }
         return super.body(bodyp);
     }
 
@@ -244,6 +309,57 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
         return JilterStatus.SMFIS_CONTINUE;
     }
+
+    void add_bcc_recpients(MimeMessage m)
+    {
+        ArrayList<Address> bcc_list = new ArrayList<Address>();
+
+        try
+        {
+            Address[] mail_recipients = m.getAllRecipients();
+
+
+            for (int i = 0; i < esmtp_rcpt_args.size(); i++)
+            {
+                String string = esmtp_rcpt_args.get(i);
+                Address a = new InternetAddress(string);
+
+                boolean found = false;
+
+                for (int j = 0; j < mail_recipients.length; j++)
+                {
+                    Address address = mail_recipients[j];
+                    if (address.equals(a))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    bcc_list.add(a);
+
+                }
+            }
+        }
+        catch (MessagingException messagingException)
+        {
+            LogManager.log(Level.WARNING, "Error while detecting bcc addresses", messagingException);
+        }
+        Address[] ret = new Address[bcc_list.size()];
+        for (int i = 0; i < bcc_list.size(); i++)
+        {
+            ret[i] = bcc_list.get(i);
+        }
+        try
+        {
+            m.addRecipients(RecipientType.BCC, ret);
+        }
+        catch (MessagingException messagingException)
+        {
+            LogManager.log(Level.WARNING, "Error while adding bcc addresses", messagingException);
+        }
+    }
 }
 
 public class MilterImporter implements WorkerParentChild
@@ -252,7 +368,7 @@ public class MilterImporter implements WorkerParentChild
     private ServerSocketChannel serverSocketChannel = null;
     InetSocketAddress adress;
 
-    final ArrayList<ServerRunnable> active_milter_list;
+    final ArrayList<JilterServerRunnable> active_milter_list;
     Milter milter;
 
 
@@ -283,7 +399,7 @@ public class MilterImporter implements WorkerParentChild
 
         do_finish = false;
 
-        active_milter_list = new ArrayList<ServerRunnable>();
+        active_milter_list = new ArrayList<JilterServerRunnable>();
     }
     
     private void log_debug( String s )
@@ -325,7 +441,7 @@ public class MilterImporter implements WorkerParentChild
 
                 log_debug(Main.Txt("Firing_up_new_thread"));
 
-                ServerRunnable sr = new ServerRunnable( connection, newHandler() );
+                JilterServerRunnable sr = new JilterServerRunnable( connection, newHandler() );
                 synchronized(active_milter_list)
                 {
                     active_milter_list.add(sr);
@@ -358,7 +474,7 @@ public class MilterImporter implements WorkerParentChild
         {
             for (int i = 0; i < active_milter_list.size(); i++)
             {
-                ServerRunnable sr = active_milter_list.get(i);
+                JilterServerRunnable sr = active_milter_list.get(i);
                 if (sr.is_finished())
                 {
                     active_milter_list.remove(i);

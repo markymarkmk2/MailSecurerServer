@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.index.IMAP.jimap.ImapServer;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
@@ -12,6 +13,9 @@ import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import java.io.File;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -179,6 +183,8 @@ public class MandantContext
             vault.flush();
         }        
     }
+
+     
 
 
 

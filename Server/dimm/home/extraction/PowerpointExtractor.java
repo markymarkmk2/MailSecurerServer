@@ -10,6 +10,7 @@ import org.apache.poi.poifs.eventfilesystem.POIFSReader;
 import org.apache.poi.poifs.eventfilesystem.POIFSReaderListener;
 import org.apache.poi.util.LittleEndian;
 import java.nio.charset.Charset;
+import org.apache.lucene.document.Document;
 
 public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, Serializable
 {
@@ -23,7 +24,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
     }
 
     @Override
-    public Reader getText( InputStream is, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
     {
         File file = null;
         try

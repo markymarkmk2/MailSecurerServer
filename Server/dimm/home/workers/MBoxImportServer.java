@@ -15,7 +15,6 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import home.shared.mail.RFCFileMail;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import javax.mail.Message;
@@ -185,11 +184,9 @@ public class MBoxImportServer extends WorkerParent
                 mbie.act_msg = i;
                 Message msg = mbi.get_message(i);
 
-                File f = Main.get_control().dump_msg_to_temp_file( mbie.mandant, msg );
-
-                RFCFileMail mail = new RFCFileMail(f);
+                RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(mbie.mandant, msg, "mbximp_");
                 
-                Main.get_control().add_mail_file(mail, mbie.mandant, mbie.da, false);
+                Main.get_control().add_mail_file(mail, mbie.mandant, mbie.da, /*bg*/ true, /*del_after*/ true);
             }
         }
         catch (Exception exception)

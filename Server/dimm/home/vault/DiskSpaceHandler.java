@@ -356,7 +356,7 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
 
         Date d = new Date(time);
-        RFCGenericMail mail = new RFCFileMail( mail_file, d );
+        RFCGenericMail mail = new RFCFileMail( mail_file, d, false );
         return mail;
     }
 

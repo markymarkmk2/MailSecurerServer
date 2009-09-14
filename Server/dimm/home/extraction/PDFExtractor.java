@@ -8,6 +8,7 @@ import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import java.nio.charset.Charset;
+import org.apache.lucene.document.Document;
 
 public class PDFExtractor implements TextExtractor, Serializable
 {
@@ -20,7 +21,7 @@ public class PDFExtractor implements TextExtractor, Serializable
 
 
     @Override
-    public Reader getText( InputStream is, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
     {
 
         File file = null;

@@ -87,7 +87,7 @@ public class OOExtractor implements TextExtractor, Serializable
     }
 
     @Override
-    public Reader getText( InputStream is, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, org.apache.lucene.document.Document ldoc, Charset charset ) throws ExtractionException
     {
         try
         {

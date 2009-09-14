@@ -22,10 +22,8 @@ import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Mandant;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
-import dimm.home.mail.RFCMailStream;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -47,10 +45,8 @@ import dimm.home.workers.MilterServer;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -59,6 +55,60 @@ import java.util.logging.Logger;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 
+class MailBGEntry
+{
+    RFCFileMail mail;
+    Mandant mandant;
+    DiskArchive da;
+    LogicControl control;
+    boolean delete_afterwards;
+
+    MailBGEntry( RFCFileMail mail, Mandant mandant, DiskArchive da, LogicControl control, boolean delete_afterwards )
+    {
+        this.mail = mail;
+        this.mandant = mandant;
+        this.da = da;
+        this.control = control;
+        this.delete_afterwards = delete_afterwards;
+    }
+
+    void do_archive()
+    {
+        try
+        {
+            control.add_mail_file(mail, mandant, da);
+        }
+        catch (ArchiveMsgException ex)
+        {
+            LogManager.err_log("Cannot archive mail", ex);
+        }
+        catch (VaultException ex)
+        {
+            if (mail != null)
+            {
+                try
+                {
+                    Main.get_control().move_to_quarantine(mail, mandant);
+                }
+                catch (IOException iOException)
+                {
+                    LogManager.err_log("Cannot move mail to quarantine", iOException);
+                }
+            }
+        }
+        catch (IndexException ex)
+        {
+            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        finally
+        {
+            if (delete_afterwards)
+            {
+                mail.delete();
+            }
+        }
+    }
+}
 /**
  *
  * @author Administrator
@@ -77,6 +127,7 @@ public class LogicControl
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
+    final ArrayList<MailBGEntry> mail_work_list;
 
     LicenseChecker lic_checker;
     
@@ -90,6 +141,8 @@ public class LogicControl
 
         mandanten_list = new ArrayList<MandantContext>();
         worker_list = new ArrayList<WorkerParent>();
+
+        mail_work_list = new ArrayList<MailBGEntry>();
         try
         {
 
@@ -171,7 +224,7 @@ public class LogicControl
         return lic_checker.check_licensed();
     }
 
-    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
+    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background, boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
     {
         // TODO: background
         if (mail == null)
@@ -182,12 +235,12 @@ public class LogicControl
         {
             throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_missing"));
         }
-        RFCFileMail mf = new RFCFileMail( mail );
+        RFCFileMail mf = new RFCFileMail( mail, false );
 
-        add_mail_file(mf, mandant, da, background);
+        add_mail_file(mf, mandant, da, background, delete_afterwards);
     }
-    
-    public void add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
+
+    void add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da)  throws ArchiveMsgException, VaultException, IndexException
     {
         MandantContext context = get_m_context(mandant);
         if (context == null)
@@ -214,7 +267,25 @@ public class LogicControl
             }
         }
     }
+    public void add_mail_file( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
+    {
+        if (background)
+        {
+            MailBGEntry mbge = new MailBGEntry(mf, mandant, da, this, delete_afterwards);
+            synchronized( mail_work_list )
+            {
+                mail_work_list.add(mbge);
+            }
+        }
+        else
+        {
+            add_mail_file(mf, mandant, da);
 
+            if (delete_afterwards)
+                mf.delete();
+        }
+    }
+/*
     public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         if (background)
@@ -240,20 +311,15 @@ public class LogicControl
 
    
     }
-
+ * */
+/*
     public void add_new_mail_stream( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
-        if (true/*background*/)
-        {
             File mail_file = create_dupl_temp_file(mandant, rfc_is);
             add_mail_file(mail_file, mandant, da, background);
-        }
-    /*      else
-    {
-    add_mail_file( rfc_is, mandant, da, background );
-    }*/
     }
-
+ * */
+/*
     public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         add_new_mail(rfc_dump, mandant, da, background);
@@ -263,6 +329,7 @@ public class LogicControl
     {
         add_new_mail(rfc_dump, mandant, da, background);
     }
+    */
 /*
     public void add_new_outmail( MimeMessage msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
@@ -286,6 +353,7 @@ public class LogicControl
         }
     }
 */
+    /*
     public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
     {
         try
@@ -299,7 +367,7 @@ public class LogicControl
             Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+*/
     public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, VaultException
     {
         long ds_id = DiskSpaceHandler.get_ds_id_from_uuid(mail_uuid);
@@ -339,7 +407,7 @@ public class LogicControl
         if (found_ds == null)
             throw new VaultException( "Cannot find ds for get mail file " + mail_uuid );
 
-        RFCFileMail msg = new RFCFileMail( null, new Date(time));
+        RFCFileMail msg = new RFCFileMail( null, new Date(time), false);
         File mail_file = msg.create_unique_mailfile( found_ds.getDs().getPath() );
 
         return mail_file;
@@ -357,20 +425,20 @@ public class LogicControl
 
     public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
     {
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(/*SUBDIR*/"", "mlt", "tmp");
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
 
         return tmp_file;
     }
-    public File dump_msg_to_temp_file( Mandant mandant, Message msg ) throws ArchiveMsgException
+    public File dump_msg_to_temp_file( Mandant mandant, Message msg, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
     {
-        BufferedOutputStream bos = null;
-        
+        OutputStream bos = null;
 
-        File tmp_file = create_temp_file(mandant);
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
+
 
         try
         {
-            bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+            bos = RFCFileMail.open_outputstream(tmp_file, encoded);
             msg.writeTo(bos);
         }
         catch (MessagingException ex)
@@ -396,18 +464,18 @@ public class LogicControl
         return tmp_file;
     }
 
-
-    public File create_dupl_temp_file( Mandant mandant, InputStream is ) throws ArchiveMsgException
+    public File dump_msg_stream_to_temp_file( Mandant mandant, InputStream is, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
     {
-        BufferedOutputStream bos = null;
+        OutputStream bos = null;
         byte[] buff = new byte[8192];
 
-        File tmp_file = create_temp_file(mandant);
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
+        
 
         try
         {
             BufferedInputStream bis = new BufferedInputStream(is);
-            bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+            bos = RFCFileMail.open_outputstream(tmp_file, encoded);
 
             while (true)
             {
@@ -437,6 +505,31 @@ public class LogicControl
         }
         return tmp_file;
     }
+
+    public RFCFileMail create_filemail_from_msg( Mandant mandant, Message msg, String subdir, String prefix, String suffix ) throws ArchiveMsgException
+    {
+        File f = dump_msg_to_temp_file(mandant, msg, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
+
+        return new RFCFileMail(f, RFCFileMail.dflt_encoded);
+    }
+
+    public RFCFileMail create_filemail_from_msg_stream( Mandant mandant, InputStream is, String subdir, String prefix, String suffix ) throws ArchiveMsgException
+    {
+        File f = dump_msg_stream_to_temp_file(mandant, is, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
+
+        return new RFCFileMail(f, RFCFileMail.dflt_encoded);
+    }
+
+    public RFCFileMail create_import_filemail_from_eml_stream( Mandant mandant, InputStream is, String prefix) throws ArchiveMsgException
+    {
+        return create_filemail_from_msg_stream(mandant, is, "import", prefix, "eml");
+    }
+    public RFCFileMail create_import_filemail_from_eml( Mandant mandant, Message msg, String prefix) throws ArchiveMsgException
+    {
+        return create_filemail_from_msg(mandant, msg, "import", prefix, "eml");
+    }
+
+
 
     void initialize_mandant( MandantContext ctx )
     {
@@ -657,6 +750,29 @@ public class LogicControl
         return ok;
     }
 
+    void work_mail_bg_jobs()
+    {
+        while (true)
+        {
+            MailBGEntry mbge = null;
+            synchronized (mail_work_list)
+            {
+                if (mail_work_list.size() > 0)
+                {
+                    mbge = mail_work_list.remove(0);
+                }
+            }
+
+            if (mbge == null)
+            {
+                break;
+            }
+
+            // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
+            mbge.do_archive();
+        }
+    }
+
 
     // MAIN WORK LOOP
     void run()
@@ -725,7 +841,11 @@ public class LogicControl
                         }
                     }
                 }
+
+                // DO BACKGROUND ARCHIVE JOBS
+                work_mail_bg_jobs();
             }
+
         }
         catch (Exception ex)
         {
@@ -921,7 +1041,7 @@ public class LogicControl
             {
                 try
                 {
-                    add_mail_file(new File(path), m_ctx.getMandant(), da, true);
+                    add_mail_file(new File(path), m_ctx.getMandant(), da, true, true);
                 }
                 catch (ArchiveMsgException ex)
                 {

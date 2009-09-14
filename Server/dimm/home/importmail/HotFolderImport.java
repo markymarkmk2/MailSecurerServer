@@ -6,7 +6,6 @@ package dimm.home.importmail;
 
 import home.shared.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.IndexException;
-import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.HotfolderExclude;
 import home.shared.mail.RFCMimeMail;
@@ -14,21 +13,16 @@ import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
-import dimm.home.mailarchiv.TempFileHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ZipUtilities;
 import dimm.home.mailarchiv.WorkerParentChild;
-import home.shared.hibernate.Mandant;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
@@ -431,30 +425,13 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
             RFCMimeMail mm = new RFCMimeMail();
             mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
-        /*    MandantContext m_ctx = Main.get_control().get_mandant_by_id( hfolder.getMandant().getId());
-            long time = System.currentTimeMillis();
-            File mail_file = m_ctx.getTempFileHandler().create_new_import_file(Long.toString(time) + ".eml");
-            RFCFileMail mail = new RFCFileMail( mail_file, new Date(time) );
-          */
+        
             Message m = mm.getMsg();
 
-            MandantContext m_ctx = Main.get_control().get_mandant_by_id(hfolder.getMandant().getId());
-            File tmp_file = m_ctx.getTempFileHandler().create_temp_file(TempFileHandler.IMPMAIL_PREFIX, "hf_imp", "eml");
+            RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(hfolder.getMandant(), m, "hf_imp");
 
-            try
-            {
-                FileOutputStream fos = new FileOutputStream(tmp_file);
-                m.writeTo(fos);
-                fos.close();
-                RFCFileMail mail = new RFCFileMail( tmp_file, new Date(System.currentTimeMillis()) );
-                Main.get_control().add_mail_file(mail, hfolder.getMandant(), hfolder.getDiskArchive(), true);
-            }
-            catch (IOException iOException)
-            {
-                throw new ArchiveMsgException( Main.Txt("Cannot_write_temporary_file") + iOException.getMessage());
-            }
-
-            
+            Main.get_control().add_mail_file(mail, hfolder.getMandant(), hfolder.getDiskArchive(), /*bg*/true, /*delete_afterwards*/true);
+           
             return true;
         }
         catch (MessagingException ex)

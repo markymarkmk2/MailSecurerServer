@@ -266,7 +266,7 @@ public class SMTPConnection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_new_outmail( rfc_dump, pe.getMandant(), pe.getDiskArchive(), false );
+               Main.get_control().add_mail_file( rfc_dump, pe.getMandant(), pe.getDiskArchive(), /*bg*/ true, /*del_after*/ true );
             }  
             else
             {                

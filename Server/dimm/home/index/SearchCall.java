@@ -20,8 +20,6 @@ import home.shared.CS_Constants;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -31,13 +29,13 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.WildcardQuery;
 
 
 
@@ -378,9 +376,17 @@ public class SearchCall
 
                             try
                             {
-                                Analyzer anal = dsh.create_read_analyzer();
-                                QueryParser qp = new QueryParser(fld, anal );
-                                Query qry = qp.parse(val);
+                                Query qry = null;
+                                if (val.length() > 0)
+                                {
+                                    Analyzer anal = dsh.create_read_analyzer();
+                                    QueryParser qp = new QueryParser(fld, anal );
+                                    qry = qp.parse(val);
+                                }
+                                else
+                                {
+                                    qry = new MatchAllDocsQuery();
+                                }
                                 
                                 TermsFilter filter = null;
                                 

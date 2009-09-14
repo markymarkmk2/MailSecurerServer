@@ -18,6 +18,7 @@ import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
 import java.io.File;
 import java.net.UnknownHostException;
@@ -50,7 +51,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     public static final int CONN_MODE_SSL = 0x0004;
     public static final int FLAG_MASK = 0xfff0;
     public static final int FLAG_AUTH_CERT = 0x0010;
-    public static final int FLAG_IMAP = 0x0020;
+    public static final int FLAG_POP3 = 0x0020;
     public static final int FLAG_IMAP_IDLE = 0x0040;
 
 
@@ -67,17 +68,27 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     ImapFetcher imfetcher;
     String get_mailbox_protokoll()
     {
-        if ((flags & FLAG_IMAP) == FLAG_IMAP)
-        {
-            return "imap";
-        }
-        else
+
+        if ((flags & FLAG_POP3) == FLAG_POP3)
         {
             return "pop3";
         }
+        else
+        {
+            return "imap";
+        }
     }
 
-    public MailBoxFetcher( ImapFetcher _imfetcher )
+    public static MailBoxFetcher mailbox_fetcher_factory( ImapFetcher fetcher )
+    {
+        if (fetcher.getType().compareTo(CS_Constants.IFETCHER_TYPE_ENVELOPE) == 0)
+            return  new ImapEnvelopeFetcher( fetcher );
+
+        return new MailBoxFetcher( fetcher );
+    }
+
+    
+    protected MailBoxFetcher( ImapFetcher _imfetcher )
     {
         imfetcher = _imfetcher;
         int i_flags = Integer.parseInt( imfetcher.getFlags() );
@@ -307,7 +318,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
             status.set_status(StatusEntry.BUSY, "Connected to mail server <" + imfetcher.getServer() + ">");
 
-            if (((flags & FLAG_IMAP) == FLAG_IMAP) && ((flags & FLAG_IMAP_IDLE) == FLAG_IMAP_IDLE))
+            if ((flags & FLAG_IMAP_IDLE) == FLAG_IMAP_IDLE)
             {
                 do_imap_idle();
             }
@@ -326,15 +337,14 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
                 status.set_status(StatusEntry.ERROR, "Disconnecting from mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
                 LogManager.err_log(status.get_status_txt());
             }
-            if (((flags & FLAG_IMAP) == FLAG_IMAP) && ((flags & FLAG_IMAP_IDLE) == FLAG_IMAP_IDLE))
+
+            // PAUSE TODO: PUT INTO PARAMETER
+            try
             {
-                try
-                {
-                    Thread.sleep(IMAP_IDLE_PERIOD * 1000);
-                }
-                catch (Exception e)
-                {
-                }
+                Thread.sleep(IMAP_IDLE_PERIOD * 1000);
+            }
+            catch (Exception e)
+            {
             }
         }
     }
@@ -459,16 +469,14 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     }
     protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
-        File f = null;
         RFCFileMail mail = null;
         try
         {
             status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
-            f = Main.get_control().dump_msg_to_temp_file(imfetcher.getMandant(), message);
+            
+            mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf_");
 
-            mail = new RFCFileMail(f);
-
-            Main.get_control().add_mail_file(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), false);
+            Main.get_control().add_mail_file(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
            
             set_msg_deleted(message);
         }
@@ -528,11 +536,12 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
                 status.set_status(StatusEntry.ERROR, "Archive of message <" + get_subject(message) + "> failed on Mail server <" + imfetcher.getServer() + ">");
                 LogManager.err_log(status.get_status_txt(), ex);
                 complete = false;
-                // TODO ERROR HANDLING : QUARANTINE, REPEAT ETC ETC ETC, HOLY SHIT!!!!
+                // TODO ERROR HANDLING : REPEAT ETC ETC ETC, HOLY SHIT!!!!
             }
         }
 
-        if (((flags & FLAG_IMAP) == FLAG_IMAP) && messages != null && messages.length > 0)
+        // DELETE MESSAGES FROM FOLDER WITH EXPUNGE
+        if (!((flags & FLAG_POP3) == FLAG_POP3) && messages != null && messages.length > 0)
         {
             IMAPFolder f = (IMAPFolder) inboxFolder;
             try
@@ -607,6 +616,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             {
                 break;
             }
+            status.set_status(StatusEntry.BUSY, Main.Txt("Fetching_new_messages_from_server") + " " + imfetcher.getServer());
             complete = archive_messages(messages);
         }
         while (!complete);

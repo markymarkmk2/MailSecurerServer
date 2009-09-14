@@ -2,9 +2,11 @@ package dimm.home.extraction;
 
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.*;
 import java.nio.charset.Charset;
 import java.io.*;
+import org.apache.lucene.document.Document;
 
 public class Extractor implements Serializable
 {
@@ -49,25 +51,29 @@ public class Extractor implements Serializable
         handlers.put("odt", oo);
         handlers.put("ods", oo);
         handlers.put("odp", oo);
+        TextExtractor eml = new EMLExtractor(m_ctx);
+        handlers.put("eml", eml);
+        handlers.put("msg", eml);
 
     }
 
 
 
 
-    public Reader getText( InputStream is, String mimetype, Charset fromCharset ) throws ExtractionException
+    public Reader getText( InputStream is, Document doc, String mimetype, Charset fromCharset ) throws ExtractionException
     {
         TextExtractor extractor;
         extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
         if (extractor == null)
         {
-            throw new ExtractionException("Cannot get text handler from document of this type: " + mimetype);
+            LogManager.err_log_fatal("Cannot get text handler from document of this type: " + mimetype);
+            return new StringReader("");
         }
         else
         {
             try
             {
-                return extractor.getText(is, fromCharset);
+                return extractor.getText(is, doc, fromCharset);
             }
             catch (Exception ee)
             {
