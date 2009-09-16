@@ -1,4 +1,4 @@
-/*  MailQueue implementation
+/*  MailInfo implementation
  *  Copyright (C) 2006 Dirk friedenberger <projekte@frittenburger.de>
  *  
  *  This program is free software; you can redistribute it and/or modify
@@ -15,15 +15,13 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-package dimm.home.index.IMAP.jimap;
+package dimm.home.index.IMAP;
 
-import dimm.home.index.IMAP.util.ObjectCollector;
-
-
-public interface MailQueue
+public interface MailInfo
 {
-    public void set(MailKonto parent);
-    public void init(ObjectCollector data); //if Thread , it can start now
-    public void add(MailMessage m);
-    public void raise(String messageid,String tag,String mfid);
+    public int getUID();
+    public String getMID();
+    public String getFlags();
+    public int getRFC822size();
+    public String getRFC822header();
 }

@@ -26,7 +26,6 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import dimm.home.mailarchiv.Commands.Ping;
@@ -38,6 +37,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
+import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MBoxImportServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
@@ -54,6 +54,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import org.hibernate.HibernateException;
+import org.hibernate.SQLQuery;
 
 class MailBGEntry
 {
@@ -124,6 +126,7 @@ public class LogicControl
     HotfolderServer hf_server;
     MailBoxFetcherServer mb_fetcher_server;
     SQLWorker sql;
+    IMAPBrowserServer ibs;
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -168,7 +171,9 @@ public class LogicControl
 
             sql = new SQLWorker();
             worker_list.add(sql);
-            
+
+            ibs = new IMAPBrowserServer();
+            worker_list.add(ibs);
 
 
         }
@@ -593,6 +598,19 @@ public class LogicControl
         {
              mb_fetcher_server.add_fetcher(if_it.next());
         }
+
+        if ( ctx.getMandant().getImap_port() > 0)
+        {
+            try
+            {
+                ibs.add_browser(ctx, null, ctx.getMandant().getImap_port());
+            }
+            catch (IOException ex)
+            {
+                LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + ctx.getMandant().getName(), ex);
+            }
+        }
+
     }
 
     void initialize()
@@ -612,7 +630,7 @@ public class LogicControl
         // WAIT UNTIL WE REACH INET BEFORE CONTINUING
         if (comm != null)
         {
-            comm.setStatusTxt("Checking internet...");
+            comm.setStatusTxt(Main.Txt("Checking_internet"));
             for (int i = 0; i < 3; i++)
             {
                 if (do_server_ping())
@@ -624,16 +642,16 @@ public class LogicControl
 
             if (!do_server_ping())
             {
-                comm.setStatusTxt("Internet not reachable");
+                comm.setStatusTxt(Main.Txt("Internet_not_reachable"));
                 comm.setGoodState(false);
-                LogManager.err_log_fatal("Cannot connect internet at startup");
+                LogManager.err_log_fatal(Main.Txt("Cannot_connect_internet_at_startup"));
 
             }
             else
             {
                 if (!comm.isGoodState())
                 {
-                    comm.setStatusTxt("Internet reachable");
+                    comm.setStatusTxt(Main.Txt("Internet_reachable"));
                     comm.setGoodState(true);
                 }
             }
@@ -702,13 +720,13 @@ public class LogicControl
                         err_txt += exec.get_err_text();
                     }
 
-                    LogManager.err_log_warn("System time cannot be retrieved: " + err_txt);
+                    LogManager.err_log_warn(Main.Txt("System_time_cannot_be_retrieved") + ": " + err_txt);
 
                     sleep(1000);
                 }
                 else
                 {
-                    LogManager.debug_msg(1, "Systemtime was synchronized");
+                    LogManager.debug_msg(1, Main.Txt("Systemtime_was_synchronized"));
                     return true;
                 }
             }
@@ -742,7 +760,7 @@ public class LogicControl
 
             if (!ok)
             {
-                comm.setStatusTxt("Internet not reachable");
+                comm.setStatusTxt(Main.Txt("Internet_not_reachable"));
             }
             comm.setGoodState(ok);
         }
@@ -797,7 +815,7 @@ public class LogicControl
             {
                 if (!worker_list.get(i).start_run_loop())
                 {
-                    LogManager.err_log_fatal("Cannot start runloop for Worker " + worker_list.get(i).getName());
+                    LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
                 }
             }
 
@@ -865,7 +883,7 @@ public class LogicControl
         }
         shutdown = b;
     }
-
+/*
     static public Date get_actual_rel_date()
     {
         Date now = new Date(System.currentTimeMillis());
@@ -883,7 +901,7 @@ public class LogicControl
         }
 
         return now;
-    }
+    }*/
 
     public SQLWorker get_sql_worker()
     {
@@ -939,8 +957,77 @@ public class LogicControl
 
     org.hibernate.classic.Session param_session;
     org.hibernate.Query read_param_db_qry;
+
+    boolean check_db_changes(org.hibernate.classic.Session change_session, String check_qry, boolean on_fail, String alter_cmd, String fill_cmd)
+    {
+
+        boolean failed = false;
+
+        try
+        {
+            SQLQuery sql_res = change_session.createSQLQuery(check_qry);
+            List l = sql_res.list();
+            if (l.size() != 1)
+                throw new Exception( "Missing field" );
+        }
+        catch (Exception hibernateException)
+        {
+            failed = true;
+        }
+
+        if ((failed && on_fail) || (!failed && !on_fail))
+        {
+            LogManager.info_msg("Performing database update: " + alter_cmd);
+            try
+            {
+                SQLQuery sql_res = change_session.createSQLQuery(alter_cmd);
+                int ret = sql_res.executeUpdate();
+            }
+            catch (Exception hibernateException1)
+            {
+                LogManager.err_log_fatal("Cannot change table struct " +  alter_cmd, hibernateException1);
+                return false;
+            }
+            if (fill_cmd != null)
+            {
+                try
+                {
+                    SQLQuery sql_res = change_session.createSQLQuery(fill_cmd);
+                    int ret = sql_res.executeUpdate();
+                }
+                catch (HibernateException hibernateException)
+                {
+                    LogManager.err_log_fatal("Cannot fill changed table struct " +  fill_cmd, hibernateException);
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    void check_db_changes()
+    {
+        org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
+        org.hibernate.Transaction tx = change_session.beginTransaction();
+
+        check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
+
+        tx.commit();        
+    }
+
     private void read_param_db()
     {
+        try
+        {
+            check_db_changes();
+        }
+
+        
+        catch (Exception ex)
+        {
+            LogManager.err_log_fatal("Error while checking database struct:", ex);
+        }
+
         try
         {
             param_session = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -1016,7 +1103,7 @@ public class LogicControl
                 }
                 catch (Exception exception)
                 {
-                    get_mb_import_server().setStatusTxt("Error opening MBox " + path + ": " + exception.getMessage());
+                    get_mb_import_server().setStatusTxt(Main.Txt("Error_opening_TBird_mbox") + " " + path + ": " + exception.getMessage());
                     get_mb_import_server().setGoodState(false);
                 }
                 
@@ -1031,7 +1118,7 @@ public class LogicControl
                 }
                 catch (Exception exception)
                 {
-                    get_mb_import_server().setStatusTxt("Error opening MBox " + path + ": " + exception.getMessage());
+                    get_mb_import_server().setStatusTxt(Main.Txt("Error_opening_Olexp_mbox") + " " + path + ": " + exception.getMessage());
                     get_mb_import_server().setGoodState(false);
                 }
                 
@@ -1071,7 +1158,7 @@ public class LogicControl
                 }
                 catch (IndexException ex)
                 {
-                    LogManager.log(Level.SEVERE, "Index generation failed", ex);
+                    LogManager.log(Level.SEVERE, Main.Txt("Index_generation_failed"), ex);
                 }
             }
             default:

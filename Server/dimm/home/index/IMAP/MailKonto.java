@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-package dimm.home.index.IMAP.jimap;
+package dimm.home.index.IMAP;
 
 public class MailKonto
 {
@@ -135,13 +135,6 @@ public class MailKonto
     String[] getDirlist( String string )
     {
         // LEVEL 1 IS "."
-        if (string.compareTo(".") == 0)
-            return new String[]{"2005", "2006", "2007", "2008", "2009"};
-
-        if (string.length() == 4)
-        {
-            return new String[]{"1", "2", "...", "12"};
-        }
-        return new String[]{"??"};
+        return new String[]{"INBOX"};
     }
 }

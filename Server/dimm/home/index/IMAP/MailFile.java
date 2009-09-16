@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-package dimm.home.index.IMAP.jimap;
+package dimm.home.index.IMAP;
 import java.util.*;
 
 public class MailFile
@@ -23,19 +23,33 @@ public class MailFile
     String file;
     MailKonto konto;
     String key = null;
-    
+    ArrayList<MailMessage> uid_map;
+
 
     public MailFile(MailKonto konto, String file,String key)
     {
         this.konto = konto;        
         this.file = file;
         this.key = key;
+        uid_map = new ArrayList<MailMessage>();
+
+        if (file.equals("INBOX"))
+        {
+            uid_map.add( new  MailMessage( this, konto, "2005", 1  ));
+            uid_map.add( new  MailMessage( this, konto, "2006", 2 ) );
+        }
     }
     private MailFile(String file) //temporraer, darf nichgt nach aussen gegeben werden 
     {
         this.konto = null;
         this.file = file;
         this.key = null;
+        uid_map = new ArrayList<MailMessage>();
+        if (file.equals("INBOX"))
+        {
+            uid_map.add( new  MailMessage( this, konto, "2005", 1  ));
+            uid_map.add( new  MailMessage( this, konto, "2006", 2 ) );
+        }
     }
 
     public String getKey()
@@ -128,17 +142,16 @@ public class MailFile
 
     public MailInfo getInfo(int index)
     {
-            String uuid = uuid_from_imap_uindex( index );
+        String uuid = uuid_from_imap_uindex( index );
 
-           return getInfo(uuid);
-
+        return getInfo(uuid);
     }
   
    
 
     public int anzMessages()
     {
-        return 5;
+        return uid_map.size();
     }
 
     private MailMessage get_mail_message(  String uuid )
@@ -156,7 +169,7 @@ public class MailFile
 
    
 
-    ArrayList<MailMessage> uid_map;
+    
     private String uuid_from_imap_uindex( int index )
     {
         return uid_map.get(index).uuid;

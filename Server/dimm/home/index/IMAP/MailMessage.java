@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-package dimm.home.index.IMAP.jimap;
+package dimm.home.index.IMAP;
 
 import java.util.*;
 
@@ -37,7 +37,7 @@ public class MailMessage implements MailInfo
     {
         throw new NullPointerException("Constructor not supported");
     }
-
+/*
     public MailMessage( MailFile mailfile, MailKonto parent )
     {
         if (parent == null)
@@ -51,20 +51,14 @@ public class MailMessage implements MailInfo
         this.parent = parent;
         this.mailfile = mailfile;
     }
-
-    public MailMessage( MailFile mailfile, MailKonto parent, String messageid )
+*/
+    public MailMessage( MailFile mailfile, MailKonto parent, String messageid, int uid )
     {
-        if (parent == null)
-        {
-            throw new NullPointerException("parent == null");
-        }
-        if (mailfile == null)
-        {
-            throw new NullPointerException("mailfile == null");
-        }
         this.parent = parent;
         this.mailfile = mailfile;
         this.messageid = messageid;
+        this.uuid = messageid;
+        this.uid = uid;
     }
 
    

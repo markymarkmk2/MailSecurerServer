@@ -15,9 +15,8 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-package dimm.home.index.IMAP.jimap;
+package dimm.home.index.IMAP;
 
-import dimm.home.index.IMAP.util.ObjectCollector;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import java.net.*;
@@ -25,27 +24,7 @@ import java.io.*;
 import java.util.*;
 
 
-class IMAPKonto
-{
 
-    void log( Exception e )
-    {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-}
-class IMAPFile
-{
-
-    int anzMessages()
-    {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    MailInfo getInfo( int i )
-    {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-}
 public class ImapServer extends Thread
 {
 
@@ -268,10 +247,7 @@ public class ImapServer extends Thread
         }
     }
 
-    
-    /* Hilfe funktion */
-    /* getKonto */
-
+   
     public static String cleanup( String name )
     {
         char org[] = name.toCharArray();
@@ -290,7 +266,6 @@ public class ImapServer extends Thread
         }
         return new String(org, 0, j);
     }
-    private static String maildb = "";
     private static Hashtable kontos = new Hashtable();
 
 
@@ -316,7 +291,7 @@ public class ImapServer extends Thread
     public static String[] imapsplit( String line )
     {
 
-        Vector v = new Vector();
+        Vector<String> v = new Vector<String>();
         while (true)
         {
             line = line.trim();
@@ -352,14 +327,14 @@ public class ImapServer extends Thread
         String part[] = new String[v.size()];
         for (int x = 0; x < part.length; x++)
         {
-            part[x] = (String) v.elementAt(x);
+            part[x] =  v.elementAt(x);
         }
         return part;
     }
 
     public static String[] pathsplit( String line )
     {
-        Vector v = new Vector();
+        Vector<String> v = new Vector<String>();
         while (true)
         {
             line = line.trim();
@@ -376,7 +351,7 @@ public class ImapServer extends Thread
         String part[] = new String[v.size()];
         for (int x = 0; x < part.length; x++)
         {
-            part[x] = (String) v.elementAt(x);
+            part[x] = v.elementAt(x);
         }
         return part;
     }
@@ -400,7 +375,10 @@ public class ImapServer extends Thread
         "+flags", "-flags"
     };
 
-   
+    boolean search( int min, int max, int offset, String part[] )
+    {
+        return false;
+    }
 
     boolean fetch( int min, int max, int offset, String part[] )
     {
@@ -561,6 +539,10 @@ public class ImapServer extends Thread
                     //debug
                     //System.out.println("call "+command+" from:"+min+" to:"+max);
 
+                    if (command.equals("search"))
+                    {
+                        success &= search(min, max, 2, part);
+                    }
                     if (command.equals("fetch"))
                     {
                         success &= fetch(min, max, 2, part);
@@ -699,6 +681,8 @@ public class ImapServer extends Thread
             if (m_ctx != null)
             {
                 //Alles Ok
+                konto = new MailKonto( auth[0], auth[1] );
+                
                 response(sid, true, "User " + m_ctx.getMandant().getName() + " logged in");
                 return 0;
             }

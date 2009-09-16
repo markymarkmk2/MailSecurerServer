@@ -5,7 +5,7 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.index.IMAP.jimap.ImapServer;
+import dimm.home.index.IMAP.ImapServer;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
