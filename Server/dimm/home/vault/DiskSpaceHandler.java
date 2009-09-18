@@ -171,14 +171,20 @@ public class DiskSpaceHandler
 
         try
         {
+            dsi = null;
+
             read_info();
-            if (dsi.getCapacity() > 0)
-                throw new VaultException( ds, "Contains data and info, should be empty" );
+
 
         }
         catch (Exception ex)
         {
             // REGULAR EXIT OF CHECK
+        }
+        if (dsi != null)
+        {
+            if (dsi.getCapacity() > 0)
+                throw new VaultException( ds, "Contains index data and info, should be empty" );
         }
 
         dsi = new DiskSpaceInfo();

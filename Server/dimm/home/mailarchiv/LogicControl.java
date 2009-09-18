@@ -137,6 +137,25 @@ public class LogicControl
     MBoxImportServer mb_import_server;
     private boolean shutdown;
 
+
+
+    void check_db_changes()
+    {
+        org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
+        org.hibernate.Transaction tx = change_session.beginTransaction();
+
+        check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
+        check_db_changes( change_session, "select max(mid) from mail_header_variable", true, "alter table mail_header_variable add mid int", null );
+
+        tx.commit();
+    }
+
+
+
+
+
+
+
     /** Creates a new instance of LogicControl */
     public LogicControl()
     {
@@ -1004,15 +1023,6 @@ public class LogicControl
         }
         
         return true;
-    }
-    void check_db_changes()
-    {
-        org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
-        org.hibernate.Transaction tx = change_session.beginTransaction();
-
-        check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
-
-        tx.commit();        
     }
 
     private void read_param_db()

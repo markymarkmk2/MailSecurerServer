@@ -105,7 +105,7 @@ class Test2
     }
 }
 
-class JndiAction
+public class Test
 {
     //Der Vollqualifizierte Name des Administrators im AD
     // final static String ADMIN_NAME = "CN=Administrator,CN=Users,DC=home,DC=dimm";
@@ -132,7 +132,7 @@ class JndiAction
     static void init() throws Exception
     {
 
-        Hashtable env = new Hashtable();
+        Hashtable<String,String> env = new Hashtable<String,String>();
         env.put(Context.INITIAL_CONTEXT_FACTORY,
                 "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
@@ -144,9 +144,9 @@ class JndiAction
         ctx = new InitialLdapContext(env, null);
     }
 
-    static List findUsersByAccountName( String accountName ) throws Exception
+    static ArrayList<String> findUsersByAccountName( String accountName ) throws Exception
     {
-        List list = new ArrayList();
+        ArrayList<String> list = new ArrayList<String>();
 
 
         //Unsere LDAP Abfrage...
@@ -180,16 +180,5 @@ class JndiAction
     }
 }
 
-class UserContext
-{
 
-    String dn;
-    LdapContext ctx;
-
-    public UserContext( String sid, LdapContext ctx )
-    {
-        this.dn = sid;
-        this.ctx = ctx;
-    }
-}
 

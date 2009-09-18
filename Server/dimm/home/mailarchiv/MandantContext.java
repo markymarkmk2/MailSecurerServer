@@ -5,7 +5,6 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.index.IMAP.ImapServer;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import home.shared.hibernate.DiskArchive;
@@ -13,9 +12,6 @@ import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import java.io.File;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -43,9 +39,7 @@ public class MandantContext
         tempFileHandler = new TempFileHandler( this );
     }
 
-    /**
-     * @return the mandant
-     */
+   
     public Mandant getMandant()
     {
         return mandant;
@@ -97,9 +91,7 @@ public class MandantContext
         }
     }
 
-    /**
-     * @return the vaultArray
-     */
+    
     public ArrayList<Vault> getVaultArray()
     {
         return vaultArray;
@@ -183,10 +175,5 @@ public class MandantContext
             vault.flush();
         }        
     }
-
-     
-
-
-
 
 }

@@ -196,8 +196,6 @@ public class IndexManager extends WorkerParent
         allowed_headers.add("To");
         allowed_headers.add("CC");
         allowed_headers.add("BCC");
-
-
     }
 
     public IndexWriter open_index( String path, String language, boolean do_index ) throws IOException
@@ -221,7 +219,6 @@ public class IndexManager extends WorkerParent
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
-
         IndexReader reader = IndexReader.open(dir, /*rd_only*/ true);
 
         return reader;
@@ -232,7 +229,12 @@ public class IndexManager extends WorkerParent
         FSDirectory dir = FSDirectory.getDirectory(path);
 
         Analyzer analyzer = create_analyzer(language, true);
-        IndexWriter writer = new IndexWriter(dir, analyzer, true, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
+
+        // CHECK IF INDEX EXISTS
+        boolean create = !IndexReader.indexExists(path);
+
+        // AND CREATE IF NOT
+        IndexWriter writer = new IndexWriter(dir, analyzer, create, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
         return writer;
     }
 

@@ -9,10 +9,6 @@
     <property name="hibernate.connection.password"/>
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
     <property name="hibernate.show_sql">true</property>
-    <mapping resource="home/shared/hibernate/Mail.hbm.xml"/>
-    <mapping resource="home/shared/hibernate/MailRecipient.hbm.xml"/>
-    <mapping resource="home/shared/hibernate/MailRecipientLink.hbm.xml"/>
-    <mapping resource="home/shared/hibernate/MailHeader.hbm.xml"/>
     <mapping resource="home/shared/hibernate/MailHeaderVariable.hbm.xml"/>
     <mapping resource="home/shared/hibernate/ImapFetcher.hbm.xml"/>
     <mapping resource="home/shared/hibernate/Proxy.hbm.xml"/>
