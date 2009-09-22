@@ -1,12 +1,12 @@
 
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import java.nio.charset.Charset;
 
-import org.apache.lucene.document.Document;
 import org.textmining.extraction.word.*;
 
 public class WordExtractor implements TextExtractor, Serializable
@@ -19,7 +19,7 @@ public class WordExtractor implements TextExtractor, Serializable
     }
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         try
         {

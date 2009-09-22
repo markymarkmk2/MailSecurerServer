@@ -18,7 +18,6 @@ import java.io.RandomAccessFile;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.mail.Message;
@@ -750,5 +749,11 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         }
 
         return "ISO-8859-1";
+    }
+
+    @Override
+    public void delete()
+    {
+        dbx_file.delete();
     }
 }

@@ -299,7 +299,7 @@ public class TCPCallConnect extends WorkerParent
     {
         Method[] list = this.getClass().getDeclaredMethods();
         String str = "";
-        ArrayList<String> args = new ArrayList<String>();
+        ArrayList args = new ArrayList();
         Long s_len = new Long(stream_len);
 
 
@@ -339,20 +339,44 @@ public class TCPCallConnect extends WorkerParent
                             continue;
                         }
 
+                        Object arg = null;
 
-                        // WE ONLY ACCEPT STRINGS RIGHT NOW
-                        Class class1 = paramc[j];
-                        if ((class1 != str.getClass()))
+                        // ADD ARGUMENT TO ARGLIST IF AVAILABLE
+                        if (k < params.size())
                         {
-                            return "8: invalid parameters for comand " + name;
-                        }
+                            Class class1 = paramc[j];
 
-                        String arg = null;
+                            // WE ONLY ACCEPT STRINGS RIGHT NOW
+                            if ((class1 == str.getClass()))
+                                arg = params.get(k);
+                            else
+                            {
 
-                        // ADD ARGUMENT TO ARGLIST IF AVAILABLETO
-                        if (params.size() > k)
-                        {
-                            arg = params.get(k);
+                                try
+                                {
+                                    String cn = class1.getName();
+                                    if (cn.compareTo("int") == 0 || cn.endsWith(".Integer"))
+                                    {
+                                        arg = new Integer(params.get(k));
+                                    }
+                                    else if (cn.compareTo("long") == 0 || cn.endsWith(".Long"))
+                                    {
+                                        arg = new Long(params.get(k));
+                                    }
+                                    else if (cn.compareTo("boolean") == 0 || cn.endsWith(".Boolean"))
+                                    {
+                                        arg = new Boolean(params.get(k));
+                                    }
+                                    else                                    
+                                    {
+                                        throw new Exception("Invalid class type");                                        
+                                    }
+                                }
+                                catch (Exception exception)
+                                {
+                                    return "8: Error in parameters for comand " + name + ": " + class1.getName() + ": " + exception.getMessage() ;
+                                }
+                            }                            
                         }
 
                         // ARGS CONTAINS EXACTLY paramc.length ENTRIES

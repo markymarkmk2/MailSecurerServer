@@ -30,4 +30,6 @@ public interface MultipleMailImporter
 
     void close() throws IOException;
 
+    public void delete();
+
 }

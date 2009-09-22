@@ -1,10 +1,10 @@
 
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import java.io.*;
 import java.nio.charset.Charset;
-import org.apache.lucene.document.Document;
 
 public class HTMLExtractor implements TextExtractor
 {
@@ -14,7 +14,7 @@ public class HTMLExtractor implements TextExtractor
     }
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         return new RemoveHTMLReader(new InputStreamReader(is, charset));
     }

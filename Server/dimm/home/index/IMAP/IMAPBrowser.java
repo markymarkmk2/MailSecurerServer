@@ -622,6 +622,7 @@ public class IMAPBrowser implements WorkerParentChild
             server.start();
 
             SKImapServer is = (SKImapServer)server.getService("IMAP4 Server");
+
             try
             {
                 ACLStore acl_store = is.getACLStore("joe");

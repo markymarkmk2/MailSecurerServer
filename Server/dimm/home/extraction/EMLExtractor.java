@@ -1,6 +1,7 @@
 
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.CS_Constants;
@@ -11,7 +12,6 @@ import java.nio.charset.Charset;
 import javax.mail.Multipart;
 import javax.mail.Part;
 import javax.mail.internet.MimeMessage;
-import org.apache.lucene.document.Document;
 
 public class EMLExtractor implements TextExtractor, Serializable
 {
@@ -23,7 +23,7 @@ public class EMLExtractor implements TextExtractor, Serializable
     }
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         try
         {

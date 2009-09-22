@@ -203,6 +203,7 @@ public class MBoxImportServer extends WorkerParent
             try
             {
                 mbi.close();
+                mbi.delete();
             }
             catch (IOException iOException)
             {

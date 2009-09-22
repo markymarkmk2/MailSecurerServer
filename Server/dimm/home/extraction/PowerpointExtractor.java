@@ -1,5 +1,6 @@
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
@@ -10,7 +11,6 @@ import org.apache.poi.poifs.eventfilesystem.POIFSReader;
 import org.apache.poi.poifs.eventfilesystem.POIFSReaderListener;
 import org.apache.poi.util.LittleEndian;
 import java.nio.charset.Charset;
-import org.apache.lucene.document.Document;
 
 public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, Serializable
 {
@@ -24,7 +24,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
     }
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         File file = null;
         try

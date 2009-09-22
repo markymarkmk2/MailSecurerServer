@@ -1,6 +1,7 @@
 
 
 package dimm.home.extraction;
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
@@ -8,7 +9,6 @@ import javax.swing.text.rtf.RTFEditorKit;
 
 import javax.swing.text.DefaultStyledDocument;
 import java.nio.charset.Charset;
-import org.apache.lucene.document.Document;
 
 public class RTFExtractor implements TextExtractor,Serializable
 {
@@ -22,7 +22,7 @@ public class RTFExtractor implements TextExtractor,Serializable
 
 
     @Override
-	public Reader getText(InputStream is,  Document ldoc, Charset charset) throws ExtractionException {
+	public Reader getText(InputStream is,  DocumentWrapper ldoc, Charset charset) throws ExtractionException {
 	    
 	        Reader reader = null;
 	        FileWriter writer = null;

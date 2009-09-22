@@ -207,6 +207,7 @@ public class DiskVault implements Vault, StatusHandler
         return dsh;
     }
 
+    
 
     boolean low_level_archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
@@ -220,6 +221,7 @@ public class DiskVault implements Vault, StatusHandler
         index_dsh = open_dsh( index_dsh, 1024*1024 );
 
 
+
         // AND SHOVE IT RIGHT IN!!!!
         write_mail_file( context, data_dsh, index_dsh, msg );
 
@@ -231,10 +233,30 @@ public class DiskVault implements Vault, StatusHandler
 
     void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCGenericMail msg ) throws ArchiveMsgException, IndexException
     {
+        String uuid = null;
+        int da_id = -1;
+        int ds_id = -1;
+
+
+        IndexManager idx = m_ctx.get_index_manager();
+
+        // IS MAIL ALREADY IN INDEX? THEN HANDLE UPDATE DOCUMENT
+        boolean handled = idx.handle_existing_mail_in_vault(this, msg);
+        if (handled)
+        {
+            // WE ARE DONE, REMOVE MESSAGE
+            msg.delete();
+            return;
+        }
+
         // WRITE OUT MAIL DATA
         try
         {
             data_dsh.write_encrypted_file(msg, password);
+
+            uuid = data_dsh.get_message_uuid(msg);
+            da_id = data_dsh.ds.getDiskArchive().getId();
+            ds_id = data_dsh.ds.getId();
         }
         catch (Exception ex)
         {
@@ -243,17 +265,10 @@ public class DiskVault implements Vault, StatusHandler
         }
 
         // AND INDEX IT AFTERWARDS
-        IndexManager idx = m_ctx.get_index_manager();
-
-        int da_id = data_dsh.ds.getDiskArchive().getId();
-        int ds_id = data_dsh.ds.getId();
-        String uuid = data_dsh.get_message_uuid(msg);
-
         // USE THREAD ?
         boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, true);
         if (parallel_index)
         {
-
             idx.create_IndexJobEntry_task(m_ctx, uuid, da_id, ds_id,  index_dsh, msg, /*delete_after_index*/true);
         }
         else
@@ -263,6 +278,7 @@ public class DiskVault implements Vault, StatusHandler
         }
     }
 
+    
     @Override
     public void flush()
     {

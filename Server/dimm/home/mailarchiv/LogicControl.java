@@ -146,6 +146,15 @@ public class LogicControl
 
         check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
         check_db_changes( change_session, "select max(mid) from mail_header_variable", true, "alter table mail_header_variable add mid int", null );
+        check_db_changes( change_session, "select count(username) from account_connector", true,
+                            "alter table account_connector add username char(80)",
+                            "update account_connector set username =''");
+        check_db_changes( change_session, "select count(pwd) from account_connector", true,
+                            "alter table account_connector  add pwd char(80)",
+                            "update account_connector set  pwd=''");
+        check_db_changes( change_session, "select count(flags) from account_connector", true,
+                            "alter table account_connector  add flags int",
+                            "update account_connector set  flags=0");
 
         tx.commit();
     }
@@ -453,16 +462,18 @@ public class LogicControl
 
         return tmp_file;
     }
-    public File dump_msg_to_temp_file( Mandant mandant, Message msg, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
+    public RFCFileMail dump_msg_to_temp_file( Mandant mandant, Message msg, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
     {
         OutputStream bos = null;
+        RFCFileMail fm = null;
 
         File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
 
 
         try
         {
-            bos = RFCFileMail.open_outputstream(tmp_file, encoded);
+            fm = new RFCFileMail(tmp_file, encoded );
+            bos = fm.open_outputstream();
             msg.writeTo(bos);
         }
         catch (MessagingException ex)
@@ -485,13 +496,14 @@ public class LogicControl
             {
             }
         }
-        return tmp_file;
+        return fm;
     }
 
-    public File dump_msg_stream_to_temp_file( Mandant mandant, InputStream is, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
+    public RFCFileMail dump_msg_stream_to_temp_file( Mandant mandant, InputStream is, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
     {
+        RFCFileMail fm = null;
         OutputStream bos = null;
-        byte[] buff = new byte[8192];
+        byte[] buff = new byte[CS_Constants.STREAM_BUFFER_LEN];
 
         File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
         
@@ -499,7 +511,8 @@ public class LogicControl
         try
         {
             BufferedInputStream bis = new BufferedInputStream(is);
-            bos = RFCFileMail.open_outputstream(tmp_file, encoded);
+            fm = new RFCFileMail(tmp_file, encoded );
+            bos = fm.open_outputstream();
 
             while (true)
             {
@@ -527,21 +540,21 @@ public class LogicControl
             {
             }
         }
-        return tmp_file;
+        return fm;
     }
 
     public RFCFileMail create_filemail_from_msg( Mandant mandant, Message msg, String subdir, String prefix, String suffix ) throws ArchiveMsgException
     {
-        File f = dump_msg_to_temp_file(mandant, msg, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
+        RFCFileMail f = dump_msg_to_temp_file(mandant, msg, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
 
-        return new RFCFileMail(f, RFCFileMail.dflt_encoded);
+        return f;
     }
 
     public RFCFileMail create_filemail_from_msg_stream( Mandant mandant, InputStream is, String subdir, String prefix, String suffix ) throws ArchiveMsgException
     {
-        File f = dump_msg_stream_to_temp_file(mandant, is, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
+        RFCFileMail f = dump_msg_stream_to_temp_file(mandant, is, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
 
-        return new RFCFileMail(f, RFCFileMail.dflt_encoded);
+        return f;
     }
 
     public RFCFileMail create_import_filemail_from_eml_stream( Mandant mandant, InputStream is, String prefix) throws ArchiveMsgException

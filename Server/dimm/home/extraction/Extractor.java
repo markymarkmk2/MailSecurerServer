@@ -1,12 +1,12 @@
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.*;
 import java.nio.charset.Charset;
 import java.io.*;
-import org.apache.lucene.document.Document;
 
 public class Extractor implements Serializable
 {
@@ -60,7 +60,7 @@ public class Extractor implements Serializable
 
 
 
-    public Reader getText( InputStream is, Document doc, String mimetype, Charset fromCharset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, String mimetype, Charset fromCharset ) throws ExtractionException
     {
         TextExtractor extractor;
         extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));

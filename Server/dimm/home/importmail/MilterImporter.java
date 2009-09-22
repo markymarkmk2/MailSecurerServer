@@ -132,8 +132,9 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     String connect_host;
     Milter milter;
 
-    File tmp_file;
+    //File tmp_file;
     OutputStream os;
+    RFCFileMail file_mail;
     byte[] tmp_buffer;
 
 
@@ -170,7 +171,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             try
             {
                 os.close();
-                tmp_file.delete();
+                file_mail.delete();
             }
             catch (Exception iOException)
             {
@@ -192,8 +193,9 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
         try
         {
-            tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
-            os = RFCFileMail.open_outputstream(tmp_file, RFCFileMail.dflt_encoded);
+            File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
+            file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
+            os = file_mail.open_outputstream();
         }
         catch (Exception archiveMsgException)
         {
@@ -251,16 +253,14 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             }
             os.close();
             os = null;
-            
-            RFCFileMail file_mail = new RFCFileMail(tmp_file, false);
-
+                        
             RFCMimeMail mime_mail = new RFCMimeMail();
             mime_mail.parse(file_mail);
 
             add_bcc_recpients( mime_mail.getMsg() );
 
             
-            Main.get_control().add_mail_file(tmp_file, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
+            Main.get_control().add_mail_file(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
         }
 
         catch (Exception ex)
@@ -346,19 +346,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         {
             LogManager.log(Level.WARNING, "Error while detecting bcc addresses", messagingException);
         }
-        Address[] ret = new Address[bcc_list.size()];
-        for (int i = 0; i < bcc_list.size(); i++)
-        {
-            ret[i] = bcc_list.get(i);
-        }
-        try
-        {
-            m.addRecipients(RecipientType.BCC, ret);
-        }
-        catch (MessagingException messagingException)
-        {
-            LogManager.log(Level.WARNING, "Error while adding bcc addresses", messagingException);
-        }
+        file_mail.set_bcc(bcc_list);
     }
 }
 

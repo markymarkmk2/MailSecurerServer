@@ -1,10 +1,10 @@
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.Iterator;
-import org.apache.lucene.document.Document;
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
@@ -19,7 +19,7 @@ public class ExcelExtractor implements TextExtractor, Serializable
     }
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         try
         {

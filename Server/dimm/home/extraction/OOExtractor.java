@@ -1,5 +1,6 @@
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import org.jdom.Document;
@@ -87,7 +88,7 @@ public class OOExtractor implements TextExtractor, Serializable
     }
 
     @Override
-    public Reader getText( InputStream is, org.apache.lucene.document.Document ldoc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper ldoc, Charset charset ) throws ExtractionException
     {
         try
         {

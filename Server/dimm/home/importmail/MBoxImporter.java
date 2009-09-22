@@ -372,6 +372,12 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
 
         return "ISO-8859-1";
     }
+
+    @Override
+    public void delete()
+    {
+        msg_file.delete();
+    }
   
 
     

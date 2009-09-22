@@ -52,8 +52,9 @@ class SearchResult
     long time;
     long size;
     String subject;
+    boolean has_attachment;
 
-    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s )
+    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment )
     {
         this.searcher = searcher;
         this.doc_index = doc_index;
@@ -64,6 +65,7 @@ class SearchResult
         this.time = time;
         this.size = size;
         subject = s;
+        this.has_attachment = has_attachment;
     }
 }
 
@@ -265,6 +267,12 @@ public class SearchCall
                     result_list.add( row_list );
             }
         }
+        else
+        {
+            ArrayList<String> row_list = retrieve_row( sce, field_list, row );
+            if (row_list != null)
+                result_list.add( row_list );
+        }
 
         XStream xstream = new XStream();
         String res = xstream.toXML(result_list);
@@ -360,7 +368,7 @@ public class SearchCall
             {
                 // GO THROUGH ALL DISKSPACES OF EACH VAULT
                 DiskVault dv = (DiskVault) vault;
-                dv.get_dsh_list();
+                
                 for (int j = 0; j < dv.get_dsh_list().size(); j++)
                 {
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
@@ -413,15 +421,19 @@ public class SearchCall
 
                                     Document doc = fir.document(doc_idx);
 
-                                    int da_id = doc_get_int( doc, CS_Constants.FLD_DA );
-                                    int ds_id = doc_get_int( doc, CS_Constants.FLD_DS );
-                                    long size = doc_get_hex_long( doc, CS_Constants.FLD_SIZE );
+                                    int da_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DA );
+                                    int ds_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DS );
+                                    long size = IndexManager.doc_get_hex_long( doc, CS_Constants.FLD_SIZE );
                                     
                                     String uuid = doc.get(CS_Constants.FLD_UID_NAME);
-                                    long time = doc_get_hex_long( doc, CS_Constants.FLD_DATE ); // HEX!!!!!
+                                    long time = IndexManager.doc_get_hex_long( doc, CS_Constants.FLD_DATE ); // HEX!!!!!
                                     String subject  = doc.get( CS_Constants.FLD_SUBJECT );
 
-                                    SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject );
+                                    boolean has_attachment = false;
+                                    if (IndexManager.doc_field_exists( doc, CS_Constants.FLD_HAS_ATTACHMENT ))
+                                        has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
+
+                                    SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment );
                                     result.add(rs);
                                 }
                             }
@@ -447,47 +459,7 @@ public class SearchCall
     {
         result.clear();
     }
-    
-    int _doc_get_int( Document doc, String fld ) throws Exception
-    {
-        String val = doc.get(fld);
-        return Integer.parseInt(val);
-    }
-    long _doc_get_long( Document doc, String fld, int radix ) throws Exception
-    {
-        String val = doc.get(fld);
-        return Long.parseLong(val, radix);
-    }
-    int doc_get_int( Document doc, String fld )
-    {
-        int ret = -1;
 
-        try
-        {
-            ret = _doc_get_int(doc, fld);
-        }
-        catch (Exception exception)
-        {
-            LogManager.err_log("Cannot parse int field " + fld + " from index" , exception);
-        }
-
-        return ret;
-    }
-    long doc_get_hex_long( Document doc, String fld )
-    {
-        long ret = -1;
-
-        try
-        {
-            ret = _doc_get_long(doc, fld, 16);
-        }
-        catch (Exception exception)
-        {
-            LogManager.err_log("Cannot parse hex long field " + fld + " from index" , exception);
-        }
-
-        return ret;
-    }
 
     private String open_RMX_mail_stream( SearchResult result )
     {

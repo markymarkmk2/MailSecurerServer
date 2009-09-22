@@ -1,5 +1,6 @@
 package dimm.home.extraction;
 
+import dimm.home.index.DocumentWrapper;
 import org.pdfbox.encryption.DocumentEncryption;
 import org.pdfbox.pdfparser.PDFParser;
 import org.pdfbox.pdmodel.PDDocument;
@@ -8,7 +9,6 @@ import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import java.nio.charset.Charset;
-import org.apache.lucene.document.Document;
 
 public class PDFExtractor implements TextExtractor, Serializable
 {
@@ -21,7 +21,7 @@ public class PDFExtractor implements TextExtractor, Serializable
 
 
     @Override
-    public Reader getText( InputStream is, Document doc, Charset charset ) throws ExtractionException
+    public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
 
         File file = null;
