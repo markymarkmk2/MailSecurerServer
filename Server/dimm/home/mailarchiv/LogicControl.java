@@ -56,6 +56,9 @@ import javax.mail.Message;
 import javax.mail.MessagingException;
 import org.hibernate.HibernateException;
 import org.hibernate.SQLQuery;
+import org.hibernate.SessionFactory;
+import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.persister.entity.SingleTableEntityPersister;
 
 class MailBGEntry
 {
@@ -302,6 +305,9 @@ public class LogicControl
     }
     public void add_mail_file( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
     {
+         LogManager.log(Level.SEVERE, "No parallel procress");
+        background = false;
+
         if (background)
         {
             MailBGEntry mbge = new MailBGEntry(mf, mandant, da, this, delete_afterwards);
@@ -1056,8 +1062,10 @@ public class LogicControl
             param_session = HibernateUtil.getSessionFactory().getCurrentSession();
             org.hibernate.Transaction tx = param_session.beginTransaction();
             read_param_db_qry = param_session.createQuery("from Mandant");
-            
+
             List l = read_param_db_qry.list();
+
+            
 
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {

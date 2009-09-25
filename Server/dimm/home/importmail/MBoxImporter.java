@@ -273,6 +273,7 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
         Session sess = Session.getDefaultInstance(props);
         MimeMessage msg = new MimeMessage( sess, byais);
         String str_msg = new String(buff, "UTF-8" );
+        byais.close();
 
 
         return msg;

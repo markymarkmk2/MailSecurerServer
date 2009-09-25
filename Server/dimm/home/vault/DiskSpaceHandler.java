@@ -49,6 +49,8 @@ public class DiskSpaceHandler
     IndexReader read_index;
     IndexWriter write_index;
     MandantContext m_ctx;
+    public final String idx_lock = "idx";
+    public final String data_lock = "data";
 
     public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
     {
@@ -144,7 +146,10 @@ public class DiskSpaceHandler
         {
             if (is_index())
             {
-                write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+                synchronized( idx_lock )
+                {
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+                }
             }
         }
         catch (IOException iex)
@@ -194,9 +199,12 @@ public class DiskSpaceHandler
         {
             if (is_index())
             {
-                write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
-                write_index.commit();
-                write_index.close();
+                synchronized( idx_lock )
+                {
+                    write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+                    write_index.commit();
+                    write_index.close();
+                }
             }
         }
         catch (IOException iex)
@@ -252,12 +260,15 @@ public class DiskSpaceHandler
     {
         try
         {
-            Object o = read_info_object( "dsinfo.xml" );
+            synchronized( data_lock )
+            {
+                Object o = read_info_object( "dsinfo.xml" );
 
-            if (o instanceof DiskSpaceInfo)
-                dsi = (DiskSpaceInfo)o;
-            else
-                throw new VaultException( ds, "Invalid info file" );
+                if (o instanceof DiskSpaceInfo)
+                    dsi = (DiskSpaceInfo)o;
+                else
+                    throw new VaultException( ds, "Invalid info file" );
+            }
         }
         catch (Exception ex)
         {
@@ -271,8 +282,11 @@ public class DiskSpaceHandler
         {
             if (is_index())
             {
-                write_index.commit();
-                write_index.close();
+                synchronized( idx_lock )
+                {
+                    write_index.commit();
+                    write_index.close();
+                }
             }
         }
         catch (IOException iex)
@@ -287,7 +301,10 @@ public class DiskSpaceHandler
     {
         try
         {
-            write_info_object( dsi, "dsinfo.xml" );
+            synchronized( data_lock )
+            {
+                write_info_object( dsi, "dsinfo.xml" );
+            }
         }
         catch (Exception ex)
         {
@@ -650,6 +667,7 @@ public class DiskSpaceHandler
         return ds.getPath() + "/index";
     }
 
+    public static boolean  no_encryption = false;
     public void write_encrypted_file(RFCGenericMail msg, String password ) throws  VaultException
     {
         OutputStream bos = null;
@@ -669,7 +687,18 @@ public class DiskSpaceHandler
             bis = msg.open_inputstream();
             OutputStream os = new FileOutputStream(out_file);
 
-            bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
+
+            LogManager.err_log_fatal( "No encryption!");
+            no_encryption = true;
+
+            if (no_encryption)
+            {
+                bos = os;
+            }
+            else
+            {
+                bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
+            }
 
 
             while (true)
@@ -740,7 +769,10 @@ public class DiskSpaceHandler
         {
             try
             {
-                write_index.commit();
+                synchronized( idx_lock )
+                {
+                    write_index.commit();
+                }
             }
             catch (CorruptIndexException ex)
             {

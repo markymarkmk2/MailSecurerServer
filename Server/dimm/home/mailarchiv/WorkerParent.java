@@ -9,6 +9,9 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
+import java.util.logging.Level;
+
 /**
  *
  * @author Administrator
@@ -54,6 +57,14 @@ public abstract class WorkerParent
     public void setStatusTxt(String statusTxt)
     {
         this.statusTxt = statusTxt;
+        if (statusTxt.length() > 0)
+            LogManager.log(Level.FINE, statusTxt );
+    }
+
+    public void clrStatusTxt(String statusTxt)
+    {
+        if (statusTxt.compareTo(this.statusTxt) == 0)
+            this.statusTxt = "";
     }
 
     public boolean isGoodState()

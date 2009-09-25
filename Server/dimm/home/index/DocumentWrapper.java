@@ -14,14 +14,20 @@ import org.apache.lucene.document.Document;
 public class DocumentWrapper
 {
      Document doc;
+     String uuid;
 
-    public DocumentWrapper( Document doc )
+    public DocumentWrapper( Document doc, String uuid )
     {
         this.doc = doc;
+        this.uuid = uuid;
     }
     public String get( String fld )
     {
         return doc.get(fld);
+    }
+    public String get_uuid()
+    {
+        return uuid;
     }
 
 

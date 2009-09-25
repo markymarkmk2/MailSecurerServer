@@ -13,9 +13,12 @@ import com.moonrug.exchange.IMessage;
 import com.moonrug.exchange.IStore;
 import com.moonrug.exchange.Recipient;
 import com.moonrug.exchange.Session;
+import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
+import home.shared.hibernate.MailHeaderVariable;
+import home.shared.hibernate.Mandant;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -25,6 +28,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.hibernate.HibernateException;
+import org.hibernate.SessionFactory;
+import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.persister.entity.SingleTableEntityPersister;
 
 /**
  *
@@ -71,7 +78,7 @@ public class Main
     public static boolean create_licensefile = false;
     public static String license_interface = "eth0";
     public static String ws_ip = "127.0.0.1";
-    public static String ws_port = "8050";
+    public static int ws_port = 8050;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
   
     
@@ -157,8 +164,14 @@ public class Main
             }
             if (args[i].compareTo("-server_port") == 0 && args[i + 1] != null)
             {
-                ws_port = args[i + 1];
-                info_msg("Using interface license_interface for licensing");
+                try
+                {
+                    ws_port = Integer.parseInt(args[i + 1]);
+                }
+                catch (NumberFormatException numberFormatException)
+                {
+                    err_log("Invalid portnumber on commandline, using default: " + ws_port);
+                }
             }
             if (args[i].compareTo("-init_db") == 0)
             {
@@ -246,7 +259,50 @@ public class Main
     }
     
     void work()
-    {        
+    {
+
+        try
+        {
+            SessionFactory s = HibernateUtil.getSessionFactory();
+            ClassMetadata clmd = s.getClassMetadata(Mandant.class.getName());
+            if (clmd instanceof SingleTableEntityPersister)
+            {
+                SingleTableEntityPersister step = (SingleTableEntityPersister) clmd;
+                String[] tables = step.getConstraintOrderedTableNameClosure();
+                for (int i = 0; i < tables.length; i++)
+                {
+                    String string = tables[i];
+
+                }
+            }
+            org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+            org.hibernate.Transaction tx = param_session.beginTransaction();
+
+            Mandant m = new Mandant();
+            m.setId(1);
+            m.setName("mmm");
+            m.setLicense("LL");
+            m.setPassword("ppp");
+            m.setLoginname("ooo");
+            m.setFlags("");
+            param_session.refresh(m);
+            
+            /*param_session.save(m);
+            MailHeaderVariable hmv = new MailHeaderVariable();
+            hmv.setMandant(m);
+            m.getMailHeaderVariable().add(hmv);
+            param_session.save(m);
+            param_session.save(hmv);
+
+            param_session.delete(m);*/
+            tx.commit();
+        }
+        catch (HibernateException hibernateException)
+        {
+            hibernateException.printStackTrace();
+        }
+
+
         while (true)
         {
             try

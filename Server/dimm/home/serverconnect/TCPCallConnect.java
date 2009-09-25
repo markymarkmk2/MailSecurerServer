@@ -3,6 +3,7 @@ package dimm.home.serverconnect;
 
 
 import com.thoughtworks.xstream.XStream;
+import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
@@ -50,6 +51,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import org.apache.commons.codec.binary.Base64;
+import org.hibernate.SessionFactory;
 
 
 
@@ -79,14 +81,19 @@ public class TCPCallConnect extends WorkerParent
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
         server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
-
+        server_port = 0;
         try
         {
-            server_port = Integer.parseInt(m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT, Main.ws_port));
+            server_port = Integer.parseInt(m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT) );
         }
         catch (NumberFormatException numberFormatException)
         {
             LogManager.err_log_fatal("Invalid Port for TCP-Server");
+        }
+        if (server_port == 0)
+        {
+            server_port = Main.ws_port + m_ctx.getMandant().getId();
+            LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
         }
         tcp_cmd_buff = new byte[TCPCMDBUFF_LEN];
 
@@ -299,7 +306,7 @@ public class TCPCallConnect extends WorkerParent
     {
         Method[] list = this.getClass().getDeclaredMethods();
         String str = "";
-        ArrayList args = new ArrayList();
+        ArrayList<Object> args = new ArrayList<Object>();
         Long s_len = new Long(stream_len);
 
 
@@ -1013,6 +1020,28 @@ public class TCPCallConnect extends WorkerParent
             return "1: " + exc.getMessage();
         }
     }
+    public String RMX_DeleteObject(  String cmd )
+    {
+        try
+        {
+            XStream xstream = new XStream();
+            Object o = xstream.fromXML(cmd);
+
+            SessionFactory s = HibernateUtil.getSessionFactory();
+            org.hibernate.Transaction tx = s.getCurrentSession().beginTransaction();
+            s.getCurrentSession().refresh(o);
+            s.getCurrentSession().delete(o);
+            tx.commit();
+            
+            return "0: ";
+        }
+        catch (Exception exc)
+        {
+            Main.err_log("Call of delete object failed:" + exc.getMessage());
+            return "1: " + exc.getMessage();
+        }
+    }
+
 
     public String RMX_executeQuery( String stmt_txt, String cmd )
     {

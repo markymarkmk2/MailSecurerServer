@@ -112,8 +112,11 @@ class IndexJobEntry
     void handle_index()
     {
         Document doc = new Document();
-        DocumentWrapper docw = new DocumentWrapper(doc);
+        DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
+
+        ixm.setStatusTxt(Main.Txt("Indexing mail file" + " "+ unique_id));
         
+
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
@@ -133,7 +136,10 @@ class IndexJobEntry
             }
 
             // SHOVE IT RIGHT OUT!!!
-            writer.addDocument(doc);
+            synchronized( index_dsh.idx_lock )
+            {
+                writer.addDocument(doc);
+            }
             
 
             // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
@@ -158,7 +164,7 @@ class IndexJobEntry
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.SEVERE, "Error occured while indexing message: ", ex);
+            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
         }
     }
 }
@@ -417,15 +423,15 @@ public class IndexManager extends WorkerParent
         }
         catch (FileNotFoundException fileNotFoundException)
         {
-            LogManager.log(Level.SEVERE, null, fileNotFoundException);
+            LogManager.log(Level.SEVERE, unique_id, fileNotFoundException);
         }
         catch (IOException iox)
         {
-            LogManager.log(Level.SEVERE, null, iox);
+            LogManager.log(Level.SEVERE, unique_id, iox);
         }
         catch (MessagingException messagingException)
         {
-            LogManager.log(Level.SEVERE, null, messagingException);
+            LogManager.log(Level.SEVERE, unique_id, messagingException);
         }
     }
 
@@ -455,11 +461,11 @@ public class IndexManager extends WorkerParent
                 {
                     // STORE ALL HEADERS INTO INDEX DB, DO NOT ANALYZE, WE NEED ORIGINAL CONTENT FOR SEARCH
                     doc.add(new Field(ih.getName(), ih.getValue(), Field.Store.YES, Field.Index.NOT_ANALYZED));
-                    LogManager.log(Level.FINE, "Mail " + uid + " adding header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                    LogManager.log(Level.FINEST, "Mail " + uid + " adding header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
                 }
                 else
                 {
-                    LogManager.log(Level.FINE, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                    LogManager.log(Level.FINEST, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
                 }                
             }
         }
@@ -536,6 +542,11 @@ public class IndexManager extends WorkerParent
             // IS THIS PART AN ATTACHMENT ?
             if (filename != null || (disposition != null && disposition.compareToIgnoreCase(Part.ATTACHMENT) == 0))
             {
+                if (filename == null)
+                    filename = "";
+
+                LogManager.log(Level.FINER, "Indexing attachment " + filename + " to " + doc.get_uuid());
+
                 // YES
                 if (do_index_attachments)
                 {
@@ -594,7 +605,10 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception ee)
         {
-            LogManager.log(Level.SEVERE, "Error in index_content for mime_type <" + mimetype + ">: ", ee);
+            if (filename == null)
+                filename = "";
+
+            LogManager.log(Level.SEVERE, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: ", ee);
             return;
         }
 
@@ -608,7 +622,7 @@ public class IndexManager extends WorkerParent
         }
         catch (IOException io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tgz_file: ", io);
+            LogManager.log(Level.SEVERE, "Error in extract_tgz_file " + doc.get_uuid(), io);
         }
     }
 
@@ -641,7 +655,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tar_file: ", io);
+            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid(), io);
         }
     }
 
@@ -678,7 +692,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception io)
             {
-                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
+                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid(), io);
             }
         }
     }
@@ -697,6 +711,8 @@ public class IndexManager extends WorkerParent
                 {
                     return;
                 }
+
+
                 extension = filename.substring(dot + 1, filename.length());
                 filename = filename.substring(0, dot);
             }
@@ -715,16 +731,17 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
+            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid(), io);
         }
     }
 
     protected void extract_zip_file( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
+        ZipEntry entry;
         try
         {
             ZipInputStream zis = new ZipInputStream(is);
-            ZipEntry entry;
+           
             while ((entry = zis.getNextEntry()) != null)
             {
                 String name = entry.getName();
@@ -733,6 +750,8 @@ public class IndexManager extends WorkerParent
                 {
                     continue;
                 }
+
+                LogManager.log(Level.FINER, "Indexing zip entry " + name + " + to " + doc.get_uuid());
                 String extention = name.substring(dot + 1, name.length());
                 Reader textReader = extractor.getText(zis, doc, extention, charset);
                 if (textReader != null)
@@ -745,9 +764,13 @@ public class IndexManager extends WorkerParent
                 }
             }
         }
+        catch ( IllegalArgumentException wrong_zip_entry )
+        {
+            LogManager.log(Level.SEVERE, "Error in zip file " + doc.get_uuid(), wrong_zip_entry);
+        }
         catch (IOException io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_octet_stream: ", io);
+            LogManager.log(Level.SEVERE, "Error in extract_zip_file " + doc.get_uuid(), io);
         }
     }
 
@@ -850,6 +873,14 @@ public class IndexManager extends WorkerParent
 
     void work_jobs()
     {
+        synchronized (index_job_list)
+        {
+            if (index_job_list.size() == 0)
+                return;
+        }
+
+        setStatusTxt(Main.Txt("Updating_index"));
+
         while (true)
         {
             IndexJobEntry ije = null;
@@ -869,6 +900,8 @@ public class IndexManager extends WorkerParent
             // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
             ije.handle_index();
         }
+
+        clrStatusTxt(Main.Txt("Updating_index"));
     }
 
     void do_idle()
@@ -880,10 +913,7 @@ public class IndexManager extends WorkerParent
             LogicControl.sleep(1000);
             long now = System.currentTimeMillis();
 
-            setStatusTxt(Main.Txt("Updating_index"));
             work_jobs();
-            setStatusTxt("");
-
 
             // ALLE MINUTE INDEX FLUSHEN SETZEN
             if ((now - last_index_flush) > 60 * 1000)
@@ -1098,7 +1128,11 @@ public class IndexManager extends WorkerParent
 
         Term term = new Term( CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME) );
         // SHOVE IT RIGHT OUT!!!
-        writer.updateDocument(term, doc);
+
+        synchronized( index_dsh.idx_lock )
+        {
+            writer.updateDocument(term, doc);
+        }
     }
 
 

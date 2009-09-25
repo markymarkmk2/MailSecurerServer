@@ -132,7 +132,8 @@ public class LogManager
         }
         if (level == Level.SEVERE)
         {
-            ex.printStackTrace();
+            if (ex != null)
+                ex.printStackTrace();
             err_log( text );
         }
         else if (level == Level.WARNING)

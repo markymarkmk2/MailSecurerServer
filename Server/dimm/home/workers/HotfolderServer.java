@@ -138,10 +138,7 @@ public class HotfolderServer extends WorkerParent
                     HotFolderImport hf = hfolder_list.get(i);
                     hf.idle_check();
                 }
-                if (this.isGoodState())
-                {
-                     this.setStatusTxt("");
-                }
+                
             }
         }
         for (int i = 0; i < hfolder_list.size(); i++)

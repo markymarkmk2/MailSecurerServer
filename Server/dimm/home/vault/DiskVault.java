@@ -228,6 +228,9 @@ public class DiskVault implements Vault, StatusHandler
         // ADD CAPACITY COUNTER
         data_dsh.add_message_info(msg);
 
+        // TODO: MAYBE THIS SLOWS DOWN
+        data_dsh.flush();
+
         return true;
     }
 
@@ -237,8 +240,14 @@ public class DiskVault implements Vault, StatusHandler
         int da_id = -1;
         int ds_id = -1;
 
+        uuid = data_dsh.get_message_uuid(msg);
+        da_id = data_dsh.ds.getDiskArchive().getId();
+        ds_id = data_dsh.ds.getId();
 
         IndexManager idx = m_ctx.get_index_manager();
+
+        LogManager.log(Level.FINE, "Writing mail file " + uuid);
+
 
         // IS MAIL ALREADY IN INDEX? THEN HANDLE UPDATE DOCUMENT
         boolean handled = idx.handle_existing_mail_in_vault(this, msg);
@@ -253,10 +262,6 @@ public class DiskVault implements Vault, StatusHandler
         try
         {
             data_dsh.write_encrypted_file(msg, password);
-
-            uuid = data_dsh.get_message_uuid(msg);
-            da_id = data_dsh.ds.getDiskArchive().getId();
-            ds_id = data_dsh.ds.getId();
         }
         catch (Exception ex)
         {
@@ -264,9 +269,16 @@ public class DiskVault implements Vault, StatusHandler
             throw new ArchiveMsgException("Cannot write data file: " + ex.getMessage());
         }
 
+        
+
         // AND INDEX IT AFTERWARDS
         // USE THREAD ?
         boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, true);
+        //
+
+        LogManager.log(Level.SEVERE, "No parallel process");
+        parallel_index = false;
+        
         if (parallel_index)
         {
             idx.create_IndexJobEntry_task(m_ctx, uuid, da_id, ds_id,  index_dsh, msg, /*delete_after_index*/true);
