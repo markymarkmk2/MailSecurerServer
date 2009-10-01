@@ -4,6 +4,8 @@
  */
 package dimm.home.auth.AD;
 
+import dimm.home.mailarchiv.Commands.AbstractCommand;
+import dimm.home.mailarchiv.Utilities.ParseToken;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -29,6 +31,51 @@ class UserContext
     {
         this.dn = sid;
         this.ctx = ctx;
+    }
+}
+
+
+class TestLoginLDAP extends AbstractCommand
+{
+    TestLoginLDAP()
+    {
+        super("TestLoginLDAP");
+    }
+
+    @Override
+    public boolean do_command( String data )
+    {
+        String opt = get_opts( data );
+
+        ParseToken pt = new ParseToken(opt);
+
+        String command = pt.GetString("CMD:");
+        if (command.compareTo("test") == 0)
+        {
+            String admin_name = pt.GetString("NM:");
+            String admin_pwd = pt.GetString("PW:");
+            String ldap_host = pt.GetString("HO:");
+            int ldap_port = (int)pt.GetLongValue("PO:");
+            boolean ssl = pt.GetBoolean("SSL:");
+
+            LDAPAuth la = new LDAPAuth(admin_name, admin_pwd, ldap_host, ldap_port, ssl);
+
+            boolean ret = la.connect();
+            if (!ret)
+            {
+                answer = "1: " + la.error_txt;
+            }
+            else
+            {
+                la.disconnect();
+                answer = "0: ok";
+            }
+
+            return true;
+        }
+
+        answer = "1: Unknown subcommand: " + data;
+        return false;
     }
 }
 
@@ -69,7 +116,9 @@ public class LDAPAuth
         try
         {
             Hashtable env = new Hashtable();
+            String protokoll = "ldap://";
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
             //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
 
@@ -78,13 +127,39 @@ public class LDAPAuth
 
             if (ssl)
             {
+                protokoll = "ldaps://";
                 env.put(Context.SECURITY_PROTOCOL, "ssl");
+                String java_home = System.getProperty("java.home").trim();
+
+                String ca_cert_file = java_home + "/lib/security/cacerts";
+
+               
+                System.setProperty("javax.net.ssl.trustStore",ca_cert_file);
+                env.put("javax.net.ssl.trustStore",ca_cert_file);
+
             }
 
             //Der entsprechende Domänen-Controller:LDAP-Port
-            env.put(Context.PROVIDER_URL, "ldap://" + ldap_host + ":" + ldap_port);
+            env.put(Context.PROVIDER_URL, protokoll + ldap_host + ":" + ldap_port);
 
             ctx = new InitialLdapContext(env, null);
+            return true;
+        }
+        catch (Exception exc)
+        {
+            error_txt = exc.getMessage();
+            exc.printStackTrace();
+        }
+        return false;
+    }
+    public boolean disconnect()
+    {
+        try
+        {
+            if (ctx != null)
+                ctx.close();
+
+            ctx = null;
             return true;
         }
         catch (Exception exc)
@@ -334,6 +409,11 @@ public class LDAPAuth
         {
             exc.printStackTrace();
         }
+    }
+
+    public String get_error_txt()
+    {
+        return error_txt;
     }
   
 }

@@ -8,6 +8,7 @@ package dimm.home.mailarchiv;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.CS_Constants;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -197,13 +198,19 @@ public class TempFileHandler
         File file = ctx.getTempFileHandler().create_temp_file(subdir, prefix, suffix);
 
         OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
-        BufferedInputStream bis = new BufferedInputStream(is);
-        int c;
-        while ((c = bis.read()) != -1)
+        //InputStream bis = new BufferedInputStream(is);
+        InputStream bis = is;
+        byte[] buff = new byte[ CS_Constants.STREAM_BUFFER_LEN ];
+        int rlen;
+        while ((rlen = bis.read(buff)) != -1)
         {
-            os.write(c);
+            os.write(buff, 0, rlen);
         }
         os.close();
+
+        file.deleteOnExit();
+        delete_list.add(file);
+        
         return file;
     }
 
@@ -239,6 +246,20 @@ public class TempFileHandler
             d.mkdirs();
 
         return d;
+    }
+
+    public void delete( File tmp_file )
+    {
+        for (int i = 0; i < delete_list.size(); i++)
+        {
+            File file = delete_list.get(i);
+            if (file == tmp_file)
+            {
+                tmp_file.delete();
+                delete_list.remove(tmp_file);
+                return;
+            }
+        }
     }
 
 

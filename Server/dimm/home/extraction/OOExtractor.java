@@ -106,7 +106,8 @@ public class OOExtractor implements TextExtractor, Serializable
                 {
                     textBuffer = new StringBuffer();
                     SAXBuilder sax = new SAXBuilder();
-                    Document doc = sax.build(zipFile.getInputStream(entry));
+                    InputStream zis = zipFile.getInputStream( entry);
+                    Document doc = sax.build( zis );
                     Element rootElement = doc.getRootElement();
                     processElement(textBuffer, rootElement);
                     break;

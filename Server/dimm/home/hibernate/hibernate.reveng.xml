@@ -13,4 +13,5 @@
   <table-filter match-name="mandant"/>
   <table-filter match-name="disk_archive"/>
   <table-filter match-name="milter"/>
+  <table-filter match-name="role_option"/>
 </hibernate-reverse-engineering>

@@ -263,7 +263,7 @@ public class Main
 
         try
         {
-            SessionFactory s = HibernateUtil.getSessionFactory();
+        /*    SessionFactory s = HibernateUtil.getSessionFactory();
             ClassMetadata clmd = s.getClassMetadata(Mandant.class.getName());
             if (clmd instanceof SingleTableEntityPersister)
             {
@@ -286,7 +286,7 @@ public class Main
             m.setLoginname("ooo");
             m.setFlags("");
             param_session.refresh(m);
-            
+            */
             /*param_session.save(m);
             MailHeaderVariable hmv = new MailHeaderVariable();
             hmv.setMandant(m);
@@ -295,7 +295,8 @@ public class Main
             param_session.save(hmv);
 
             param_session.delete(m);*/
-            tx.commit();
+
+            //tx.commit();
         }
         catch (HibernateException hibernateException)
         {

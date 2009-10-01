@@ -667,7 +667,7 @@ public class DiskSpaceHandler
         return ds.getPath() + "/index";
     }
 
-    public static boolean  no_encryption = false;
+    public static boolean  no_encryption = true;
     public void write_encrypted_file(RFCGenericMail msg, String password ) throws  VaultException
     {
         OutputStream bos = null;
@@ -688,11 +688,10 @@ public class DiskSpaceHandler
             OutputStream os = new FileOutputStream(out_file);
 
 
-            LogManager.err_log_fatal( "No encryption!");
-            no_encryption = true;
 
             if (no_encryption)
             {
+                LogManager.err_log_fatal( "No encryption!");
                 bos = os;
             }
             else
@@ -749,6 +748,9 @@ public class DiskSpaceHandler
             CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.DECRYPT;
 
             InputStream mis = msg.open_inputstream();
+
+            if ( no_encryption)
+                return mis;
 
             InputStream is = CryptTools.create_crypt_instream(m_ctx, mis, password, encrypt);
 

@@ -22,7 +22,13 @@ public class ExtractionException extends Exception {
      * Constructs an instance of <code>ExtractionException</code> with the specified detail message.
      * @param msg the detail message.
      */
-    public ExtractionException(String msg) {
+    public ExtractionException(String msg)
+    {
         super(msg);
+    }
+    public ExtractionException(String msg, Exception ex)
+    {
+        super(msg);
+        ex.printStackTrace();
     }
 }

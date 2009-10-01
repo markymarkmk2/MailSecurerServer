@@ -41,8 +41,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
+import home.shared.zip.LocZipInputStream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import javax.mail.Address;
 import javax.mail.Header;
 import javax.mail.Message;
@@ -67,6 +67,59 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
+
+
+
+class ZipEntryInputStream extends InputStream
+{
+    InputStream is;
+    ZipEntry ze;
+
+    public ZipEntryInputStream( InputStream is, ZipEntry ze )
+    {
+        this.is = is;
+        this.ze = ze;
+    }
+
+    @Override
+    public int available() throws IOException
+    {        
+        return is.available();
+    }
+
+    @Override
+    public long skip( long n ) throws IOException
+    {
+        return is.skip(n);
+    }
+
+    @Override
+    public boolean markSupported()
+    {
+        return is.markSupported();
+    }
+
+
+    @Override
+    public int read( byte[] b ) throws IOException
+    {
+        return is.read(b);
+    }
+
+    @Override
+    public int read( byte[] b, int off, int len ) throws IOException
+    {
+        return is.read(b, off, len);
+    }
+
+
+
+    @Override
+    public int read() throws IOException
+    {
+        return is.read();
+    }
+}
 
 class MyMimetype
 {
@@ -740,7 +793,7 @@ public class IndexManager extends WorkerParent
         ZipEntry entry;
         try
         {
-            ZipInputStream zis = new ZipInputStream(is);
+            LocZipInputStream zis = new LocZipInputStream(is);
            
             while ((entry = zis.getNextEntry()) != null)
             {
@@ -753,14 +806,25 @@ public class IndexManager extends WorkerParent
 
                 LogManager.log(Level.FINER, "Indexing zip entry " + name + " + to " + doc.get_uuid());
                 String extention = name.substring(dot + 1, name.length());
-                Reader textReader = extractor.getText(zis, doc, extention, charset);
-                if (textReader != null)
+
+                ZipEntryInputStream zeis = new ZipEntryInputStream( zis, entry );
+
+
+                try
                 {
-                    doc.doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
+                    Reader textReader = extractor.getText(zeis, doc, extention, charset);
+                    if (textReader != null)
+                    {
+                        doc.doc.add(new Field(CS_Constants.FLD_ATTACHMENT, textReader));
+                    }
+                    if (name != null)
+                    {
+                        doc.doc.add(new Field(CS_Constants.FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
+                    }
                 }
-                if (name != null)
+                catch (ExtractionException extractionException)
                 {
-                    doc.doc.add(new Field(CS_Constants.FLD_ATTACHMENT_NAME, name, Field.Store.NO, Field.Index.ANALYZED));
+                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name , extractionException);
                 }
             }
         }

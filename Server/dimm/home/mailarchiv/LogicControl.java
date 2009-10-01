@@ -147,18 +147,36 @@ public class LogicControl
         org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = change_session.beginTransaction();
 
+ /*       check_db_changes( change_session, "select max(id) from role_option", true,
+                "create table role_option ( id INT NOT NULL GENERATED ALWAYS AS IDENTITY, ro_id int not null, token varchar(80) not null, flags int)",null );
+*/
+
+ /*       check_db_changes( change_session, "select token from role_option", false,
+                "alter table role_option drop token",null );
+        check_db_changes( change_session, "select token from role_option", true,
+                "alter table role_option add token varchar(80)",null );
+*/
+
         check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
         check_db_changes( change_session, "select max(mid) from mail_header_variable", true, "alter table mail_header_variable add mid int", null );
+
+//        check_db_changes( change_session, "select max(ac_id) from role", false, "alter table role drop ac_id", "delete from account_connector" );
+
+//        check_db_changes( change_session, "select max(ac_id) from role", true, "alter table role add ac_id int", "delete from role" );
+
+/*        check_db_changes( change_session, "select count(username) from account_connector", false,"alter table account_connector drop username", null );
+        check_db_changes( change_session, "select count(pwd) from account_connector", false,"alter table account_connector drop pwd", null );
+
         check_db_changes( change_session, "select count(username) from account_connector", true,
-                            "alter table account_connector add username char(80)",
+                            "alter table account_connector add username varchar(80)",
                             "update account_connector set username =''");
         check_db_changes( change_session, "select count(pwd) from account_connector", true,
-                            "alter table account_connector  add pwd char(80)",
+                            "alter table account_connector  add pwd varchar(80)",
                             "update account_connector set  pwd=''");
         check_db_changes( change_session, "select count(flags) from account_connector", true,
                             "alter table account_connector  add flags int",
                             "update account_connector set  flags=0");
-
+*/
         tx.commit();
     }
 
@@ -580,9 +598,6 @@ public class LogicControl
         TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
         worker_list.add(tcp_conn);
         ctx.set_tcp_conn( tcp_conn );
-
-        // ADD COMMANDLISTS
-        tcp_conn.add_command_list( SearchCall.command_list );
 
         // ATTACH INDEXMANAGER
         IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null, /*index_attachments*/ true);

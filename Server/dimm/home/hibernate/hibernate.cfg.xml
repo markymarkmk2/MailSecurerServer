@@ -20,5 +20,6 @@
     <mapping resource="home/shared/hibernate/Hotfolder.hbm.xml"/>
     <mapping resource="home/shared/hibernate/Mandant.hbm.xml"/>
     <mapping resource="home/shared/hibernate/HotfolderExclude.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/RoleOption.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>

@@ -16,9 +16,12 @@ import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Commands.ReadLog;
 import dimm.home.mailarchiv.Commands.Reboot;
 import dimm.home.mailarchiv.Commands.Restart;
+import dimm.home.mailarchiv.Commands.SearchCommand;
 import dimm.home.mailarchiv.Commands.SetStation;
 import dimm.home.mailarchiv.Commands.ShellCmd;
 import dimm.home.mailarchiv.Commands.StartVPN;
+import dimm.home.mailarchiv.Commands.TestLoginLDAP;
+import dimm.home.mailarchiv.Commands.UploadCertificate;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
 import dimm.home.mailarchiv.LogicControl;
@@ -115,6 +118,9 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new StartVPN() );
         cmd_list.add( new ImportMailFile() );
         cmd_list.add( new UploadMailFile() );
+        cmd_list.add( new TestLoginLDAP() );
+        cmd_list.add( new UploadCertificate() );
+        cmd_list.add( new SearchCommand() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

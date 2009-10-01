@@ -1,14 +1,14 @@
 package dimm.home.extraction;
 
 import dimm.home.index.DocumentWrapper;
-import org.pdfbox.encryption.DocumentEncryption;
-import org.pdfbox.pdfparser.PDFParser;
-import org.pdfbox.pdmodel.PDDocument;
-import org.pdfbox.util.PDFTextStripper;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.MandantContext;
 import java.io.*;
 import java.nio.charset.Charset;
+import org.apache.pdfbox.encryption.DocumentEncryption;
+import org.apache.pdfbox.pdfparser.PDFParser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.util.PDFTextStripper;
 
 public class PDFExtractor implements TextExtractor, Serializable
 {
@@ -26,8 +26,13 @@ public class PDFExtractor implements TextExtractor, Serializable
 
         File file = null;
         PDDocument document = null;
+/*        File pdf_file = null;
+        FileInputStream fis = null;*/
         try
         {
+           /* pdf_file = m_ctx.getTempFileHandler().writeTemp("PDFExtract", "extract", "txt", is);
+            fis = new FileInputStream( pdf_file );*/
+
             PDFParser parser = new PDFParser(is);
             parser.parse();
             document = parser.getPDDocument();
@@ -36,7 +41,7 @@ public class PDFExtractor implements TextExtractor, Serializable
                 DocumentEncryption decryptor = new DocumentEncryption(document);
                 decryptor.decryptDocument("");
             }
-            file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "extract", "tmp");
+            file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "extract", "txt");
 
             Writer output = null;
             output = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
@@ -46,7 +51,7 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         catch (Exception e)
         {
-            throw new ExtractionException("failed to extract pdf (probable password protected document)");
+            throw new ExtractionException("Failed to parse PDF",  e);
         }
         finally
         {
@@ -56,6 +61,10 @@ public class PDFExtractor implements TextExtractor, Serializable
                 {
                     document.close();
                 }
+           /*     if (pdf_file != null)
+                {
+                     m_ctx.getTempFileHandler().delete( pdf_file );
+                }*/
             }
             catch (IOException io)
             {
@@ -63,12 +72,11 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         try
         {
-
             return new FileReader(file);
         }
         catch (Exception ex)
         {
-            throw new ExtractionException("failed to extract text from powerpoint document");
+            throw new ExtractionException("Failed to strip text from PDF", ex);
         }
     }
 }
