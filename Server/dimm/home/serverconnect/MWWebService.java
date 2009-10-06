@@ -412,7 +412,7 @@ public class MWWebService
     @WebMethod(operationName = "TXTFunctionCall")
     public String TXTFunctionCall( @WebParam(name = "func_name") String func_name, @WebParam(name = "args") String args  )
     {
-        Communicator comm = Main.get_control().get_communicator();
+        TCPCallConnect comm = Main.get_control().get_tcp_connect();
         ArrayList<AbstractCommand> cmd_list = comm.get_cmd_array();
 
         // STRIP OFF STATION ID, ONLY REST TO FUNCS

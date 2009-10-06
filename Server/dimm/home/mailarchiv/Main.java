@@ -13,12 +13,9 @@ import com.moonrug.exchange.IMessage;
 import com.moonrug.exchange.IStore;
 import com.moonrug.exchange.Recipient;
 import com.moonrug.exchange.Session;
-import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
-import home.shared.hibernate.MailHeaderVariable;
-import home.shared.hibernate.Mandant;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -26,12 +23,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.hibernate.HibernateException;
-import org.hibernate.SessionFactory;
-import org.hibernate.metadata.ClassMetadata;
-import org.hibernate.persister.entity.SingleTableEntityPersister;
 
 /**
  *
@@ -45,6 +40,8 @@ public class Main
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
     public static final String LOG_WARN = "warn.log";
+    public static final String LOG_SQL = "sql.log";
+    public static final String LOG_L4J = "l4j.log";
     
     public static final String PREFS_PATH = "preferences/";
     public static final String TEMP_PATH = "temp/";
@@ -76,7 +73,7 @@ public class Main
     static LogicControl control;
     
     public static boolean create_licensefile = false;
-    public static String license_interface = "eth0";
+    public static String license_interface = null;
     public static String ws_ip = "127.0.0.1";
     public static int ws_port = 8050;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
@@ -365,7 +362,11 @@ public class Main
             ex.printStackTrace();
         }
     }
-    
+
+    public static String get_name()
+    {
+        return get_prop( GeneralPreferences.NAME, Main.APPNAME );
+    }
     
     static public boolean is_proxy_enabled()
     {
@@ -630,17 +631,9 @@ public class Main
         {
             import_moonrug_exc();
         }
-        catch (ExchangeException ex)
+        catch (Exception ex)
         {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (FileNotFoundException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            System.err.println("MR failed: " + ex.getMessage() );
         }
     }
 

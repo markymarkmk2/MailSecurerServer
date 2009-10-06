@@ -5,7 +5,6 @@
 
 package dimm.home.mailarchiv.Utilities;
 
-import dimm.home.mailarchiv.LogicControl;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -15,8 +14,8 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Enumeration;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -37,6 +36,24 @@ public class LicenseChecker
         _is_licensed = false;
         _create_licensefile = crt_lf;
 
+        try
+        {
+            if (license_interface == null)
+            {
+                Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
+
+                while ( en.hasMoreElements() )
+                {
+                    license_interface = en.nextElement().getName();
+                    if (!license_interface.startsWith("lo") )
+                        break;
+                }
+            }
+        }
+        catch (Exception socketException)
+        {
+            LogManager.err_log("Cannot detect network interface, running foot loose", socketException);
+        }
     }
 
     public boolean is_licensed()
@@ -51,6 +68,14 @@ public class LicenseChecker
     public boolean check_licensed()
     {
         _is_licensed = false;
+
+        // IN CASE OF NETWORK FAILURE
+        if (license_interface == null)
+        {
+            _is_licensed = true;
+            return true;
+        }
+
         NetworkInterface ni;
         {
             FileReader fr = null;
@@ -59,7 +84,15 @@ public class LicenseChecker
                 ni = NetworkInterface.getByName(license_interface);
                 if (ni == null || ni.getHardwareAddress() == null)
                 {
-                    throw new Exception("Missing interface " + license_interface + " or has no hardware address");
+                    Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
+
+                    while ( en.hasMoreElements() )
+                    {
+                        System.out.println("Available interfaces:");
+                        System.out.println( en.nextElement().getName() );
+                    }
+
+                    throw new Exception("invalid interface " + license_interface + " or we have no hardware address");
                 }
 
                 byte[] mac = ni.getHardwareAddress();
@@ -68,6 +101,7 @@ public class LicenseChecker
                 md5.reset();
                 md5.update(mac);
                 byte[] result = md5.digest();
+
 
                 /* Ausgabe */
                 StringBuffer hexString = new StringBuffer();

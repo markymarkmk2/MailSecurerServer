@@ -28,7 +28,7 @@ public class HelloCommand extends AbstractCommand
     @Override
     public boolean do_command(String data)
     {
-        answer = "VER:" + Main.VERSION + " STATION:" + Main.get_long_prop(GeneralPreferences.STATION_ID, 0);
+        answer = "VER:" + Main.VERSION + " STATION:" + Main.get_long_prop(GeneralPreferences.STATION_ID, 0) + " NAME:" + Main.get_name();
         return true;
     }
     

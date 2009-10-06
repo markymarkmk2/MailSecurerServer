@@ -83,21 +83,34 @@ public class TCPCallConnect extends WorkerParent
     {
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
-        server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
-        server_port = 0;
-        try
+        if (m_ctx != null)
         {
-            server_port = Integer.parseInt(m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT) );
+            server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
+            server_port = 0;
+
+            // THIS IS NOT VISIBLE FOR CLIENT, WE HAVE TO PUT PORT INTO MANADANT TO MAKE THIS WORK
+         /*   String port_text = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT);
+            try
+            {
+                server_port = Integer.parseInt(port_text);
+                LogManager.info_msg("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
+            }
+            catch (NumberFormatException numberFormatException)
+            {
+                LogManager.err_log_fatal("Invalid Port for TCP-Server");
+            }*/
+            if (server_port == 0)
+            {
+                server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
+                LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
+            }
         }
-        catch (NumberFormatException numberFormatException)
+        else
         {
-            LogManager.err_log_fatal("Invalid Port for TCP-Server");
+            server_port = Main.ws_port;
         }
-        if (server_port == 0)
-        {
-            server_port = Main.ws_port + m_ctx.getMandant().getId();
-            LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
-        }
+
+
         tcp_cmd_buff = new byte[TCPCMDBUFF_LEN];
 
         cmd_list = new ArrayList<AbstractCommand>();
@@ -1294,7 +1307,12 @@ public class TCPCallConnect extends WorkerParent
         {
             long len = slen.longValue();
 
-            OutputStream os = get_ostream(get_id(stream_id)).os;
+            OutputStreamEntry ose = get_ostream(get_id(stream_id));
+            if (ose == null)
+            {
+                return "2: Stream id " + stream_id + " not found";
+            }
+            OutputStream os = ose.os;
             BufferedOutputStream bos = new BufferedOutputStream(os,buff_len*2);
             BufferedInputStream bis = new BufferedInputStream(s.getInputStream(),buff_len*2);
 

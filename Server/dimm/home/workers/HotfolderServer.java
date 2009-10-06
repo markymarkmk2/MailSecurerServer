@@ -68,6 +68,19 @@ public class HotfolderServer extends WorkerParent
             hfolder_list.add( new HotFolderImport( hf ) );
         }
     }
+    public void remove_hfolder( Hotfolder hf )
+    {
+        for (int i = 0; i < hfolder_list.size(); i++)
+        {
+            HotFolderImport hf_entry = hfolder_list.get(i);
+            if (hf_entry.get_hf() == hf)
+            {
+                hf_entry.finish();
+                hfolder_list.remove(hf_entry);
+                break;
+            }
+        }
+    }
 
     @Override
     public boolean start_run_loop()
@@ -171,4 +184,5 @@ public class HotfolderServer extends WorkerParent
 
         return stb.toString();
     }
+
 }

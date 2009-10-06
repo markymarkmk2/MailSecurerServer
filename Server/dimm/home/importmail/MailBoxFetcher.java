@@ -66,6 +66,12 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
 
     ImapFetcher imfetcher;
+
+    public ImapFetcher get_imap_fetcher()
+    {
+        return imfetcher;
+    }
+
     String get_mailbox_protokoll()
     {
 
@@ -147,6 +153,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         // DEFAULTTIMOUT IS 300 S
         props.put("mail." + protocol + ".connectiontimeout", 300 * 1000);
         props.put("mail." + protocol + ".timeout", 300 * 1000);
+        props.put( "mail.debug", "false");
 
         connect(protocol, server, port, username, password, props);
     }
@@ -155,7 +162,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     {
         Session session = Session.getInstance(props, null);
 
-        if (LogManager.get_debug_lvl() > 2)
+        if (LogManager.get_debug_lvl() > 5)
         {
             session.setDebug(true);
         }
@@ -341,7 +348,8 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             // PAUSE TODO: PUT INTO PARAMETER
             try
             {
-                Thread.sleep(IMAP_IDLE_PERIOD * 1000);
+                if (!do_finish)
+                    Thread.sleep(IMAP_IDLE_PERIOD * 1000);
             }
             catch (Exception e)
             {
@@ -639,6 +647,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     {
         // NOTHING
     }
+
 
 
 }

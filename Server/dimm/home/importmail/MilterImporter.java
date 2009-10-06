@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -359,6 +360,10 @@ public class MilterImporter implements WorkerParentChild
     final ArrayList<JilterServerRunnable> active_milter_list;
     Milter milter;
 
+    public Milter get_milter()
+    {
+        return milter;
+    }
 
     private JilterHandler newHandler() throws InstantiationException, IllegalAccessException
     {
@@ -424,6 +429,7 @@ public class MilterImporter implements WorkerParentChild
             try
             {
                 log_debug(Main.Txt("Going_to_accept"));
+
                 connection = this.serverSocketChannel.accept();
                 log_debug(Main.Txt("Got_a_connection_from_") + connection.socket().getInetAddress().getHostAddress());
 
@@ -440,6 +446,11 @@ public class MilterImporter implements WorkerParentChild
 
 
                 log_debug(Main.Txt("Thread_started"));
+            }
+            catch (SocketTimeoutException ste)
+            {
+
+            // do nothing
             }
             catch (IOException e)
             {
@@ -458,6 +469,7 @@ public class MilterImporter implements WorkerParentChild
     @Override
     public void idle_check()
     {
+
         synchronized(active_milter_list)
         {
             for (int i = 0; i < active_milter_list.size(); i++)

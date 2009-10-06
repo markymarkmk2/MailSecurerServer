@@ -71,6 +71,20 @@ public class MailBoxFetcherServer extends WorkerParent
 
         fetcher_list.add( MailBoxFetcher.mailbox_fetcher_factory(fetcher) );
     }
+    public void remove_fetcher( ImapFetcher imap_fetcher )
+    {
+        for (int i = 0; i < fetcher_list.size(); i++)
+        {
+            MailBoxFetcher if_entry = fetcher_list.get(i);
+            if (if_entry.get_imap_fetcher() == imap_fetcher)
+            {
+                if_entry.finish();
+                fetcher_list.remove(if_entry);
+                break;
+            }
+        }
+    }
+
 
     @Override
     public boolean start_run_loop()
@@ -182,6 +196,7 @@ public class MailBoxFetcherServer extends WorkerParent
 
         return stb.toString();
     }
+
 
 
 }

@@ -79,6 +79,19 @@ public class MailProxyServer extends WorkerParent
 
         proxy_list.add( new ProxyEntry( proxy ));
     }
+    public void remove_proxy( Proxy proxy )
+    {
+        for (int i = 0; i < proxy_list.size(); i++)
+        {
+            ProxyEntry proxy_entry = proxy_list.get(i);
+            if (proxy_entry.get_proxy() == proxy)
+            {
+                proxy_entry.finish();
+                proxy_list.remove(proxy_entry);
+                break;
+            }
+        }
+    }
 
     void go_pop( ProxyEntry pe )
     {
@@ -92,15 +105,15 @@ public class MailProxyServer extends WorkerParent
             ss = new ServerSocket(LocalPort);
             // 1 second timeout
             ss.setSoTimeout(1000);
-            Main.info_msg("BettyMailProxy is running for the host 'pop3://" + host +
+            Main.info_msg("MailProxy is running for the host 'pop3://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
            
 
-            while (!m_Stop)
+            while (!pe.get_finish())
             {
                 try
                 {
-                    
+                    ss.setSoTimeout(1000);
                     Socket theSocket = ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
                     
@@ -119,7 +132,8 @@ public class MailProxyServer extends WorkerParent
                     
                     m_POP3Connection.handleConnection(theSocket);
 
-                } catch (SocketTimeoutException ste)
+                }
+                catch (SocketTimeoutException ste)
                 {
                 // timeout triggered
                 // do nothing
@@ -169,7 +183,7 @@ public class MailProxyServer extends WorkerParent
             ss = new ServerSocket(LocalPort);
             // 1 second timeout
             ss.setSoTimeout(1000);
-            Main.info_msg("BettyMailProxy is running for the host 'smtp://" + host +
+            Main.info_msg("MailProxy is running for the host 'smtp://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
 
             
@@ -428,6 +442,7 @@ public class MailProxyServer extends WorkerParent
 
         return stb.toString();
     }
+
 
 } // POP3Server
 

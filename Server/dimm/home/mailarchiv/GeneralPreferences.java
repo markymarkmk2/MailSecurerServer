@@ -27,6 +27,7 @@ Songs=/var/www/localhost/htdocs/websense/dev/music_v3
 public class GeneralPreferences extends Preferences
 {
     
+    public static final String NAME ="Name";
     public static final String STATION_ID ="StationID";
     public static final String DEBUG = "Debug";
     public static final String PORT = "Port";
@@ -36,7 +37,6 @@ public class GeneralPreferences extends Preferences
     public static final String DNS = "NameServer";
     public static final String DHCP = "DHCP";
     public static final String MASK = "MASK";
-    public static final String STATIONNAME ="StationName";
     public static final String NETINTERFACE = "NetworkInterface";
     public static final String VPN_SERVER = "VPNServer";
     public static final String VPN_PORT = "VPNPort";
@@ -68,8 +68,8 @@ public class GeneralPreferences extends Preferences
     {
         super(_path);
         
+        prop_names.add( NAME );
         prop_names.add( STATION_ID );
-        prop_names.add( STATIONNAME );
         prop_names.add( DEBUG );
         prop_names.add( PORT );
         prop_names.add( SERVER );

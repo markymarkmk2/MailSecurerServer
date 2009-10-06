@@ -623,7 +623,7 @@ public class Communicator extends WorkerParent
         {
             HelloCommand hello = new HelloCommand();
             if (hello.do_command(str))
-                answer = "OK:" + hello.get_answer();
+                answer = "OK:" + hello.get_answer() + " PO:" + Main.ws_port;
             else
                 answer = "NOK:" + hello.get_answer();
                 

@@ -13,6 +13,7 @@ package dimm.home.workers;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import java.io.File;
@@ -443,9 +444,7 @@ MySQL root /eKmIklz37T
             {
                 String id = rs.getString(1);
                 String name = rs.getString(2);
-
-                System.out.println("Mandant " + id + " is " + name );
-                
+                LogManager.info_msg("Mandant " + id + " is " + name );
             }
                         
             rs.close();

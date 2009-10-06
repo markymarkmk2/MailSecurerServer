@@ -456,5 +456,10 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         return status.get_status_code();
     }
 
+    public Hotfolder get_hf()
+    {
+        return hfolder;
+    }
+
 
 }

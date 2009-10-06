@@ -54,6 +54,21 @@ public class IMAPBrowserServer extends WorkerParent
         browser_list.add( brw );
     }
 
+    public void remove_browser( MandantContext ctx, String host, int imap_port )
+    {
+        for (int i = 0; i < browser_list.size(); i++)
+        {
+            IMAPBrowser brw = browser_list.get(i);
+            if (brw.getHost() == host && brw.get_ctx() == ctx && brw.getPort() == imap_port)
+            {
+                brw.finish();
+                browser_list.remove(brw);
+                break;
+            }
+        }
+    }
+
+
     @Override
     public boolean start_run_loop()
     {
@@ -163,6 +178,7 @@ public class IMAPBrowserServer extends WorkerParent
 
         return stb.toString();
     }
+
 
 
 }

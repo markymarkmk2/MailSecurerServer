@@ -14,6 +14,7 @@ import home.shared.hibernate.Proxy;
 public class ProxyEntry extends Proxy
 {
     private int instanceCnt;
+    boolean finish;
 
     public ProxyEntry( Proxy p )
     {
@@ -26,6 +27,7 @@ public class ProxyEntry extends Proxy
         setDiskArchive(p.getDiskArchive());
         setFlags(p.getFlags());
         instanceCnt = 0;
+        finish = false;
     }
 
     public int getInstanceCnt()
@@ -43,6 +45,20 @@ public class ProxyEntry extends Proxy
     public String getConfigLine()
     {
         return getType() + "\t" + getLocalPort() + "\t" + getRemoteServer() + "\t" + getRemotePort() + "\n";
+    }
+
+    public Proxy get_proxy()
+    {
+        return this;
+    }
+
+    public void finish()
+    {
+        finish = true;
+    }
+    public boolean get_finish()
+    {
+        return finish;
     }
 
 

@@ -13,15 +13,10 @@ import dimm.home.importmail.DBXImporter;
 import dimm.home.importmail.MBoxImporter;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.serverconnect.TCPCallConnect;
-import dimm.home.index.IndexManager;
-import dimm.home.index.SearchCall;
 import home.shared.mail.RFCFileMail;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
-import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Mandant;
-import home.shared.hibernate.Milter;
-import home.shared.hibernate.Proxy;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import java.io.File;
 import java.io.FileWriter;
@@ -56,9 +51,6 @@ import javax.mail.Message;
 import javax.mail.MessagingException;
 import org.hibernate.HibernateException;
 import org.hibernate.SQLQuery;
-import org.hibernate.SessionFactory;
-import org.hibernate.metadata.ClassMetadata;
-import org.hibernate.persister.entity.SingleTableEntityPersister;
 
 class MailBGEntry
 {
@@ -130,6 +122,7 @@ public class LogicControl
     MailBoxFetcherServer mb_fetcher_server;
     SQLWorker sql;
     IMAPBrowserServer ibs;
+    TCPCallConnect tcc;
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -224,6 +217,8 @@ public class LogicControl
             ibs = new IMAPBrowserServer();
             worker_list.add(ibs);
 
+            tcc = new TCPCallConnect(null);
+            worker_list.add(tcc);
 
         }
         catch (Exception ex)
@@ -590,81 +585,51 @@ public class LogicControl
         return create_filemail_from_msg(mandant, msg, "import", prefix, "eml");
     }
 
-
-
-    void initialize_mandant( MandantContext ctx )
+    public void reinit_mandant( int mid)
     {
-        // ATTACH COMM
-        TCPCallConnect tcp_conn = new TCPCallConnect(ctx);
-        worker_list.add(tcp_conn);
-        ctx.set_tcp_conn( tcp_conn );
-
-        // ATTACH INDEXMANAGER
-        IndexManager idx_util = new IndexManager(ctx, /*MailHeadervariable*/null, /*index_attachments*/ true);
-        ctx.set_index_manager( idx_util );
-
-        idx_util.initialize();
-        worker_list.add(idx_util);
+        MandantContext ctx = get_mandant_by_id(mid);
+        Mandant old_m = ctx.getMandant();
 
 
-        // BUILD VAULT LIST FROM DISKARRAYS
-        ctx.build_vault_list();
+        org.hibernate.Transaction tx = param_session.beginTransaction();
+        read_param_db_qry = param_session.createQuery("from Mandant where id=" + mid);
 
+        List l = read_param_db_qry.list();
 
-        Set<Milter> milters = ctx.getMandant().getMilters();
-        Iterator<Milter> milter_it = milters.iterator();
-
-        while (milter_it.hasNext())
+        // SHUT DOWN OLD MANDANT
+        try
         {
-            try
-            {
-                ms.add_milter(milter_it.next());
-            }
-            catch (IOException ex)
-            {
-                ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
-                ms.setGoodState(false);
-                LogManager.err_log_fatal(ms.getStatusTxt(), ex);
-            }
+            LogManager.info_msg("Tearing down old mandant");
+            ctx.teardown_mandant();
+        }
+        catch (Exception e)
+        {
+            LogManager.err_log("Tearing down old mandant failed", e);
         }
 
-        Set<Proxy> proxies = ctx.getMandant().getProxies();
-        Iterator<Proxy> proxy_it = proxies.iterator();
-
-        while (proxy_it.hasNext())
+        try
         {
-             ps.add_proxy(proxy_it.next());
-        }
-
-        Set<Hotfolder> hfs = ctx.getMandant().getHotfolders();
-        Iterator<Hotfolder> hf_it = hfs.iterator();
-
-        while (hf_it.hasNext())
-        {
-             hf_server.add_hfolder(hf_it.next());
-        }
-
-        Set<ImapFetcher> ifs = ctx.getMandant().getImapFetchers();
-        Iterator<ImapFetcher> if_it = ifs.iterator();
-
-        while (if_it.hasNext())
-        {
-             mb_fetcher_server.add_fetcher(if_it.next());
-        }
-
-        if ( ctx.getMandant().getImap_port() > 0)
-        {
-            try
+            if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
-                ibs.add_browser(ctx, null, ctx.getMandant().getImap_port());
-            }
-            catch (IOException ex)
-            {
-                LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + ctx.getMandant().getName(), ex);
+                LogManager.info_msg("Loading new mandant");
+
+                Mandant new_m = (Mandant) l.get(0);
+
+                ctx.reload_mandant(new_m);
+
+                ctx.initialize_mandant();
             }
         }
+        catch (Exception e)
+        {
+            LogManager.err_log("Loading new mandant failed", e);
 
+            ctx.reload_mandant(old_m);
+
+            ctx.initialize_mandant();            
+        }
     }
+
 
     void initialize()
     {
@@ -675,15 +640,15 @@ public class LogicControl
         {
             MandantContext ctx = mandanten_list.get(i);
 
-            initialize_mandant( ctx );
+            ctx.initialize_mandant();
         }
 
 
 
         // WAIT UNTIL WE REACH INET BEFORE CONTINUING
-        if (comm != null)
+        if (tcc != null)
         {
-            comm.setStatusTxt(Main.Txt("Checking_internet"));
+            tcc.setStatusTxt(Main.Txt("Checking_internet"));
             for (int i = 0; i < 3; i++)
             {
                 if (do_server_ping())
@@ -695,17 +660,17 @@ public class LogicControl
 
             if (!do_server_ping())
             {
-                comm.setStatusTxt(Main.Txt("Internet_not_reachable"));
-                comm.setGoodState(false);
+                tcc.setStatusTxt(Main.Txt("Internet_not_reachable"));
+                tcc.setGoodState(false);
                 LogManager.err_log_fatal(Main.Txt("Cannot_connect_internet_at_startup"));
 
             }
             else
             {
-                if (!comm.isGoodState())
+                if (!tcc.isGoodState())
                 {
-                    comm.setStatusTxt(Main.Txt("Internet_reachable"));
-                    comm.setGoodState(true);
+                    tcc.setStatusTxt(Main.Txt("Internet_reachable"));
+                    tcc.setGoodState(true);
                 }
             }
         }
@@ -808,14 +773,14 @@ public class LogicControl
         {
         }
 
-        if (comm != null)
+        if (tcc != null)
         {
 
             if (!ok)
             {
-                comm.setStatusTxt(Main.Txt("Internet_not_reachable"));
+                tcc.setStatusTxt(Main.Txt("Internet_not_reachable"));
             }
-            comm.setGoodState(ok);
+            tcc.setGoodState(ok);
         }
 
         return ok;
@@ -1130,9 +1095,9 @@ public class LogicControl
         }
     }
 
-    public Communicator get_communicator()
+    public TCPCallConnect get_tcp_connect()
     {
-        return comm;
+        return tcc;
     }
 
     public void register_new_import( MandantContext m_ctx, DiskArchive da, String path ) throws ArchiveMsgException
@@ -1285,5 +1250,30 @@ public class LogicControl
 
         move_mail_to_quarantine( m_ctx, mail.getFile().getAbsolutePath() );
 
+    }
+
+    MilterServer get_milter_server()
+    {
+        return ms;
+    }
+
+    MailProxyServer get_mail_proxy_server()
+    {
+        return ps;
+    }
+
+    HotfolderServer get_hf_server()
+    {
+        return hf_server;
+    }
+
+    MailBoxFetcherServer get_mb_fetcher_server()
+    {
+        return mb_fetcher_server;
+    }
+
+    IMAPBrowserServer get_imap_browser_server()
+    {
+        return ibs;
     }
 }

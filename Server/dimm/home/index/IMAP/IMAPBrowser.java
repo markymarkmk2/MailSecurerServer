@@ -7,10 +7,13 @@ package dimm.home.index.IMAP;
 import SK.gnome.dwarf.ServiceException;
 import SK.gnome.dwarf.config.XMLConfiguration;
 import SK.gnome.dwarf.config.XMLConfigurationException;
+import SK.gnome.dwarf.log.FileLogger;
+import SK.gnome.dwarf.log.LogServer;
+import SK.gnome.dwarf.log.StreamLogger;
+import SK.gnome.dwarf.log.SystemLogger;
 import SK.gnome.dwarf.mail.MailException;
 import SK.gnome.dwarf.mail.auth.MailPermission;
 import SK.gnome.dwarf.mail.mime.FileSource;
-import SK.gnome.dwarf.mail.mime.MimeException;
 import SK.gnome.dwarf.mail.mime.MimePart;
 import SK.gnome.dwarf.mail.mime.StreamMimePart;
 import SK.gnome.dwarf.mail.store.ACLStore;
@@ -35,9 +38,8 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class SKMailMessage extends MailMessage
 {
@@ -46,8 +48,8 @@ class SKMailMessage extends MailMessage
     File dummy;
     static StreamMimePart mimepart;
     static int uid_offset = 0;
-
     static FileSource fs;
+
     public SKMailMessage( MailFolder f, long uid )
     {
         super(f);
@@ -62,7 +64,7 @@ class SKMailMessage extends MailMessage
             }
             catch (IOException ex)
             {
-                Logger.getLogger(SKMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.err_log("Err opening FileSource", ex);
             }
         }
 
@@ -75,6 +77,7 @@ class SKMailMessage extends MailMessage
             mailException.printStackTrace();
         }
     }
+
     public SKMailMessage( MailFolder f, String file, long uid )
     {
         super(f);
@@ -82,20 +85,20 @@ class SKMailMessage extends MailMessage
         dummy = new File("Z:\\Mailtest\\" + file);
 
         FileSource _fs = null;
-            try
-            {
+        try
+        {
             _fs = new FileSource(dummy, 1000 * 1024);
-            }
-            catch (IOException ex)
-            {
-                Logger.getLogger(SKMailMessage.class.getName()).log(Level.SEVERE, null, ex);
-            }
-       
+        }
+        catch (IOException ex)
+        {
+            LogManager.err_log("Err opening FileSource", ex);
+        }
+
 
         try
         {
             mimepart = new StreamMimePart(_fs);
-      
+
         }
         catch (Exception mailException)
         {
@@ -159,6 +162,7 @@ class SKMailMessage extends MailMessage
     {
         return mimepart;
     }
+
     String get_subject()
     {
         try
@@ -179,14 +183,10 @@ class SKMailMessage extends MailMessage
     }
 }
 
-
-
-
 class SKMailFolder extends MailFolder
 {
 
     private boolean is_open;
-   
     String name;
     int uid = 1;
     int uid_validity = 3;
@@ -195,7 +195,7 @@ class SKMailFolder extends MailFolder
     {
         super(user, store, parent);
         this.name = name;
-       
+
         this.uid = uid;
 
         new_mess = new SKMailMessage[0];
@@ -211,9 +211,13 @@ class SKMailFolder extends MailFolder
     public String getFullName()
     {
         if (parent != null && parent.getFullName() != null && parent.getFullName().length() > 1)
+        {
             return parent.getFullName() + getSeparator() + name;
+        }
         else
+        {
             return name;
+        }
     }
 
     @Override
@@ -225,26 +229,26 @@ class SKMailFolder extends MailFolder
     @Override
     public boolean exists()
     {
-       /* if (subfolders == null)
-            return false;*/
+        /* if (subfolders == null)
+        return false;*/
         return true;
     }
-/*
+    /*
     @Override
     public int getMessageCount() throws MailException
     {
-        if (mess == null)
-            return 0;
+    if (mess == null)
+    return 0;
 
-        return mess.length;
+    return mess.length;
     }*/
-/*
+    /*
     @Override
     public int getFirstUnseen() throws MailException
     {
-        return super.getFirstUnseen();
+    return super.getFirstUnseen();
     }
-*/
+     */
 
     @Override
     public void create() throws MailException
@@ -256,9 +260,11 @@ class SKMailFolder extends MailFolder
     @Override
     public long getNextUID() throws MailException
     {
-        MailMessage[] ms =  getMessages();
+        MailMessage[] ms = getMessages();
         if (ms.length > 0)
+        {
             return ms[0].getUID();
+        }
 
         return 0;
     }
@@ -267,7 +273,7 @@ class SKMailFolder extends MailFolder
     public long getUIDValidity() throws MailException
     {
         // CACHE BEI VERÄNDERUNG
-       
+
         return uid_validity;
     }
 
@@ -307,12 +313,12 @@ class SKMailFolder extends MailFolder
         if (is_open)
         {
             is_open = false;
-            
+
         }
         else
         {
             throw new MailException("not open");
-            
+
         }
     }
 
@@ -322,16 +328,16 @@ class SKMailFolder extends MailFolder
         if (this.getName().equals("Query"))
         {
             MailMessage[] list = new MailMessage[3];
-            list[0] = new SKMailMessage( this, "test0.eml", 2000);
-            list[1] = new SKMailMessage( this, "test1.eml", 2000);
-            list[2] = new SKMailMessage( this, "test2.eml", 2000);
+            list[0] = new SKMailMessage(this, "test0.eml", 2000);
+            list[1] = new SKMailMessage(this, "test1.eml", 2000);
+            list[2] = new SKMailMessage(this, "test2.eml", 2000);
 
-            new_mess = list;            
+            new_mess = list;
             uid_validity++;
         }
         MailMessage[] retarr;
         boolean b = false;
-        if(b)
+        if (b)
         {
             ArrayList<MailMessage> ret = new ArrayList<MailMessage>();
             MailFolder[] mf = build_folder_list("*");
@@ -341,14 +347,16 @@ class SKMailFolder extends MailFolder
                 MailMessage[] msgl = mailFolder.getMessages();
                 for (int j = 0; j < msgl.length; j++)
                 {
-                    SKMailMessage msg = (SKMailMessage)msgl[j];
+                    SKMailMessage msg = (SKMailMessage) msgl[j];
                     if (key.match(msg))
+                    {
                         ret.add(msg);
+                    }
 
                 }
 
             }
-            retarr = ret.toArray( new MailMessage[0] );
+            retarr = ret.toArray(new MailMessage[0]);
         }
         else
         {
@@ -356,7 +364,6 @@ class SKMailFolder extends MailFolder
         }
         return retarr;
     }
-
     MailMessage[] mess;
     MailMessage[] new_mess;
 
@@ -364,7 +371,9 @@ class SKMailFolder extends MailFolder
     public MailMessage[] getMessages() throws MailException
     {
         if (mess != null)
+        {
             return mess;
+        }
 
         if (get_level() == 5 || getName().equals("Query"))
         {
@@ -413,13 +422,13 @@ class SKMailFolder extends MailFolder
             MailFolder mailFolder = mf[i];
             if (mailFolder.getName().equals(arg0))
             {
-                dispatchMailEvent( new FolderEvent(mailFolder, "joe", FolderEvent.OPENED ) );
+                dispatchMailEvent(new FolderEvent(mailFolder, "joe", FolderEvent.OPENED));
                 return mailFolder;
             }
         }
-       
+
         return null;
-        
+
     }
 
     private int get_level()
@@ -435,42 +444,43 @@ class SKMailFolder extends MailFolder
         }
         return level;
     }
-
-   
     MailFolder[] subfolders = null;
+
     MailFolder[] build_folder_list( String arg )
     {
         int level = get_level();
 
         if (subfolders != null)
+        {
             return subfolders;
+        }
 
         MailFolder[] ret = null;
 
-       
-  /*      if (arg0.indexOf(getSeparator()) >= 0)
-            level++;
+
+        /*      if (arg0.indexOf(getSeparator()) >= 0)
+        level++;
 
         if (level == 1)
         {
-            ret = new MailFolder[2];
-            ret[0] = new SKMailFolder(user, getMailStore(), this,  "INBOX", path );
-            ret[1] = new SKMailFolder(user, getMailStore(), this, "Trash", path );
+        ret = new MailFolder[2];
+        ret[0] = new SKMailFolder(user, getMailStore(), this,  "INBOX", path );
+        ret[1] = new SKMailFolder(user, getMailStore(), this, "Trash", path );
         }
-   *
-*/
-  /*      if (level == 2)
+         *
+         */
+        /*      if (level == 2)
         {
-            try
-            {
-                return parent.listFolders(arg);
-            }
-            catch (MailException ex)
-            {
-                return new MailFolder[0];
-            }
+        try
+        {
+        return parent.listFolders(arg);
         }
-*/
+        catch (MailException ex)
+        {
+        return new MailFolder[0];
+        }
+        }
+         */
         if (level != 1)
         {
             return new MailFolder[0];
@@ -484,7 +494,7 @@ class SKMailFolder extends MailFolder
 
 
             ret = new MailFolder[years * months * days + years * months + years + 3];
-            ret[0] = new SKMailFolder(user, getMailStore(), this, "INBOX",  0);
+            ret[0] = new SKMailFolder(user, getMailStore(), this, "INBOX", 0);
             ret[1] = new SKMailFolder(user, getMailStore(), this, "Trash", 1);
             ret[2] = new SKMailFolder(user, getMailStore(), this, "Query", 2);
             int idx = 3;
@@ -496,20 +506,28 @@ class SKMailFolder extends MailFolder
                 {
                     String mtxt;
                     if (m < 9)
+                    {
                         mtxt = "0" + Integer.toString(m + 1);
+                    }
                     else
+                    {
                         mtxt = Integer.toString(m + 1);
+                    }
                     SKMailFolder mmf = new SKMailFolder(user, getMailStore(), ymf, mtxt, idx);
                     ret[idx++] = mmf;
-                    
+
                     for (int d = 0; d < days; d++)
                     {
                         String dtxt;
                         if (d < 9)
+                        {
                             dtxt = "0" + Integer.toString(d + 1);
+                        }
                         else
+                        {
                             dtxt = Integer.toString(d + 1);
-                        SKMailFolder dmf = new SKMailFolder(user, getMailStore(), mmf, dtxt,idx);
+                        }
+                        SKMailFolder dmf = new SKMailFolder(user, getMailStore(), mmf, dtxt, idx);
                         ret[idx++] = dmf;
                     }
                 }
@@ -525,7 +543,6 @@ class SKMailFolder extends MailFolder
 
     }
 
-
     @Override
     public MailFolder[] listFolders( String arg0 ) throws MailException
     {
@@ -539,6 +556,7 @@ class SKMailFolder extends MailFolder
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }
+
 /**
  *
  * @author mw
@@ -548,12 +566,33 @@ public class IMAPBrowser implements WorkerParentChild
 
     ServerSocket sock;
     MandantContext m_ctx;
+    String host;
+    int port;
     final ArrayList<SKImapServer> srv_list;
+
+    public String getHost()
+    {
+        return host;
+    }
+
+    public MandantContext get_ctx()
+    {
+        return m_ctx;
+    }
+
+    public int getPort()
+    {
+        return port;
+    }
+
 
     public IMAPBrowser( MandantContext m_ctx, String host, int port ) throws IOException
     {
         this.m_ctx = m_ctx;
+        this.host = host;
+        this.port = port;
         log_debug(Main.Txt("Opening_socket"));
+
 
         //   sock = new ServerSocket(port, 0, InetAddress.getByName(host));
 
@@ -603,7 +642,7 @@ public class IMAPBrowser implements WorkerParentChild
 
         try
         {
-            XMLConfiguration.setVerbosity(true);
+            XMLConfiguration.setVerbosity(false);
 
             // create new XMLConfiguration instance and read the given XML configuration data
 
@@ -612,22 +651,30 @@ public class IMAPBrowser implements WorkerParentChild
             // create new MainServer instance according to the given XML configuration
 
             MainServer server = (MainServer) cfg.getService();
+            List src = server.getServices();
+
+ 
 
             // initialize the server
 
             server.init(null);
 
+            LogServer logServer = (LogServer)server.getService("Log Server");
+            FileLogger fl = (FileLogger)logServer.getService("File Logger");
+            fl.setLevels("error");
+
             // start the server
 
             server.start();
 
-            SKImapServer is = (SKImapServer)server.getService("IMAP4 Server");
+            SKImapServer is = (SKImapServer) server.getService("IMAP4 Server");
+ 
 
             try
             {
                 ACLStore acl_store = is.getACLStore("joe");
-                acl_store.addPermission("joe", new MailPermission("*", "lrs") );
-                acl_store.addPermission("joe", new MailPermission("*.*", "lrs") );
+                acl_store.addPermission("joe", new MailPermission("*", "lrs"));
+                acl_store.addPermission("joe", new MailPermission("*.*", "lrs"));
             }
             catch (MailException mailException)
             {
@@ -644,27 +691,27 @@ public class IMAPBrowser implements WorkerParentChild
             serviceException.printStackTrace();
         }
 
-/*
+        /*
         MainServer mainServer = new MainServer("Main Server");
         mainServer.setLogFacility("server");
 
         SKImapServer srv = new SKImapServer(m_ctx, null, false);
         try
         {
-            mainServer.addService(srv);
-            mainServer.init(null);
+        mainServer.addService(srv);
+        mainServer.init(null);
 
-//            srv.init(null);
- //           srv.start();
+        //            srv.init(null);
+        //           srv.start();
         }
         catch (Exception serviceException)
         {
-            serviceException.printStackTrace();
+        serviceException.printStackTrace();
         }
 
         synchronized (srv_list)
         {
-            srv_list.add(srv);
+        srv_list.add(srv);
         }*/
 
         while (!do_finish)

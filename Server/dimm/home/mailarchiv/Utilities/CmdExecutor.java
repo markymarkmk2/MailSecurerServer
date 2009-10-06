@@ -295,8 +295,10 @@ public class CmdExecutor
         
         try
         {
-            stdout.close();
-            stderr.close();
+            if (stdout != null)
+                stdout.close();
+            if (stderr != null)
+                stderr.close();
         }
         catch (Exception e )
         {

@@ -72,6 +72,21 @@ public class MilterServer extends WorkerParent
         milter_list.add( new MilterImporter( milter ));
     }
 
+    public void remove_milter( Milter milter )
+    {
+        for (int i = 0; i < milter_list.size(); i++)
+        {
+            MilterImporter milterImporter = milter_list.get(i);
+            if (milterImporter.get_milter() == milter)
+            {
+                milterImporter.finish();
+                milter_list.remove(milterImporter);
+                break;
+            }
+        }
+    }
+
+
     @Override
     public boolean start_run_loop()
     {

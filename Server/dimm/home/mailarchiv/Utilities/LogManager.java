@@ -5,10 +5,12 @@
 
 package dimm.home.mailarchiv.Utilities;
 
-import java.io.File;
-import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 /**
  *
@@ -24,7 +26,8 @@ public class LogManager
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
 
-    static long dbg_level = 5;
+    static long dbg_level = 1;
+    private static String LOG_L4J = "logfj.log";
 
     public static void debug( String string )
     {
@@ -65,7 +68,8 @@ public class LogManager
     // CAN BE CALLED FROM INSIDE SQL-WORKER
     static void err_log_no_lock_fatal(String string)
     {
-        log( "error.log", string );
+        main_logger.fatal(string);
+        //log( "error.log", string );
     }
 
     public static void err_log_fatal(String string)
@@ -73,7 +77,8 @@ public class LogManager
         if (string == null || string.length() == 0)
             return;
 
-        log( "error.log", string );
+        main_logger.fatal(string);
+//        log( "error.log", string );
 
     }
 
@@ -82,7 +87,8 @@ public class LogManager
         if (string == null || string.length() == 0)
             return;
 
-        log( "warn.log", string );
+        main_logger.warn(string);
+//      log( "warn.log", string );
     }
 
     public static void info_msg(String string)
@@ -90,7 +96,8 @@ public class LogManager
         if (string == null || string.length() == 0)
             return;
 
-        log( "info.log", string );
+        main_logger.info(string);
+        //log( "info.log", string );
     }
     public static void debug_msg(long level,  String string)
     {
@@ -98,12 +105,14 @@ public class LogManager
 
         if (level <= debug_level)
         {
-            log( "debug.log", string );
+            main_logger.debug(string);
+//            log( "debug.log", string );
         }
     }
     public static void debug_msg( String string )
     {
-        debug_msg( 0, string );
+          main_logger.debug(string);
+          //debug_msg( 0, string );
     }
 
 
@@ -112,12 +121,13 @@ public class LogManager
         if (string == null || string.length() == 0)
             return;
 
-        log( "error.log", string );
+          main_logger.error(string);
 
     }
     public static void log( Level level, String msg)
     {
-        log(level, msg, null);
+         main_logger.log(org.apache.log4j.Level.toLevel(level.intValue()), msg);
+        //log(level, msg, null);
     }
 
     public static void log( Level level, String msg, Throwable ex )
@@ -154,7 +164,7 @@ public class LogManager
     static SimpleDateFormat sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
 
 
-
+/*
     static synchronized void log( String file, String s )
     {
         System.out.println( s );
@@ -162,7 +172,7 @@ public class LogManager
         File log = new File( LOG_PATH + file );
         try
         {
-            FileWriter fw = new FileWriter( log, /*append*/ true );
+            FileWriter fw = new FileWriter( log,  true );
             java.util.Date now = new java.util.Date();
 
             fw.write( sdf.format( now ) );
@@ -175,7 +185,26 @@ public class LogManager
         {
             exc.printStackTrace();
         }
+    }*/
 
+    static Logger main_logger;
+    static
+    {
+        main_logger = Logger.getLogger("dimm.MailSecurerServer");
+
+        try
+        {
+            PatternLayout layout = new PatternLayout("%-5p: %d{dd.MM.yyyy HH:mm:ss,SSS}: %m%n");
+            FileAppender fileAppender = new FileAppender(layout, LOG_PATH + LOG_L4J, true);
+            main_logger.addAppender(fileAppender);
+            Logger.getRootLogger().addAppender(fileAppender);
+        }
+        catch (IOException iOException)
+        {
+            System.out.println("Logger init failed! " + iOException.getMessage());
+        }
 
     }
+
+
 }
