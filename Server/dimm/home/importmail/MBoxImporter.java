@@ -46,6 +46,8 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
 
     File msg_file;
     RandomAccessFile raf = null;
+    private boolean started;
+    private boolean finished;
 
     public MBoxImporter( String p ) throws Exception
     {
@@ -380,6 +382,30 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
         msg_file.delete();
     }
   
+
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
 
     
 

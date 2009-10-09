@@ -5,6 +5,11 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.importmail.HotFolderImport;
+import dimm.home.importmail.MailBoxFetcher;
+import dimm.home.importmail.MilterImporter;
+import dimm.home.importmail.ProxyEntry;
+import dimm.home.index.IMAP.IMAPBrowser;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -41,7 +46,7 @@ public class MandantContext
     private IndexManager index_manager;
     
     
-    
+    ArrayList<WorkerParent> worker_list;
 
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
@@ -49,6 +54,7 @@ public class MandantContext
         mandant = _m;
         vaultArray = new ArrayList<Vault>();
         tempFileHandler = new TempFileHandler( this );
+        worker_list = new ArrayList<WorkerParent>();
     }
 
    
@@ -196,17 +202,25 @@ public class MandantContext
         }        
     }
 
+    public void start_run_loop()
+    {
+        for (int i = 0; i < worker_list.size(); i++)
+        {
+            if (!worker_list.get(i).start_run_loop())
+            {
+                LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+            }
+        }
+    }
+
 
 
     void initialize_mandant(  )
-    {
-
-        ArrayList<WorkerParent> worker_list = Main.get_control().get_worker_list();
-
+    {        
         // ATTACH COMM
-        TCPCallConnect tcp_conn = new TCPCallConnect(this);
+        tcp_conn = new TCPCallConnect(this);
         worker_list.add(tcp_conn);
-        set_tcp_call_connect( tcp_conn );
+        //set_tcp_call_connect( tcp_conn );
 
         // ATTACH INDEXMANAGER
         IndexManager idx_util = new IndexManager(this, /*MailHeadervariable*/null, /*index_attachments*/ true);
@@ -228,7 +242,7 @@ public class MandantContext
         {
             try
             {
-                ms.add_milter(milter_it.next());
+                ms.add_child( new MilterImporter(milter_it.next()));
             }
             catch (IOException ex)
             {
@@ -244,7 +258,7 @@ public class MandantContext
         MailProxyServer ps = Main.get_control().get_mail_proxy_server();
         while (proxy_it.hasNext())
         {
-             ps.add_proxy(proxy_it.next());
+             ps.add_child( new ProxyEntry( proxy_it.next() ));
         }
 
         Set<Hotfolder> hfs = getMandant().getHotfolders();
@@ -253,7 +267,7 @@ public class MandantContext
         HotfolderServer hf_server = Main.get_control().get_hf_server();
         while (hf_it.hasNext())
         {
-             hf_server.add_hfolder(hf_it.next());
+             hf_server.add_child( new HotFolderImport( hf_it.next() ));
         }
 
         Set<ImapFetcher> ifs = getMandant().getImapFetchers();
@@ -262,7 +276,8 @@ public class MandantContext
         MailBoxFetcherServer mb_fetcher_server = Main.get_control().get_mb_fetcher_server();
         while (if_it.hasNext())
         {
-             mb_fetcher_server.add_fetcher(if_it.next());
+            MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory( if_it.next() );
+             mb_fetcher_server.add_child(  child );
         }
 
         if ( getMandant().getImap_port() > 0)
@@ -270,7 +285,7 @@ public class MandantContext
             IMAPBrowserServer ibs = Main.get_control().get_imap_browser_server();
             try
             {
-                ibs.add_browser(this, null, getMandant().getImap_port());
+                ibs.add_child( new IMAPBrowser(this, null, getMandant().getImap_port()) );
             }
             catch (IOException ex)
             {
@@ -284,19 +299,24 @@ public class MandantContext
 
     void teardown_mandant( )
     {
+        for (int i = 0; i < worker_list.size(); i++)
+        {
+            WorkerParent wp = worker_list.get(i);
+            wp.setShutdown(true);
+        }
+
         // REMOVE COMM
-        ArrayList<WorkerParent> worker_list = Main.get_control().get_worker_list();
-
-
         worker_list.remove( tcp_conn );
-        tcp_conn.setShutdown(true);
 
-        // REMOVE INDEXMANAGER
-       
+        // REMOVE INDEXMANAGER       
         worker_list.remove(index_manager);
-        index_manager.setShutdown(true);
 
 
+        if (worker_list.size() > 0)
+        {
+            LogManager.err_log_fatal(Main.Txt("Workerlist is not empty") + " " + getMandant().getName());
+            worker_list.clear();
+        }
 
 
         Set<Milter> milters = getMandant().getMilters();
@@ -305,7 +325,7 @@ public class MandantContext
         MilterServer ms = Main.get_control().get_milter_server();
         while (milter_it.hasNext())
         {
-             ms.remove_milter(milter_it.next());
+             ms.remove_child(milter_it.next());
         }
 
         Set<Proxy> proxies = getMandant().getProxies();
@@ -314,7 +334,7 @@ public class MandantContext
         MailProxyServer ps = Main.get_control().get_mail_proxy_server();
         while (proxy_it.hasNext())
         {
-             ps.remove_proxy(proxy_it.next());
+             ps.remove_child(proxy_it.next());
         }
 
         Set<Hotfolder> hfs = getMandant().getHotfolders();
@@ -323,7 +343,7 @@ public class MandantContext
         HotfolderServer hf_server = Main.get_control().get_hf_server();
         while (hf_it.hasNext())
         {
-             hf_server.remove_hfolder(hf_it.next());
+             hf_server.remove_child( hf_it.next());
         }
 
         Set<ImapFetcher> ifs = getMandant().getImapFetchers();
@@ -332,18 +352,16 @@ public class MandantContext
         MailBoxFetcherServer mb_fetcher_server = Main.get_control().get_mb_fetcher_server();
         while (if_it.hasNext())
         {
-             mb_fetcher_server.remove_fetcher(if_it.next());
+             mb_fetcher_server.remove_child(if_it.next());
         }
 
         if ( getMandant().getImap_port() > 0)
         {
             IMAPBrowserServer ibs = Main.get_control().get_imap_browser_server();
-            ibs.remove_browser(this, null, getMandant().getImap_port());
+            ibs.remove_child( getMandant() );
         }
         // REMOVE VAULT LIST FROM DISKARRAYS
         delete_vault_list();
-
-
     }
 
 

@@ -33,7 +33,7 @@ public class HibernateUtil
 
             conf = conf.setProperty(Environment.FORMAT_SQL, "false");
             // ADFUST SETTINGS
-            if (Main.get_debug_lvl() > 5)
+            if (Main.get_debug_lvl() > 9)
             {
                 conf = conf.setProperty(Environment.SHOW_SQL, "true");
             }

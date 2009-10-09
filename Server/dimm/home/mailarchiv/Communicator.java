@@ -29,7 +29,7 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
  */
 public class Communicator extends WorkerParent
 {
-    private static final int UDP_LEN = 1024;
+    private static final int UDP_LEN = 256;
     private static final int TCP_LEN = 32;
     private static final int UDP_LOCAL_PORT = 11411;
     private static final int UDP_SERVER_PORT = 11410;
@@ -39,7 +39,7 @@ public class Communicator extends WorkerParent
     
     public static final String NAME = "Communicator";
     
-    private static final String magic = "MAILPROXY:";
+    private static final String magic = "MAILSECURER:";
     
     ArrayList<AbstractCommand> cmd_list;
     
@@ -91,34 +91,35 @@ public class Communicator extends WorkerParent
             Main.err_log_fatal("Communication cannot be initialized: " + ex.getMessage());
             return false;
         }     
-        
-        IPConfig ipc = new IPConfig();
-        
-        String real_ip = ipc.get_ip_for_if( "eth0" );
-        if (real_ip != null)
+        if (System.getProperty("os.name").startsWith("Linux"))
         {
-            Main.info_msg( "Got real IP <" + real_ip + ">" );
-        }
-        else
-        {
-            Main.err_log( "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
+            IPConfig ipc = new IPConfig();
 
-            ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
-            using_fallback = true;
-            
-            return false;
+            String real_ip = ipc.get_ip_for_if( "eth0" );
+            if (real_ip != null)
+            {
+                Main.info_msg( "Got real IP <" + real_ip + ">" );
+            }
+            else
+            {
+                Main.err_log( "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
+
+                ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
+                using_fallback = true;
+
+                return false;
+            }
+
+            if (!ipc.is_route_ok())
+            {
+                Main.err_log( "Invalid routing detected, setting to fallback IP: 192.168.201.201");
+
+                ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
+                using_fallback = true;
+
+                return false;
+            }
         }
-        
-        if (!ipc.is_route_ok())
-        {
-            Main.err_log( "Invalid routing detected, setting to fallback IP: 192.168.201.201");
-            
-            ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
-            using_fallback = true;
-            
-            return false;
-        }
-        
         return true;
     }
     
@@ -258,7 +259,8 @@ public class Communicator extends WorkerParent
                          udp_s.receive( packet );
                          udp_listeners++;
                          final DatagramSocket answer_sock = udp_s;
-                         
+                         Main.debug_msg(4, "udp_recv packet");
+
                          if (isGoodState())
                              this.setStatusTxt("Connected to " + String.valueOf(udp_listeners + tcp_listeners) + " client(s)");
                          
@@ -626,7 +628,8 @@ public class Communicator extends WorkerParent
                 answer = "OK:" + hello.get_answer() + " PO:" + Main.ws_port;
             else
                 answer = "NOK:" + hello.get_answer();
-                
+
+            
             answer_udp( s, in_packet, answer );
         }
         else

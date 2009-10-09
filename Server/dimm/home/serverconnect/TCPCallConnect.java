@@ -16,6 +16,7 @@ import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Commands.ReadLog;
 import dimm.home.mailarchiv.Commands.Reboot;
 import dimm.home.mailarchiv.Commands.Restart;
+import dimm.home.mailarchiv.Commands.RestartMandant;
 import dimm.home.mailarchiv.Commands.SearchCommand;
 import dimm.home.mailarchiv.Commands.SetStation;
 import dimm.home.mailarchiv.Commands.ShellCmd;
@@ -134,6 +135,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new TestLoginLDAP() );
         cmd_list.add( new UploadCertificate() );
         cmd_list.add( new SearchCommand() );
+        cmd_list.add( new RestartMandant() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
@@ -868,14 +870,17 @@ public class TCPCallConnect extends WorkerParent
     public void setShutdown( boolean shutdown )
     {
 
-
-        try
+        if (shutdown)
         {
-            tcp_s.close();
+            try
+            {
+                tcp_s.close();
+            }
+            catch (Exception exc)
+            {
+            }
         }
-        catch (Exception exc)
-        {
-        }
+        super.setShutdown(shutdown);
     }
 
     public String RMX_open( String db_name )
@@ -952,10 +957,8 @@ public class TCPCallConnect extends WorkerParent
                     StatementEntry ste = sta_list.get(i);
                     if (ste.ce == conn)
                     {
-                        if (!ste.sta.isClosed())
-                        {
-                            ste.sta.close();
-                        }
+                        ste.sta.close();
+                        
                         drop_sta(ste.id);
                         i--;
                     }
@@ -965,10 +968,8 @@ public class TCPCallConnect extends WorkerParent
                     ResultEntry rse = rs_list.get(i);
                     if (rse.ce == conn)
                     {
-                        if (!rse.rs.isClosed())
-                        {
-                            rse.rs.close();
-                        }
+                        rse.rs.close();
+                        
                         drop_rs(rse.id);
                         i--;
                     }

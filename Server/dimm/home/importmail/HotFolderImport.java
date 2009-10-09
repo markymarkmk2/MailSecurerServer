@@ -288,6 +288,8 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         hfolder = _hf;
     }
     boolean do_finish;
+    boolean started;
+    boolean finished;
 
     @Override
     public void finish()
@@ -298,7 +300,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     @Override
     public void run_loop()
     {
-
+        started = true;
         ArrayList<DirectoryEntry> last_entry_list = new ArrayList<DirectoryEntry>();
 
         while (!do_finish)
@@ -369,6 +371,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
                 status.set_status(StatusEntry.ERROR, Main.Txt("error") + " " + e.getMessage() );
             }
         }
+        finished = true;
     }
 
     @Override
@@ -457,6 +460,29 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     }
 
     public Hotfolder get_hf()
+    {
+        return hfolder;
+    }
+
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
+
+    @Override
+    public Object get_db_object()
     {
         return hfolder;
     }

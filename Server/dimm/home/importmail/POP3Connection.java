@@ -42,7 +42,6 @@ public class POP3Connection extends ProxyConnection
     public void runConnection(Socket _clientSocket)
     {
         boolean do_quit = false;
-        m_Stop = false;
         m_error = -1;
         m_Command = -1;
         
@@ -59,7 +58,7 @@ public class POP3Connection extends ProxyConnection
             clientReader = new BufferedInputStream(clientSocket.getInputStream(), clientSocket.getReceiveBufferSize());
 
             // connect to the real POP3 server
-            serverSocket = new Socket(pe.getRemoteServer(), pe.getRemotePort());
+            serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
@@ -86,7 +85,7 @@ public class POP3Connection extends ProxyConnection
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
-                if (m_Stop)
+                if (pe.get_finish())
                 {
                     break;
                 }
@@ -106,7 +105,7 @@ public class POP3Connection extends ProxyConnection
 
 
                 // verify if the user stopped the thread
-                if (m_Stop)
+                if (pe.get_finish())
                 {
                     break;
                 }
@@ -133,7 +132,7 @@ public class POP3Connection extends ProxyConnection
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
 
                 // verify if the user stopped the thread
-                if (m_Stop)
+                if (pe.get_finish())
                 {
                     break;
                 }
@@ -161,7 +160,7 @@ public class POP3Connection extends ProxyConnection
                         break;
                     }      
                     // verify if the user stopped the thread
-                    if (m_Stop)
+                    if (pe.get_finish())
                     {
                         break;
                     }
@@ -171,7 +170,7 @@ public class POP3Connection extends ProxyConnection
 
                     
                     // verify if the user stopped the thread
-                    if (m_Stop)
+                    if (pe.get_finish())
                     {
                         break;
                     }
@@ -202,7 +201,7 @@ public class POP3Connection extends ProxyConnection
 
         } catch (UnknownHostException uhe)
         {
-            String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.getRemoteServer() + Main.Txt("'_exists.");
+            String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.get_proxy().getRemoteServer() + Main.Txt("'_exists.");
             //Common.showError(msgerror);
             Main.err_log(msgerror);
         } catch (Exception e)
@@ -242,7 +241,7 @@ public class POP3Connection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_mail_file( rfc_dump, pe.getMandant(), pe.getDiskArchive(), /*bg*/ true, /*del_after*/ true );
+               Main.get_control().add_mail_file( rfc_dump, pe.get_proxy().getMandant(), pe.get_proxy().getDiskArchive(), /*bg*/ true, /*del_after*/ true );
             }  
             else
             {                

@@ -20,12 +20,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.String;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
 import org.hibernate.HibernateException;
 
 /**
@@ -65,7 +64,7 @@ public class Main
     
     public static Main me;
 
-    private static int startup_debug_level = 1;
+    //private static int startup_debug_level = 1;
     public static String work_dir;
     
     public static boolean trace_mode = false;
@@ -378,26 +377,38 @@ public class Main
     }
     static public long get_debug_lvl()
     {
-        return get_long_prop( GeneralPreferences.DEBUG, startup_debug_level );
+        return LogManager.get_debug_lvl();
+//        return get_long_prop( GeneralPreferences.DEBUG, startup_debug_level );
     }
     
     void read_args( String[] args )
     {
+
+ClassLoader classloader = org.apache.poi.poifs.filesystem.POIFSFileSystem.class.getClassLoader();
+URL res = classloader.getResource("org/apache/poi/poifs/filesystem/POIFSFileSystem.class");
+String path = res.getPath();
+System.out.println("Core POI came from " + path);
+
+        LogManager.set_debug_lvl( get_long_prop( GeneralPreferences.DEBUG, (long)0 ) );
+        String x = "";
         for (int i = 0; i < args.length; i++)
         {
+            x += args[i] + " ";
             if (args[i].compareTo("-d") == 0)
             {
                 if ( i+1 < args.length)
                 try
                 {
-                    startup_debug_level = Integer.parseInt( args[i+1] );
+                    LogManager.set_debug_lvl( Integer.parseInt( args[i+1] ) );
                 }
                 catch (Exception exc)
                 {
-                    startup_debug_level = 1;
+                    LogManager.set_debug_lvl(  1 );
                 }
             }
         }
+
+        LogManager.info_msg("Args: " +x);
     }
 
     

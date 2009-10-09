@@ -5,12 +5,16 @@
 
 package dimm.home.mailarchiv.Utilities;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
+import org.apache.log4j.SimpleLayout;
 
 /**
  *
@@ -46,11 +50,13 @@ public class LogManager
 
     public static void err_log( String s, Exception e )
     {
+        e.printStackTrace();
         err_log( s + ": " + e.getMessage() );
     }
 
     public static void err_log_fatal( String s, Exception e )
     {
+        e.printStackTrace();
         err_log_fatal( s + ": " + e.getMessage() );
     }
 
@@ -105,8 +111,8 @@ public class LogManager
 
         if (level <= debug_level)
         {
-            main_logger.debug(string);
-//            log( "debug.log", string );
+//            main_logger.debug(string);
+            file_log( "debug.log", string );
         }
     }
     public static void debug_msg( String string )
@@ -164,8 +170,8 @@ public class LogManager
     static SimpleDateFormat sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
 
 
-/*
-    static synchronized void log( String file, String s )
+
+    static synchronized void file_log( String file, String s )
     {
         System.out.println( s );
 
@@ -185,7 +191,7 @@ public class LogManager
         {
             exc.printStackTrace();
         }
-    }*/
+    }
 
     static Logger main_logger;
     static
@@ -196,8 +202,14 @@ public class LogManager
         {
             PatternLayout layout = new PatternLayout("%-5p: %d{dd.MM.yyyy HH:mm:ss,SSS}: %m%n");
             FileAppender fileAppender = new FileAppender(layout, LOG_PATH + LOG_L4J, true);
+
             main_logger.addAppender(fileAppender);
             Logger.getRootLogger().addAppender(fileAppender);
+
+            
+            ConsoleAppender con = new ConsoleAppender( new SimpleLayout(), ConsoleAppender.SYSTEM_OUT );
+            main_logger.addAppender(con);
+          //  Logger.getRootLogger().addAppender(con);
         }
         catch (IOException iOException)
         {

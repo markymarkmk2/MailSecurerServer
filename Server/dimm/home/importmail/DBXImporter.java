@@ -97,6 +97,8 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
     };
     File dbx_file;
     dbx_s dbx;
+    private boolean started;
+    private boolean finished;
 
     public DBXImporter( String p ) throws Exception
     {
@@ -756,4 +758,29 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
     {
         dbx_file.delete();
     }
+
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
+
 }

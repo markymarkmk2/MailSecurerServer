@@ -44,8 +44,10 @@ public class LicenseChecker
 
                 while ( en.hasMoreElements() )
                 {
-                    license_interface = en.nextElement().getName();
-                    if (!license_interface.startsWith("lo") )
+                    NetworkInterface ni = en.nextElement();
+                    license_interface = ni.getName();
+                    LogManager.log(Level.FINE, "Found Interface: " + license_interface );
+                    if (!license_interface.startsWith("lo") && ni.getHardwareAddress() != null &&  ni.getHardwareAddress().length > 0)
                         break;
                 }
             }
@@ -148,6 +150,7 @@ public class LicenseChecker
             }
             catch (FileNotFoundException ex2)
             {
+                ex2.printStackTrace();
                 LogManager.err_log_fatal("Missing licensefile");
             }
             catch (SocketException ex3)

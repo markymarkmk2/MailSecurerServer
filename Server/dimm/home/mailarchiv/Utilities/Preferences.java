@@ -136,9 +136,12 @@ public class Preferences
         props = new Properties();
         try
         {
-            FileInputStream istr = new FileInputStream(prop_file);
-            props.load(istr);
-            istr.close();
+            if (prop_file.exists())
+            {
+                FileInputStream istr = new FileInputStream(prop_file);
+                props.load(istr);
+                istr.close();
+            }
         }
         catch (Exception exc)
         {

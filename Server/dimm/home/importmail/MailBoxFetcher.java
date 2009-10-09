@@ -20,7 +20,6 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
-import java.io.File;
 import java.net.UnknownHostException;
 import javax.mail.AuthenticationFailedException;
 import javax.mail.Flags;
@@ -66,6 +65,8 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
 
     ImapFetcher imfetcher;
+    private boolean finished;
+    private boolean started;
 
     public ImapFetcher get_imap_fetcher()
     {
@@ -267,6 +268,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     @Override
     public void run_loop()
     {
+        started = true;
         try
         {
             java.net.InetAddress inetAdd = java.net.InetAddress.getByName(imfetcher.getServer());
@@ -355,6 +357,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             {
             }
         }
+        finished = true;
     }
 
     private void disconnect() throws Exception
@@ -648,6 +651,29 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         // NOTHING
     }
 
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        return imfetcher;
+    }
+
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
 
 
 }

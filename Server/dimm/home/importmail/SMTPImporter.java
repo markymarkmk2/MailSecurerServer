@@ -84,6 +84,8 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
 	public static final int MAX_SMTP_CONNECTIONS = 1024*1024;
 
         SmtpServer smtp_db_entry;
+        private boolean started;
+        private boolean finished;
 
  	public SMTPImporter(SmtpServer smtp_server)
         {
@@ -92,7 +94,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
 
 	
 
-	   boolean  startup()
+	 boolean  startup()
          {
              // WE ARE LISTENER
              ArrayList<SimpleMessageListener> listeners = new ArrayList<SimpleMessageListener>();
@@ -133,6 +135,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
                   LogManager.log(Level.SEVERE, Main.Txt("Cannot_start_smtp_server_on_port") + " " + smtp_db_entry.getPort(), e);
                   return false;
              }
+            
             return true;
 	 }
 
@@ -234,7 +237,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
     @Override
     public void run_loop()
     {
-
+        started = true;
         while (!startup())
         {
             LogicControl.sleep(60*1000);
@@ -245,6 +248,30 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
             // YAWN....
             LogicControl.sleep(1000);
         }
+        finished = true;
+    }
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        return smtp_db_entry;
+    }
+
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
     }
 
 }

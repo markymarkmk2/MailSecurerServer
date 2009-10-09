@@ -20,7 +20,6 @@ import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCMimeMail;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
@@ -37,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
 import javax.mail.Address;
-import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
@@ -359,6 +357,8 @@ public class MilterImporter implements WorkerParentChild
 
     final ArrayList<JilterServerRunnable> active_milter_list;
     Milter milter;
+    private boolean started;
+    private boolean finished;
 
     public Milter get_milter()
     {
@@ -422,6 +422,7 @@ public class MilterImporter implements WorkerParentChild
     @Override
     public void run_loop()
     {
+        started = true;
         while (!do_finish)
         {
             SocketChannel connection = null;
@@ -465,6 +466,7 @@ public class MilterImporter implements WorkerParentChild
                 log_debug(Main.Txt("Unexpected_exception"), e);
             }
         }
+        finished = true;
     }
     @Override
     public void idle_check()
@@ -494,5 +496,29 @@ public class MilterImporter implements WorkerParentChild
         }
         return r;
     }
+
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        return milter;
+    }
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
+
 }
 

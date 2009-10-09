@@ -18,7 +18,6 @@ import dimm.home.importmail.ProxyEntry;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
-import dimm.home.mailarchiv.WorkerParent;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,16 +31,11 @@ import java.util.ArrayList;
 
 
 
-public class MailProxyServer extends WorkerParent
+public class MailProxyServer extends ListWorkerParent
 {
     public static final String NAME = "MailProxyServer";
 
-    private static boolean m_Stop;					// stop the thread
-    
-    ArrayList<ProxyEntry> proxy_list;
     final ArrayList<ProxyConnection> connection_list;
-    
-    SwingWorker idle_worker;
 
     /**
      * Constructor
@@ -53,53 +47,18 @@ public class MailProxyServer extends WorkerParent
     {        
         super(NAME);
         
-        m_Stop = false;
+  //      m_Stop = false;
         connection_list = new ArrayList<ProxyConnection>();
-        proxy_list = new ArrayList<ProxyEntry>();
-
     }
     
-    public void set_proxy_list(Proxy[] proxy_array)
-    {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW 
-        
-        proxy_list.clear();
-        for (int i = 0; i < proxy_array.length; i++)
-        {
-            proxy_list.add( new ProxyEntry( proxy_array[i] ));
-        }
-    }
-    public void add_proxy(Proxy proxy)
-    {
-        // FORMAT Protokoll (POP3/SMTP/IMAP) Localport Server  Remoteport
-        // TODO:
-        // STOP OLD PROCESSES, RESTART NEW
-
-        proxy_list.add( new ProxyEntry( proxy ));
-    }
-    public void remove_proxy( Proxy proxy )
-    {
-        for (int i = 0; i < proxy_list.size(); i++)
-        {
-            ProxyEntry proxy_entry = proxy_list.get(i);
-            if (proxy_entry.get_proxy() == proxy)
-            {
-                proxy_entry.finish();
-                proxy_list.remove(proxy_entry);
-                break;
-            }
-        }
-    }
 
     void go_pop( ProxyEntry pe )
     {
         ServerSocket ss = null;
         
-        String host = pe.getRemoteServer();
-        int LocalPort = pe.getLocalPort();
-        int RemotePort = pe.getRemotePort();
+        String host = pe.get_proxy().getRemoteServer();
+        int LocalPort = pe.get_proxy().getLocalPort();
+        int RemotePort = pe.get_proxy().getRemotePort();
         try
         {
             ss = new ServerSocket(LocalPort);
@@ -109,17 +68,17 @@ public class MailProxyServer extends WorkerParent
                     ":" + RemotePort + "' on local port " + LocalPort);
            
 
-            while (!pe.get_finish())
+            while (!isShutdown() && !pe.get_finish())
             {
                 try
                 {
                     ss.setSoTimeout(1000);
                     Socket theSocket = ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
                     POP3Connection m_POP3Connection = new POP3Connection( pe );
                     
-                    if (m_Stop)
+                    if (isShutdown())
                     {
                         m_POP3Connection.closeConnections();
                         break;
@@ -174,9 +133,9 @@ public class MailProxyServer extends WorkerParent
     void go_smtp(ProxyEntry pe)
     {
         ServerSocket ss = null;
-        String host = pe.getRemoteServer();
-        int LocalPort = pe.getLocalPort();
-        int RemotePort = pe.getRemotePort();
+        String host = pe.get_proxy().getRemoteServer();
+        int LocalPort = pe.get_proxy().getLocalPort();
+        int RemotePort = pe.get_proxy().getRemotePort();
 
         try
         {
@@ -188,16 +147,16 @@ public class MailProxyServer extends WorkerParent
 
             
 
-            while (!m_Stop)
+            while (!isShutdown() && !pe.get_finish())
             {
                 try
                 {
                     Socket theSocket = ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
                     SMTPConnection m_SMTPConnection = new SMTPConnection(pe);
                     
-                    if (m_Stop)
+                    if (isShutdown())
                     {
                         m_SMTPConnection.closeConnections();
                         break;
@@ -254,10 +213,13 @@ public class MailProxyServer extends WorkerParent
     
     public void StopServer()
     {
-        m_Stop = true;
-        POP3Connection.StopServer();
-        SMTPConnection.StopServer();
-                
+        for (int i = 0; i < child_list.size(); i++)
+        {
+            final ProxyEntry pe = (ProxyEntry)child_list.get(i);
+            pe.finish();
+        }
+        setShutdown(true);
+        
         LogicControl.sleep(1100);
         
         while (!idle_worker.finished())
@@ -266,12 +228,7 @@ public class MailProxyServer extends WorkerParent
         }
     }
 
-    @Override
-    public boolean initialize()
-    {
-        return true;
-    }
-
+  
     boolean is_pop3( Proxy pe )
     {
         if (pe.getType().compareTo("POP3") == 0)
@@ -292,7 +249,7 @@ public class MailProxyServer extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting " + proxy_list.size() + " proxy tasks" );
+        Main.debug_msg(1, NAME + " is starting " + child_list.size() + " tasks" );
         
         if (!Main.get_control().is_licensed())
         {
@@ -301,20 +258,20 @@ public class MailProxyServer extends WorkerParent
             return false;
         }
        
-        m_Stop = false;
+        setShutdown(false);
         
-        for (int i = 0; i < proxy_list.size(); i++)
+        for (int i = 0; i < child_list.size(); i++)
         {
-            final ProxyEntry pe = proxy_list.get(i);
+            final ProxyEntry pe = (ProxyEntry)child_list.get(i);
             
             SwingWorker worker = new SwingWorker()
             {
                 @Override
                 public Object construct()
                 {
-                   if (is_pop3(pe))
+                   if (is_pop3(pe.get_proxy()))
                        go_pop( pe );
-                   else if (is_smtp(pe))
+                   else if (is_smtp(pe.get_proxy()))
                        go_smtp( pe );
 
                     return null;
@@ -342,6 +299,7 @@ public class MailProxyServer extends WorkerParent
        return true;
     }
     
+    @Override
     void do_idle()
     {                
         while (!this.isShutdown())
@@ -350,11 +308,7 @@ public class MailProxyServer extends WorkerParent
             
             // CLEAN UP LIST OF FINISHED CONNECTIONS
             synchronized(connection_list)
-            {
-                if ( m_Stop && connection_list.isEmpty())
-                    break;
-                
-                
+            {                                
                 for (int i = 0; i < connection_list.size(); i++)
                 {
                     ProxyConnection m = connection_list.get(i);
@@ -375,13 +329,6 @@ public class MailProxyServer extends WorkerParent
         }
     }
     
-
-    @Override
-    public boolean check_requirements(StringBuffer sb)
-    {
-        return true;
-    }
-
     public static BufferedOutputStream get_rfc_stream( File rfc_dump)
     {
 
@@ -422,25 +369,6 @@ public class MailProxyServer extends WorkerParent
 
         }
         return bos;
-    }
-
-    @Override
-    public String get_task_status()
-    {
-        StringBuffer stb = new StringBuffer();
-
-        // CLEAN UP LIST OF FINISHED CONNECTIONS
-        for (int i = 0; i < proxy_list.size(); i++)
-        {
-            ProxyEntry pe = proxy_list.get(i);
-            stb.append("PXPT"); stb.append(i); stb.append(":"); stb.append(pe.getType());
-            stb.append(" PXPR"); stb.append(i); stb.append(":"); stb.append(pe.getRemotePort() );
-            stb.append(" PXPL"); stb.append(i); stb.append(":"); stb.append(pe.getLocalPort() );
-            stb.append(" PXIN"); stb.append(i); stb.append(":"); stb.append(pe.getInstanceCnt()  );
-            stb.append(" PXHO"); stb.append(i); stb.append(":'"); stb.append(pe.getRemoteServer() + "' " );
-        }
-
-        return stb.toString();
     }
 
 

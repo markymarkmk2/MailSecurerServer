@@ -9,8 +9,6 @@ import SK.gnome.dwarf.config.XMLConfiguration;
 import SK.gnome.dwarf.config.XMLConfigurationException;
 import SK.gnome.dwarf.log.FileLogger;
 import SK.gnome.dwarf.log.LogServer;
-import SK.gnome.dwarf.log.StreamLogger;
-import SK.gnome.dwarf.log.SystemLogger;
 import SK.gnome.dwarf.mail.MailException;
 import SK.gnome.dwarf.mail.auth.MailPermission;
 import SK.gnome.dwarf.mail.mime.FileSource;
@@ -569,6 +567,8 @@ public class IMAPBrowser implements WorkerParentChild
     String host;
     int port;
     final ArrayList<SKImapServer> srv_list;
+    private boolean started;
+    private boolean finished;
 
     public String getHost()
     {
@@ -618,7 +618,10 @@ public class IMAPBrowser implements WorkerParentChild
         do_finish = true;
         try
         {
-            sock.close();
+            if (sock != null)
+                sock.close();
+            sock = null;
+            
             synchronized (srv_list)
             {
                 for (int i = 0; i < srv_list.size(); i++)
@@ -636,6 +639,8 @@ public class IMAPBrowser implements WorkerParentChild
     @Override
     public void run_loop()
     {
+        started = true;
+
         log_debug(Main.Txt("Going_to_accept"));
         //    Socket cl = sock.accept();
 
@@ -725,6 +730,7 @@ public class IMAPBrowser implements WorkerParentChild
                 log_debug(Main.Txt("Unexpected_exception"), e);
             }
         }
+        finished = true;
     }
 
     @Override
@@ -754,5 +760,30 @@ public class IMAPBrowser implements WorkerParentChild
         }
         return r;
     }
+
+    @Override
+    public boolean is_started()
+    {
+        return started;
+    }
+
+    @Override
+    public boolean is_finished()
+    {
+        return finished;
+    }
+
+    @Override
+    public Object get_db_object()
+    {
+        return m_ctx.getMandant();
+    }
+
+    @Override
+    public String get_task_status_txt()
+    {
+        return "";
+    }
+
 }
 

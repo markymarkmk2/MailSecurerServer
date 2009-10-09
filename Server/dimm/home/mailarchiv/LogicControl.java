@@ -618,6 +618,7 @@ public class LogicControl
                 ctx.reload_mandant(new_m);
 
                 ctx.initialize_mandant();
+
             }
         }
         catch (Exception e)
@@ -627,6 +628,18 @@ public class LogicControl
             ctx.reload_mandant(old_m);
 
             ctx.initialize_mandant();            
+        }
+
+        // RESTART LOCAL WORKER LIST
+        ctx.start_run_loop();
+
+        // RESTART ALL NEW ENTRIES
+        for (int i = 0; i < worker_list.size(); i++)
+        {
+            if (!worker_list.get(i).start_run_loop())
+            {
+                LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+            }
         }
     }
 
@@ -836,6 +849,17 @@ public class LogicControl
                     LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
                 }
             }
+
+            for (int i = 0; i < mandanten_list.size(); i++)
+            {
+                MandantContext ctx = mandanten_list.get(i);
+
+                // RESTART LOCAL WORKER LIST
+                ctx.start_run_loop();
+            }
+
+
+
 
 
             while (!shutdown)

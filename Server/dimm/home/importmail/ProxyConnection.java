@@ -56,7 +56,6 @@ public abstract class ProxyConnection
 
     static int m_retries;					// numbers of retries to read a message from the socket
     int m_Command;							// actual POP command
-    static boolean m_Stop;					// stop the thread
 
     static final int POP_RETR = 1;
     static final int POP_MULTILINE = 2;
@@ -90,8 +89,7 @@ public abstract class ProxyConnection
 
     ProxyConnection(ProxyEntry _pe)
     {
-        pe = _pe;
-        m_Stop = false;
+        pe = _pe;       
         m_error = -1;
         m_Command = -1;
     }
@@ -312,14 +310,14 @@ public abstract class ProxyConnection
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(2, pe.getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(2, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
 
-        Main.debug_msg(dbg, pe.getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(dbg, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
     }
 
 
@@ -374,7 +372,7 @@ public abstract class ProxyConnection
                 }
 
                 // verify if the user stopped the thread
-                if (m_Stop)
+                if (pe.get_finish())
                 {
                     return output;
                 }
@@ -525,11 +523,7 @@ public abstract class ProxyConnection
         return null;
     }
 
-    public static void StopServer()
-    {
-        m_Stop = true;
-    }
-
+  
 
     protected int get_multiline_proxy_data(InputStream Reader, OutputStream Writer, File rfc_dump, BufferedOutputStream bos)
     {
@@ -572,7 +566,7 @@ public abstract class ProxyConnection
             {
 
                 // verify if the user stopped the thread
-                if (m_Stop)
+                if (pe.get_finish())
                 {
                     return 1;
                 }
