@@ -101,6 +101,10 @@ public abstract class ProxyConnection
 
         return !clientSocket.isClosed();
     }
+    public ProxyEntry get_proxy()
+    {
+        return pe;
+    }
 
     boolean is_command_multiline(String sData)
     {
@@ -245,7 +249,7 @@ public abstract class ProxyConnection
         }
         if ( i == END_OF_LINE.length)
         {
-            log( 4, Main.Txt("Detected_EOL") );
+            log( 6, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -266,7 +270,7 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_LINE.length)
         {
-            log( 4, Main.Txt("Detected_EOL") );
+            log( 6, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -287,7 +291,7 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_MULTILINE.length)
         {
-            log( 4, Main.Txt("Detected_MEOL") );
+            log( 6, Main.Txt("Detected_MEOL") );
             return true;
         }
 
@@ -310,7 +314,7 @@ public abstract class ProxyConnection
     {
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(2, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(4, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
@@ -594,7 +598,7 @@ public abstract class ProxyConnection
                     rlen = Reader.read(buffer);
                     if (dgb_level > 3)
                     {
-                        log(4, new String(buffer, 0, rlen));
+                        log(7, new String(buffer, 0, rlen));
                     }
 
                 }
@@ -605,14 +609,14 @@ public abstract class ProxyConnection
                         rlen = Reader.read(buffer, 0, avail - END_OF_MULTILINE.length);
                         if (dgb_level > 3)
                         {
-                            log(4, new String(buffer, 0, rlen));
+                            log(7, new String(buffer, 0, rlen));
                         }
                     }
                     else
                     {
                         rlen = Reader.read(buffer, 0, avail);
                         if (dgb_level > 3)
-                            log( 4, new String( buffer, 0, rlen ) );
+                            log( 7, new String( buffer, 0, rlen ) );
 
                         if (rlen < END_OF_MULTILINE.length)
                         {
@@ -635,7 +639,7 @@ public abstract class ProxyConnection
                             {
                                 rlen += Reader.read(buffer, rlen, avail);
                                 if (dgb_level > 3)
-                                    log( 4, new String( buffer, 0, rlen ) );
+                                    log( 7, new String( buffer, 0, rlen ) );
 
                                 Main.sleep(2000);
                                 avail = Reader.available();

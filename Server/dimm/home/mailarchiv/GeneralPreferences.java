@@ -56,6 +56,9 @@ public class GeneralPreferences extends Preferences
     public static final String DB_USER  = "DBUser";
     public static final String DB_PWD = "DBPWD";
     public static final String SQL_CYCLETIME = "SQLCycleTime";
+    public static final String WRITE_MAIL_IN_BG = "WriteMailBackground";
+    public static final String INDEX_MAIL_IN_BG = "IndexMailBackground";
+    public static final String INDEX_TIMEOUT = "IndexTimeoutSecs";
 
     
     /** Creates a new instance of Preferences */
@@ -97,6 +100,9 @@ public class GeneralPreferences extends Preferences
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
 //        prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );
+
+        prop_names.add( WRITE_MAIL_IN_BG );
+        prop_names.add( INDEX_MAIL_IN_BG );
         
                 
         read_props();

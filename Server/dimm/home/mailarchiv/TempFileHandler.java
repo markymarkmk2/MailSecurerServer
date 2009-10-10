@@ -39,6 +39,20 @@ public class TempFileHandler
     {
         this.ctx = ctx;
         delete_list = new ArrayList<File>();
+
+        Thread thr = new Thread()
+        {
+
+            @Override
+            public void run()
+            {
+                clean_up();
+            }
+
+        };
+        Runtime r = Runtime.getRuntime();
+        r.addShutdownHook(thr);
+
     }
 
     public void check_space( long size ) throws VaultException
@@ -187,7 +201,7 @@ public class TempFileHandler
         }
 
         // GET RID OF FILE ON EXIT OF JVM
-        tmp_file.deleteOnExit();
+        //tmp_file.deleteOnExit();
         delete_list.add(tmp_file);
 
         return tmp_file;
@@ -208,7 +222,7 @@ public class TempFileHandler
         }
         os.close();
 
-        file.deleteOnExit();
+        //file.deleteOnExit();
         delete_list.add(file);
         
         return file;

@@ -81,7 +81,7 @@ public class POP3Connection extends ProxyConnection
             {
 
                 // read the answer from the server
-                log( 3, Main.Txt("Waiting_for_Server..."));
+                log( 5, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -126,7 +126,7 @@ public class POP3Connection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 3, Main.Txt("Waiting_for_Client..."));
+                log( 5, Main.Txt("Waiting_for_Client..."));
                 
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
@@ -195,10 +195,6 @@ public class POP3Connection extends ProxyConnection
 
             }  // while
 
-            closeConnections();
-
-            System.gc();
-
         } catch (UnknownHostException uhe)
         {
             String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.get_proxy().getRemoteServer() + Main.Txt("'_exists.");
@@ -207,6 +203,11 @@ public class POP3Connection extends ProxyConnection
         } catch (Exception e)
         {
             Main.err_log(e.getMessage());
+        }
+        finally
+        {
+            closeConnections();
+            System.gc();
         }
         log(2, Main.Txt("Finished") );
     }  // handleConnection

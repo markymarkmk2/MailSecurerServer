@@ -73,7 +73,7 @@ class MailBGEntry
     {
         try
         {
-            control.add_mail_file(mail, mandant, da);
+            control.lowlevel_add_mail_file(mail, mandant, da);
         }
         catch (ArchiveMsgException ex)
         {
@@ -99,10 +99,12 @@ class MailBGEntry
         }
         finally
         {
+            /* // THIS IS DONE BY INDEX JOB WHICH IS STARTED IN ADD_MAIL_FILE -> DISKVAULT
             if (delete_afterwards)
             {
                 mail.delete();
             }
+             * */
         }
     }
 }
@@ -286,10 +288,10 @@ public class LogicControl
         }
         RFCFileMail mf = new RFCFileMail( mail, false );
 
-        add_mail_file(mf, mandant, da, background, delete_afterwards);
+        add_rfc_file_mail(mf, mandant, da, background, delete_afterwards);
     }
 
-    void add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da)  throws ArchiveMsgException, VaultException, IndexException
+    void lowlevel_add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da)  throws ArchiveMsgException, VaultException, IndexException
     {
         MandantContext context = get_m_context(mandant);
         if (context == null)
@@ -316,10 +318,10 @@ public class LogicControl
             }
         }
     }
-    public void add_mail_file( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
+    public void add_rfc_file_mail( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
     {
-         LogManager.log(Level.SEVERE, "No parallel procress");
-        background = false;
+        if (!Main.get_bool_prop(GeneralPreferences.WRITE_MAIL_IN_BG, true))
+            background = false;
 
         if (background)
         {
@@ -331,95 +333,19 @@ public class LogicControl
         }
         else
         {
-            add_mail_file(mf, mandant, da);
+            LogManager.log(Level.SEVERE, "No parallel archive");
+            lowlevel_add_mail_file(mf, mandant, da);
 
             if (delete_afterwards)
-                mf.delete();
-        }
-    }
-/*
-    public void add_new_mail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        if (background)
-        {
-            try
             {
-                FileInputStream rfc_is;
-                rfc_is = new FileInputStream(rfc_dump);
-                File mail_file = create_dupl_temp_file(mandant, rfc_is);
-
-                add_mail_file(mail_file, mandant, da, true);
-            }
-            catch (FileNotFoundException ex)
-            {
-                LogManager.log(Level.SEVERE, null, ex);
-                throw new ArchiveMsgException(Main.Txt("Mail_file_disappeared") + ": " + ex.getMessage());
+                if (mf.getFile().exists())
+                    mf.delete();
+                else
+                    LogManager.err_log("Mail file " + mf.getFile().getAbsolutePath() + " was already deleted");
             }
         }
-        else
-        {
-            add_mail_file(rfc_dump, mandant, da, false);
-        }
-
-   
-    }
- * */
-/*
-    public void add_new_mail_stream( InputStream rfc_is, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-            File mail_file = create_dupl_temp_file(mandant, rfc_is);
-            add_mail_file(mail_file, mandant, da, background);
-    }
- * */
-/*
-    public void add_new_outmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        add_new_mail(rfc_dump, mandant, da, background);
     }
 
-    public void add_new_inmail( File rfc_dump, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        add_new_mail(rfc_dump, mandant, da, background);
-    }
-    */
-/*
-    public void add_new_outmail( MimeMessage msg, Mandant mandant, DiskArchive diskArchive, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        try
-        {
-            MandantContext m_ctx = get_m_context(mandant);
-            FileOutputStream fos = new FileOutputStream( m_ctx.getTempFileHandler().create_new_import_file(null))
-            msg.writeTo(null);
-            add_new_mail_stream( is, mandant, diskArchive, background);
-            is.close();
-        }
-        catch (IOException ex)
-        {
-            LogManager.log(Level.SEVERE, null, ex);
-            throw new ArchiveMsgException("Message Inputstream exception: " + ex.getMessage());
-        }
-        catch (MessagingException ex)
-        {
-            LogManager.log(Level.SEVERE, null, ex);
-            throw new ArchiveMsgException("Messaging exception: " + ex.getMessage());
-        }
-    }
-*/
-    /*
-    public void add_new_outmail( RFCMailStream mail, Mandant mandant, DiskArchive da, boolean background ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        try
-        {
-            InputStream is = mail.getInputStream();
-            add_new_mail_stream(is, mandant, da, background);
-            is.close();
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-*/
     public DiskSpaceHandler get_mail_dsh( Mandant mandant, String mail_uuid ) throws ArchiveMsgException, VaultException
     {
         long ds_id = DiskSpaceHandler.get_ds_id_from_uuid(mail_uuid);

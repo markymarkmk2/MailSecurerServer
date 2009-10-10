@@ -310,6 +310,12 @@ public class IndexManager extends WorkerParent
 
         // CHECK IF INDEX EXISTS
         boolean create = !IndexReader.indexExists(path);
+        
+        if (IndexWriter.isLocked(dir))
+        {
+            Main.err_log("Unlocking already locked IndexWriter");
+            IndexWriter.unlock(dir);
+        }
 
         // AND CREATE IF NOT
         IndexWriter writer = new IndexWriter(dir, analyzer, create, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
@@ -598,7 +604,7 @@ public class IndexManager extends WorkerParent
                 if (filename == null)
                     filename = "";
 
-                LogManager.log(Level.FINER, "Indexing attachment " + filename + " to " + doc.get_uuid());
+                LogManager.log(Level.FINER, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc "+ doc.get_uuid());
 
                 // YES
                 if (do_index_attachments)

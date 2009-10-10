@@ -383,12 +383,12 @@ public class Main
     
     void read_args( String[] args )
     {
-
+/*
 ClassLoader classloader = org.apache.poi.poifs.filesystem.POIFSFileSystem.class.getClassLoader();
 URL res = classloader.getResource("org/apache/poi/poifs/filesystem/POIFSFileSystem.class");
 String path = res.getPath();
 System.out.println("Core POI came from " + path);
-
+*/
         LogManager.set_debug_lvl( get_long_prop( GeneralPreferences.DEBUG, (long)0 ) );
         String x = "";
         for (int i = 0; i < args.length; i++)

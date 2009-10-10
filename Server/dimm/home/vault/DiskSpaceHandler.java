@@ -15,8 +15,6 @@ import home.shared.CS_Constants;
 import home.shared.hibernate.DiskSpace;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -229,16 +227,17 @@ public class DiskSpaceHandler
 
     private void write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
     {
-        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(ds.getPath() + "/" + filename));
+        OutputStream bos = new FileOutputStream(ds.getPath() + "/" + filename);
         XMLEncoder e = new XMLEncoder(bos);
         e.writeObject(o);
         e.close();
+
         bos.close();
     }
 
     private Object read_info_object( String filename ) throws FileNotFoundException, IOException
     {
-        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(ds.getPath() + "/" + filename));
+        InputStream bis = new FileInputStream(ds.getPath() + "/" + filename);
         XMLDecoder e = new XMLDecoder(bis);
         Object o = e.readObject();
         e.close();

@@ -186,7 +186,7 @@ public class MBoxImportServer extends WorkerParent
 
                 RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(mbie.mandant, msg, "mbximp_");
                 
-                Main.get_control().add_mail_file(mail, mbie.mandant, mbie.da, /*bg*/ true, /*del_after*/ true);
+                Main.get_control().add_rfc_file_mail(mail, mbie.mandant, mbie.da, /*bg*/ true, /*del_after*/ true);
             }
         }
         catch (Exception exception)

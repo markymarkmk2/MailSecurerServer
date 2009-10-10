@@ -433,7 +433,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
 
             RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(hfolder.getMandant(), m, "hf_imp");
 
-            Main.get_control().add_mail_file(mail, hfolder.getMandant(), hfolder.getDiskArchive(), /*bg*/true, /*delete_afterwards*/true);
+            Main.get_control().add_rfc_file_mail(mail, hfolder.getMandant(), hfolder.getDiskArchive(), /*bg*/true, /*delete_afterwards*/true);
            
             return true;
         }

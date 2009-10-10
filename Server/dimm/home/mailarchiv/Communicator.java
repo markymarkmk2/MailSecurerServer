@@ -31,9 +31,9 @@ public class Communicator extends WorkerParent
 {
     private static final int UDP_LEN = 256;
     private static final int TCP_LEN = 32;
-    private static final int UDP_LOCAL_PORT = 11411;
-    private static final int UDP_SERVER_PORT = 11410;
-    private static final int TCP_SERVER_PORT = 11410;
+    private static final int UDP_LOCAL_PORT = 11511;
+    private static final int UDP_SERVER_PORT = 11510;
+    private static final int TCP_SERVER_PORT = 11510;
     public static final String HELLO_CMD = "HELLO";
     final int UDP_BIGBLOCK_SIZE = 48000;
     

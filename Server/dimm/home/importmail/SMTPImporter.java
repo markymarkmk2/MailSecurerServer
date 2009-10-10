@@ -179,7 +179,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
 
             mail = Main.get_control().create_import_filemail_from_eml_stream(smtp_db_entry.getMandant(), data, "smtpimp_");
 
-            Main.get_control().add_mail_file(mail, smtp_db_entry.getMandant(), smtp_db_entry.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
+            Main.get_control().add_rfc_file_mail(mail, smtp_db_entry.getMandant(), smtp_db_entry.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
 
         }
         catch (VaultException ex)

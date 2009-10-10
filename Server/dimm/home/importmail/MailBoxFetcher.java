@@ -487,7 +487,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             
             mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf_");
 
-            Main.get_control().add_mail_file(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
+            Main.get_control().add_rfc_file_mail(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
            
             set_msg_deleted(message);
         }

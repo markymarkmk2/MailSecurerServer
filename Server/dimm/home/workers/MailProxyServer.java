@@ -74,7 +74,7 @@ public class MailProxyServer extends ListWorkerParent
                 {
                     ss.setSoTimeout(1000);
                     Socket theSocket = ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the pop3 host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
                     POP3Connection m_POP3Connection = new POP3Connection( pe );
                     
@@ -152,7 +152,7 @@ public class MailProxyServer extends ListWorkerParent
                 try
                 {
                     Socket theSocket = ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
+                    Main.debug_msg( 2, "Connection accepted for the smtp host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
                     SMTPConnection m_SMTPConnection = new SMTPConnection(pe);
                     
@@ -231,7 +231,7 @@ public class MailProxyServer extends ListWorkerParent
   
     boolean is_pop3( Proxy pe )
     {
-        if (pe.getType().compareTo("POP3") == 0)
+        if (pe.getType().toUpperCase().compareTo("POP3") == 0)
             return true;
 
         return false;
@@ -239,7 +239,7 @@ public class MailProxyServer extends ListWorkerParent
 
     boolean is_smtp( Proxy pe )
     {
-        if (pe.getType().compareTo("SMTP") == 0)
+        if (pe.getType().toUpperCase().compareTo("SMTP") == 0)
             return true;
 
         return false;
@@ -313,7 +313,7 @@ public class MailProxyServer extends ListWorkerParent
                 {
                     ProxyConnection m = connection_list.get(i);
                     if (!m.is_connected())
-                    {
+                    {                        
                         connection_list.remove(m);
                         i--;
                     }

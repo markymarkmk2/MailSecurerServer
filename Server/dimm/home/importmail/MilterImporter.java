@@ -259,7 +259,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             add_bcc_recpients( mime_mail.getMsg() );
 
             
-            Main.get_control().add_mail_file(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
+            Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
         }
 
         catch (Exception ex)

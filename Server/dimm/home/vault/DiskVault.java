@@ -13,6 +13,8 @@ import home.shared.hibernate.DiskSpace;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.GeneralPreferences;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Notification;
@@ -236,17 +238,15 @@ public class DiskVault implements Vault, StatusHandler
 
     void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCGenericMail msg ) throws ArchiveMsgException, IndexException
     {
-        String uuid = null;
+        
         int da_id = -1;
         int ds_id = -1;
 
-        uuid = data_dsh.get_message_uuid(msg);
         da_id = data_dsh.ds.getDiskArchive().getId();
         ds_id = data_dsh.ds.getId();
 
         IndexManager idx = m_ctx.get_index_manager();
 
-        LogManager.log(Level.FINE, "Writing mail file " + uuid);
 
 
         // IS MAIL ALREADY IN INDEX? THEN HANDLE UPDATE DOCUMENT
@@ -269,15 +269,17 @@ public class DiskVault implements Vault, StatusHandler
             throw new ArchiveMsgException("Cannot write data file: " + ex.getMessage());
         }
 
+        String uuid = data_dsh.get_message_uuid(msg);
+        LogManager.log(Level.FINE, "Wrote mail file " + uuid);
         
 
         // AND INDEX IT AFTERWARDS
         // USE THREAD ?
-        boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, true);
+        boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, false);
         //
 
-        LogManager.log(Level.SEVERE, "No parallel process");
-        parallel_index = false;
+        
+        parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, parallel_index);
         
         if (parallel_index)
         {
@@ -285,6 +287,7 @@ public class DiskVault implements Vault, StatusHandler
         }
         else
         {
+            LogManager.log(Level.SEVERE, "No parallel index");
             // NO, DO RIGHT HERE
             idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true);
         }

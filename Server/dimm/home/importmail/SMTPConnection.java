@@ -105,7 +105,7 @@ public class SMTPConnection extends ProxyConnection
             {
 
                 // read the answer from the server
-                log( 3, Main.Txt("Waiting_for_Server..."));
+                log( 5, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -160,7 +160,7 @@ public class SMTPConnection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 3, Main.Txt("Waiting_for_Client..."));
+                log( 5, Main.Txt("Waiting_for_Client..."));
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
@@ -201,9 +201,6 @@ public class SMTPConnection extends ProxyConnection
                 }
             }  // while
 
-            closeConnections();
-
-            System.gc();
 
         }
         catch (UnknownHostException uhe)
@@ -215,6 +212,12 @@ public class SMTPConnection extends ProxyConnection
         catch (Exception e)
         {
             LogManager.err_log(e.getMessage());
+        }
+        finally
+        {
+            closeConnections();
+
+            System.gc();
         }
         log(2, Main.Txt("Finished") );
         
