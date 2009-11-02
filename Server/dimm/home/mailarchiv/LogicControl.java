@@ -153,6 +153,7 @@ public class LogicControl
 */
 
         check_db_changes( change_session, "select max(imap_port) from mandant", true, "alter table mandant add imap_port int", "update mandant set imap_port=0" );
+        check_db_changes( change_session, "select count(imap_host) from mandant", true, "alter table mandant add imap_host varchar(80)", "update mandant set imap_host=''" );
         check_db_changes( change_session, "select max(mid) from mail_header_variable", true, "alter table mail_header_variable add mid int", null );
 
 //        check_db_changes( change_session, "select max(ac_id) from role", false, "alter table role drop ac_id", "delete from account_connector" );

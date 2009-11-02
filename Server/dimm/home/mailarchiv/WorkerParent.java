@@ -58,7 +58,7 @@ public abstract class WorkerParent
     {
         this.statusTxt = statusTxt;
         if (statusTxt.length() > 0)
-            LogManager.log(Level.FINE, statusTxt );
+            LogManager.log(Level.FINEST, statusTxt );
     }
 
     public void clrStatusTxt(String statusTxt)

@@ -17,9 +17,19 @@
  */
 package dimm.home.index.IMAP;
 
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCMimeMail;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.mail.MessagingException;
 
-public class MailMessage implements MailInfo
+public class MWMailMessage implements MailInfo
 {
     String uuid;
     String header = null;
@@ -30,10 +40,14 @@ public class MailMessage implements MailInfo
     int uid = 0;
     String messageid = null;
     MailKonto parent = null;
-    MailFile mailfile = null;
+    MailFolder mailfile = null;
     boolean read = false;
 
-    public MailMessage()
+    RFCFileMail rfc;
+    RFCMimeMail mmail;
+    SimpleDateFormat internaldate_sdf;
+
+    public MWMailMessage()
     {
         throw new NullPointerException("Constructor not supported");
     }
@@ -52,13 +66,35 @@ public class MailMessage implements MailInfo
         this.mailfile = mailfile;
     }
 */
-    public MailMessage( MailFile mailfile, MailKonto parent, String messageid, int uid )
+    public MWMailMessage( MailFolder mailfile, MailKonto parent, String messageid, int uid )
     {
         this.parent = parent;
         this.mailfile = mailfile;
         this.messageid = messageid;
         this.uuid = messageid;
         this.uid = uid;
+
+        internaldate_sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss z");
+
+        rfc = new RFCFileMail(new File( messageid ), false);
+        mmail = new RFCMimeMail();
+        try
+        {
+            mmail.parse(rfc);
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
     }
 
    
@@ -72,11 +108,15 @@ public class MailMessage implements MailInfo
     @Override
     public String getMID()
     {
-        if (messageid == null)
+        try
         {
-            throw new NullPointerException("messageid == null");
+            return mmail.getMsg().getMessageID();
         }
-        return messageid;
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return "";
     }
 
     @Override
@@ -104,30 +144,51 @@ public class MailMessage implements MailInfo
 
     public String get( String key )
     {
-        return (String) h.get(key);
+        try
+        {
+            return mmail.getMsg().getHeader(key, null);
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return "";
     }
 
      @Override
     public int getRFC822size()
     {
-        if (!read)
-        {
-            return mesgsize;
-        }
-        return header.length() + bodysize;
+        return (int)rfc.get_length();
     }
 
  
     @Override
     public String getRFC822header()
     {
-        return header;
+        String ret = "";
+        try
+        {
+
+            Enumeration en = mmail.getMsg().getAllHeaderLines();
+            while (en.hasMoreElements())
+            {
+                ret += en.nextElement().toString();
+                ret += "\n";
+            }
+
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return ret;
     }
 
   
-    public Vector getRFC822body()
+    public void getRFC822body( OutputStream os) throws IOException, MessagingException
     {
-        return mesg;
+        mmail.getMsg().writeTo(os);
     }
 
     public static String getMessageId( String line )
@@ -148,5 +209,28 @@ public class MailMessage implements MailInfo
             }
         }
         return mid;
+    }
+
+    String get_internaldate()
+    {
+        Date d = null;
+
+        try
+        {
+            mmail.getMsg().getSentDate();
+            if (d == null)
+            {
+                d = mmail.getMsg().getReceivedDate();
+
+            }
+        }
+        catch (MessagingException messagingException)
+        {
+        }
+        
+        if ( d == null)
+            d = new Date();
+
+        return internaldate_sdf.format(d);
     }
 }

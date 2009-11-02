@@ -22,22 +22,23 @@ import dimm.home.mailarchiv.MandantContext;
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import javax.mail.MessagingException;
 
 
 
-public class ImapServer extends Thread
+public class MWImapServer extends Thread
 {
 
     PrintWriter out;
     BufferedReader in;
     Socket s = null;
     MailKonto konto = null;
-    MailFile mailfile = null;
+    MailFolder mailfolder = null;
     boolean trace = false;
     int con = 0;
     MandantContext m_ctx;
 
-    public ImapServer( MandantContext m_ctx, Socket s, boolean trace )
+    public MWImapServer( MandantContext m_ctx, Socket s, boolean trace )
     {
         this.s = s;
         this.m_ctx = m_ctx;
@@ -48,7 +49,7 @@ public class ImapServer extends Thread
     {
         if (trace)
         {
-            System.out.println( message);
+            System.out.println( "Out: " + message);
         }
         message += "\r\n";
         out.write(message);
@@ -59,7 +60,7 @@ public class ImapServer extends Thread
     {
         if (trace)
         {
-            System.out.print(message);
+            System.out.print( message);
         }
         out.write(message);
         out.flush();
@@ -93,9 +94,14 @@ public class ImapServer extends Thread
         write(res + message);
     }
 
+    public static MailFolder query;
+    boolean has_searched = false;
     private int techno( String line )
     {
         line = line.trim();
+
+        if (trace)
+            System.out.println( "In: " + line );
 
         int i = line.indexOf(" ");
         if (i > 0)
@@ -114,7 +120,8 @@ public class ImapServer extends Thread
                 cmd = rest.substring(0, i).trim().toLowerCase();
                 par = rest.substring(i + 1).trim();
             }
-            System.out.println("In: [" + sid + "]  "+cmd);
+
+            //System.out.println("In: [" + sid + "]  "+cmd);
 
 
             if (cmd.equals("capability"))
@@ -149,6 +156,21 @@ public class ImapServer extends Thread
             
             if (cmd.equals("noop"))
             {
+                if (has_searched)
+                {
+                    for ( int m = 0; m < mailfolder.lastanzMessages(); m++)
+                    {
+                        MailInfo msginfo = mailfolder.get_last_mail_message(m);
+                        response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
+                    }
+                    for ( int m = 0; m < mailfolder.anzMessages(); m++)
+                    {
+                        MailInfo msginfo = mailfolder.get_mail_message(m);
+                        response(Integer.toString(msginfo.getUID()) + " RECENT");
+                    }
+                    has_searched = false;
+                }
+
                 response(sid, true, "NOOP completed");
                 return 0;
             }
@@ -157,20 +179,48 @@ public class ImapServer extends Thread
                 response(sid, true, "CHECK completed");
                 return 0;
             }
+            if (cmd.equals("subscribe"))
+            {
+                response(sid, true, "SUBSCRIBE completed");
+                return 0;
+            }
+            if (cmd.equals("unsubscribe"))
+            {
+                response(sid, true, "UNSUBSCRIBE completed");
+                return 0;
+            }
             if (cmd.equals("idle"))
             {
-                if (konto == null || mailfile == null)
+                if (konto == null)
                 {
                     response(sid, false, "IDLE failed");
                     return 1;
                 }
-                write("+ Waiting for done");
+
+                if (mailfolder != null && has_searched)
+                {
+                    for ( int m = 0; m < mailfolder.lastanzMessages(); m++)
+                    {
+                        MailInfo msginfo = mailfolder.get_last_mail_message(m);
+                        response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
+                    }
+                    for ( int m = 0; m < mailfolder.anzMessages(); m++)
+                    {
+                        MailInfo msginfo = mailfolder.get_mail_message(m);
+                        response(Integer.toString(msginfo.getUID()) + " RECENT");
+                    }
+                    has_searched = false;
+                }
+                else
+                    write("+ Waiting for done");
+
                 //Idle schleife 
                 long last = 0;
-                int manz = mailfile.anzMessages();
+                int manz = 0;
+                if (mailfolder != null)
+                        manz = mailfolder.anzMessages();
                 while (true)
                 {
-
                     try
                     {
                         if (in.ready())
@@ -199,9 +249,9 @@ public class ImapServer extends Thread
                     {
                         konto.log(e);
                     }
-                    if (manz != mailfile.anzMessages())
+                    if ( (mailfolder != null) && manz != mailfolder.anzMessages())
                     {
-                        response(mailfile.anzMessages() + " EXISTS");
+                        response(mailfolder.anzMessages() + " EXISTS");
                         response("0 RECENT");
                     }
                 }
@@ -227,10 +277,10 @@ public class ImapServer extends Thread
                 {
                     break;
                 }
-                if (trace)
+               /* if (trace)
                 {
                     System.out.println("[" + con + "] " + line);
-                }
+                }*/
                 line = line.trim();
                 if (!line.equals(""))
                 {
@@ -363,7 +413,7 @@ public class ImapServer extends Thread
      */
     private int capability( String sid, String par )
     {
-        response("CAPABILITY IMAP4 LOGIN");
+        response("CAPABILITY IMAP4 LOGIN IDLE");
 //        response("CAPABILITY IMAP4 IDLE LOGIN");
         response(sid, true, "CAPABILITY completed");
         return 0;
@@ -376,46 +426,29 @@ public class ImapServer extends Thread
     };
 
     boolean search( int min, int max, int offset, String part[] )
-    {
-        return false;
+    {        
+        query.create_new_mail();
+
+        String result = "SEARCH";
+        for ( int i = 0; i < mailfolder.anzMessages(); i++)
+        {
+            MailInfo msginfo = mailfolder.get_mail_message(i);
+            result += " " +  msginfo.getUID();
+        }
+        response( result );
+        has_searched = true;
+        return true;
     }
 
     boolean fetch( int min, int max, int offset, String part[] )
     {
-        int i, x;
-        boolean flags = false;
-        boolean header = false;
-        boolean mesg = false;
-        boolean mesgsize = false;
+        
 
-        for (i = offset; i < part.length; i++)
-        {
-            String tags[] = imapsplit(part[i]);
-            for (x = 0; x < tags.length; x++)
-            {
-                if (tags[x].toLowerCase().trim().equals("flags"))
-                {
-                    flags = true;
-                }
-                if (tags[x].toLowerCase().trim().equals("rfc822.header"))
-                {
-                    header = true;
-                }
-                if (tags[x].toLowerCase().trim().equals("rfc822.size"))
-                {
-                    mesgsize = true;
-                }
-                if (tags[x].toLowerCase().trim().equals("rfc822"))
-                {
-                    mesg = true;
-                }
-            }
-        }
 
         int zaehler = 1;
-        for (i = 0; i < mailfile.anzMessages(); i++)
+        for (int i = 0; i < mailfolder.anzMessages(); i++)
         {
-            MailInfo msginfo = mailfile.getInfo(i);
+            MailInfo msginfo = mailfolder.get_mail_message(i);
             if (msginfo == null)
             {
                 continue;
@@ -429,51 +462,81 @@ public class ImapServer extends Thread
             {
                 continue;
             }
-
-            String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
-
             rawwrite(RESTAG + (zaehler++) + " FETCH (UID " + uid);
 
-
             int size = msginfo.getRFC822size();
-            if (mesgsize)
-            {
-                rawwrite(" RFC822.SIZE " + size);
-            }
+            String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
 
-            if (header)
+            for (int p = offset; p < part.length; p++)
             {
-                //header
-                String theader = msginfo.getRFC822header();
-                rawwrite(" RFC822.HEADER {" + theader.length() + "}\r\n");
-                rawwrite(theader);
-            }
-            else if (mesg)
-            {
-                MailMessage msg = mailfile.getMesg(i);
-                //message
-                String theader = msg.getRFC822header();
-                Vector tmesg = msg.getRFC822body();
-                int tsize = msg.getRFC822size();
-                rawwrite(" RFC822 {" + size + "}\r\n");
-                rawwrite(theader);
-                for (int ei = 0; ei < tmesg.size(); ei++)
+                String tags[] = imapsplit(part[p]);
+                for (int x = 0; x < tags.length; x++)
                 {
-                    rawwrite((String) tmesg.elementAt(ei));
+
+                    String tag = tags[x].toLowerCase().trim();
+
+                    if (tag.equals("flags"))
+                    {
+                        rawwrite(" FLAGS " + sflags);
+                    }
+                    else if (tag.equals("rfc822.header"))
+                    {
+                        //header
+                        String theader = msginfo.getRFC822header();
+                        rawwrite(" RFC822.HEADER {" + theader.length() + "}\r\n");
+                        System.out.println("Writing Message header...");
+                        try
+                        {
+                            s.getOutputStream().write(theader.getBytes());
+                        }
+                        catch (IOException iOException)
+                        {
+                        }
+                    }
+                    else if (tag.equals("rfc822.size"))
+                    {
+                        rawwrite(" RFC822.SIZE " + size);
+                    }
+                  /*  else if (tag.equals("uid"))
+                    {
+                        rawwrite(" UID " + uid);
+                    }*/
+                    else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
+                    {
+                        MWMailMessage msg = mailfolder.getMesg(i);
+                        //message
+                        int tsize = msg.getRFC822size();
+                        rawwrite(" RFC822 {" + tsize + "}\r\n");
+
+                        try
+                        {
+                            System.out.println("Writing Message body...");
+                            msg.getRFC822body(s.getOutputStream());
+                        }
+                        catch (IOException iOException)
+                        {
+                        }
+                        catch (MessagingException messagingException)
+                        {
+                        }
+
+                    }
+                    else if (tag.equals("internaldate"))
+                    {
+                        MWMailMessage msg = mailfolder.getMesg(i);
+                        rawwrite(" INTERNALDATE " + msg.get_internaldate());
+                    }
                 }
-            }
-            if (flags)
-            {
-                rawwrite(" FLAGS " + sflags);
             }
             rawwrite(")\r\n");
         }
+        
         return true;
     }
 
     private int uid( String sid, String par )
     {
-        if (konto != null && mailfile != null)
+        if (konto != null && mailfolder != null)
         {
             String part[] = imapsplit(par);
             if (part != null && part.length >= 1)
@@ -529,7 +592,7 @@ public class ImapServer extends Thread
                         
                         if (min > 100000)
                         {
-                            min = 0; //Mop: ob das wohl richtig ist
+                        min = 0; //Mop: ob das wohl richtig ist
                         }
                         if (max == 0)
                         {
@@ -539,11 +602,11 @@ public class ImapServer extends Thread
                     //debug
                     //System.out.println("call "+command+" from:"+min+" to:"+max);
 
-                    if (command.equals("search"))
+                    if (command.toLowerCase().equals("search"))
                     {
                         success &= search(min, max, 2, part);
                     }
-                    if (command.equals("fetch"))
+                    else if (command.toLowerCase().equals("fetch"))
                     {
                         success &= fetch(min, max, 2, part);
                     }
@@ -570,12 +633,14 @@ public class ImapServer extends Thread
             String part[] = imapsplit(par);
             if (part != null && part.length >= 1)
             {
-                mailfile = konto.select(part[0]);
-                if (mailfile != null)
+                mailfolder = konto.select(part[0]);
+                if (mailfolder != null)
                 {
-                    response(mailfile.anzMessages() + " EXISTS");
-                    response("0 RECENT");
+                    response("" + mailfolder.anzMessages() + " EXISTS" );
+                    response("" + mailfolder.anzMessages() + " RECENT" );
+
                     response("FLAGS (Junk NonJunk \\* \\Answered \\Flagged \\Deleted \\Draft \\Seen)");
+                    response("OK [UIDVALIDITY " + mailfolder.get_uid_validity() + "]" );
                     response("OK [PERMANENTFLAGS (Junk  NonJunk \\* \\Answered \\Flagged \\Deleted \\Draft \\Seen)] Permanent flags)");
                 }
                 response(sid, true, "[READ-ONLY] SELECT completed");
@@ -593,11 +658,33 @@ public class ImapServer extends Thread
     {
         int h;
         int anz;
+
+
         if (konto != null)
         {
             String part[] = imapsplit(par);
             if (part != null && part.length >= 2)
             {
+                if (part[1].compareTo("*") == 0)
+                {
+                    response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    response("LIST (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
+                if (part[1].startsWith("INBOX"))
+                {
+                    response("LIST (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
+                if (part[1].startsWith( MailFolder.QRYTOKEN ))
+                {
+                    response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
+
                 String dirlist[] = konto.getDirlist(".");
                 String req[] = pathsplit(part[1]);
                 for (int i = 0; i < dirlist.length; i++)
@@ -647,6 +734,13 @@ public class ImapServer extends Thread
                 {
                     boolean filter = true;
                     //filtern der directories
+                    int l = part[1].length();
+                    if (l > 1)
+                    {
+                        if (part[1].charAt(l-1) == '*')
+                            part[1] = part[1].substring(0, l-2);
+                    }
+                    
                     if (dirlist[i].startsWith(part[1]))
                     {
                         filter = false;

@@ -17,6 +17,8 @@
 */
 package dimm.home.index.IMAP;
 
+import java.util.ArrayList;
+
 public class MailKonto
 {
     String of;
@@ -82,11 +84,11 @@ public class MailKonto
         
     }
     
-    public MailFile select(String folder)
+    public MailFolder select(String folder)
     {
         System.out.println("select " + folder);
 
-        MailFile f = new MailFile(this, folder, ImapServer.cleanup(folder));
+        MailFolder f = new MailFolder(this, folder, MWImapServer.cleanup(folder));
         if(f.isValid())
             return f;
         return null;
@@ -131,10 +133,66 @@ public class MailKonto
         
             
     }
+    int cnt_level( String path )
+    {
+
+        if (path.length() == 0 || path.compareTo(".") == 0)
+            return 0;
+
+        int lvl = 1;
+        for (int i = 0; i < path.length(); i++)
+        {
+            char ch = path.charAt(i);
+            if (ch == '/' || ch == '\\')
+                lvl++;
+        }
+        return lvl;
+    }
 
     String[] getDirlist( String string )
     {
-        // LEVEL 1 IS "."
-        return new String[]{"INBOX"};
+        int level = cnt_level( string );
+
+        String[] m_txt = {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
+        
+        switch( level )
+        {
+            case 0:
+            {
+                // LEVEL 1 IS "."
+                ArrayList<String> fs = new ArrayList<String>();
+                fs.add("INBOX");
+                fs.add(MailFolder.QRYTOKEN);
+
+/*                for (int i = 0; i < 1; i++)
+                {
+                    String year = "INBOX" + "/" + Integer.toString(2008 + i );
+                    fs.add( year );
+                    for ( int m = 0; m < m_txt.length; m++)
+                    {
+                        String month = Integer.toString( m + 1 );
+                        if (m < 9)
+                            month = "0" + month;
+
+                     //   month += " " + m_txt[m] + "";
+
+                        fs.add( year + "/" + month);
+//                        for ( int d = 1; d< 31; d++)
+                        for ( int d = 1; d< 2; d++)
+                        {
+                            String day = Integer.toString( d );
+                            if (d < 10)
+                                day = "0" + day;
+
+                            fs.add( year + "/" + month + "/" + day);
+                        }
+                    }
+                }
+ * */
+                String[] arr = fs.toArray(new String[0]);
+                return arr;
+            }
+         }
+        return new String[0];
     }
 }

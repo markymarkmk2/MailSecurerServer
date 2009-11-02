@@ -285,7 +285,9 @@ public class MandantContext
             IMAPBrowserServer ibs = Main.get_control().get_imap_browser_server();
             try
             {
-                ibs.add_child( new IMAPBrowser(this, null, getMandant().getImap_port()) );
+                LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port() );
+
+                ibs.add_child( new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port()) );
             }
             catch (IOException ex)
             {
