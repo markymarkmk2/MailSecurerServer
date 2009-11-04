@@ -4,12 +4,19 @@
  */
 package dimm.home.mailarchiv.Utilities;
 
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
+import home.shared.mail.RFCFileMail;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
@@ -266,17 +273,22 @@ public class CryptTools
         return null;
     }
 
-    public static OutputStream create_crypt_outstream( MandantContext context, OutputStream os, String passPhrase, ENC_MODE encrypt )
+    private OutputStream create_crypt_AES_outstream( MandantContext context, OutputStream os, String passPhrase, ENC_MODE encrypt )
     {
         int iterationCount = context.getPrefs().get_KeyPBEIteration();
         byte[] salt = context.getPrefs().get_KeyPBESalt();
-        String algorithm = context.getPrefs().get_KeyAlgorithm();
+//        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
         {
-            KeySpec keySpec = new PBEKeySpec(passPhrase.toCharArray(), salt, iterationCount);
-            SecretKey key = SecretKeyFactory.getInstance(algorithm).generateSecret(keySpec);
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("AES");
+            byte[] keyData = passPhrase.getBytes(); // 16 bytes for AES
+            SecretKeySpec keySpec = new SecretKeySpec(keyData, "AES");
+            Key key = keyFactory.generateSecret(keySpec);
 
+/*            KeySpec keySpec = new PBEKeySpec(passPhrase.toCharArray(), salt, iterationCount);
+            SecretKey key = SecretKeyFactory.getInstance(algorithm).generateSecret(keySpec);
+*/
             Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
 
@@ -309,17 +321,22 @@ public class CryptTools
         return null;
     }
     
-    public static InputStream create_crypt_instream( MandantContext context, InputStream is, String passPhrase, ENC_MODE encrypt )
+    private InputStream create_crypt_AES_instream( MandantContext context, InputStream is, String passPhrase, ENC_MODE encrypt )
     {
         int iterationCount = context.getPrefs().get_KeyPBEIteration();
         byte[] salt = context.getPrefs().get_KeyPBESalt();
-        String algorithm = context.getPrefs().get_KeyAlgorithm();
+//        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
         {
-            KeySpec keySpec = new PBEKeySpec(passPhrase.toCharArray(), salt, iterationCount);
-            SecretKey key = SecretKeyFactory.getInstance( algorithm ).generateSecret(keySpec);
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("AES");
+            byte[] keyData = passPhrase.getBytes(); // 16 bytes for AES
+            SecretKeySpec keySpec = new SecretKeySpec(keyData, "AES");
+            Key key = keyFactory.generateSecret(keySpec);
 
+/*            KeySpec keySpec = new PBEKeySpec(passPhrase.toCharArray(), salt, iterationCount);
+            SecretKey key = SecretKeyFactory.getInstance( algorithm ).generateSecret(keySpec);
+*/
             Cipher cipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
 
@@ -351,5 +368,84 @@ public class CryptTools
         }
         return null;
     }
+    
+    public static void main( String[] args )
+    {
+        LogicControl instance;
+
+
+        try
+        {
+            instance = new LogicControl();
+            instance.initialize();
+
+            System.out.println("testcrypt");
+
+            String name = "j:\\tmp\\enc.tst";
+            String TEST = "1234567890";
+
+            MandantContext ctx = instance.get_mandant_by_id(1);
+
+            RFCFileMail rfc = new RFCFileMail(new File(name), true);
+            //rfc.set_encryption( ctx.getPrefs().get_password(), ctx.getPrefs().get_KeyPBEIteration(), ctx.getPrefs().get_KeyPBESalt() );
+            OutputStream os = rfc.open_outputstream();
+
+            os.write(TEST.getBytes());
+            os.flush();
+            os.close();
+
+            InputStream is = rfc.open_inputstream();
+
+            byte[] in_data = new byte[TEST.getBytes().length];
+
+            is.read(in_data);
+            is.close();
+
+            String intest = new String(in_data);
+
+
+            ctx.getTempFileHandler().clean_up();
+            if (TEST.compareTo(intest) != 0)
+            {
+                System.out.println("Encrypt / decrypt failed: Wrote " + TEST + " got " + intest);
+            }
+            else
+            {
+                rfc.delete();
+
+            }
+
+
+        System.out.println("create_dupl_temp_file");
+
+
+
+        File f = ctx.getTempFileHandler().create_temp_file("UnitTest", "JU", "dat");
+
+        FileOutputStream fos = new FileOutputStream(f);
+        fos.write(new String("12345").getBytes());
+        fos.close();
+        FileInputStream fis = new FileInputStream(f);
+
+
+        RFCFileMail result = instance.dump_msg_stream_to_temp_file(ctx.getMandant(), fis, "test", "test", "eml", false);
+        if (f.length() !=  result.get_length())
+            System.err.println("Length doensz fit");
+
+        fis.close();
+
+        ctx.getTempFileHandler().clean_up();
+        if (f.exists())
+                System.err.println("Source file is still there " + f.getAbsolutePath() );
+        if (result.getFile().exists())
+            System.err.println( "target file is still there " + result.getFile().getAbsolutePath() );
+
+        }
+        catch (Exception iOException)
+        {
+            iOException.printStackTrace();
+        }
+    }
+
 }    
 

@@ -9,10 +9,11 @@ import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.CryptTools;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import home.shared.hibernate.DiskSpace;
+import home.shared.mail.CryptAESInputStream;
+import home.shared.mail.CryptAESOutputStream;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.File;
@@ -60,6 +61,10 @@ public class DiskSpaceHandler
     public boolean is_open()
     {
         return _open;
+    }
+    public int get_enc_mode()
+    {
+        return dsi.getEncMode();
     }
 
     public IndexReader get_read_index()
@@ -192,6 +197,7 @@ public class DiskSpaceHandler
 
         dsi = new DiskSpaceInfo();
         dsi.setLanguage( m_ctx.getPrefs().get_language());
+        dsi.setEncMode( RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE);
 
         try
         {
@@ -368,10 +374,10 @@ public class DiskSpaceHandler
         }
     }
     
-    public RFCGenericMail get_mail_from_time( long time ) throws VaultException
+    public RFCGenericMail get_mail_from_time( long time, int enc_mode ) throws VaultException
     {
         String parent_path = getMailPath();
-        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time );
+        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode );
 
         File mail_file = new File( absolutePath );
         if (!mail_file.exists())
@@ -675,13 +681,14 @@ public class DiskSpaceHandler
 
         try
         {
-            File out_file = msg.create_unique_mailfile(getMailPath());
+            int enc_mode = no_encryption ? RFCGenericMail.ENC_NONE : RFCGenericMail.ENC_AES;
+            File out_file = msg.create_unique_mailfile(getMailPath(), enc_mode );
 
             if (out_file == null)
             {
                 throw new VaultException( ds, "Cannot create unique mailpath" );
             }
-            CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
+            //CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.ENCRYPT;
 
             bis = msg.open_inputstream();
             OutputStream os = new FileOutputStream(out_file);
@@ -695,7 +702,10 @@ public class DiskSpaceHandler
             }
             else
             {
-                bos = CryptTools.create_crypt_outstream(m_ctx, os, password, encrypt);
+                bos = new CryptAESOutputStream(os,
+                        m_ctx.getPrefs().get_KeyPBEIteration(),
+                        m_ctx.getPrefs().get_KeyPBESalt(), password);
+//                bos = CryptTools.create_crypt_AES_outstream(m_ctx, os, password, encrypt);
             }
 
 
@@ -744,16 +754,20 @@ public class DiskSpaceHandler
     {
         try
         {
-            CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.DECRYPT;
+            //CryptTools.ENC_MODE encrypt = CryptTools.ENC_MODE.DECRYPT;
 
             InputStream mis = msg.open_inputstream();
 
             if ( no_encryption)
                 return mis;
 
-            InputStream is = CryptTools.create_crypt_instream(m_ctx, mis, password, encrypt);
+                mis = new CryptAESInputStream(mis,
+                        m_ctx.getPrefs().get_KeyPBEIteration(),
+                        m_ctx.getPrefs().get_KeyPBESalt(), password);
 
-            return is;
+            //InputStream is = CryptTools.create_crypt_AES_instream(m_ctx, mis, password, encrypt);
+
+            return mis;
         }
         catch (Exception e)
         {

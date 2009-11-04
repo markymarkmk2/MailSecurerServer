@@ -11,7 +11,7 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *  
- *  You should have received a copy of the GNU General Public License
+ *  You should have received a copy of the GNU General Public License_sp
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
@@ -94,7 +94,6 @@ public class MWImapServer extends Thread
         write(res + message);
     }
 
-    public static MailFolder query;
     boolean has_searched = false;
     private int techno( String line )
     {
@@ -132,9 +131,18 @@ public class MWImapServer extends Thread
             {
                 return login(sid, par);
             }
+            if (cmd.equals("fetch"))
+            {
+                return raw_fetch( sid, par );
+            }
             if (cmd.equals("logout"))
             {
                 return logout(sid, par);
+            }
+            if (cmd.equals("close"))
+            {
+                response(sid, true, "CLOSE completed");
+                return 0;
             }
             if (cmd.equals("lsub"))
             {
@@ -143,6 +151,10 @@ public class MWImapServer extends Thread
             if (cmd.equals("list"))
             {
                 return list(sid, par);
+            }
+            if (cmd.equals("status"))
+            {
+                return status(sid, par);
             }
             
             if (cmd.equals("select") || cmd.equals("examine"))
@@ -197,6 +209,8 @@ public class MWImapServer extends Thread
                     return 1;
                 }
 
+                write("+ Waiting for done");
+
                 if (mailfolder != null && has_searched)
                 {
                     for ( int m = 0; m < mailfolder.lastanzMessages(); m++)
@@ -211,8 +225,7 @@ public class MWImapServer extends Thread
                     }
                     has_searched = false;
                 }
-                else
-                    write("+ Waiting for done");
+                    
 
                 //Idle schleife 
                 long last = 0;
@@ -226,12 +239,15 @@ public class MWImapServer extends Thread
                         if (in.ready())
                         {
                             String rline = in.readLine();
-                            if (rline.toLowerCase().startsWith("done"))
+                            if (rline.toLowerCase().startsWith("done")
+                                    || rline.toLowerCase().endsWith("close")
+                                     || rline.toLowerCase().endsWith("logout") )
                             {
                                 response(sid, true, "IDLE completed");
                                 return 0;
                             }
-                            throw new Exception(rline);
+                            if (!rline.toLowerCase().endsWith("noop"))
+                                throw new Exception(rline);
                         }
                     }
                     catch (Exception e)
@@ -345,32 +361,54 @@ public class MWImapServer extends Thread
         while (true)
         {
             line = line.trim();
-            String tr = " ";
+            char tr = ' ';
             if (line.startsWith("\""))
             {
                 line = line.substring(1);
-                tr = "\"";
+                tr = '\"';
             }
             if (line.startsWith("("))
             {
                 line = line.substring(1);
-                tr = ")";
+                tr = ')';
             }
             if (line.startsWith("{"))
             {
                 line = line.substring(1);
-                tr = "}";
+                tr = '}';
             }
             if (line.trim().equals(""))
             {
                 break;
             }
-            int i = line.indexOf(tr);
+            int i = -1;
+            if (tr == ' ')
+                i = line.indexOf(tr);
+            else
+                i = line.lastIndexOf(tr);
+
+
+            if (line.startsWith("BODY"))
+            {
+                int klauf = line.indexOf('[');
+                if (klauf > 0 && i > 0 && klauf < i)
+                {
+                    int klzu = line.indexOf(']');
+                    if (klzu > 0)
+                    {
+                        i = klzu + 1;
+                        if (i >= line.length())
+                            i = -1;
+                    }
+
+                }
+            }
             if (i < 0)
             {
                 v.add(line);
                 break;
             }
+
             v.add(line.substring(0, i));
             line = line.substring(i + 1);
         }
@@ -427,7 +465,7 @@ public class MWImapServer extends Thread
 
     boolean search( int min, int max, int offset, String part[] )
     {        
-        query.create_new_mail();
+        mailfolder.create_new_mail();
 
         String result = "SEARCH";
         for ( int i = 0; i < mailfolder.anzMessages(); i++)
@@ -440,11 +478,8 @@ public class MWImapServer extends Thread
         return true;
     }
 
-    boolean fetch( int min, int max, int offset, String part[] )
+    boolean fetch( int min, int max, int offset, boolean is_uid, String part[] )
     {
-        
-
-
         int zaehler = 1;
         for (int i = 0; i < mailfolder.anzMessages(); i++)
         {
@@ -454,18 +489,32 @@ public class MWImapServer extends Thread
                 continue;
             }
             int uid = msginfo.getUID();
-            if (uid < min)
+
+            if (is_uid)
             {
-                continue;
+                if (uid < min)
+                {
+                    continue;
+                }
+                if (uid > max && max > -1)
+                {
+                    continue;
+                }
             }
-            if (uid > max && max > -1)
+            else
             {
-                continue;
+                if (max > 0)
+                    if (i > max)
+                        break;
             }
-            rawwrite(RESTAG + (zaehler++) + " FETCH (UID " + uid);
+
+            rawwrite(RESTAG + (zaehler++) + " FETCH (");
 
             int size = msginfo.getRFC822size();
             String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
+
+            boolean had_uid = false;
+            boolean needs_space = false;
 
             for (int p = offset; p < part.length; p++)
             {
@@ -473,21 +522,46 @@ public class MWImapServer extends Thread
                 for (int x = 0; x < tags.length; x++)
                 {
 
-                    String tag = tags[x].toLowerCase().trim();
+                    String orig_tag = tags[x].trim();
+                    String tag = orig_tag.toLowerCase();
 
+
+                    if (tag.equals("envelope"))
+                    {
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+
+                        String envelope = msginfo.getEnvelope();
+
+                        rawwrite("ENVELOPE (" + envelope + ")");
+                    }
                     if (tag.equals("flags"))
                     {
-                        rawwrite(" FLAGS " + sflags);
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        rawwrite("FLAGS " + sflags);
                     }
                     else if (tag.equals("rfc822.header"))
                     {
                         //header
                         String theader = msginfo.getRFC822header();
-                        rawwrite(" RFC822.HEADER {" + theader.length() + "}\r\n");
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        rawwrite("RFC822.HEADER {" + theader.length() + "}\r\n");
                         System.out.println("Writing Message header...");
                         try
                         {
                             s.getOutputStream().write(theader.getBytes());
+                            System.out.print( theader );
                         }
                         catch (IOException iOException)
                         {
@@ -495,23 +569,66 @@ public class MWImapServer extends Thread
                     }
                     else if (tag.equals("rfc822.size"))
                     {
-                        rawwrite(" RFC822.SIZE " + size);
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        rawwrite("RFC822.SIZE " + size);
                     }
-                  /*  else if (tag.equals("uid"))
+                    else if (tag.equals("uid"))
                     {
-                        rawwrite(" UID " + uid);
-                    }*/
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        rawwrite("UID " + uid);
+                        had_uid = true;
+                    }
+                    else if (tag.startsWith("body.peek[header.fields"))
+                    {
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        
+                        MWMailMessage msg = mailfolder.getMesg(i);
+                        //message
+                        String header = msg.get_header_fields( tag );
+                        
+                        rawwrite(orig_tag + " {" + header.length() + "}\r\n");
+                        rawwrite( header );
+                    }
+
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
                     {
                         MWMailMessage msg = mailfolder.getMesg(i);
                         //message
                         int tsize = msg.getRFC822size();
-                        rawwrite(" RFC822 {" + tsize + "}\r\n");
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        
+
+                        ByteArrayOutputStream byas = new ByteArrayOutputStream();
 
                         try
                         {
-                            System.out.println("Writing Message body...");
-                            msg.getRFC822body(s.getOutputStream());
+//                            System.out.println("Writing Message body...");
+                            //msg.getRFC822body(s.getOutputStream());
+                            msg.getRFC822body(byas);
+                            byte[] mdata = byas.toByteArray();
+                            tsize = mdata.length;
+                            rawwrite("" + tag.toUpperCase() + " {" + tsize + "}\r\n");
+                            s.getOutputStream().write( mdata );
+                            s.getOutputStream().flush();
+
+                            
+                            System.out.print(byas.toString());
                         }
                         catch (IOException iOException)
                         {
@@ -519,15 +636,25 @@ public class MWImapServer extends Thread
                         catch (MessagingException messagingException)
                         {
                         }
-
                     }
                     else if (tag.equals("internaldate"))
                     {
                         MWMailMessage msg = mailfolder.getMesg(i);
-                        rawwrite(" INTERNALDATE " + msg.get_internaldate());
+                        if (needs_space)
+                        {
+                            rawwrite(" ");
+                        }
+                        needs_space = true;
+                        rawwrite("INTERNALDATE \"" + msg.get_internaldate() + "\"");
                     }
                 }
             }
+            if (!had_uid)
+            {
+                rawwrite(" UID " + uid);
+                had_uid = true;
+            }
+
             rawwrite(")\r\n");
         }
         
@@ -608,7 +735,7 @@ public class MWImapServer extends Thread
                     }
                     else if (command.toLowerCase().equals("fetch"))
                     {
-                        success &= fetch(min, max, 2, part);
+                        success &= fetch(min, max, 2, /*is_uid*/ true, part);
                     }
                     else
                     {
@@ -618,6 +745,7 @@ public class MWImapServer extends Thread
                     }
 
                 }
+//                response(sid, success, command.toUpperCase() + " " + (success ? "completed" : "failed"));
                 response(sid, success, "UID " + command.toUpperCase() + " " + (success ? "completed" : "failed"));
                 return success ? 0 : 1;
             }
@@ -639,9 +767,9 @@ public class MWImapServer extends Thread
                     response("" + mailfolder.anzMessages() + " EXISTS" );
                     response("" + mailfolder.anzMessages() + " RECENT" );
 
-                    response("FLAGS (Junk NonJunk \\* \\Answered \\Flagged \\Deleted \\Draft \\Seen)");
-                    response("OK [UIDVALIDITY " + mailfolder.get_uid_validity() + "]" );
-                    response("OK [PERMANENTFLAGS (Junk  NonJunk \\* \\Answered \\Flagged \\Deleted \\Draft \\Seen)] Permanent flags)");
+                    response("FLAGS (\\Answered \\Flagged \\Deleted \\Draft \\Seen)");
+                    response("OK [UIDVALIDITY " + mailfolder.get_uid_validity() + "] UIDVALIDITY value" );
+                    response("OK [PERMANENTFLAGS (\\Answered \\Flagged \\Deleted \\Draft \\Seen)] Permanent flags)");
                 }
                 response(sid, true, "[READ-ONLY] SELECT completed");
                 return 0;
@@ -665,6 +793,12 @@ public class MWImapServer extends Thread
             String part[] = imapsplit(par);
             if (part != null && part.length >= 2)
             {
+                if (part[1].length() == 0)
+                {
+                    response("LIST  \"/\" ");  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
                 if (part[1].compareTo("*") == 0)
                 {
                     response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
@@ -675,6 +809,80 @@ public class MWImapServer extends Thread
                 if (part[1].startsWith("INBOX"))
                 {
                     response("LIST (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
+                if (part[1].startsWith( MailFolder.QRYTOKEN ))
+                {
+                    response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    response(sid, true, "LIST completed");
+                    return 0;
+                }
+
+                String dirlist[] = konto.getDirlist(".");
+                String req[] = pathsplit(part[1]);
+                for (int i = 0; i < dirlist.length; i++)
+                {
+                    String qreq[] = pathsplit(dirlist[i]);
+                    if (req.length != qreq.length)
+                    {
+                        continue;
+                    }
+                    for (h = 0; h < req.length; h++)
+                    {
+                        if (req[h].equals("%"))
+                        {
+                            continue;
+                        }
+                        if (req[h].equals(qreq[h]))
+                        {
+                            continue;
+                        }
+                        break;
+                    }
+                    if (h < req.length)
+                    {
+                        continue;
+                    }
+
+                    response("LIST (" + "" + ") \"/\" " + dirlist[i]);  // \\NoInferiors \\HasNoChildren
+                }
+                response(sid, true, "LIST completed");
+                return 0;
+            }
+        }
+        response(sid, false, "LIST failed");
+        return 1;
+    }
+
+    private int status( String sid, String par )
+    {
+        int h;
+        int anz;
+
+
+        if (konto != null)
+        {
+            boolean with_uidnext = false;
+            boolean with_unseen = false;
+            String part[] = imapsplit(par);
+            if (part != null && part.length >= 2)
+            {
+                if (part.length > 2 )
+                {
+                    if (part[2].toLowerCase().contains("UIDNEXT"))
+                    {
+                        with_uidnext = true;
+                    }
+                    if (part[2].toLowerCase().contains("UNSEEN"))
+                    {
+                        with_unseen = true;
+                    }
+                }
+
+                if (part[1].startsWith("INBOX"))
+                {
+                    response("STATUS INBOX (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
                     response(sid, true, "LIST completed");
                     return 0;
                 }
@@ -803,4 +1011,76 @@ public class MWImapServer extends Thread
     {
         s.close();
     }
+
+
+      int  raw_fetch( String sid, String par )
+      {
+            String part[] = imapsplit(par);
+            String range = part[0];
+            boolean success = true;
+            while (!range.equals(""))
+            {
+                /* range could be 34:38,42:43,45 */
+                String bereich = "";
+                int i = range.indexOf(",");
+                if (i < 0)
+                {
+                    bereich = range;
+                    range = "";
+                }
+                else
+                {
+                    bereich = range.substring(0, i);
+                    range = range.substring(i + 1);
+                }
+                int min = -1;
+                int max = -1;
+                i = bereich.indexOf(":");
+                if (i < 0)
+                {
+                    try
+                    {
+                        min = max = Integer.parseInt(bereich);
+                    }
+                    catch (Exception e)
+                    {
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        min = Integer.parseInt(bereich.substring(0, i));
+                    }
+                    catch (Exception e)
+                    {
+                    }
+
+                    try
+                    {
+                        max = Integer.parseInt(bereich.substring(i + 1));
+                    }
+                    catch (Exception e)
+                    {
+                    }
+
+                    if (min > 100000)
+                    {
+                    min = 0; //Mop: ob das wohl richtig ist
+                    }
+                    if (max == 0)
+                    {
+                        max = -1;
+                    }
+                }
+                //debug
+                //System.out.println("call "+command+" from:"+min+" to:"+max);
+
+
+               success &= fetch(min, max, 1, false, part);
+            }
+
+            response(sid, success, "FETCH " + (success ? "completed" : "failed"));
+            return success ? 0 : 1;
+      }
 }

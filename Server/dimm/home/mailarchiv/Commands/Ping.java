@@ -46,9 +46,12 @@ public class Ping extends AbstractCommand
                 server = ip;
             }
         }
-        
+
+        String cmd3[]  = new String[]{"ping", "-c", "1", server };
+
         // TRY TO GET A PING
-        String cmd3[]  = {"ping", "-c", "1", server };
+        if (System.getProperty("os.name").startsWith("Windows"))
+            cmd3[1]  = "-n";
         
         CmdExecutor exe = new CmdExecutor( cmd3 );
         exe.set_no_debug( true );

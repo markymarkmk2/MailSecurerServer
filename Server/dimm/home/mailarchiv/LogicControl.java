@@ -185,6 +185,7 @@ public class LogicControl
     /** Creates a new instance of LogicControl */
     public LogicControl()
     {
+        Main.control = this;
         lic_checker = new LicenseChecker( Main.APPNAME + ".license",  Main.license_interface, Main.create_licensefile );
 
         mandanten_list = new ArrayList<MandantContext>();
@@ -387,7 +388,7 @@ public class LogicControl
             throw new VaultException( "Cannot find ds for get mail file " + mail_uuid );
 
         RFCFileMail msg = new RFCFileMail( null, new Date(time), false);
-        File mail_file = msg.create_unique_mailfile( found_ds.getDs().getPath() );
+        File mail_file = msg.create_unique_mailfile( found_ds.getDs().getPath(), found_ds.get_enc_mode() );
 
         return mail_file;
     }
@@ -544,7 +545,7 @@ public class LogicControl
 
                 ctx.reload_mandant(new_m);
 
-                ctx.initialize_mandant();
+                ctx.initialize_mandant(this);
 
             }
         }
@@ -554,7 +555,7 @@ public class LogicControl
 
             ctx.reload_mandant(old_m);
 
-            ctx.initialize_mandant();            
+            ctx.initialize_mandant(this);
         }
 
         // RESTART LOCAL WORKER LIST
@@ -571,7 +572,7 @@ public class LogicControl
     }
 
 
-    void initialize()
+    public void initialize()
     {
        // READ PARAM DB
         read_param_db();
@@ -580,7 +581,7 @@ public class LogicControl
         {
             MandantContext ctx = mandanten_list.get(i);
 
-            ctx.initialize_mandant();
+            ctx.initialize_mandant( this );
         }
 
 
@@ -718,7 +719,7 @@ public class LogicControl
 
             if (!ok)
             {
-                tcc.setStatusTxt(Main.Txt("Internet_not_reachable"));
+             //   tcc.setStatusTxt(Main.Txt("Internet_not_reachable"));
             }
             tcc.setGoodState(ok);
         }
@@ -1122,6 +1123,7 @@ public class LogicControl
                 {
                     LogManager.log(Level.SEVERE, Main.Txt("Index_generation_failed"), ex);
                 }
+                break;
             }
             default:
             {

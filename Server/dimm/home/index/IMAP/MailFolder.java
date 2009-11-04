@@ -45,8 +45,6 @@ public class MailFolder
             //uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", uid++  ));
             uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid++ ) );
             uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
-
-            MWImapServer.query = this;
         }
         int level = cnt_level(file);
 

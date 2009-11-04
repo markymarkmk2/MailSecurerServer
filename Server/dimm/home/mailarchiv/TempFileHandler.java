@@ -144,6 +144,7 @@ public class TempFileHandler
             }
             catch (Exception e)
             {
+                e.printStackTrace();
             }
         }
     }

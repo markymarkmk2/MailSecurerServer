@@ -74,7 +74,8 @@ public class MWMailMessage implements MailInfo
         this.uuid = messageid;
         this.uid = uid;
 
-        internaldate_sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss z");
+        //21-Apr-2009 16:50:44 +0100
+        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
 
         rfc = new RFCFileMail(new File( messageid ), false);
         mmail = new RFCMimeMail();
@@ -232,5 +233,68 @@ public class MWMailMessage implements MailInfo
             d = new Date();
 
         return internaldate_sdf.format(d);
+    }
+
+    /*
+     * date, subject, from, sender, reply-to, to, cc, bcc,
+         in-reply-to, and message-id.  The date, subject, in-reply-to,
+         and message-id fields are strings.  The from, sender, reply-to,
+         to, cc, and bcc fields are parenthesized lists of address
+         structures.
+
+ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb" 
+     (("Journal" NIL "exjournal" "dimm.home")) (("Journal" NIL "exjournal" "dimm.home")) (("Journal" NIL "exjournal" "dimm.home")) (("Mark Williams" NIL "mw" "dimm.home")) NIL (("Piet Borowski" NIL "pb" "dimm.home")) "<87823F8FD45C47EA8448BFD92F9F80A6@STOREVISTA>" NIL)         
+
+
+     * */
+    @Override
+    public String getEnvelope()
+    {
+        StringBuffer sb = new StringBuffer();
+
+        try
+        {
+            sb.append("\"");
+            sb.append(get_internaldate());
+            sb.append("\"");
+            sb.append("\"");
+            sb.append(mmail.getMsg().getSubject());
+            sb.append("\"");
+        }
+        catch (MessagingException messagingException)
+        {
+            messagingException.printStackTrace();
+        }
+
+
+        return sb.toString();
+    }
+
+    String get_header_fields( String tag )
+    {
+        StringBuffer sb = new StringBuffer();
+
+        int idx = tag.indexOf('(');
+        int last_idx = tag.lastIndexOf(')');
+        String header_list = tag.substring(idx + 1, last_idx);
+        StringTokenizer str = new StringTokenizer( header_list, " ");
+        try
+        {
+            while (str.hasMoreElements())
+            {
+                String hdr = str.nextToken();
+                String val = mmail.getMsg().getHeader(hdr, ",");
+                if (val != null)
+                {
+                    sb.append(hdr + ": " + val + "\r\n");
+                }
+            }
+        }
+        catch (MessagingException messagingException)
+        {
+            messagingException.printStackTrace();
+        }
+
+        return sb.toString();
     }
 }

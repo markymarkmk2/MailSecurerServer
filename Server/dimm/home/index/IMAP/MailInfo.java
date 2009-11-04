@@ -24,4 +24,6 @@ public interface MailInfo
     public String getFlags();
     public int getRFC822size();
     public String getRFC822header();
+
+    public String getEnvelope();
 }

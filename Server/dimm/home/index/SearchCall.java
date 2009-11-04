@@ -7,12 +7,10 @@ package dimm.home.index;
 
 import com.thoughtworks.xstream.XStream;
 import home.shared.mail.RFCGenericMail;
-import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
@@ -151,7 +149,7 @@ public class SearchCall
         return "0: ok";
     }
 
-    public static ArrayList<String> retrieve_row( SearchCallEntry sce, ArrayList<String> field_list, int row )
+    static ArrayList<String> retrieve_row( SearchCallEntry sce, ArrayList<String> field_list, int row )
     {
         SearchResult result = sce.call.result.get(row);
         try
@@ -395,7 +393,8 @@ public class SearchCall
             DiskSpaceHandler dsh = get_dsh( result.ds_id );
             Vault vault = get_vault( result.ds_id );
             long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
-            RFCGenericMail mail = dsh.get_mail_from_time( time );
+            
+            RFCGenericMail mail = dsh.get_mail_from_time( time, dsh.get_enc_mode() );
             InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
 
             String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is , result.size);

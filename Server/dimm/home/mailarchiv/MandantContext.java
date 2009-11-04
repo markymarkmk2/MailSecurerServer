@@ -215,7 +215,7 @@ public class MandantContext
 
 
 
-    void initialize_mandant(  )
+    void initialize_mandant( LogicControl control )
     {        
         // ATTACH COMM
         tcp_conn = new TCPCallConnect(this);
@@ -237,7 +237,7 @@ public class MandantContext
         Set<Milter> milters = getMandant().getMilters();
         Iterator<Milter> milter_it = milters.iterator();
 
-        MilterServer ms = Main.get_control().get_milter_server();
+        MilterServer ms = control.get_milter_server();
         while (milter_it.hasNext())
         {
             try
@@ -255,7 +255,7 @@ public class MandantContext
         Set<Proxy> proxies = getMandant().getProxies();
         Iterator<Proxy> proxy_it = proxies.iterator();
 
-        MailProxyServer ps = Main.get_control().get_mail_proxy_server();
+        MailProxyServer ps = control.get_mail_proxy_server();
         while (proxy_it.hasNext())
         {
              ps.add_child( new ProxyEntry( proxy_it.next() ));
@@ -264,7 +264,7 @@ public class MandantContext
         Set<Hotfolder> hfs = getMandant().getHotfolders();
         Iterator<Hotfolder> hf_it = hfs.iterator();
 
-        HotfolderServer hf_server = Main.get_control().get_hf_server();
+        HotfolderServer hf_server = control.get_hf_server();
         while (hf_it.hasNext())
         {
              hf_server.add_child( new HotFolderImport( hf_it.next() ));
@@ -273,7 +273,7 @@ public class MandantContext
         Set<ImapFetcher> ifs = getMandant().getImapFetchers();
         Iterator<ImapFetcher> if_it = ifs.iterator();
 
-        MailBoxFetcherServer mb_fetcher_server = Main.get_control().get_mb_fetcher_server();
+        MailBoxFetcherServer mb_fetcher_server = control.get_mb_fetcher_server();
         while (if_it.hasNext())
         {
             MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory( if_it.next() );
@@ -282,7 +282,7 @@ public class MandantContext
 
         if ( getMandant().getImap_port() > 0)
         {
-            IMAPBrowserServer ibs = Main.get_control().get_imap_browser_server();
+            IMAPBrowserServer ibs = control.get_imap_browser_server();
             try
             {
                 LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port() );

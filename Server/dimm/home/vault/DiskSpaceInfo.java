@@ -5,6 +5,8 @@
 
 package dimm.home.vault;
 
+import home.shared.mail.RFCGenericMail;
+
 /**
  *
  * @author mw
@@ -15,6 +17,7 @@ public class DiskSpaceInfo
     long firstEntryTS;
     long lastEntryTS;
     String language;
+    private int encMode;
 
     public DiskSpaceInfo()
     {
@@ -22,6 +25,7 @@ public class DiskSpaceInfo
         firstEntryTS = 0;
         lastEntryTS = 0;
         language = "de";
+        encMode = RFCGenericMail.ENC_NONE;
     }
     /**
      * @return the capacity
@@ -85,5 +89,21 @@ public class DiskSpaceInfo
     public void setLanguage( String language )
     {
         this.language = language;
+    }
+
+    /**
+     * @return the encMode
+     */
+    public int getEncMode()
+    {
+        return encMode;
+    }
+
+    /**
+     * @param encMode the encMode to set
+     */
+    public void setEncMode( int encMode )
+    {
+        this.encMode = encMode;
     }
 }
