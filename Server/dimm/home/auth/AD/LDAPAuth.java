@@ -22,19 +22,19 @@ import javax.naming.ldap.LdapContext;
 
 
 
-class UserContext
+
+
+class LDAPUserContext implements UserContext
 {
     String dn;
     LdapContext ctx;
 
-    public UserContext( String sid, LdapContext ctx )
+    public LDAPUserContext( String sid, LdapContext ctx )
     {
         this.dn = sid;
         this.ctx = ctx;
     }
 }
-
-
 class TestLoginLDAP extends AbstractCommand
 {
     TestLoginLDAP()
@@ -79,7 +79,7 @@ class TestLoginLDAP extends AbstractCommand
     }
 }
 
-public class LDAPAuth
+public class LDAPAuth extends GenericRealmAuth
 {
 
     String admin_name;
@@ -92,7 +92,9 @@ public class LDAPAuth
 
     public static final String DN = "distinguishedName";
 
-    public LDAPAuth( String admin_name, String admin_pwd, String ldap_host, int ldap_port, boolean ssl )
+    LDAPUserContext user_context;
+
+    LDAPAuth( String admin_name, String admin_pwd, String ldap_host, int ldap_port, boolean ssl )
     {
         this.admin_name = admin_name;
         this.admin_pwd = admin_pwd;
@@ -106,11 +108,23 @@ public class LDAPAuth
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
     }
 
-    public boolean is_connected()
+    String get_user_search_base() throws NamingException
     {
-        return (ctx != null);
+        Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
+        Attribute attribute = attributes.get(DN);
+        return "CN=Users," + attribute.get().toString();
+
     }
 
+
+    @Override
+    public void close_user_context()
+    {
+        close_user(user_context);
+        user_context = null;
+    }
+
+    @Override
     public boolean connect()
     {
         try
@@ -118,30 +132,21 @@ public class LDAPAuth
             Hashtable env = new Hashtable();
             String protokoll = "ldap://";
             env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-
             env.put(Context.SECURITY_AUTHENTICATION, "simple");
             //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
-
             env.put(Context.SECURITY_PRINCIPAL, admin_name);
             env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
-
             if (ssl)
             {
                 protokoll = "ldaps://";
                 env.put(Context.SECURITY_PROTOCOL, "ssl");
                 String java_home = System.getProperty("java.home").trim();
-
                 String ca_cert_file = java_home + "/lib/security/cacerts";
-
-               
-                System.setProperty("javax.net.ssl.trustStore",ca_cert_file);
-                env.put("javax.net.ssl.trustStore",ca_cert_file);
-
+                System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
+                env.put("javax.net.ssl.trustStore", ca_cert_file);
             }
-
             //Der entsprechende Domänen-Controller:LDAP-Port
             env.put(Context.PROVIDER_URL, protokoll + ldap_host + ":" + ldap_port);
-
             ctx = new InitialLdapContext(env, null);
             return true;
         }
@@ -152,13 +157,15 @@ public class LDAPAuth
         }
         return false;
     }
+    @Override
     public boolean disconnect()
     {
         try
         {
             if (ctx != null)
+            {
                 ctx.close();
-
+            }
             ctx = null;
             return true;
         }
@@ -169,15 +176,91 @@ public class LDAPAuth
         return false;
     }
 
-    String get_user_search_base() throws NamingException
+    @Override
+    public String get_error_txt()
     {
-        Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
-        Attribute attribute = attributes.get(DN);
-        return "CN=Users," + attribute.get().toString();
-
+        return error_txt;
     }
 
-    UserContext open_user( String user_principal, String pwd )
+    @Override
+    public String get_user_attribute( String attr_name )
+    {
+        return get_user_attribute(user_context, attr_name);
+    }
+
+    @Override
+    public boolean is_connected()
+    {
+        return ctx != null;
+    }
+
+    @Override
+    public ArrayList<String> list_groups() throws NamingException
+    {
+        return list_dn_qry("(&(objectClass=group)(name=*))");
+    }
+
+    @Override
+    public ArrayList<String> list_mails_for_userlist( ArrayList<String> users ) throws NamingException
+    {
+        // RETURN VALS
+        SearchControls ctrl = new SearchControls();
+        ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses"});
+        // USER ROOT
+        String rootSearchBase = get_user_search_base();
+        // BUILD ORED LIST OF DNs
+        StringBuffer ldap_qry = new StringBuffer();
+        ldap_qry.append("(objectClass=group) (|");
+        for (int i = 0; i < users.size(); i++)
+        {
+            String string = users.get(i);
+            ldap_qry.append("(" + LDAPAuth.DN + "=" + string + ")");
+        }
+        ldap_qry.append(")");
+        NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry.toString(), ctrl);
+        ArrayList<String> mail_list = new ArrayList<String>();
+        while (results.hasMoreElements())
+        {
+            SearchResult searchResult = (SearchResult) results.nextElement();
+            String mail = searchResult.getAttributes().get("mail").get().toString();
+            if (mail != null && mail.length() > 0)
+            {
+                mail_list.add(mail);
+            }
+            // proxyAddresses ARE CODED SMTP:mail@domain.com
+            String proxyAddresses = searchResult.getAttributes().get("proxyAddresses").get().toString();
+            if (proxyAddresses != null && proxyAddresses.length() > 0)
+            {
+                if (proxyAddresses.toLowerCase().startsWith("smtp:"))
+                {
+                    mail_list.add(proxyAddresses.substring(5));
+                }
+            }
+            String upn = searchResult.getAttributes().get("userPrincipalName").get().toString();
+            if (upn != null && upn.length() > 0)
+            {
+                mail_list.add(upn);
+            }
+        }
+        return mail_list;
+    }
+
+    @Override
+    public ArrayList<String> list_users_for_group( String group ) throws NamingException
+    {
+        return list_dn_qry("(objectClass=user)(memberOf=CN=" + group + ")");
+    }
+
+    @Override
+    public boolean open_user_context( String user_principal, String pwd )
+    {
+        user_context = open_user(user_principal, pwd);
+        return user_context == null ? false : true;
+    }
+
+
+    LDAPUserContext open_user( String user_principal, String pwd )
     {
         try
         {
@@ -253,7 +336,7 @@ public class LDAPAuth
 
             user_ctx = new InitialLdapContext(env, null);
           
-            return new UserContext(user_dn, user_ctx);
+            return new LDAPUserContext(user_dn, user_ctx);
         }
         catch (Exception namingException)
         {
@@ -262,7 +345,8 @@ public class LDAPAuth
         return null;
     }
 
-    String get_user_attribute( UserContext uctx, String attr_name )
+
+    String get_user_attribute( LDAPUserContext uctx, String attr_name )
     {
         Attributes search_attributes = new BasicAttributes(DN, uctx.dn);
 
@@ -286,7 +370,7 @@ public class LDAPAuth
         return null;
     }
 
-    void close_user( UserContext uctx )
+    void close_user( LDAPUserContext uctx )
     {
         try
         {
@@ -295,16 +379,6 @@ public class LDAPAuth
         catch (NamingException namingException)
         {
         }
-    }
-
-    ArrayList<String> list_users_for_group( String group ) throws NamingException
-    {
-        return list_dn_qry( "(objectClass=user)(memberOf=CN=" + group +  ")" );
-    }
-
-    ArrayList<String> list_groups() throws NamingException
-    {        
-        return list_dn_qry( "(&(objectClass=group)(name=*))" );
     }
 
     ArrayList<String> list_dn_qry( String ldap_qry ) throws NamingException
@@ -330,60 +404,6 @@ public class LDAPAuth
 
         return dn_list;
     }
-    ArrayList<String> list_mails_for_userlist( ArrayList<String>users ) throws NamingException
-    {
-        // RETURN VALS
-        SearchControls ctrl = new SearchControls();
-        ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        ctrl.setReturningAttributes(new String[]
-                {
-                    "mail", "userPrincipalName", "proxyAddresses"
-                });
-
-        // USER ROOT
-        String rootSearchBase = get_user_search_base();
-
-        // BUILD ORED LIST OF DNs
-        StringBuffer ldap_qry = new StringBuffer();
-
-        ldap_qry.append("(objectClass=group) (|" );
-
-        for (int i = 0; i < users.size(); i++)
-        {
-            String string = users.get(i);
-            ldap_qry.append("(" +  DN + "=" + string + ")");
-        }
-        ldap_qry.append(")" );
-
-        NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry.toString(), ctrl);
-
-        ArrayList<String> mail_list = new ArrayList<String>();
-
-        while (results.hasMoreElements())
-        {
-            SearchResult searchResult = (SearchResult) results.nextElement();
-            String mail = searchResult.getAttributes().get("mail").get().toString();
-            if (mail != null && mail.length() > 0)
-                mail_list.add(mail);
-
-            // proxyAddresses ARE CODED SMTP:mail@domain.com
-            String proxyAddresses = searchResult.getAttributes().get("proxyAddresses").get().toString();
-            if (proxyAddresses != null && proxyAddresses.length() > 0)
-            {
-                if (proxyAddresses.toLowerCase().startsWith("smtp:"))
-                {
-                    mail_list.add(proxyAddresses.substring(5));
-                }
-            }
-
-            String upn = searchResult.getAttributes().get("userPrincipalName").get().toString();
-            if (upn != null && upn.length() > 0)
-                mail_list.add(upn);
-
-        }
-
-        return mail_list;
-    }
     
 
     /**
@@ -396,7 +416,7 @@ public class LDAPAuth
             LDAPAuth test = new LDAPAuth("Administrator", "helikon", "192.168.1.120", 0, /*ssl*/false);
             if (test.connect())
             {
-                UserContext uctx = test.open_user( "mark@localhost", "12345" );
+                LDAPUserContext uctx = test.open_user( "mark@localhost", "12345" );
                 if (uctx != null)
                 {
                     String mail = test.get_user_attribute(uctx, "mail");
@@ -409,11 +429,6 @@ public class LDAPAuth
         {
             exc.printStackTrace();
         }
-    }
-
-    public String get_error_txt()
-    {
-        return error_txt;
     }
   
 }
