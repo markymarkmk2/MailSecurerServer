@@ -465,7 +465,7 @@ public class MWImapServer extends Thread
 
     boolean search( int min, int max, int offset, String part[] )
     {        
-        mailfolder.create_new_mail();
+        mailfolder.search( min, max, offset, part) ;
 
         String result = "SEARCH";
         for ( int i = 0; i < mailfolder.anzMessages(); i++)
@@ -977,13 +977,13 @@ public class MWImapServer extends Thread
         String auth[] = imapsplit(par);
         if (auth != null && auth.length >= 2)
         {
-            // TODO: MAIL USER AUTH
-            m_ctx = Main.get_control().get_mandant_by_id(1);
-
-            if (m_ctx != null)
+            String user = auth[0];
+            String pwd = auth[1];
+            
+            if (m_ctx.authenticate_user( user, pwd ))
             {
                 //Alles Ok
-                konto = new MailKonto( auth[0], auth[1] );
+                konto = new MailKonto( user, pwd );
                 
                 response(sid, true, "User " + m_ctx.getMandant().getName() + " logged in");
                 return 0;

@@ -16,15 +16,18 @@ import com.moonrug.exchange.Session;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
+import home.shared.mail.CryptAESInputStream;
+import home.shared.mail.CryptAESOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.String;
-import java.net.URL;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.hibernate.HibernateException;
 
 /**
@@ -68,6 +71,7 @@ public class Main
     public static String work_dir;
     
     public static boolean trace_mode = false;
+    
     
     static LogicControl control;
     
@@ -128,7 +132,35 @@ public class Main
         catch ( Exception exc)
         {
             Main.err_log_fatal("Cannot create local dirs: " + exc.getMessage() );
-        } 
+        }
+
+        try
+        {
+            Security.addProvider(new BouncyCastleProvider() );
+        }
+        catch ( Exception exc)
+        {
+            Main.err_log_fatal("Cannot use 256 bit encryption falling back to 128 bit: " + exc.getMessage() );
+            CryptAESInputStream.lame_security = true;
+            CryptAESOutputStream.lame_security = true;
+        }
+
+        // SETTING SECURITY PROPERTIES
+        init_mail_security();
+
+        Security.setProperty( "ssl.SocketFactory.provider", "dimm.home.auth.DefaultSSLSocketFactory");
+        Security.addProvider( new com.sun.net.ssl.internal.ssl.Provider());
+        final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
+  Properties props = System.getProperties();
+  // IMAP provider
+  props.setProperty( "mail.imap.socketFactory.class", SSL_FACTORY);
+  // POP3 provider
+  props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
+  // NNTP provider (if any)
+  // props.setProperty( "mail.nntp.socketFactory.class", SSL_FACTORY);
+
+
+
         
         info_msg("Starting " + APPNAME + " V" + VERSION );
 
@@ -251,6 +283,25 @@ public class Main
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }*/
         
+        
+    }
+
+        // SETTING SECURITY PROPERTIES
+    void init_mail_security()
+    {
+
+        Security.setProperty( "ssl.SocketFactory.provider", "dimm.home.auth.DefaultSSLSocketFactory");
+        Security.addProvider( new com.sun.net.ssl.internal.ssl.Provider());
+
+        // NOW WE USE JAVAS DEFAULT SSL FACTORY, THIS IS OVERRIDDEN WITH OUR
+        final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
+        Properties props = System.getProperties();
+
+        // IMAP provider
+        props.setProperty( "mail.imap.socketFactory.class", SSL_FACTORY);
+        
+        // POP3 provider
+        props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
         
     }
     

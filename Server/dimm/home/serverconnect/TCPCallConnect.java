@@ -21,7 +21,7 @@ import dimm.home.mailarchiv.Commands.SearchCommand;
 import dimm.home.mailarchiv.Commands.SetStation;
 import dimm.home.mailarchiv.Commands.ShellCmd;
 import dimm.home.mailarchiv.Commands.StartVPN;
-import dimm.home.mailarchiv.Commands.TestLoginLDAP;
+import dimm.home.mailarchiv.Commands.TestLogin;
 import dimm.home.mailarchiv.Commands.UploadCertificate;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
@@ -132,7 +132,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new StartVPN() );
         cmd_list.add( new ImportMailFile() );
         cmd_list.add( new UploadMailFile() );
-        cmd_list.add( new TestLoginLDAP() );
+        cmd_list.add( new TestLogin() );
         cmd_list.add( new UploadCertificate() );
         cmd_list.add( new SearchCommand() );
         cmd_list.add( new RestartMandant() );

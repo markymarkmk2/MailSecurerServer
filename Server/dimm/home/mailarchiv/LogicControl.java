@@ -1054,7 +1054,7 @@ public class LogicControl
 
     public void register_new_import( MandantContext m_ctx, DiskArchive da, String path ) throws ArchiveMsgException
     {
-        int itype = CS_Constants.get_itype_from_name(path);
+        int itype = CS_Constants.get_itype_from_em_name(path);
         switch (itype)
         {
             case CS_Constants.ITYPE_TBIRD: 

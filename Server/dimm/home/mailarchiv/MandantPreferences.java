@@ -47,6 +47,8 @@ public class MandantPreferences extends Preferences
     String dec_password;
     public static final String ENC_PASSWORD = "EncryptionPassword";
     public static final String DFLT_PASSWORD = "12345";
+    public static final String SSO_TIMEOUT_S = "SSOTimeout_s";
+    public static final long   DFTL_SSO_TIMEOUT_S = 120;
     
     MandantContext context;
     
@@ -71,6 +73,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( INDEX_TASK );
         prop_names.add( SERVER_PORT );
         prop_names.add( SERVER_IP );
+        prop_names.add( SSO_TIMEOUT_S );
     }
     public void setContext( MandantContext _context )
     {

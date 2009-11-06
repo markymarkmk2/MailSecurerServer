@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.auth.AD.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
@@ -22,10 +23,12 @@ import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
+import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
+import home.shared.hibernate.Role;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -330,6 +333,9 @@ public class MandantContext
              ms.remove_child(milter_it.next());
         }
 
+
+
+        
         Set<Proxy> proxies = getMandant().getProxies();
         Iterator<Proxy> proxy_it = proxies.iterator();
 
@@ -354,7 +360,7 @@ public class MandantContext
         MailBoxFetcherServer mb_fetcher_server = Main.get_control().get_mb_fetcher_server();
         while (if_it.hasNext())
         {
-             mb_fetcher_server.remove_child(if_it.next());
+              mb_fetcher_server.remove_child(if_it.next());
         }
 
         if ( getMandant().getImap_port() > 0)
@@ -364,6 +370,123 @@ public class MandantContext
         }
         // REMOVE VAULT LIST FROM DISKARRAYS
         delete_vault_list();
+    }
+
+    private boolean user_is_member_of( Role role )
+    {
+        return false;
+    }
+
+    class UserSSOcache
+    {
+        String user;
+        String pwd;
+        Role role;
+        AccountConnector acct;
+        long checked;
+        long last_auth;
+
+        public UserSSOcache( String user, String pwd, Role role, AccountConnector acct, long checked, long last_auth )
+        {
+            this.user = user;
+            this.pwd = pwd;
+            this.role = role;
+            this.acct = acct;
+            this.checked = checked;
+            this.last_auth = last_auth;
+        }
+
+
+    }
+
+    ArrayList< UserSSOcache> user_sso_list = new ArrayList<UserSSOcache>();
+    void remove_from_sso_cache( String user )
+    {
+        // REMOVE
+        for (int i = 0; i < user_sso_list.size(); i++)
+        {
+            UserSSOcache entry = user_sso_list.get(i);
+            if (entry.user.compareTo(user) == 0)
+            {
+                user_sso_list.remove(i);
+                i--;
+            }
+        }
+    }
+    UserSSOcache get_from_sso_cache( String user, String pwd )
+    {
+        for (int i = 0; i < user_sso_list.size(); i++)
+        {
+            UserSSOcache entry = user_sso_list.get(i);
+            if (entry.user.compareTo(user) == 0 && entry.pwd.compareTo(pwd) == 0 )
+            {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    public boolean authenticate_user( String user, String pwd )
+    {
+        boolean auth_ok = false;
+        long now = System.currentTimeMillis();
+
+        UserSSOcache usc = get_from_sso_cache( user, pwd);
+        if (usc != null)
+        {
+            // USER STILL VALID
+            if (now - usc.last_auth < prefs.get_long_prop( MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S ))
+            {
+                // REWIND CLOCK
+                usc.last_auth = System.currentTimeMillis();
+                return true;
+            }
+        }
+
+
+
+        // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
+        for (Iterator<Role> it = this.mandant.getRoles().iterator(); it.hasNext();)
+        {
+            Role role = it.next();
+
+            if (!user_is_member_of( role ))
+                continue;
+
+            AccountConnector acct = role.getAccountConnector();
+
+            GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( acct );
+
+            // PRUEFE OB DER BENUTZER OK IST
+            auth_ok = auth_realm.open_user_context(user, pwd);
+
+            // SCHLIESSEN NICHT VERGESSEN
+            auth_realm.close_user_context();
+
+            // WENN OK, DANN RAUS HIER, ABER SCHNELL!!!
+            if (auth_ok)
+            {
+                // NEUER CACHE ENTRY ?
+                if (usc == null)
+                {
+                    usc = new UserSSOcache(user, pwd, role, acct, now, now);
+
+                    // ALTE USERANGABEN RAUS
+                    remove_from_sso_cache( user );
+                    
+                    // NEUE DAZU
+                    user_sso_list.add(usc);
+                }
+
+                usc.last_auth = now;
+
+                break;
+            }
+        }
+
+
+        // BENUTZER WAR OK / NICHT OK, BYE BYE
+        return auth_ok;
     }
 
 

@@ -26,7 +26,7 @@ public class DefaultSSLSocketFactory extends SSLSocketFactory
         }
         catch (Exception ex)
         {
-            // ignore
+            ex.printStackTrace();
         }
     }
 

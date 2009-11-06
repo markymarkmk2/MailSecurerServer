@@ -4,13 +4,14 @@
  */
 package dimm.home.mailarchiv.Utilities;
 
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.mail.RFCFileMail;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -19,6 +20,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.security.SignatureException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
@@ -39,6 +41,7 @@ import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  *
@@ -58,7 +61,7 @@ public class CryptTools
         ctx = _ctx;
     }
 
-    public static String get_sha256( byte[] data )
+    public  static String get_sha256( byte[] data )
     {
 
         MessageDigest md = null;
@@ -73,8 +76,8 @@ public class CryptTools
         }
         return null;
     }
-
-    public static String get_sha1( byte[] data )
+/*
+    private static String get_sha1( byte[] data )
     {
 
         MessageDigest md = null;
@@ -89,6 +92,7 @@ public class CryptTools
         }
         return null;
     }
+ * */
     public static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
 
     /**
@@ -129,8 +133,8 @@ public class CryptTools
         }
         return result;
     }
-
-    byte[] encrypt_aes( byte[] data ) throws NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
+/*
+    private byte[] encrypt_aes( byte[] data ) throws NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException
     {
         try
         {
@@ -156,6 +160,7 @@ public class CryptTools
         return null;
 
     }
+ * */
     /*    Cipher ecipher;
     Cipher dcipher;
      * */
@@ -384,10 +389,14 @@ public class CryptTools
             String name = "j:\\tmp\\enc.tst";
             String TEST = "1234567890";
 
+            // PREFS FOR ARGS, ARGS HABEN PRIO
+            Main.prefs = new GeneralPreferences();
+            Security.addProvider(new BouncyCastleProvider() );
+
             MandantContext ctx = instance.get_mandant_by_id(1);
 
             RFCFileMail rfc = new RFCFileMail(new File(name), true);
-            //rfc.set_encryption( ctx.getPrefs().get_password(), ctx.getPrefs().get_KeyPBEIteration(), ctx.getPrefs().get_KeyPBESalt() );
+            rfc.set_encryption( ctx.getPrefs().get_password(), ctx.getPrefs().get_KeyPBEIteration(), ctx.getPrefs().get_KeyPBESalt() );
             OutputStream os = rfc.open_outputstream();
 
             os.write(TEST.getBytes());

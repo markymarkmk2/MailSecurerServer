@@ -123,6 +123,63 @@ public class Preferences
     {
         return get_boolean_prop(p, false);
     }
+    public long get_long_prop( String p, long def )
+    {
+        if (!check_prop(p))
+        {
+            warn_unknown(p);
+            return -1;
+        }
+        String ret = props.getProperty(p);
+
+        if (ret == null || ret.length() == 0)
+            return def;
+
+        try
+        {
+            return Long.parseLong(ret);
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log( Main.Txt("Cannot_read_long_property") + ": ", exc);
+        }
+
+        return -1;
+    }
+    public long get_long_prop( String p )
+    {
+        return get_long_prop(p, 0);
+    }
+
+    public int get_int_prop( String p, int def )
+    {
+        if (!check_prop(p))
+        {
+            warn_unknown(p);
+            return -1;
+        }
+        String ret = props.getProperty(p);
+
+        if (ret == null || ret.length() == 0)
+            return def;
+
+        try
+        {
+            return Integer.parseInt(ret);
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log( Main.Txt("Cannot_read_int_property") + ": ", exc);
+        }
+
+        return -1;
+    }
+    public long get_int_prop( String p )
+    {
+        return get_int_prop(p, 0);
+    }
+
+
 
 
     public ArrayList<String> get_prop_list()

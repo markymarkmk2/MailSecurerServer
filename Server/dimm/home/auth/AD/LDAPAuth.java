@@ -56,9 +56,9 @@ class TestLoginLDAP extends AbstractCommand
             String admin_pwd = pt.GetString("PW:");
             String ldap_host = pt.GetString("HO:");
             int ldap_port = (int)pt.GetLongValue("PO:");
-            boolean ssl = pt.GetBoolean("SSL:");
+            int flags = (int)pt.GetLongValue("FL:");
 
-            LDAPAuth la = new LDAPAuth(admin_name, admin_pwd, ldap_host, ldap_port, ssl);
+            LDAPAuth la = new LDAPAuth(admin_name, admin_pwd, ldap_host, ldap_port, flags);
 
             boolean ret = la.connect();
             if (!ret)
@@ -84,26 +84,22 @@ public class LDAPAuth extends GenericRealmAuth
 
     String admin_name;
     String admin_pwd;
-    String ldap_host;
-    int ldap_port;
-    boolean ssl;
     LdapContext ctx;
-    String error_txt;
 
     public static final String DN = "distinguishedName";
 
     LDAPUserContext user_context;
 
-    LDAPAuth( String admin_name, String admin_pwd, String ldap_host, int ldap_port, boolean ssl )
+    LDAPAuth( String admin_name, String admin_pwd, String ldap_host, int ldap_port, int  flags )
     {
+        super(flags, ldap_host, ldap_port);
         this.admin_name = admin_name;
         this.admin_pwd = admin_pwd;
-        this.ldap_host = ldap_host;
-        this.ldap_port = ldap_port;
-        this.ssl = ssl;
+        
+        this.flags = flags;
         if (ldap_port == 0)
         {
-            ldap_port = (ssl) ? 636 : 389;
+            ldap_port = is_ssl() ? 636 : 389;
         }
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
     }
@@ -113,7 +109,6 @@ public class LDAPAuth extends GenericRealmAuth
         Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
         Attribute attribute = attributes.get(DN);
         return "CN=Users," + attribute.get().toString();
-
     }
 
 
@@ -124,30 +119,41 @@ public class LDAPAuth extends GenericRealmAuth
         user_context = null;
     }
 
+    Hashtable create_sec_env()
+    {
+        Hashtable env = new Hashtable();
+        String protokoll = "ldap://";
+        env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+        env.put(Context.SECURITY_AUTHENTICATION, "simple");
+        //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
+
+        if (is_ssl())
+        {
+            protokoll = "ldaps://";
+            env.put(Context.SECURITY_PROTOCOL, "ssl");
+            String java_home = System.getProperty("java.home").trim();
+            String ca_cert_file = java_home + "/lib/security/cacerts";
+            System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
+            env.put("javax.net.ssl.trustStore", ca_cert_file);
+        }
+        //Der entsprechende Domänen-Controller:LDAP-Port
+        env.put(Context.PROVIDER_URL, protokoll + host + ":" + port);
+        return env;
+
+    }
+
+    
     @Override
     public boolean connect()
     {
         try
         {
-            Hashtable env = new Hashtable();
-            String protokoll = "ldap://";
-            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            env.put(Context.SECURITY_AUTHENTICATION, "simple");
-            //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
-            env.put(Context.SECURITY_PRINCIPAL, admin_name);
-            env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
-            if (ssl)
-            {
-                protokoll = "ldaps://";
-                env.put(Context.SECURITY_PROTOCOL, "ssl");
-                String java_home = System.getProperty("java.home").trim();
-                String ca_cert_file = java_home + "/lib/security/cacerts";
-                System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
-                env.put("javax.net.ssl.trustStore", ca_cert_file);
-            }
-            //Der entsprechende Domänen-Controller:LDAP-Port
-            env.put(Context.PROVIDER_URL, protokoll + ldap_host + ":" + ldap_port);
-            ctx = new InitialLdapContext(env, null);
+            Hashtable connect_env = create_sec_env();
+
+            connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
+            connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
+
+            ctx = new InitialLdapContext(connect_env, null);
             return true;
         }
         catch (Exception exc)
@@ -176,11 +182,7 @@ public class LDAPAuth extends GenericRealmAuth
         return false;
     }
 
-    @Override
-    public String get_error_txt()
-    {
-        return error_txt;
-    }
+   
 
     @Override
     public String get_user_attribute( String attr_name )
@@ -322,19 +324,13 @@ public class LDAPAuth extends GenericRealmAuth
 
             // NOW GO FOR LOGIN USER WITH DN
             LdapContext user_ctx;
-            Hashtable env = new Hashtable();
-            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            env.put(Context.SECURITY_AUTHENTICATION, "simple");
-            //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
+            Hashtable connect_env = create_sec_env();
 
-            env.put(Context.SECURITY_PRINCIPAL, user_dn);
-            env.put(Context.SECURITY_CREDENTIALS, pwd);
-            //        env.put(Context.SECURITY_PROTOCOL, "ssl");
 
-            
-            env.put(Context.PROVIDER_URL, "ldap://" + ldap_host + ":" + ldap_port);
+            connect_env.put(Context.SECURITY_PRINCIPAL, user_dn);
+            connect_env.put(Context.SECURITY_CREDENTIALS, pwd);
 
-            user_ctx = new InitialLdapContext(env, null);
+            user_ctx = new InitialLdapContext(connect_env, null);
           
             return new LDAPUserContext(user_dn, user_ctx);
         }
@@ -413,7 +409,7 @@ public class LDAPAuth extends GenericRealmAuth
     {
         try
         {
-            LDAPAuth test = new LDAPAuth("Administrator", "helikon", "192.168.1.120", 0, /*ssl*/false);
+            LDAPAuth test = new LDAPAuth("Administrator", "helikon", "192.168.1.120", 0, /*flags*/0);
             if (test.connect())
             {
                 LDAPUserContext uctx = test.open_user( "mark@localhost", "12345" );
@@ -429,6 +425,5 @@ public class LDAPAuth extends GenericRealmAuth
         {
             exc.printStackTrace();
         }
-    }
-  
+    }  
 }

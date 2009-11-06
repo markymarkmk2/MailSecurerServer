@@ -4,7 +4,7 @@
  */
 package dimm.home.auth.AD;
 
-import com.sun.mail.smtp.SMTPTransport;
+import com.sun.mail.imap.IMAPStore;
 import java.net.Socket;
 
 import java.util.Properties;
@@ -15,32 +15,31 @@ import javax.mail.URLName;
 
 
 
-class SMTPUserContext
+class IMAPUserContext
 {
 }
 
 
 
-public class SMTPAuth extends GenericRealmAuth
+public class IMAPAuth extends GenericRealmAuth
 {    
-    Socket smtp_sock;
+    Socket imap_sock;
+    IMAPStore store;
 
-    SMTPUserContext user_context;
 
-    SMTPAuth(  String host, int port, int flags )
-    {
+    IMAPUserContext user_context;
+
+    IMAPAuth(  String host, int port, int flags )
+    {       
         super(flags, host, port);
-        
+
         if (port == 0)
         {
-            port = 25;
+            port = 143;
             if (is_ssl())
-                port = 465;
+                port = 993;
         }
-
-        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
     }
-
    
 
     @Override
@@ -58,10 +57,11 @@ public class SMTPAuth extends GenericRealmAuth
         boolean ret = false;
         try
         {
-            smtp_sock = new Socket(host, port);
-            if (smtp_sock.isConnected())
+            imap_sock = new Socket(host, port);
+            if (imap_sock.isConnected())
             {                
                 ret = true;
+                imap_sock.close();
             }            
         }
         catch (Exception exc)
@@ -76,7 +76,8 @@ public class SMTPAuth extends GenericRealmAuth
     {
         try
         {
-            transport.close();
+            if (store != null)
+                store.close();
             return true;
         }
         catch (Exception exc)
@@ -86,13 +87,12 @@ public class SMTPAuth extends GenericRealmAuth
         return false;
     }
 
-   
 
 
     @Override
     public boolean is_connected()
     {
-        return smtp_sock != null;
+        return imap_sock != null;
     }
 
 
@@ -103,45 +103,29 @@ public class SMTPAuth extends GenericRealmAuth
         return user_context == null ? false : true;
     }
 
-    boolean is_smtp_ok(int code)
-    {
-        if (code > 220 && code < 300)
-            return true;
+    
 
-        return false;
-    }
-    boolean is_smtp_request(int code)
-    {
-        if (code >= 300 && code < 400)
-            return true;
-        return false;
-    }
 
-    SMTPTransport transport;
-    SMTPUserContext open_user( String user_principal, String pwd )
+    IMAPUserContext open_user( String user_principal, String pwd )
     {
         Properties props = new Properties();
         props.put("mail.host", host);
         props.put("mail.port", port);
-        props.put("mail.smtp.auth", true );
-        if ( is_ssl())
-        {
-            props.put("mail.smtp.ssl.enable", true );
-        }
-        
-        props = set_conn_props(props, "smtp", port);
 
+        props = set_conn_props(props, "imap", port);
+       
         try
         {
             Session mailConnection = Session.getInstance(props, null);
-            URLName params = new URLName("smtp", host, port, null, user_principal, pwd);
-            transport = new SMTPTransport(mailConnection, params);
+            URLName params = new URLName("imap", host, port, null, user_principal, pwd);
+            store = new IMAPStore(mailConnection, params);
 
-            transport.connect(smtp_sock);
+            store.connect();
 
-            int code = transport.getLastReturnCode();
-            if (is_smtp_ok(code))
-                return new SMTPUserContext();
+            if (store.isConnected())
+            {
+                return new IMAPUserContext();
+            }
         }
         catch (MessagingException messagingException)
         {
@@ -149,18 +133,18 @@ public class SMTPAuth extends GenericRealmAuth
         return null;
     }
 
-
-    void close_user( SMTPUserContext uctx )
-    {       
+    void close_user( IMAPUserContext uctx )
+    {
+       
     }
 
     public static void main( String[] args)
     {
-        SMTPAuth auth = new SMTPAuth("auth.mail.onlinehome.de", 25, 0);
+        IMAPAuth auth = new IMAPAuth("192.168.1.120", 143, 0);
 
         if (auth.connect())
         {
-            if (auth.open_user_context("1166-560-2", "helikon"))
+            if (auth.open_user_context("EXJournal", "12345"))
             {
                 System.out.println("Feini");
                 auth.close_user_context();

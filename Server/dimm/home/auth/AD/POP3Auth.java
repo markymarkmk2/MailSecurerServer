@@ -4,7 +4,7 @@
  */
 package dimm.home.auth.AD;
 
-import com.sun.mail.smtp.SMTPTransport;
+import com.sun.mail.pop3.POP3Store;
 import java.net.Socket;
 
 import java.util.Properties;
@@ -15,30 +15,29 @@ import javax.mail.URLName;
 
 
 
-class SMTPUserContext
+class POP3UserContext
 {
 }
 
 
 
-public class SMTPAuth extends GenericRealmAuth
+public class POP3Auth extends GenericRealmAuth
 {    
-    Socket smtp_sock;
+    Socket POP3_sock;
+    POP3Store store;
 
-    SMTPUserContext user_context;
 
-    SMTPAuth(  String host, int port, int flags )
+    POP3UserContext user_context;
+
+    POP3Auth(  String host, int port, int flags  )
     {
-        super(flags, host, port);
-        
+        super( flags, host, port);
         if (port == 0)
         {
-            port = 25;
+            port = 110;
             if (is_ssl())
-                port = 465;
+                port = 995;
         }
-
-        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
     }
 
    
@@ -58,10 +57,11 @@ public class SMTPAuth extends GenericRealmAuth
         boolean ret = false;
         try
         {
-            smtp_sock = new Socket(host, port);
-            if (smtp_sock.isConnected())
+            POP3_sock = new Socket(host, port);
+            if (POP3_sock.isConnected())
             {                
                 ret = true;
+                POP3_sock.close();
             }            
         }
         catch (Exception exc)
@@ -76,7 +76,8 @@ public class SMTPAuth extends GenericRealmAuth
     {
         try
         {
-            transport.close();
+            if (store != null)
+                store.close();
             return true;
         }
         catch (Exception exc)
@@ -86,13 +87,12 @@ public class SMTPAuth extends GenericRealmAuth
         return false;
     }
 
-   
 
 
     @Override
     public boolean is_connected()
     {
-        return smtp_sock != null;
+        return POP3_sock != null;
     }
 
 
@@ -103,45 +103,31 @@ public class SMTPAuth extends GenericRealmAuth
         return user_context == null ? false : true;
     }
 
-    boolean is_smtp_ok(int code)
-    {
-        if (code > 220 && code < 300)
-            return true;
+    
 
-        return false;
-    }
-    boolean is_smtp_request(int code)
-    {
-        if (code >= 300 && code < 400)
-            return true;
-        return false;
-    }
 
-    SMTPTransport transport;
-    SMTPUserContext open_user( String user_principal, String pwd )
+    POP3UserContext open_user( String user_principal, String pwd )
     {
+
         Properties props = new Properties();
         props.put("mail.host", host);
         props.put("mail.port", port);
-        props.put("mail.smtp.auth", true );
-        if ( is_ssl())
-        {
-            props.put("mail.smtp.ssl.enable", true );
-        }
-        
-        props = set_conn_props(props, "smtp", port);
+
+        props = set_conn_props(props, "pop3", port);
+
 
         try
         {
             Session mailConnection = Session.getInstance(props, null);
-            URLName params = new URLName("smtp", host, port, null, user_principal, pwd);
-            transport = new SMTPTransport(mailConnection, params);
+            URLName params = new URLName("pop3", host, port, null, user_principal, pwd);
+            store = new POP3Store(mailConnection, params, "test", is_ssl());
 
-            transport.connect(smtp_sock);
+            store.connect();
 
-            int code = transport.getLastReturnCode();
-            if (is_smtp_ok(code))
-                return new SMTPUserContext();
+            if (store.isConnected())
+            {
+                return new POP3UserContext();
+            }
         }
         catch (MessagingException messagingException)
         {
@@ -149,14 +135,14 @@ public class SMTPAuth extends GenericRealmAuth
         return null;
     }
 
-
-    void close_user( SMTPUserContext uctx )
-    {       
+    void close_user( POP3UserContext uctx )
+    {
+       
     }
 
     public static void main( String[] args)
     {
-        SMTPAuth auth = new SMTPAuth("auth.mail.onlinehome.de", 25, 0);
+        POP3Auth auth = new POP3Auth("pop.onlinehome.de", 110, 0);
 
         if (auth.connect())
         {

@@ -246,6 +246,12 @@ public class MailFolder
     {
         return uid_validity;
     }
+
+    void search( int min, int max, int offset, String[] part )
+    {
+
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
     
     
 }

@@ -46,7 +46,7 @@ public class UploadMailFile extends AbstractCommand
         String type = pt.GetString("TY:");
         long size = pt.GetLongValue("SI:");
 
-        String suffix = CS_Constants.get_suffix_from_type(type);
+        String suffix = CS_Constants.get_suffix_from_em_type(type);
 
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
 
