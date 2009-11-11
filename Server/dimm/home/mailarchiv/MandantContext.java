@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
+import javax.naming.NamingException;
 
 /**
  *
@@ -385,6 +386,8 @@ public class MandantContext
         AccountConnector acct;
         long checked;
         long last_auth;
+        ArrayList<String> mail_list;
+
 
         public UserSSOcache( String user, String pwd, Role role, AccountConnector acct, long checked, long last_auth )
         {
@@ -450,19 +453,43 @@ public class MandantContext
         for (Iterator<Role> it = this.mandant.getRoles().iterator(); it.hasNext();)
         {
             Role role = it.next();
-
-            if (!user_is_member_of( role ))
-                continue;
-
             AccountConnector acct = role.getAccountConnector();
 
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( acct );
+
+            if (!auth_realm.connect())
+            {
+                LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" +  acct.getIp() + ":" + acct.getPort());
+                continue;
+
+            }
+
+            ArrayList<String> mail_list = null;
+            try
+            {
+                mail_list = auth_realm.get_maillist_for_user(user);
+            }
+            catch (NamingException namingException)
+            {
+                LogManager.err_log("Cannot retrieve mail list", namingException);
+                auth_realm.disconnect();
+                continue;
+            }
+
+            if (!auth_realm.user_is_member_of( role, user, mail_list ))
+            {
+                auth_realm.disconnect();
+                continue;
+            }
+
 
             // PRUEFE OB DER BENUTZER OK IST
             auth_ok = auth_realm.open_user_context(user, pwd);
 
             // SCHLIESSEN NICHT VERGESSEN
             auth_realm.close_user_context();
+            auth_realm.disconnect();
+
 
             // WENN OK, DANN RAUS HIER, ABER SCHNELL!!!
             if (auth_ok)
@@ -476,7 +503,9 @@ public class MandantContext
                 // NEUE DAZU
                 user_sso_list.add(usc);
 
+                // STORE ACT RESULTS
                 usc.last_auth = now;
+                usc.mail_list = mail_list;
 
                 break;
             }

@@ -48,12 +48,18 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyStore;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.ResourceBundle;
 import java.util.StringTokenizer;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 import org.apache.commons.codec.binary.Base64;
 import org.hibernate.SessionFactory;
 
@@ -79,11 +85,13 @@ public class TCPCallConnect extends WorkerParent
     String server_ip;
     int server_port;
     MandantContext m_ctx;
+    boolean use_ssl;
 
     public TCPCallConnect( MandantContext m_ctx)
     {
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
+        use_ssl = true;
         if (m_ctx != null)
         {
             server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
@@ -105,6 +113,7 @@ public class TCPCallConnect extends WorkerParent
                 server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
                 LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
             }
+            use_ssl = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.SERVER_SSL, true );
         }
         else
         {
@@ -483,12 +492,21 @@ public class TCPCallConnect extends WorkerParent
         // TCP-PACKET HAS AT LEAST TCP_LEN BYTE
         byte[] buff = new byte[TCP_LEN];
 
-        in.read(buff);
-        if (buff[0] == 0)
+        try
         {
+            in.read(buff);
+            if (buff[0] == 0)
+            {
+                return false;
+            }
+        }
+        catch (IOException iOException)
+        {
+            // CLIENT CLOSED CONN
+            LogManager.info_msg("Client " + s.getRemoteSocketAddress().toString() + " closed connection");
             return false;
         }
-
+        
         String data = new String(buff, "UTF-8");
         ParseToken pt = new ParseToken(data);
         String cmd = pt.GetString("CMD:");
@@ -791,7 +809,40 @@ public class TCPCallConnect extends WorkerParent
             {
                 this.setStatusTxt("");
                 this.setGoodState(true);
-                tcp_s = new ServerSocket(server_port, backlog);
+                if (use_ssl)
+                {
+                 //   System.setProperty("javax.net.debug","ssl");
+
+                    final String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
+
+                    SSLContext ctx;
+                    KeyManagerFactory kmf;
+                    KeyStore ks;
+                    char[] passphrase = "123456".toCharArray();
+
+                    ctx = SSLContext.getInstance("TLS");
+                    kmf = KeyManagerFactory.getInstance("SunX509");
+                    ks = KeyStore.getInstance("JKS");
+
+                    ks.load(CS_Constants.class.getResourceAsStream("/Utilities/ms.keystore"), passphrase);
+                    kmf.init(ks, passphrase);
+                    ctx.init(kmf.getKeyManagers(), null, null);
+
+                    SSLServerSocketFactory factory = ctx.getServerSocketFactory();
+
+
+                    tcp_s = factory.createServerSocket(server_port, backlog);
+
+                    if (tcp_s instanceof SSLServerSocket)
+                    {
+                        SSLServerSocket ssl = (SSLServerSocket)tcp_s;
+                        ssl.setEnabledCipherSuites(enabledCipherSuites);                        
+                    }
+                }
+                else
+                {
+                    tcp_s = new ServerSocket(server_port, backlog);
+                }
                 tcp_s.setReuseAddress(true);
                 tcp_s.setReceiveBufferSize(CS_Constants.STREAM_BUFFER_LEN * 2);
 

@@ -148,17 +148,7 @@ public class Main
         // SETTING SECURITY PROPERTIES
         init_mail_security();
 
-        Security.setProperty( "ssl.SocketFactory.provider", "dimm.home.auth.DefaultSSLSocketFactory");
-        Security.addProvider( new com.sun.net.ssl.internal.ssl.Provider());
-        final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
-  Properties props = System.getProperties();
-  // IMAP provider
-  props.setProperty( "mail.imap.socketFactory.class", SSL_FACTORY);
-  // POP3 provider
-  props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
-  // NNTP provider (if any)
-  // props.setProperty( "mail.nntp.socketFactory.class", SSL_FACTORY);
-
+      
 
 
         
@@ -302,7 +292,7 @@ public class Main
         
         // POP3 provider
         props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
-        
+   
     }
     
     void work()

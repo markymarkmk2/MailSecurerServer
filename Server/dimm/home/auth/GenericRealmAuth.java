@@ -5,10 +5,22 @@
 
 package dimm.home.auth;
 
+import com.thoughtworks.xstream.XStream;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
+import home.shared.Utilities.ZipUtilities;
+import home.shared.filter.FilterMatcher;
+import home.shared.filter.FilterValProvider;
+import home.shared.filter.LogicEntry;
 import home.shared.hibernate.AccountConnector;
+import home.shared.hibernate.MailAddress;
+import home.shared.hibernate.MailUser;
+import home.shared.hibernate.Role;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Properties;
+import java.util.Set;
 import javax.naming.NamingException;
 
 /**
@@ -107,9 +119,37 @@ public abstract class GenericRealmAuth
         return new ArrayList<String>();
     }
 
+    // THIS IS OVERRIDDEN IN LDAP
     public ArrayList<String> list_mails_for_userlist( ArrayList<String> users ) throws NamingException
     {
-        return new ArrayList<String>();
+        ArrayList<String>mail_list = new ArrayList<String>();
+
+        Set<MailUser> mail_user = act.getMandant().getMailusers();
+        for (Iterator<MailUser> it = mail_user.iterator(); it.hasNext();)
+        {
+            MailUser mailUser = it.next();
+
+            for (int i = 0; i < users.size(); i++)
+            {
+                String user = users.get(i);
+
+                // IS IT CLEVER TO COMPARE W/O CASE ????
+                if (mailUser.getUsername().compareToIgnoreCase(user) == 0)
+                {
+                    // ADD NATIVE EMAIL
+                    mail_list.add(mailUser.getEmail());
+
+                    // ADD ALIASES
+                    Set<MailAddress> add_email = mailUser.getAddMailAddresses();
+                    for (Iterator<MailAddress> it1 = add_email.iterator(); it1.hasNext();)
+                    {
+                        MailAddress mailAddress = it1.next();
+                        mail_list.add(mailAddress.getEmail());
+                    }
+                }
+            }
+        }
+        return mail_list;
     }
 
 
@@ -173,6 +213,102 @@ public abstract class GenericRealmAuth
     private boolean test_flag( int test_flag )
     {
         return (flags & test_flag) == test_flag;
+    }
+
+    public ArrayList<String> get_maillist_for_user( String user ) throws NamingException
+    {
+        ArrayList<String> user_list = new ArrayList<String>();
+        user_list.add(user);
+        return list_mails_for_userlist(  user_list );
+    }
+
+    class UserFilterProvider implements FilterValProvider
+    {
+        String user;
+        ArrayList<String> mail_list;
+
+        UserFilterProvider( String user, ArrayList<String> mail_list )
+        {
+            this.user = user;
+            this.mail_list = mail_list;
+        }
+
+        @Override
+        public ArrayList<String> get_val_vor_name( String name )
+        {
+            ArrayList<String> list = null;
+            if (name.toLowerCase().compareTo("username") == 0)
+            {
+                list = new ArrayList<String>();
+                list.add(user);
+
+            }
+            if (name.toLowerCase().compareTo("email") == 0)
+            {
+                list = mail_list;
+            }
+            if (name.toLowerCase().compareTo("domain") == 0)
+            {
+                list = new ArrayList<String>();
+                for (int i = 0; i < mail_list.size(); i++)
+                {
+                    String mail = mail_list.get(i);
+                    int idx = mail.indexOf('@');
+                    if (idx > 0 && idx < mail.length() - 1)
+                        list.add(mail.substring(idx + 1));
+                }
+            }
+            return list;
+        }
+    }
+
+    private ArrayList<LogicEntry> get_filter_list( String compressed_list_str )
+    {
+        ArrayList<LogicEntry> list = null;
+        if (compressed_list_str.length() == 0)
+        {
+            list = new ArrayList<LogicEntry>();
+        }
+        else
+        {
+            try
+            {
+                String xml_list_str = ZipUtilities.uncompress(compressed_list_str);
+                XStream xstr = new XStream();
+
+                Object o = xstr.fromXML(xml_list_str);
+                if (o instanceof ArrayList<?>)
+                {
+                    list = (ArrayList<LogicEntry>) o;
+                }
+                else
+                    throw new Exception("wrong list data type" );
+            }
+            catch (Exception e)
+            {
+                LogManager.err_log(Main.Txt("Invalid_role_filter,_resetting_to_empty_list"), e);
+                list = new ArrayList<LogicEntry>();
+            }
+        }
+        return list;
+    }
+
+    public boolean user_is_member_of( Role role, String user, ArrayList<String> mail_list )
+    {
+        // CREATE FILTER VALUE PROVIDER
+        UserFilterProvider f_provider = new UserFilterProvider(user, mail_list );
+
+        // GET FILTER STR AND PARSE TO ARRAYLIST
+        String compressed_list_str = role.getAccountmatch();
+        ArrayList<LogicEntry> logic_list = get_filter_list( compressed_list_str );
+
+        // CREATE FILTER AND EVAL FINALLY
+        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
+        boolean ret = matcher.eval();
+
+        LogManager.debug( "User " + user + " is " + (ret?"":"not ") + "member of role " + role.getName());
+
+        return ret;
     }
 
 

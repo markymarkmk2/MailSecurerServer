@@ -36,6 +36,7 @@ public class MandantPreferences extends Preferences
     public static final String INDEX_TASK = "IndexTask";
     public static final String SERVER_PORT = "ServerPort";
     public static final String SERVER_IP = "ServerIP";
+    public static final String SERVER_SSL = "ServerSSL";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
 /*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
@@ -73,6 +74,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( INDEX_TASK );
         prop_names.add( SERVER_PORT );
         prop_names.add( SERVER_IP );
+        prop_names.add( SERVER_SSL );
         prop_names.add( SSO_TIMEOUT_S );
     }
     public void setContext( MandantContext _context )
