@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
 import com.sun.mail.smtp.SMTPTransport;
 import java.net.Socket;
@@ -95,11 +95,17 @@ public class SMTPAuth extends GenericRealmAuth
         return smtp_sock != null;
     }
 
+    String get_mail_for_user( String user_principal )
+    {
+        return "mark@dimm.de";
+    }
 
     @Override
     public boolean open_user_context( String user_principal, String pwd )
     {
-        user_context = open_user(user_principal, pwd);
+        String email = get_mail_for_user( user_principal );
+
+        user_context = open_user(user_principal, pwd, email);
         return user_context == null ? false : true;
     }
 
@@ -118,7 +124,7 @@ public class SMTPAuth extends GenericRealmAuth
     }
 
     SMTPTransport transport;
-    SMTPUserContext open_user( String user_principal, String pwd )
+    SMTPUserContext open_user( String user_principal, String pwd, String mailadr )
     {
         Properties props = new Properties();
         props.put("mail.host", host);
@@ -141,7 +147,18 @@ public class SMTPAuth extends GenericRealmAuth
 
             int code = transport.getLastReturnCode();
             if (is_smtp_ok(code))
-                return new SMTPUserContext();
+            {
+                code = transport.simpleCommand("MAIL FROM:" + mailadr);
+                String ret = transport.getLastServerResponse();
+                System.out.println(ret);
+                code = transport.simpleCommand("RCPT TO:" + mailadr);
+                ret = transport.getLastServerResponse();
+                System.out.println(ret);
+                code = transport.simpleCommand("RSET");
+                ret = transport.getLastServerResponse();
+                System.out.println(ret);
+            }
+            return new SMTPUserContext();
         }
         catch (MessagingException messagingException)
         {

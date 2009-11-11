@@ -5,7 +5,7 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.auth.AD.GenericRealmAuth;
+import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
@@ -441,6 +441,7 @@ public class MandantContext
                 usc.last_auth = System.currentTimeMillis();
                 return true;
             }
+            remove_from_sso_cache( user );
         }
 
 
@@ -466,17 +467,14 @@ public class MandantContext
             // WENN OK, DANN RAUS HIER, ABER SCHNELL!!!
             if (auth_ok)
             {
-                // NEUER CACHE ENTRY ?
-                if (usc == null)
-                {
-                    usc = new UserSSOcache(user, pwd, role, acct, now, now);
+                // NEUER CACHE ENTRY 
+                usc = new UserSSOcache(user, pwd, role, acct, now, now);
 
-                    // ALTE USERANGABEN RAUS
-                    remove_from_sso_cache( user );
-                    
-                    // NEUE DAZU
-                    user_sso_list.add(usc);
-                }
+                // ALTE USERANGABEN RAUS
+                remove_from_sso_cache( user );
+
+                // NEUE DAZU
+                user_sso_list.add(usc);
 
                 usc.last_auth = now;
 

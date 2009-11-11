@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
 /**
  *

@@ -3,11 +3,10 @@
  * and open the template in the editor.
  */
 
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
 import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
-import home.shared.hibernate.Role;
 import java.util.ArrayList;
 import java.util.Properties;
 import javax.naming.NamingException;

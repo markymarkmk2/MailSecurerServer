@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
 import com.sun.mail.pop3.POP3Store;
 import java.net.Socket;

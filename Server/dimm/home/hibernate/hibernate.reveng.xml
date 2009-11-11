@@ -14,4 +14,8 @@
   <table-filter match-name="disk_archive"/>
   <table-filter match-name="milter"/>
   <table-filter match-name="role_option"/>
+  <table-filter match-name="mail_user"/>
+  <table-filter match-name="mail_address"/>
+  <table-filter match-name="mu_add_link"/>
+  <table-filter match-name="mu_view_link"/>
 </hibernate-reverse-engineering>

@@ -10,6 +10,7 @@
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
     <property name="hibernate.show_sql">false</property>
     <property name="hibernate.format_sql">false</property>
+    <property name="hibernate.hbm2ddl.auto">update</property>
     <mapping resource="home/shared/hibernate/MailHeaderVariable.hbm.xml"/>
     <mapping resource="home/shared/hibernate/ImapFetcher.hbm.xml"/>
     <mapping resource="home/shared/hibernate/Proxy.hbm.xml"/>
@@ -22,5 +23,9 @@
     <mapping resource="home/shared/hibernate/Mandant.hbm.xml"/>
     <mapping resource="home/shared/hibernate/HotfolderExclude.hbm.xml"/>
     <mapping resource="home/shared/hibernate/RoleOption.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailUser.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailAddress.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailAddLink.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/MailViewLink.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>

@@ -627,7 +627,6 @@ public class TCPCallConnect extends WorkerParent
 
     void dispatch_tcp_command( Socket s, String cmd, long stream_len, byte[] add_data, OutputStream out ) throws IOException
     {
-        Main.debug_msg(0, "Received ip command <" + cmd + "> ");
 
         if (cmd.equals("?") || cmd.equals("help"))
         {
@@ -651,6 +650,15 @@ public class TCPCallConnect extends WorkerParent
                     params.add(arg);
                 }
             }
+            StringBuffer args = new StringBuffer();
+            for (int i = 0; i < params.size(); i++)
+            {
+                if (i > 0)
+                    args.append(" ");
+
+                args.append( params.get(i) );
+            }
+            Main.debug_msg(1, "Received ip command <" + cmd + " " + args + "> ");
 
             // call_ ARE THE OLDSTYLE FUNCS
             if (cmd.substring(0,5).compareTo("call_") == 0 )

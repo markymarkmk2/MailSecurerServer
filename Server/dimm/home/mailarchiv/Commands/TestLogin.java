@@ -5,8 +5,8 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.auth.AD.GenericRealmAuth;
-import dimm.home.auth.AD.LDAPAuth;
+import dimm.home.auth.GenericRealmAuth;
+import dimm.home.auth.LDAPAuth;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -105,7 +105,7 @@ class Test2
     }
 }
 
-public class Test
+public class TestLDAP
 {
     //Der Vollqualifizierte Name des Administrators im AD
     // final static String ADMIN_NAME = "CN=Administrator,CN=Users,DC=home,DC=dimm";

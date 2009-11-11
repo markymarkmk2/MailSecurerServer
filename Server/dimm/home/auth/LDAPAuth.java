@@ -2,10 +2,8 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package dimm.home.auth.AD;
+package dimm.home.auth;
 
-import dimm.home.mailarchiv.Commands.AbstractCommand;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -33,49 +31,6 @@ class LDAPUserContext implements UserContext
     {
         this.dn = sid;
         this.ctx = ctx;
-    }
-}
-class TestLoginLDAP extends AbstractCommand
-{
-    TestLoginLDAP()
-    {
-        super("TestLoginLDAP");
-    }
-
-    @Override
-    public boolean do_command( String data )
-    {
-        String opt = get_opts( data );
-
-        ParseToken pt = new ParseToken(opt);
-
-        String command = pt.GetString("CMD:");
-        if (command.compareTo("test") == 0)
-        {
-            String admin_name = pt.GetString("NM:");
-            String admin_pwd = pt.GetString("PW:");
-            String ldap_host = pt.GetString("HO:");
-            int ldap_port = (int)pt.GetLongValue("PO:");
-            int flags = (int)pt.GetLongValue("FL:");
-
-            LDAPAuth la = new LDAPAuth(admin_name, admin_pwd, ldap_host, ldap_port, flags);
-
-            boolean ret = la.connect();
-            if (!ret)
-            {
-                answer = "1: " + la.error_txt;
-            }
-            else
-            {
-                la.disconnect();
-                answer = "0: ok";
-            }
-
-            return true;
-        }
-
-        answer = "1: Unknown subcommand: " + data;
-        return false;
     }
 }
 

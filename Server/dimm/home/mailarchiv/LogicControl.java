@@ -142,6 +142,17 @@ public class LogicControl
         org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = change_session.beginTransaction();
 
+        check_db_changes( change_session, "select max(mu_id) from mu_add_link", true, "create table mu_add_link " +
+                "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
+        check_db_changes( change_session, "select max(mu_id) from mu_view_link", true, "create table mu_view_link " +
+                "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
+
+        if (check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true, "alter table role drop accountmatch", null))
+        {
+            check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true,
+                            "alter table role add accountmatch varchar(32000)", "update role set accountmatch=''" );
+        }
+
  /*       check_db_changes( change_session, "select max(id) from role_option", true,
                 "create table role_option ( id INT NOT NULL GENERATED ALWAYS AS IDENTITY, ro_id int not null, token varchar(80) not null, flags int)",null );
 */
@@ -932,12 +943,13 @@ public class LogicControl
     {
 
         boolean failed = false;
+        boolean changed = false;
 
         try
         {
             SQLQuery sql_res = change_session.createSQLQuery(check_qry);
             List l = sql_res.list();
-            if (l.size() != 1)
+            if (l.size() < 1)
                 throw new Exception( "Missing field" );
         }
         catch (Exception hibernateException)
@@ -952,6 +964,7 @@ public class LogicControl
             {
                 SQLQuery sql_res = change_session.createSQLQuery(alter_cmd);
                 int ret = sql_res.executeUpdate();
+                changed = true;
             }
             catch (Exception hibernateException1)
             {
@@ -968,12 +981,12 @@ public class LogicControl
                 catch (HibernateException hibernateException)
                 {
                     LogManager.err_log_fatal("Cannot fill changed table struct " +  fill_cmd, hibernateException);
-                    return false;
+                    return changed;
                 }
             }
         }
         
-        return true;
+        return changed;
     }
 
     private void read_param_db()
