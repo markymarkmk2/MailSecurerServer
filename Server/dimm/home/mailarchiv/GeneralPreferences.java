@@ -59,6 +59,7 @@ public class GeneralPreferences extends Preferences
     public static final String WRITE_MAIL_IN_BG = "WriteMailBackground";
     public static final String INDEX_MAIL_IN_BG = "IndexMailBackground";
     public static final String INDEX_TIMEOUT = "IndexTimeoutSecs";
+    public static final String SERVER_SSL = "ServerSSL";
 
     
     /** Creates a new instance of Preferences */
@@ -103,6 +104,7 @@ public class GeneralPreferences extends Preferences
 
         prop_names.add( WRITE_MAIL_IN_BG );
         prop_names.add( INDEX_MAIL_IN_BG );
+        prop_names.add( SERVER_SSL );
         
                 
         read_props();

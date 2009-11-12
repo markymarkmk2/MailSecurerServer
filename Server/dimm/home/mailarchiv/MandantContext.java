@@ -13,6 +13,7 @@ import dimm.home.importmail.ProxyEntry;
 import dimm.home.index.IMAP.IMAPBrowser;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
+import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
@@ -429,7 +430,7 @@ public class MandantContext
         return null;
     }
 
-    public boolean authenticate_user( String user, String pwd )
+    public boolean authenticate_user( String user, String pwd ) throws AuthException
     {
         boolean auth_ok = false;
         long now = System.currentTimeMillis();
@@ -447,6 +448,8 @@ public class MandantContext
             remove_from_sso_cache( user );
         }
 
+        boolean role_found = false;
+        boolean acct_connected = false;
 
 
         // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
@@ -469,12 +472,13 @@ public class MandantContext
             {
                 mail_list = auth_realm.get_maillist_for_user(user);
             }
-            catch (NamingException namingException)
+            catch (Exception namingException)
             {
                 LogManager.err_log("Cannot retrieve mail list", namingException);
                 auth_realm.disconnect();
                 continue;
             }
+            acct_connected = true;
 
             if (!auth_realm.user_is_member_of( role, user, mail_list ))
             {
@@ -482,6 +486,8 @@ public class MandantContext
                 continue;
             }
 
+            // OKAY USER IS REGISTERED
+            role_found = true;
 
             // PRUEFE OB DER BENUTZER OK IST
             auth_ok = auth_realm.open_user_context(user, pwd);
@@ -510,6 +516,11 @@ public class MandantContext
                 break;
             }
         }
+        if (!acct_connected)
+            throw new AuthException(Main.Txt("No_Realm_could_be_connected"));
+        
+        if (!role_found)
+            throw new AuthException(Main.Txt("No_Role_was_fond_for_this_user"));
 
 
         // BENUTZER WAR OK / NICHT OK, BYE BYE

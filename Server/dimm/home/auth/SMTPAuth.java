@@ -5,6 +5,7 @@
 package dimm.home.auth;
 
 import com.sun.mail.smtp.SMTPTransport;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.Socket;
 
 import java.util.Properties;
@@ -38,7 +39,6 @@ public class SMTPAuth extends GenericRealmAuth
                 port = 465;
         }
 
-        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
     }
 
    
@@ -49,7 +49,6 @@ public class SMTPAuth extends GenericRealmAuth
         close_user(user_context);
         user_context = null;
     }
-
 
     
     @Override
@@ -71,6 +70,8 @@ public class SMTPAuth extends GenericRealmAuth
         }
         return ret;
     }
+
+
     @Override
     public boolean disconnect()
     {
@@ -88,22 +89,16 @@ public class SMTPAuth extends GenericRealmAuth
 
    
 
-
     @Override
     public boolean is_connected()
     {
         return smtp_sock != null;
     }
 
-    String get_mail_for_user( String user_principal )
-    {
-        return "mark@dimm.de";
-    }
-
     @Override
     public boolean open_user_context( String user_principal, String pwd )
     {
-        String email = get_mail_for_user( user_principal );
+        String email = get_dbs_mail_for_user( user_principal );
 
         user_context = open_user(user_principal, pwd, email);
         return user_context == null ? false : true;
@@ -133,8 +128,7 @@ public class SMTPAuth extends GenericRealmAuth
         if ( is_ssl())
         {
             props.put("mail.smtp.ssl.enable", true );
-        }
-        
+        }        
         props = set_conn_props(props, "smtp", port);
 
         try
@@ -146,19 +140,32 @@ public class SMTPAuth extends GenericRealmAuth
             transport.connect(smtp_sock);
 
             int code = transport.getLastReturnCode();
+            //System.out.println("" + code);
             if (is_smtp_ok(code))
             {
                 code = transport.simpleCommand("MAIL FROM:" + mailadr);
                 String ret = transport.getLastServerResponse();
-                System.out.println(ret);
-                code = transport.simpleCommand("RCPT TO:" + mailadr);
-                ret = transport.getLastServerResponse();
-                System.out.println(ret);
-                code = transport.simpleCommand("RSET");
-                ret = transport.getLastServerResponse();
-                System.out.println(ret);
+                LogManager.debug_msg(4, ret);
             }
-            return new SMTPUserContext();
+            if (is_smtp_ok(code))
+            {
+                code = transport.simpleCommand("RCPT TO:" + mailadr);
+                String ret = transport.getLastServerResponse();
+                LogManager.debug_msg(4, ret);
+            }
+            if (is_smtp_ok(code))
+            {
+                code = transport.simpleCommand("RSET");
+                String ret = transport.getLastServerResponse();
+                LogManager.debug_msg(4, ret);
+            }
+            if (is_smtp_ok(code))
+                return new SMTPUserContext();
+            else
+            {
+                String ret = transport.getLastServerResponse();
+                LogManager.err_log( "SMTP auth failed: " + ret);
+            }
         }
         catch (MessagingException messagingException)
         {

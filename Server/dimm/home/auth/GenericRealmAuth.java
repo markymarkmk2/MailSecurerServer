@@ -34,6 +34,7 @@ import javax.naming.NamingException;
                 new AccountConnectorTypeEntry("smtp","SMTP"),
                 new AccountConnectorTypeEntry("pop","POP3"),
                 new AccountConnectorTypeEntry("imap","IMAP"),
+                new AccountConnectorTypeEntry("imap","IMAP"),
              * */
 
 
@@ -62,7 +63,7 @@ public abstract class GenericRealmAuth
         this.act = act;
     }
 
-    public GenericRealmAuth( int flags, String host, int port )
+    public GenericRealmAuth(  int flags, String host, int port )
     {
         this.flags = flags;
         this.host = host;
@@ -72,28 +73,30 @@ public abstract class GenericRealmAuth
     public static GenericRealmAuth factory_create_realm( /*Role role,*/ AccountConnector act )
     {
         GenericRealmAuth realm = null;
+        
+        if (act.getType().compareTo("dbs") == 0)
+        {
+            realm = new DBSAuth( act.getMandant() );
+        }
         if (act.getType().compareTo("ldap") == 0)
         {
-
             realm = new LDAPAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getPort(), act.getFlags() );
-            realm.set_params(/*role,*/ act);
-        }
-        
+        }        
         if (act.getType().compareTo("smtp") == 0)
         {
             realm = new SMTPAuth( act.getIp(), act.getPort(), act.getFlags() );
-            realm.set_params(act);
         }
         if (act.getType().compareTo("pop") == 0)
         {
             realm = new POP3Auth( act.getIp(), act.getPort(), act.getFlags() );
-            realm.set_params(act);
         }
         if (act.getType().compareTo("imap") == 0)
         {
-            realm = new IMAPAuth( act.getIp(), act.getPort(), act.getFlags() );
-            realm.set_params(act);
+            realm = new IMAPAuth( act.getIp(), act.getPort(), act.getFlags() );            
         }
+        
+        if (realm != null)
+            realm.set_params(act);
 
         return realm;
     }
@@ -141,10 +144,13 @@ public abstract class GenericRealmAuth
 
                     // ADD ALIASES
                     Set<MailAddress> add_email = mailUser.getAddMailAddresses();
-                    for (Iterator<MailAddress> it1 = add_email.iterator(); it1.hasNext();)
+                    if (add_email != null)
                     {
-                        MailAddress mailAddress = it1.next();
-                        mail_list.add(mailAddress.getEmail());
+                        for (Iterator<MailAddress> it1 = add_email.iterator(); it1.hasNext();)
+                        {
+                            MailAddress mailAddress = it1.next();
+                            mail_list.add(mailAddress.getEmail());
+                        }
                     }
                 }
             }
@@ -222,6 +228,25 @@ public abstract class GenericRealmAuth
         return list_mails_for_userlist(  user_list );
     }
 
+    String get_dbs_mail_for_user( String user )
+    {
+        String ret = null;
+
+        Set<MailUser> mail_users = act.getMandant().getMailusers();
+        for (Iterator<MailUser> it = mail_users.iterator(); it.hasNext();)
+        {
+            MailUser mailUser = it.next();
+
+            if (mailUser.getUsername().compareTo(user) == 0)
+            {
+                // ADD NATIVE EMAIL
+                ret = mailUser.getEmail();
+                break;
+            }
+        }
+        return ret;
+    }
+
     class UserFilterProvider implements FilterValProvider
     {
         String user;
@@ -262,7 +287,7 @@ public abstract class GenericRealmAuth
         }
     }
 
-    private ArrayList<LogicEntry> get_filter_list( String compressed_list_str )
+    private ArrayList<LogicEntry> get_filter_list( String compressed_list_str, boolean compressed )
     {
         ArrayList<LogicEntry> list = null;
         if (compressed_list_str.length() == 0)
@@ -273,7 +298,10 @@ public abstract class GenericRealmAuth
         {
             try
             {
-                String xml_list_str = ZipUtilities.uncompress(compressed_list_str);
+                String xml_list_str = compressed_list_str;
+                if (compressed)
+                    xml_list_str = ZipUtilities.uncompress(compressed_list_str);
+                
                 XStream xstr = new XStream();
 
                 Object o = xstr.fromXML(xml_list_str);
@@ -300,7 +328,17 @@ public abstract class GenericRealmAuth
 
         // GET FILTER STR AND PARSE TO ARRAYLIST
         String compressed_list_str = role.getAccountmatch();
-        ArrayList<LogicEntry> logic_list = get_filter_list( compressed_list_str );
+        int role_flags = 0;
+        try
+        {
+            role_flags = Integer.parseInt(role.getFlags());
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+
+        boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
+        ArrayList<LogicEntry> logic_list = get_filter_list( compressed_list_str, compressed );
 
         // CREATE FILTER AND EVAL FINALLY
         FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);

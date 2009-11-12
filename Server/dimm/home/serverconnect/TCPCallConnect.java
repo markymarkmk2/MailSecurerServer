@@ -5,6 +5,7 @@ package dimm.home.serverconnect;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
+import dimm.home.mailarchiv.Commands.AuthUser;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
 import dimm.home.mailarchiv.Commands.GetStatus;
@@ -25,6 +26,7 @@ import dimm.home.mailarchiv.Commands.TestLogin;
 import dimm.home.mailarchiv.Commands.UploadCertificate;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
@@ -54,7 +56,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.ResourceBundle;
 import java.util.StringTokenizer;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -91,7 +92,10 @@ public class TCPCallConnect extends WorkerParent
     {
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
-        use_ssl = true;
+        
+        use_ssl = Main.get_bool_prop(GeneralPreferences.SERVER_SSL, true);
+
+
         if (m_ctx != null)
         {
             server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
@@ -113,7 +117,7 @@ public class TCPCallConnect extends WorkerParent
                 server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
                 LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
             }
-            use_ssl = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.SERVER_SSL, true );
+            
         }
         else
         {
@@ -145,6 +149,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new UploadCertificate() );
         cmd_list.add( new SearchCommand() );
         cmd_list.add( new RestartMandant() );
+        cmd_list.add( new AuthUser() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

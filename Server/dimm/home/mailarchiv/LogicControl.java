@@ -925,7 +925,7 @@ public class LogicControl
         return ok;
     }
 
-    private MandantPreferences read_mandant_prefs( Mandant m )
+    static MandantPreferences read_mandant_prefs( Mandant m )
     {
         String prefs_path = Main.PREFS_PATH + m.getId() + "/";
         File d = new File( prefs_path );

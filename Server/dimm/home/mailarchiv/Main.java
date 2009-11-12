@@ -280,7 +280,7 @@ public class Main
     void init_mail_security()
     {
 
-        Security.setProperty( "ssl.SocketFactory.provider", "dimm.home.auth.DefaultSSLSocketFactory");
+        Security.setProperty( "ssl.SocketFactory.provider", "home.shared.Utilities.DefaultSSLSocketFactory");
         Security.addProvider( new com.sun.net.ssl.internal.ssl.Provider());
 
         // NOW WE USE JAVAS DEFAULT SSL FACTORY, THIS IS OVERRIDDEN WITH OUR
@@ -292,6 +292,10 @@ public class Main
         
         // POP3 provider
         props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
+
+        // MAYBEE NEEDED BY KERBEROS, I DUNNO
+        ///        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+
    
     }
     
