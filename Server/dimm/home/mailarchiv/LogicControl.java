@@ -147,6 +147,12 @@ public class LogicControl
         check_db_changes( change_session, "select max(mu_id) from mu_view_link", true, "create table mu_view_link " +
                 "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
 
+        check_db_changes( change_session, "select max(smtp_port) from mandant", true, "alter table mandant add smtp_port int", "update mandant set smtp_port=0" );
+        check_db_changes( change_session, "select count(smtp_host) from mandant", true, "alter table mandant add smtp_host varchar(80)", "update mandant set smtp_host=''" );
+        check_db_changes( change_session, "select count(smtp_user) from mandant", true, "alter table mandant add smtp_user varchar(80)", "update mandant set smtp_user=''" );
+        check_db_changes( change_session, "select count(smtp_pwd) from mandant", true, "alter table mandant add smtp_pwd varchar(80)", "update mandant set smtp_pwd=''" );
+        check_db_changes( change_session, "select max(smtp_flags) from mandant", true, "alter table mandant add smtp_flags int", "update mandant set smtp_flags=0" );
+
         if (check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true, "alter table role drop accountmatch", null))
         {
             check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true,
