@@ -13,6 +13,7 @@ import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import java.util.ArrayList;
 
 /**
  *
@@ -37,22 +38,41 @@ public class AuthUser extends AbstractCommand
 
         ParseToken pt = new ParseToken(opt);
 
+        String cmd = pt.GetString("CMD:");
         long m_id = pt.GetLongValue("MA:");
         String name = pt.GetString("NM:");
         String pwd = pt.GetString("PW:");
 
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
-                
+
         try
         {
-            boolean auth_ok = m_ctx.authenticate_user(name, pwd);
-            if (auth_ok)
+            if (cmd.compareTo("login") == 0)
             {
-                answer = "0: ok";
+                boolean auth_ok = m_ctx.authenticate_user(name, pwd);
+                if (auth_ok)
+                {
+                    answer = "0: ";
+                    ArrayList<String> mail_aliases = m_ctx.get_mailaliases( name, pwd );
+                    if (mail_aliases != null)
+                    {
+                        answer += "MA:";
+                        for (int i = 0; i < mail_aliases.size(); i++)
+                        {
+                            if (i > 0)
+                                answer += ",";
+                            answer += mail_aliases.get(i);
+                        }
+                    }
+                }
+                else
+                {
+                    answer = "1: " + Main.Txt("Username_or_password_are_incorrect");
+                }
             }
             else
             {
-                answer = "1: " + Main.Txt("Username_or_password_are_incorrect");
+                answer = "3: unknown subcommand: " + cmd;
             }
         }
         catch (AuthException authException)

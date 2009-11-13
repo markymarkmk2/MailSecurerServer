@@ -21,12 +21,15 @@ import home.shared.mail.CryptAESOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ResourceBundle;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.hibernate.HibernateException;
 
@@ -676,10 +679,80 @@ System.out.println("Core POI came from " + path);
     {
          LogManager.err_log_warn(string);
     }
-    public static String Txt(String key )
+
+    static ArrayList<String> missing_transl_tokens = new ArrayList<String>();
+
+    public static String Txt(String string )
     {
-        return key;
+
+        try
+        {
+            if (bundle != null)
+                return bundle.getString(string);
+        }
+        catch (Exception exc)
+        {
+        }
+
+        System.err.println("Missing translation resource: " + string);
+
+        if (!missing_transl_tokens.contains(string))
+        {
+            missing_transl_tokens.add(string);
+            try
+            {
+                FileWriter fw = new FileWriter("MissingTransl.txt", true);
+                fw.append(string + "\n");
+                fw.close();
+            }
+            catch (IOException iOException)
+            {
+            }
+        }
+
+        // REMOVE UNDERSCORES FROM KEY
+        string = string.replace('_', ' ');
+        return string;
     }
+
+    static ResourceBundle bundle;
+
+    static public void init_text_interface(String lcode)
+    {
+        if (lcode == null || lcode.length() == 0)
+            lcode = Main.get_prop( GeneralPreferences.COUNTRYCODE, "EN" );
+
+        if (lcode.compareTo("DE") == 0)
+        {
+            Locale l = new Locale("de", "DE", "");
+            Locale.setDefault(l);
+        }
+        if (lcode.compareTo("EN") == 0)
+        {
+            Locale l = new Locale("en", "EN", "");
+            Locale.setDefault(l);
+        }
+        if (lcode.compareTo("DK") == 0)
+        {
+            Locale l = new Locale("da", "DK", "");
+            Locale.setDefault(l);
+        }
+        bundle = null;
+        try
+        {
+            bundle = ResourceBundle.getBundle("./mainrsrc",Locale.getDefault());
+        }
+        catch (Exception exc)
+        {
+            try
+            {
+                bundle = ResourceBundle.getBundle("dimm/home/mainrsrc",Locale.getDefault());
+            }
+            catch (Exception _exc)
+            {}
+        }
+    }
+
 
     void import_moonrug()
     {

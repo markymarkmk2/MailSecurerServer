@@ -24,6 +24,7 @@ import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
+import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
@@ -379,6 +380,18 @@ public class MandantContext
         return false;
     }
 
+    public ArrayList<String> get_mailaliases( String user, String pwd )
+    {
+        ArrayList<String> mail_list = new ArrayList<String>();
+
+        UserSSOcache ussc = get_from_sso_cache( user,  pwd );
+        if (ussc != null)
+        {
+            return ussc.mail_list;
+        }
+        return null;
+    }
+
     class UserSSOcache
     {
         String user;
@@ -458,7 +471,21 @@ public class MandantContext
             Role role = it.next();
             AccountConnector acct = role.getAccountConnector();
 
+            try
+            {
+                if ((Integer.parseInt(role.getFlags()) & CS_Constants.ROLE_DISABLED) == CS_Constants.ROLE_DISABLED)
+                {
+                    LogManager.debug_msg(4, "Skipping disabled role " + role.getName());
+                    continue;
+                }
+            }
+            catch (NumberFormatException numberFormatException)
+            {
+            }
+
+            
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( acct );
+
 
             if (!auth_realm.connect())
             {
@@ -470,7 +497,7 @@ public class MandantContext
             ArrayList<String> mail_list = null;
             try
             {
-                mail_list = auth_realm.get_maillist_for_user(user);
+                mail_list = auth_realm.get_mailaliaslist_for_user(user);
             }
             catch (Exception namingException)
             {
@@ -520,7 +547,7 @@ public class MandantContext
             throw new AuthException(Main.Txt("No_Realm_could_be_connected"));
         
         if (!role_found)
-            throw new AuthException(Main.Txt("No_Role_was_fond_for_this_user"));
+            throw new AuthException(Main.Txt("No_Role_matches_this_user"));
 
 
         // BENUTZER WAR OK / NICHT OK, BYE BYE

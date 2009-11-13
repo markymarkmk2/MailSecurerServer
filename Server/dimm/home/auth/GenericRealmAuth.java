@@ -5,11 +5,9 @@
 
 package dimm.home.auth;
 
-import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
-import home.shared.Utilities.ZipUtilities;
 import home.shared.filter.FilterMatcher;
 import home.shared.filter.FilterValProvider;
 import home.shared.filter.LogicEntry;
@@ -123,7 +121,7 @@ public abstract class GenericRealmAuth
     }
 
     // THIS IS OVERRIDDEN IN LDAP
-    public ArrayList<String> list_mails_for_userlist( ArrayList<String> users ) throws NamingException
+    public ArrayList<String> list_mailaliases_for_userlist( ArrayList<String> users ) throws NamingException
     {
         ArrayList<String>mail_list = new ArrayList<String>();
 
@@ -221,11 +219,11 @@ public abstract class GenericRealmAuth
         return (flags & test_flag) == test_flag;
     }
 
-    public ArrayList<String> get_maillist_for_user( String user ) throws NamingException
+    public ArrayList<String> get_mailaliaslist_for_user( String user ) throws NamingException
     {
         ArrayList<String> user_list = new ArrayList<String>();
         user_list.add(user);
-        return list_mails_for_userlist(  user_list );
+        return list_mailaliases_for_userlist(  user_list );
     }
 
     String get_dbs_mail_for_user( String user )
@@ -287,39 +285,6 @@ public abstract class GenericRealmAuth
         }
     }
 
-    private ArrayList<LogicEntry> get_filter_list( String compressed_list_str, boolean compressed )
-    {
-        ArrayList<LogicEntry> list = null;
-        if (compressed_list_str.length() == 0)
-        {
-            list = new ArrayList<LogicEntry>();
-        }
-        else
-        {
-            try
-            {
-                String xml_list_str = compressed_list_str;
-                if (compressed)
-                    xml_list_str = ZipUtilities.uncompress(compressed_list_str);
-                
-                XStream xstr = new XStream();
-
-                Object o = xstr.fromXML(xml_list_str);
-                if (o instanceof ArrayList<?>)
-                {
-                    list = (ArrayList<LogicEntry>) o;
-                }
-                else
-                    throw new Exception("wrong list data type" );
-            }
-            catch (Exception e)
-            {
-                LogManager.err_log(Main.Txt("Invalid_role_filter,_resetting_to_empty_list"), e);
-                list = new ArrayList<LogicEntry>();
-            }
-        }
-        return list;
-    }
 
     public boolean user_is_member_of( Role role, String user, ArrayList<String> mail_list )
     {
@@ -338,7 +303,12 @@ public abstract class GenericRealmAuth
         }
 
         boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
-        ArrayList<LogicEntry> logic_list = get_filter_list( compressed_list_str, compressed );
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, compressed );
+        if (logic_list == null)
+        {
+            LogManager.err_log(Main.Txt("Invalid_role_filter"));
+            return false;
+        }
 
         // CREATE FILTER AND EVAL FINALLY
         FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);

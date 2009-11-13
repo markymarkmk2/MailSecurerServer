@@ -6,7 +6,6 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.auth.GenericRealmAuth;
-import dimm.home.auth.LDAPAuth;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
@@ -46,6 +45,21 @@ public class TestLogin extends AbstractCommand
 
             // PRUEFE OB DER LOGIN OK IST
             boolean auth_ok = auth_realm.connect();
+
+            // ON NON-LDAP CONNECTIONS WE HAVE TO CHECK USERNAME DIRECTLY IF USER WAS GIVEN TOO
+            if (auth_ok && type.compareTo("ldap") != 0 && admin_name.length() > 0)
+            {
+                if (auth_realm.open_user_context(admin_pwd, admin_pwd))
+                {
+                    auth_realm.close_user_context();
+                }
+                else
+                {
+                    // SCHLIESSEN NICHT VERGESSEN
+                    auth_realm.disconnect();
+                    auth_ok = false;
+                }
+            }
 
             // SCHLIESSEN NICHT VERGESSEN
             if (auth_ok)

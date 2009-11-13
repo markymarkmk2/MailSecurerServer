@@ -7,6 +7,7 @@ package dimm.home.auth;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
+import java.util.Properties;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -80,6 +81,8 @@ public class LDAPAuth extends GenericRealmAuth
         String protokoll = "ldap://";
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
+        env.put("com.sun.jndi.ldap.connect.pool", "true");
+        env.put("com.sun.jndi.ldap.connect.timeout", "10000");
         //        env.put(Context.SECURITY_AUTHENTICATION, "GSSAPI");
 
         if (is_ssl())
@@ -102,11 +105,13 @@ public class LDAPAuth extends GenericRealmAuth
     public boolean connect()
     {
         try
-        {
+        {            
+
             Hashtable connect_env = create_sec_env();
 
             connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
+            
 
             ctx = new InitialLdapContext(connect_env, null);
             return true;
@@ -158,7 +163,7 @@ public class LDAPAuth extends GenericRealmAuth
     }
 
     @Override
-    public ArrayList<String> list_mails_for_userlist( ArrayList<String> users ) throws NamingException
+    public ArrayList<String> list_mailaliases_for_userlist( ArrayList<String> users ) throws NamingException
     {
         // RETURN VALS
         SearchControls ctrl = new SearchControls();

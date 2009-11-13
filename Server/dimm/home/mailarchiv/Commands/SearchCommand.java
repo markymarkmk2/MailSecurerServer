@@ -76,6 +76,40 @@ public class SearchCommand extends AbstractCommand
 
             return true;
         }
+        else if (command.compareTo("open_filter") == 0)
+        {
+            int ma_id = (int)pt.GetLongValue("MA:");
+            String user = pt.GetString("US:");
+            String pwd = pt.GetString("PW:");
+            String compressed_filter = pt.GetString("FL:");
+            int n = (int)pt.GetLongValue("CNT:");
+
+            answer = SearchCall.open_filtersearch_call( ma_id, compressed_filter, n, user, pwd);
+
+            return true;
+        }        
+        else if (command.compareTo("send_mail") == 0)
+        {
+            String id = pt.GetString("ID:");
+            String to = pt.GetString("TO:");
+            String rowlist = pt.GetString("ROWLIST:");
+            String[] rows = rowlist.split(",");
+            int[] rowi = new int[rows.length];
+            try
+            {
+                for (int i = 0; i < rows.length; i++)
+                {
+                    rowi[i] = Integer.parseInt(rows[i]);
+                }
+
+                answer = SearchCall.send_mail(id, rowi, to);
+            }
+            catch (Exception e)
+            {
+                answer = "1: Error while sending mails: " + e.getMessage();
+            }
+            return true;
+        }
 
         answer = "1: Unknown subcommand: " + data;
         return false;

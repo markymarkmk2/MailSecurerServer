@@ -284,7 +284,7 @@ public class IndexManager extends WorkerParent
 
         if (IndexWriter.isLocked(dir))
         {
-            Main.err_log("Unlocking already locked IndexWriter");
+            Main.err_log("/*Unlocking already locked IndexWriter*/");
             IndexWriter.unlock(dir);
         }
 

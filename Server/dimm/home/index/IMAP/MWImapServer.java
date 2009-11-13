@@ -17,8 +17,10 @@
  */
 package dimm.home.index.IMAP;
 
+import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -980,13 +982,20 @@ public class MWImapServer extends Thread
             String user = auth[0];
             String pwd = auth[1];
             
-            if (m_ctx.authenticate_user( user, pwd ))
+            try
             {
-                //Alles Ok
-                konto = new MailKonto( user, pwd );
-                
-                response(sid, true, "User " + m_ctx.getMandant().getName() + " logged in");
-                return 0;
+                if (m_ctx.authenticate_user(user, pwd))
+                {
+                    //Alles Ok
+                    konto = new MailKonto(user, pwd);
+
+                    response(sid, true, "User " + m_ctx.getMandant().getName() + " logged in");
+                    return 0;
+                }
+            }
+            catch (AuthException authException)
+            {
+                LogManager.err_log("IMAP Login failed", authException);
             }
         }
 

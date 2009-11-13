@@ -2,10 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package dimm.home.index;
 
+import com.sun.mail.smtp.SMTPTransport;
 import com.thoughtworks.xstream.XStream;
+import dimm.home.auth.SMTPAuth;
+import dimm.home.auth.SMTPUserContext;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
@@ -15,9 +17,20 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
+import home.shared.filter.ExprEntry;
+import home.shared.filter.FilterMatcher;
+import home.shared.filter.GroupEntry;
+import home.shared.filter.LogicEntry;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Properties;
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -26,21 +39,23 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Searchable;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 
-
-
-
-
 class SearchResult
 {
+
     Searcher searcher;
     int doc_index;
     float score;
@@ -51,6 +66,7 @@ class SearchResult
     long size;
     String subject;
     boolean has_attachment;
+    
 
     public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment )
     {
@@ -67,10 +83,9 @@ class SearchResult
     }
 }
 
-
-
 class SearchCallEntry
 {
+
     SearchCall call;
     int id;
 
@@ -86,8 +101,6 @@ class SearchCallEntry
     }
 }
 
-
-
 /**
  *
  * @author mw
@@ -97,10 +110,14 @@ public class SearchCall
 
     MandantContext m_ctx;
     ArrayList<SearchResult> result;
+    ArrayList<IndexSearcher> searcher_list;
 
-
+    MandantContext get_ctx()
+    {
+        return m_ctx;
+    }
     static final ArrayList<SearchCallEntry> call_list = new ArrayList<SearchCallEntry>();
-   
+
     static SearchCallEntry get_sce( String sce_id )
     {
         int id = Integer.parseInt(sce_id.substring(2));  // scN
@@ -122,22 +139,51 @@ public class SearchCall
         {
             return "1: invalid mandant";
         }
-        SearchCall sc = new SearchCall( m_ctx );
+        SearchCall sc = new SearchCall(m_ctx);
         sc.search(mail, field, val, n);
 
         int id = 0;
-        synchronized ( call_list )
+        synchronized (call_list)
         {
             id = call_list.size();
-            SearchCallEntry sce = new SearchCallEntry( sc, id );
+            SearchCallEntry sce = new SearchCallEntry(sc, id);
             call_list.add(sce);
         }
 
         return "0: sc" + id + " N:" + sc.result.size();
     }
+
+    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd )
+    {
+        MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
+        if (m_ctx == null)
+        {
+            return "1: invalid mandant";
+        }
+        SearchCall sc = new SearchCall(m_ctx);
+        try
+        {
+            sc.search_lucene( user, pwd, compressed_filter, n );
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return "2: " + e.getMessage();
+        }
+        int id = 0;
+        synchronized (call_list)
+        {
+            id = call_list.size();
+            SearchCallEntry sce = new SearchCallEntry(sc, id);
+            call_list.add(sce);
+        }
+
+        return "0: sc" + id + " N:" + sc.result.size();
+    }
+
     public static String close_search_call( String id )
     {
-        SearchCallEntry sce = get_sce( id );
+        SearchCallEntry sce = get_sce(id);
         if (sce == null)
         {
             return "1: invalid sce";
@@ -145,6 +191,7 @@ public class SearchCall
         call_list.remove(sce);
 
         sce.call.close();
+
 
         return "0: ok";
     }
@@ -171,10 +218,10 @@ public class SearchCall
         }
         return null;
     }
-    
+
     public static String retrieve_search_call( String id, ArrayList<String> field_list, int row )
     {
-        SearchCallEntry sce = get_sce( id );
+        SearchCallEntry sce = get_sce(id);
         if (sce == null)
         {
             return "1: invalid sce";
@@ -187,16 +234,20 @@ public class SearchCall
             for (int i = 0; i < sce.call.result.size(); i++)
             {
 
-                ArrayList<String> row_list = retrieve_row( sce, field_list, i );
+                ArrayList<String> row_list = retrieve_row(sce, field_list, i);
                 if (row_list != null)
-                    result_list.add( row_list );
+                {
+                    result_list.add(row_list);
+                }
             }
         }
         else
         {
-            ArrayList<String> row_list = retrieve_row( sce, field_list, row );
+            ArrayList<String> row_list = retrieve_row(sce, field_list, row);
             if (row_list != null)
-                result_list.add( row_list );
+            {
+                result_list.add(row_list);
+            }
         }
 
         XStream xstream = new XStream();
@@ -204,11 +255,12 @@ public class SearchCall
 
         return "0: " + res;
     }
+
     public static String retrieve_mail( String id, int row )
     {
         String ret = null;
 
-        SearchCallEntry sce = get_sce( id );
+        SearchCallEntry sce = get_sce(id);
         if (sce == null)
         {
             return "1: invalid sce";
@@ -219,26 +271,117 @@ public class SearchCall
             return "2: invalid result";
         }
 
-        ret = sce.call.open_RMX_mail_stream( result );
+        ret = sce.call.open_RMX_mail_stream(result);
 
         if (ret == null)
-            return "3: cannot open mail for result" ;
+        {
+            return "3: cannot open mail for result";
+        }
 
         return ret;
     }
 
+    public static String send_mail( String id, int[] rowi, String send_to )
+    {
+        SearchCallEntry sce = get_sce(id);
+        if (sce == null)
+        {
+            return "1: invalid sce";
+        }
+        MandantContext m_ctx = sce.call.get_ctx();
+
+        String host = m_ctx.getMandant().getSmtp_host();
+        int port = m_ctx.getMandant().getSmtp_port();
+        SMTPAuth smtp = new SMTPAuth(host, port, m_ctx.getMandant().getSmtp_flags());
+
+        if (!smtp.connect())
+        {
+            return "2: " + Main.Txt("Cannot_connect_to_SMTP_host") + " " + host + ":" + port;
+        }
+
+        try
+        {
+            String user = m_ctx.getMandant().getSmtp_user();
+            String pwd = m_ctx.getMandant().getSmtp_pwd();
+            SMTPUserContext smtp_ctx = smtp.open_user(user, pwd, null);
+
+            if (smtp_ctx == null)
+            {
+                return "3: " + Main.Txt("Cannot_authenticate_at_SMTP_host") + " " + host + ":" + port + " user " + user + " to " + send_to;
+            }
+            SMTPTransport transport = smtp_ctx.get_transport();
+
+            String[] adr_list = send_to.split(",");
+            Address[] addresses = new Address[adr_list.length];
+            try
+            {
+                for (int i = 0; i < adr_list.length; i++)
+                {
+                    addresses[i] = new InternetAddress(adr_list[i], false);
+                }
+            }
+            catch (AddressException addressException)
+            {
+                return "4: " + Main.Txt("Invalid_To_address") + ":" + send_to;
+            }
+
+            for (int i = 0; i < rowi.length; i++)
+            {
+                int j = rowi[i];
+
+                SearchResult result = sce.call.result.get(rowi[i]);
+                DiskSpaceHandler dsh = sce.call.get_dsh(result.ds_id);
+                Vault vault = sce.call.get_vault(result.ds_id);
+                try
+                {
+                    long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
+
+                    RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+                    InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
+                    Properties props = new Properties();
+                    props.put("mail.smtp.host", host);
+                    Session session = Session.getDefaultInstance(props);
+                    Message msg = new MimeMessage(session, is);
+
+                    transport.sendMessage(msg, addresses);
+
+                    is.close();
+
+                }
+                catch (VaultException vaultException)
+                {
+                    return "5: " + Main.Txt("Cannot_get_message_from_vault") + ":" + vaultException.getMessage();
+                }
+                catch (Exception messagingException)
+                {
+                    return "6: " + Main.Txt("Error_while_sending_message") + ":" + messagingException.getMessage();
+                }
+            }
+        }
+        finally
+        {
+            smtp.close_user_context();
+            smtp.disconnect();
+        }
+
+
+
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
 
     public SearchCall( MandantContext m_ctx )
     {
         this.m_ctx = m_ctx;
         result = new ArrayList<SearchResult>();
     }
-
     static DiskSpaceHandler last_dsh;
+
     DiskSpaceHandler get_dsh( int ds_idx )
     {
         if (last_dsh != null && last_dsh.getDs().getId() == ds_idx)
+        {
             return last_dsh;
+        }
 
         for (int i = 0; i < m_ctx.getVaultArray().size(); i++)
         {
@@ -251,12 +394,15 @@ public class SearchCall
                 {
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
                     if (dsh.getDs().getId() == ds_idx)
+                    {
                         return dsh;
+                    }
                 }
             }
         }
         return null;
     }
+
     Vault get_vault( int ds_idx )
     {
 
@@ -271,7 +417,9 @@ public class SearchCall
                 {
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
                     if (dsh.getDs().getId() == ds_idx)
+                    {
                         return dv;
+                    }
                 }
             }
         }
@@ -283,29 +431,253 @@ public class SearchCall
         return searcher.doc(doc_index);
     }
 
-    void search( String mail_adress, String fld, String val, int n )
+    void search_lucene( String user, String pwd, String compressed_filter, int n ) throws IOException, IllegalArgumentException, ParseException
     {
-        // GO THROUGH ALL VAULTS
-        for (int i = 0; i < m_ctx.getVaultArray().size(); i++)
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list(compressed_filter, true);
+
+        ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
+        if (dsh_list.size() == 0)
         {
-            Vault vault = m_ctx.getVaultArray().get(i);
+            throw new IllegalArgumentException(Main.Txt("No_disk_spaces_for_search_found"));
+        }
+        Analyzer ana = dsh_list.get(0).create_read_analyzer();
+
+
+        ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
+        if (mail_aliases == null || mail_aliases.size() == 0)
+        {
+            throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
+        }
+        TermsFilter filter = build_lucene_filter( mail_aliases );
+
+        Query qry = build_lucene_qry( logic_list, ana );
+
+        run_lucene_searcher(dsh_list, qry, filter, n);
+    }
+
+
+
+    ArrayList<DiskSpaceHandler> create_dsh_list(  )
+    {
+        ArrayList<DiskSpaceHandler> dsh_list = new ArrayList<DiskSpaceHandler>();
+
+        for (int v_idx = m_ctx.getVaultArray().size() - 1; v_idx >= 0; v_idx--)
+        {
+            Vault vault = m_ctx.getVaultArray().get(v_idx);
             if (vault instanceof DiskVault)
             {
                 // GO THROUGH ALL DISKSPACES OF EACH VAULT
                 DiskVault dv = (DiskVault) vault;
-                
-                for (int j = 0; j < dv.get_dsh_list().size(); j++)
+
+                for (int ds_idx = dv.get_dsh_list().size() - 1; ds_idx >= 0; ds_idx--)
                 {
-                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(ds_idx);
+                    if (dsh.is_index())
+                    {
+                        try
+                        {
+                            dsh.open_read_index();
+                            dsh_list.add(dsh);
+                        }
+                        catch (VaultException vaultException)
+                        {
+                            LogManager.err_log_warn(Main.Txt("Cannot_open_index_space") + " " + dsh.getDs().getPath());
+                        }
+                    }
+                }
+            }
+        }
+        return dsh_list;
+    }
+    TermsFilter build_lucene_filter( ArrayList<String> mail_aliases  )
+    {
+        TermsFilter filter = null;
+
+        for (int i = 0; i < mail_aliases.size(); i++)
+        {
+            String mail_adress = mail_aliases.get(i);
+            if (mail_adress.length() > 0)
+            {
+                filter = new TermsFilter();
+                filter.addTerm(new Term("To", mail_adress));
+                filter.addTerm(new Term("From", mail_adress));
+                filter.addTerm(new Term("CC", mail_adress));
+            }
+        }
+        return filter;
+    }
+
+
+    void add_level_txt( StringBuffer sb, int level, String txt )
+    {
+        sb.append(" ");
+        sb.append( txt );
+        sb.append( " " );
+    }
+    String get_op_val_txt( ExprEntry entry )
+    {
+        switch( entry.getOperation() )
+        {
+            case BEGINS_WITH: return "*" + entry.getValue();
+            case ENDS_WITH: return entry.getValue() + "*";
+            case CONTAINS: return "*" + entry.getValue() + "*";
+            case EXACTLY: return entry.getValue();
+            case REGEXP: return entry.getValue();
+        }
+        return "???";
+    }
+
+    String get_lucene_txt( ExprEntry e)
+    {
+        String val_txt = get_op_val_txt( e );
+
+        return (e.isNeg() ? "NOT "  : "") + e.getName() + ":" + val_txt;
+    }
+
+
+    void gather_lucene_qry_text( StringBuffer sb, ArrayList<LogicEntry> list, int level )
+    {
+        for (int i = 0; i < list.size(); i++)
+        {
+            LogicEntry logicEntry = list.get(i);
+
+            if (i > 0)
+            {
+                if (logicEntry.isPrevious_is_or())
+                    add_level_txt( sb, level, "OR");
+                else
+                    add_level_txt( sb, level, "AND");
+            }
+
+            if (logicEntry instanceof  GroupEntry)
+            {
+                if (logicEntry.isNeg())
+                    add_level_txt( sb, level, "NOT" + " (");
+                else
+                    add_level_txt( sb, level, "(");
+
+                gather_lucene_qry_text( sb, ((GroupEntry)logicEntry).getChildren(), level + 1 );
+
+                add_level_txt( sb, level, ")");
+            }
+            if (logicEntry instanceof  ExprEntry)
+            {
+                ExprEntry expe = (ExprEntry)logicEntry;
+                String txt = get_lucene_txt(expe);
+                add_level_txt( sb, level, txt);
+            }
+        }
+    }
+
+    
+
+    Query build_lucene_qry( ArrayList<LogicEntry> logic_list, Analyzer ana ) throws ParseException
+    {
+        StringBuffer sb = new StringBuffer();
+
+        gather_lucene_qry_text(sb, logic_list, 0);
+
+        LogManager.debug_msg(2, "QueryParser: " + sb.toString());
+
+        QueryParser parser = new QueryParser( "FLDN_BODY", ana);
+        parser.setAllowLeadingWildcard(true);
+
+        Query qry = parser.parse( sb.toString() );
+
+        return qry;
+    }
+
+
+    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list,  Query qry, Filter filter, int n ) throws IOException
+    {
+        // RESET LISTS
+        result = new ArrayList<SearchResult>();
+        searcher_list = new ArrayList<IndexSearcher>();
+
+        // FIRST PASS, OPEN INDEX READERS
+        for (int i = 0; i < dsh_list.size(); i++)
+        {
+            DiskSpaceHandler dsh = dsh_list.get(i);
+            IndexReader reader = dsh.get_read_index();
+            IndexSearcher searcher = new IndexSearcher(reader);
+            searcher_list.add(searcher);
+        }
+
+        // BUILD SEARCHABLE ARRAY
+        Searchable[] search_arr = new Searchable[dsh_list.size()];
+        for (int i = 0; i < searcher_list.size(); i++)
+        {            
+            search_arr[i] = searcher_list.get(i);
+        }
+
+        // SORT BY DATE REVERSE
+        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+
+        // PARALLEL SEARCH
+        ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
+
+        // SSSSEEEEAAAARRRRCHHHHHHH
+        TopDocs tdocs = pms.search(qry, filter, n, sort);
+
+
+        ScoreDoc[] sdocs = tdocs.scoreDocs;
+        for (int k = 0; k < sdocs.length; k++)
+        {
+            ScoreDoc scoreDoc = sdocs[k];
+
+            int doc_idx = scoreDoc.doc;
+            float score = scoreDoc.score;
+
+            Document doc = pms.doc(doc_idx);
+
+            int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
+            int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
+            long size = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_SIZE);
+
+            String uuid = doc.get(CS_Constants.FLD_UID_NAME);
+            long time = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_DATE); // HEX!!!!!
+            String subject = doc.get(CS_Constants.FLD_SUBJECT);
+
+            boolean has_attachment = false;
+            if (IndexManager.doc_field_exists(doc, CS_Constants.FLD_HAS_ATTACHMENT))
+            {
+                has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
+            }
+
+            SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
+            result.add(rs);
+
+            // STOP AFTER N RESULTS
+            if (result.size() >= n)
+            {
+                break;
+            }
+        }
+    }
+
+    void search( String mail_adress, String fld, String val, int n )
+    {
+        // GO THROUGH ALL VAULTS
+        for (int v_idx = m_ctx.getVaultArray().size() - 1; v_idx >= 0; v_idx--)
+        {
+            Vault vault = m_ctx.getVaultArray().get(v_idx);
+            if (vault instanceof DiskVault)
+            {
+                // GO THROUGH ALL DISKSPACES OF EACH VAULT
+                DiskVault dv = (DiskVault) vault;
+
+                for (int ds_idx = dv.get_dsh_list().size() - 1; ds_idx >= 0; ds_idx--)
+                {
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(ds_idx);
                     if (dsh.is_index())
                     {
                         // START A SERACH TODO: DO THIS IN BACKGROUND
                         try
                         {
                             IndexReader reader = dsh.open_read_index();
-                            IndexSearcher searcher = new IndexSearcher( reader );
+                            IndexSearcher searcher = new IndexSearcher(reader);
 
-                            FilterIndexReader fir = new FilterIndexReader( reader );
+                            FilterIndexReader fir = new FilterIndexReader(reader);
 
                             try
                             {
@@ -313,28 +685,28 @@ public class SearchCall
                                 if (val.length() > 0)
                                 {
                                     Analyzer anal = dsh.create_read_analyzer();
-                                    QueryParser qp = new QueryParser(fld, anal );
+                                    QueryParser qp = new QueryParser(fld, anal);
                                     qry = qp.parse(val);
                                 }
                                 else
                                 {
                                     qry = new MatchAllDocsQuery();
                                 }
-                                
+
                                 TermsFilter filter = null;
-                                
+
                                 if (mail_adress != null && mail_adress.length() > 0)
                                 {
                                     filter = new TermsFilter();
-                                    filter.addTerm(new Term( "To", mail_adress));
-                                    filter.addTerm(new Term( "From", mail_adress));
-                                    filter.addTerm(new Term( "CC", mail_adress));
+                                    filter.addTerm(new Term("To", mail_adress));
+                                    filter.addTerm(new Term("From", mail_adress));
+                                    filter.addTerm(new Term("CC", mail_adress));
                                 }
 
                                 Sort sort = new Sort(CS_Constants.FLD_TM);
 
                                 // SSSSEEEEAAAARRRRCHHHHHHH
-                                TopDocs tdocs = searcher.search( qry, filter, n );
+                                TopDocs tdocs = searcher.search(qry, filter, n);
 
                                 ScoreDoc[] sdocs = tdocs.scoreDocs;
                                 for (int k = 0; k < sdocs.length; k++)
@@ -346,58 +718,81 @@ public class SearchCall
 
                                     Document doc = fir.document(doc_idx);
 
-                                    int da_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DA );
-                                    int ds_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DS );
-                                    long size = IndexManager.doc_get_hex_long( doc, CS_Constants.FLD_SIZE );
-                                    
+                                    int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
+                                    int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
+                                    long size = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_SIZE);
+
                                     String uuid = doc.get(CS_Constants.FLD_UID_NAME);
-                                    long time = IndexManager.doc_get_hex_long( doc, CS_Constants.FLD_DATE ); // HEX!!!!!
-                                    String subject  = doc.get( CS_Constants.FLD_SUBJECT );
+                                    long time = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_DATE); // HEX!!!!!
+                                    String subject = doc.get(CS_Constants.FLD_SUBJECT);
 
                                     boolean has_attachment = false;
-                                    if (IndexManager.doc_field_exists( doc, CS_Constants.FLD_HAS_ATTACHMENT ))
+                                    if (IndexManager.doc_field_exists(doc, CS_Constants.FLD_HAS_ATTACHMENT))
+                                    {
                                         has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
+                                    }
 
-                                    SearchResult rs = new SearchResult( searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment );
+                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
                                     result.add(rs);
+
+                                    // STOP AFTER N INDEX
+                                    if (result.size() >= n)
+                                    {
+                                        break;
+                                    }
                                 }
                             }
                             catch (ParseException ex)
                             {
-                                LogManager.err_log("Cannot parse query" , ex);
+                                LogManager.err_log("Cannot parse query", ex);
                             }
                             catch (IOException exception)
                             {
-                                LogManager.err_log("Cannot read term doc list from index" , exception);
+                                LogManager.err_log("Cannot read term doc list from index", exception);
                             }
                         }
                         catch (VaultException vaultException)
                         {
-                            LogManager.err_log("Cannot open index " + dsh.getDs().getPath() , vaultException);
+                            LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
                         }
                     }
                 }
             }
         }
     }
+
     void close()
     {
         result.clear();
-    }
 
+        // CLOSE INDEX READERS AND SEARCHERS AGAIN
+        for (int i = 0; i < searcher_list.size(); i++)
+        {
+            try
+            {
+                searcher_list.get(i).getIndexReader().close();
+                searcher_list.get(i).close();
+            }
+            catch (IOException iOException)
+            {
+            }
+        }
+        searcher_list.clear();
+
+    }
 
     private String open_RMX_mail_stream( SearchResult result )
     {
         try
         {
-            DiskSpaceHandler dsh = get_dsh( result.ds_id );
-            Vault vault = get_vault( result.ds_id );
+            DiskSpaceHandler dsh = get_dsh(result.ds_id);
+            Vault vault = get_vault(result.ds_id);
             long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
-            
-            RFCGenericMail mail = dsh.get_mail_from_time( time, dsh.get_enc_mode() );
+
+            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
             InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
 
-            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is , result.size);
+            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is, result.size);
 
             return ret;
         }
@@ -407,6 +802,4 @@ public class SearchCall
             return "1: cannot open";
         }
     }
-
-
 }

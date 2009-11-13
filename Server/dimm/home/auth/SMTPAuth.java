@@ -9,6 +9,8 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.Socket;
 
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.URLName;
@@ -16,9 +18,6 @@ import javax.mail.URLName;
 
 
 
-class SMTPUserContext
-{
-}
 
 
 
@@ -28,7 +27,12 @@ public class SMTPAuth extends GenericRealmAuth
 
     SMTPUserContext user_context;
 
-    SMTPAuth(  String host, int port, int flags )
+    public SMTPUserContext get_user_context()
+    {
+        return user_context;
+    }
+
+    public SMTPAuth(  String host, int port, int flags )
     {
         super(flags, host, port);
         
@@ -38,7 +42,6 @@ public class SMTPAuth extends GenericRealmAuth
             if (is_ssl())
                 port = 465;
         }
-
     }
 
    
@@ -46,8 +49,11 @@ public class SMTPAuth extends GenericRealmAuth
     @Override
     public void close_user_context()
     {
-        close_user(user_context);
-        user_context = null;
+        if (user_context != null)
+        {
+            close_user(user_context);
+            user_context = null;
+        }
     }
 
     
@@ -77,7 +83,7 @@ public class SMTPAuth extends GenericRealmAuth
     {
         try
         {
-            transport.close();
+            smtp_sock.close();
             return true;
         }
         catch (Exception exc)
@@ -92,7 +98,11 @@ public class SMTPAuth extends GenericRealmAuth
     @Override
     public boolean is_connected()
     {
-        return smtp_sock != null;
+        if (smtp_sock != null)
+        {
+            return smtp_sock.isConnected();
+        }
+        return false;
     }
 
     @Override
@@ -118,8 +128,8 @@ public class SMTPAuth extends GenericRealmAuth
         return false;
     }
 
-    SMTPTransport transport;
-    SMTPUserContext open_user( String user_principal, String pwd, String mailadr )
+    
+    public SMTPUserContext open_user( String user_principal, String pwd, String mailadr )
     {
         Properties props = new Properties();
         props.put("mail.host", host);
@@ -135,32 +145,37 @@ public class SMTPAuth extends GenericRealmAuth
         {
             Session mailConnection = Session.getInstance(props, null);
             URLName params = new URLName("smtp", host, port, null, user_principal, pwd);
-            transport = new SMTPTransport(mailConnection, params);
+            SMTPTransport transport = new SMTPTransport(mailConnection, params);
 
             transport.connect(smtp_sock);
 
             int code = transport.getLastReturnCode();
             //System.out.println("" + code);
-            if (is_smtp_ok(code))
+            // CHECK MAIL ALSO
+            if (mailadr != null && mailadr.length() > 0)
             {
-                code = transport.simpleCommand("MAIL FROM:" + mailadr);
-                String ret = transport.getLastServerResponse();
-                LogManager.debug_msg(4, ret);
+                if (is_smtp_ok(code))
+                {
+                    code = transport.simpleCommand("MAIL FROM:" + mailadr);
+                    String ret = transport.getLastServerResponse();
+                    LogManager.debug_msg(4, ret);
+                }
+                if (is_smtp_ok(code))
+                {
+                    code = transport.simpleCommand("RCPT TO:" + mailadr);
+                    String ret = transport.getLastServerResponse();
+                    LogManager.debug_msg(4, ret);
+                }
+                if (is_smtp_ok(code))
+                {
+                    code = transport.simpleCommand("RSET");
+                    String ret = transport.getLastServerResponse();
+                    LogManager.debug_msg(4, ret);
+                }
             }
+
             if (is_smtp_ok(code))
-            {
-                code = transport.simpleCommand("RCPT TO:" + mailadr);
-                String ret = transport.getLastServerResponse();
-                LogManager.debug_msg(4, ret);
-            }
-            if (is_smtp_ok(code))
-            {
-                code = transport.simpleCommand("RSET");
-                String ret = transport.getLastServerResponse();
-                LogManager.debug_msg(4, ret);
-            }
-            if (is_smtp_ok(code))
-                return new SMTPUserContext();
+                return new SMTPUserContext(transport);
             else
             {
                 String ret = transport.getLastServerResponse();
@@ -169,13 +184,22 @@ public class SMTPAuth extends GenericRealmAuth
         }
         catch (MessagingException messagingException)
         {
+            LogManager.err_log( "SMTP auth aborted: ", messagingException);
         }
         return null;
     }
 
 
     void close_user( SMTPUserContext uctx )
-    {       
+    {
+        try
+        {
+            uctx.transport.close();
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(SMTPAuth.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public static void main( String[] args)
@@ -192,7 +216,4 @@ public class SMTPAuth extends GenericRealmAuth
             auth.disconnect();
         }
     }
-
-    
-  
 }

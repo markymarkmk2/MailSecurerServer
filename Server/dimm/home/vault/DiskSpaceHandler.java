@@ -118,7 +118,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot open read index: ", iex);
+            throw new VaultException( ds, "Cannot open read index: " + iex.getMessage());
         }
     }
     public void close_read_index() throws VaultException
@@ -277,7 +277,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot read info file: " , ex);
+            throw new VaultException( ds, "Cannot read info file: " + ex.getMessage());
         }
     }
     public void close() throws VaultException

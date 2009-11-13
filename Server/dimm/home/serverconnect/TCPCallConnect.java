@@ -123,6 +123,10 @@ public class TCPCallConnect extends WorkerParent
         {
             server_port = Main.ws_port;
         }
+        if (!use_ssl)
+        {
+            LogManager.err_log_warn("Starting TCPListener w/o SSL on  port " + server_port);
+        }
 
 
         tcp_cmd_buff = new byte[TCPCMDBUFF_LEN];
