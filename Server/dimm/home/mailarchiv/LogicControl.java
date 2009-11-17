@@ -39,6 +39,7 @@ import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
+import home.shared.mail.RFCGenericMail;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -73,7 +74,7 @@ class MailBGEntry
     {
         try
         {
-            control.lowlevel_add_mail_file(mail, mandant, da);
+            control.lowlevel_add_mail_file(mail, mandant, da, /*bg_idx*/ true);
         }
         catch (ArchiveMsgException ex)
         {
@@ -85,7 +86,7 @@ class MailBGEntry
             {
                 try
                 {
-                    Main.get_control().move_to_quarantine(mail, mandant);
+                    Main.get_control().move_to_hold_buffer(mail, mandant, da);
                 }
                 catch (IOException iOException)
                 {
@@ -153,12 +154,12 @@ public class LogicControl
 
 
         
-        check_db_changes( change_session, "select count(smtp_port) from mandant where smtp_port is null", true, "alter table mandant add smtp_port int", "update mandant set smtp_port=0"  );
+        check_db_changes( change_session, "select smtp_port from mandant where smtp_port is null", false, "update mandant set smtp_port=0", null  );
         check_db_changes( change_session, "select count(smtp_user) from mandant", true, "alter table mandant add smtp_user varchar(80)", "update mandant set smtp_user=''" );
         check_db_changes( change_session, "select count(smtp_pwd) from mandant", true, "alter table mandant add smtp_pwd varchar(80)", "update mandant set smtp_pwd=''" );
-        check_db_changes( change_session, "select count(smtp_flags) from mandant where smtp_flags is null", true, "alter table mandant add smtp_flags int", "update mandant set smtp_flags=0" );
+        check_db_changes( change_session, "select smtp_flags from mandant where smtp_flags is null", false, "update mandant set smtp_flags=0", null );
 
-        if (check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true, "alter table role drop accountmatch", null))
+        if (check_db_changes( change_session, "select count(substr(accountmatch, 30000,2))  from role", true, "alter table role drop accountmatch", null))
         {
             check_db_changes( change_session, "select substr(accountmatch, 30000,2)  from role", true,
                             "alter table role add accountmatch varchar(32000)", "update role set accountmatch=''" );
@@ -315,7 +316,7 @@ public class LogicControl
         add_rfc_file_mail(mf, mandant, da, background, delete_afterwards);
     }
 
-    void lowlevel_add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da)  throws ArchiveMsgException, VaultException, IndexException
+    void lowlevel_add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da, boolean background_index)  throws ArchiveMsgException, VaultException, IndexException
     {
         MandantContext context = get_m_context(mandant);
         if (context == null)
@@ -333,12 +334,12 @@ public class LogicControl
                 DiskVault dv = (DiskVault)vault;
                 if (dv.get_da() == da)
                 {
-                    vault.archive_mail(mf, context, da);
+                    vault.archive_mail(mf, context, da, background_index);
                 }
             }
             else
             {
-                vault.archive_mail(mf, context, da);
+                vault.archive_mail(mf, context, da, background_index);
             }
         }
     }
@@ -358,15 +359,15 @@ public class LogicControl
         else
         {
             LogManager.log(Level.SEVERE, "No parallel archive");
-            lowlevel_add_mail_file(mf, mandant, da);
+            lowlevel_add_mail_file(mf, mandant, da, background);
 
-            if (delete_afterwards)
+           /* if (delete_afterwards)
             {
                 if (mf.getFile().exists())
                     mf.delete();
                 else
                     LogManager.err_log("Mail file " + mf.getFile().getAbsolutePath() + " was already deleted");
-            }
+            }*/
         }
     }
 
@@ -435,9 +436,13 @@ public class LogicControl
     {
         OutputStream bos = null;
         RFCFileMail fm = null;
+        if (encoded)
+        {
+            suffix = suffix + RFCGenericMail.get_suffix_for_encoded();
+        }
+
 
         File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
-
 
         try
         {
@@ -473,6 +478,10 @@ public class LogicControl
         RFCFileMail fm = null;
         OutputStream bos = null;
         byte[] buff = new byte[CS_Constants.STREAM_BUFFER_LEN];
+        if (encoded)
+        {            
+            suffix = suffix + RFCGenericMail.get_suffix_for_encoded();
+        }
 
         File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
         
@@ -526,13 +535,29 @@ public class LogicControl
         return f;
     }
 
-    public RFCFileMail create_import_filemail_from_eml_stream( Mandant mandant, InputStream is, String prefix) throws ArchiveMsgException
+    public RFCFileMail create_import_filemail_from_eml_stream( Mandant mandant, InputStream is, String prefix, DiskArchive da) throws ArchiveMsgException
     {
-        return create_filemail_from_msg_stream(mandant, is, "import", prefix, "eml");
+        // CREATE DA.ID AS FIRST ENTRY IN NAME
+        prefix = "" + da.getId() + "." + prefix + ".";
+        return create_filemail_from_msg_stream(mandant, is, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml");
     }
-    public RFCFileMail create_import_filemail_from_eml( Mandant mandant, Message msg, String prefix) throws ArchiveMsgException
+    public RFCFileMail create_import_filemail_from_eml( Mandant mandant, Message msg, String prefix, DiskArchive da) throws ArchiveMsgException
     {
-        return create_filemail_from_msg(mandant, msg, "import", prefix, "eml");
+        prefix = "" + da.getId() + "." + prefix + ".";
+        return create_filemail_from_msg(mandant, msg, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml");
+    }
+    public int get_da_id_from_import_filemail( String name )
+    {
+        try
+        {
+            String[] s = name.split("\\.");
+            return Integer.parseInt(s[0]);
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log("Found invalid import mail entry " + name);
+            return -1;
+        }
     }
 
     public void reinit_mandant( int mid)
@@ -590,6 +615,137 @@ public class LogicControl
             {
                 LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
             }
+        }
+    }
+
+    void resolve_hold_buffer(MandantContext m_ctx )
+    {        
+        try
+        {
+            File hold_buffer_dir = m_ctx.getTempFileHandler().get_hold_mail_path();
+            if (hold_buffer_dir.exists() && hold_buffer_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_hold_buffer") );
+
+                File[] flist = hold_buffer_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String hold_uuid = file.getName();
+
+                    int da_id = get_da_id_from_hold_buffer_filename(hold_uuid);
+                    long time = get_date_from_hold_buffer_filename(hold_uuid);
+                    DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_hold_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+                    boolean encoded = hold_uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
+
+                    RFCFileMail mf = new RFCFileMail( file, new Date(time), encoded );
+
+                    // HANDLE A NOT IN BG
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    this.add_rfc_file_mail(mf, m_ctx.getMandant(), dv.get_da(), false, true);
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_hold_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up hold buffer", e);
+            return;
+        }
+    }
+    void resolve_mailimport_buffer(MandantContext m_ctx )
+    {
+        try
+        {
+            File import_buffer_dir = m_ctx.getTempFileHandler().get_import_mail_path();
+            if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer") );
+
+                File[] flist = import_buffer_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String uuid = file.getName();
+
+                    int da_id = get_da_id_from_import_filemail(uuid);
+                    boolean encoded = uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
+                    
+                    // SKIP INVALID ENTRIES
+                    if (da_id == -1)
+                        continue;
+
+                    DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_import_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+                    RFCFileMail mf = new RFCFileMail( file, new Date(), encoded );
+
+                    // HANDLE ADD NOT IN BG
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    this.add_rfc_file_mail(mf, m_ctx.getMandant(), dv.get_da(), false, true);
+
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up import buffer", e);
+            return;
+        }
+    }
+
+    void resolve_clientimport_buffer(MandantContext m_ctx )
+    {
+        try
+        {
+            File import_dir = m_ctx.getTempFileHandler().get_clientimport_path();
+            if (import_dir.exists() && import_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer") );
+
+                File[] flist = import_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String uuid = file.getName();
+
+                    int da_id = m_ctx.getTempFileHandler().get_da_id_from_import_file(uuid);
+                    
+
+                    // SKIP INVALID ENTRIES
+                    if (da_id == -1)
+                        continue;
+
+                    DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    Main.get_control().register_new_import( m_ctx,  dv.get_da(), file.getAbsolutePath() );
+
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up import buffer", e);
+            return;
         }
     }
 
@@ -803,6 +959,16 @@ public class LogicControl
             for (int i = 0; i < mandanten_list.size(); i++)
             {
                 MandantContext ctx = mandanten_list.get(i);
+
+                // RESOLVE ANY LEFT OVER MAILS (WRONG DS...)
+                resolve_hold_buffer( ctx );
+                
+                // RESOLVE ANY LEFT OVER IMPORTS (ABORTED SERVER)
+                resolve_mailimport_buffer( ctx );
+
+                // RESOLVE ANY LEFT OVER CLIENTIMPORTS (MBOX, EML, FROM ABORTED SERVER)
+                resolve_clientimport_buffer( ctx );
+
 
                 // RESTART LOCAL WORKER LIST
                 ctx.start_run_loop();
@@ -1113,9 +1279,10 @@ public class LogicControl
             }
             case CS_Constants.ITYPE_EML:
             {
+                RFCFileMail rfc = new RFCFileMail(new File(path), false);
                 try
                 {
-                    add_mail_file(new File(path), m_ctx.getMandant(), da, true, true);
+                    add_rfc_file_mail( rfc, m_ctx.getMandant(), da, true, true);
                 }
                 catch (ArchiveMsgException ex)
                 {
@@ -1135,7 +1302,7 @@ public class LogicControl
                     LogManager.log(Level.SEVERE, null, ex);
                     try
                     {
-                        move_mail_to_hold_buffer(m_ctx, path);
+                        move_mail_to_hold_buffer(m_ctx, rfc, da);
                     }
                     catch (IOException ex1)
                     {
@@ -1154,7 +1321,6 @@ public class LogicControl
                 Main.err_log_fatal(Main.Txt("Invalid_mailbox_type") + ": " + path);
                 throw new ArchiveMsgException(Main.Txt("Invalid_mailbox_type"));
             }
-
         }
     }
 
@@ -1194,8 +1360,17 @@ public class LogicControl
     {
         File file = new File(path);
         File new_file = new File( dir, file.getName() );
-        while (new_file.exists())
+        int mr = 1000;
+        while (new_file.exists() && mr > 0)
         {
+            try
+            {
+                Thread.sleep(4);
+            }
+            catch (InterruptedException interruptedException)
+            {
+            }
+
             String tmp_name = file.getName();
             int idx = tmp_name.lastIndexOf('.');
             if (idx > 0)
@@ -1203,18 +1378,46 @@ public class LogicControl
                 tmp_name = tmp_name.substring(0, idx) + "_" + System.currentTimeMillis() + file.getName().substring(idx);
             }
             new_file = new File( dir, tmp_name );
+            mr--;
         }
         file.renameTo(new_file);
     }
+    private synchronized void move_mail_to_file( String path, File dir, String new_name ) throws IOException
+    {
+        File file = new File(path);
+        File new_file = new File( dir, new_name );
+        int mr = 1000;
+        while (new_file.exists() && mr > 0)
+        {
+            try
+            {
+                Thread.sleep(4);
+            }
+            catch (InterruptedException interruptedException)
+            {
+            }
+            String tmp_name = new_name;
+            int idx = tmp_name.lastIndexOf('.');
+            if (idx > 0)
+            {
+                tmp_name = tmp_name.substring(0, idx) + "_" + System.currentTimeMillis() + file.getName().substring(idx);
+            }
+            new_file = new File( dir, tmp_name );
+            mr--;
+        }
+        file.renameTo(new_file);
+    }
+
 
     private void move_mail_to_quarantine( MandantContext m_ctx, String path ) throws IOException
     {
         move_mail_to_dir( path, m_ctx.getTempFileHandler().get_quarantine_mail_path());
     }
 
-    public void move_mail_to_hold_buffer( MandantContext m_ctx, String path ) throws IOException
+    public void move_mail_to_hold_buffer( MandantContext m_ctx, RFCFileMail mail, DiskArchive da ) throws IOException
     {
-        move_mail_to_dir( path, m_ctx.getTempFileHandler().get_hold_mail_path());
+        String hold_file_name = get_hold_buffer_filename( mail, da);
+        move_mail_to_file( mail.getFile().getAbsolutePath(), m_ctx.getTempFileHandler().get_hold_mail_path(), hold_file_name );
     }
     public void move_mail_to_index_buffer( MandantContext m_ctx, String path ) throws IOException
     {
@@ -1226,7 +1429,31 @@ public class LogicControl
         MandantContext m_ctx = get_mandant_by_id( mandant.getId());
 
         move_mail_to_quarantine( m_ctx, mail.getFile().getAbsolutePath() );
+    }
+    public void move_to_hold_buffer( RFCFileMail mail, Mandant mandant, DiskArchive da ) throws IOException
+    {
+        MandantContext m_ctx = get_mandant_by_id( mandant.getId());
 
+        move_mail_to_hold_buffer( m_ctx, mail, da );
+    }
+    String get_hold_buffer_filename( RFCFileMail mail, DiskArchive da )
+    {
+        String file = "" + da.getId() + "." + mail.getDate().getTime() + ".eml";
+        if (mail.isEncoded())
+        {
+            file += RFCGenericMail.get_suffix_for_encoded();
+        }
+        return file;
+    }
+    int get_da_id_from_hold_buffer_filename( String name )
+    {
+        String[] s = name.split("\\.");
+        return Integer.parseInt(s[0]);
+    }
+    long get_date_from_hold_buffer_filename( String name )
+    {
+        String[] s = name.split("\\.");
+        return Long.parseLong(s[1]);
     }
 
     MilterServer get_milter_server()

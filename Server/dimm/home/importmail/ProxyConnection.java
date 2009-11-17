@@ -78,7 +78,7 @@ public abstract class ProxyConnection
     abstract int get_thread_count();
 
     abstract void dec_thread_count();
-    abstract void runConnection(final Socket clientSocket);
+    abstract void runConnection();
     abstract String[] get_single_line_commands();
     abstract String[] get_multi_line_commands();
     abstract public int get_default_port();
@@ -87,17 +87,18 @@ public abstract class ProxyConnection
 
     ProxyEntry pe;
 
-    ProxyConnection(ProxyEntry _pe)
+    ProxyConnection(ProxyEntry _pe, Socket _clientSocket)
     {
         pe = _pe;       
         m_error = -1;
         m_Command = -1;
+        clientSocket = _clientSocket;
     }
 
     public boolean is_connected()
     {
         if (clientSocket == null)
-            return true;
+            return false;
 
         return !clientSocket.isClosed();
     }
@@ -141,7 +142,7 @@ public abstract class ProxyConnection
     }
 
 
-    public void handleConnection(final Socket clientSocket)
+    public void handleConnection()
     {
         Thread sockThread;
 
@@ -158,7 +159,7 @@ public abstract class ProxyConnection
 
         if (get_thread_count() > MAX_THREADS)
         {
-            runConnection(clientSocket);
+            runConnection();
             synchronized (mtx)
             {
                 dec_thread_count();
@@ -175,7 +176,7 @@ public abstract class ProxyConnection
                 public void run()
                 {
 
-                    runConnection(clientSocket);
+                    runConnection();
 
                     synchronized (mtx)
                     {
@@ -815,6 +816,35 @@ public abstract class ProxyConnection
         return -1;
 
     }
+
+    int read_one_line( InputStream serverReader, byte[] first_line )
+    {
+        int i = 0;
+        for (i = 0; i < first_line.length; i++)
+        {
+            byte b = 0;
+            try
+            {
+                first_line[i] = (byte) serverReader.read();
+            }
+            catch (IOException iOException)
+            {
+                return 0;
+            }
+
+            b = first_line[i];
+            if (b == '\n')
+            {
+                break;
+            }
+        }
+        // I IS INDEX, WE NEDD LENGTH
+        if (i < first_line.length)
+            i++;
+
+        return i;
+    }
+
 
 
 }

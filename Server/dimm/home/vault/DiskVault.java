@@ -148,12 +148,12 @@ public class DiskVault implements Vault, StatusHandler
     }
 
     @Override
-    public boolean archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException, IndexException
+    public boolean archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive, boolean background_index ) throws ArchiveMsgException, VaultException, IndexException
     {
         boolean ret = false;
         try
         {
-            ret = low_level_archive_mail(msg, context, diskArchive);
+            ret = low_level_archive_mail(msg, context, diskArchive, background_index);
         }
         catch (IOException ex)
         {
@@ -161,7 +161,7 @@ public class DiskVault implements Vault, StatusHandler
             // IF MAIL IS BIGGER THAN DISKSPACE WE CHOKE
             try
             {
-                ret = low_level_archive_mail(msg, context, diskArchive);
+                ret = low_level_archive_mail(msg, context, diskArchive, background_index);
             }
             catch (IOException _ex)
             {
@@ -178,12 +178,18 @@ public class DiskVault implements Vault, StatusHandler
             if (!dsh.is_open())
             {
                 dsh.open();
+
+                // OPEN WRITE_INDEX
+                dsh.open_write_index();
             }
         }
         catch (VaultException vaultException)
         {
+            LogManager.err_log(Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
             dsh.create();
             dsh.open();
+            // OPEN WRITE_INDEX
+            dsh.open_write_index();
         }
 
 
@@ -205,18 +211,45 @@ public class DiskVault implements Vault, StatusHandler
                 throw new VaultException("No diskspace for " + (dsh.is_data() ? "data" : "index") + " found" );
             }
             dsh = new_dsh;
+
+            try
+            {
+                if (!dsh.is_open())
+                {
+                    dsh.open();
+                    // OPEN WRITE_INDEX
+                    dsh.open_write_index();
+                }
+            }
+            catch (VaultException vaultException)
+            {
+                LogManager.err_log( Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
+                dsh.create();
+                
+                dsh.open();
+                // OPEN WRITE_INDEX
+                dsh.open_write_index();
+            }
         }
         return dsh;
     }
 
     
 
-    boolean low_level_archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive ) throws ArchiveMsgException, IOException, VaultException, IndexException
+    boolean low_level_archive_mail( RFCGenericMail msg, MandantContext context, DiskArchive diskArchive, boolean background_index ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
         int index = 0;
 
         DiskSpaceHandler data_dsh = get_next_active_data_diskspace( index );
         DiskSpaceHandler index_dsh = get_next_active_index_diskspace( index );
+        if (data_dsh == null)
+        {
+            throw new VaultException("No diskspace for data found" );
+        }
+        if (index_dsh == null)
+        {
+            throw new VaultException("No diskspace for index found" );
+        }
 
         // GET THE DISKSPACES FOR DATA AND INDEX
         data_dsh = open_dsh( data_dsh, msg.get_length() );
@@ -225,7 +258,7 @@ public class DiskVault implements Vault, StatusHandler
 
 
         // AND SHOVE IT RIGHT IN!!!!
-        write_mail_file( context, data_dsh, index_dsh, msg );
+        write_mail_file( context, data_dsh, index_dsh, msg, background_index );
 
         // ADD CAPACITY COUNTER
         data_dsh.add_message_info(msg);
@@ -236,7 +269,7 @@ public class DiskVault implements Vault, StatusHandler
         return true;
     }
 
-    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCGenericMail msg ) throws ArchiveMsgException, IndexException
+    void write_mail_file( MandantContext m_ctx, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean background_index ) throws ArchiveMsgException, IndexException
     {
         
         int da_id = -1;
@@ -281,13 +314,15 @@ public class DiskVault implements Vault, StatusHandler
         
         parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, parallel_index);
         
-        if (parallel_index)
+        if (parallel_index && background_index)
         {
             idx.create_IndexJobEntry_task(m_ctx, uuid, da_id, ds_id,  index_dsh, msg, /*delete_after_index*/true);
         }
         else
         {
-            LogManager.log(Level.SEVERE, "No parallel index");
+            if (!parallel_index)
+                LogManager.log(Level.SEVERE, "No parallel index");
+            
             // NO, DO RIGHT HERE
             idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true);
         }

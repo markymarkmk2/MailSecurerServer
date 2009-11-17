@@ -47,8 +47,8 @@ public class ImportMailFile extends AbstractCommand
         try
         {
             String oid = pt.GetString("OI:");  // STREAM HANDLE FROM A PREVIOUS upload_mail_file CALL
-            long m_id = pt.GetLongValue("MA:");
-            long da_id = pt.GetLongValue("DA:");
+            int m_id = (int)pt.GetLongValue("MA:");
+            int da_id = (int)pt.GetLongValue("DA:");
 
             // GET STRUCTS FROM ARGS
             MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
@@ -72,7 +72,7 @@ public class ImportMailFile extends AbstractCommand
             // NOW CLOSE THE STREAM
             conn.RMX_CloseOutStream(oid);
 
-            File nf = m_ctx.getTempFileHandler().create_new_import_file(ose.file.getName());
+            File nf = m_ctx.getTempFileHandler().create_new_import_file(ose.file.getName(), da_id);
 
             if (!ose.file.renameTo(nf))
             {

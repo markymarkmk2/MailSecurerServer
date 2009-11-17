@@ -17,6 +17,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
+import home.shared.CS_Constants.USERMODE;
 import home.shared.filter.ExprEntry;
 import home.shared.filter.FilterMatcher;
 import home.shared.filter.GroupEntry;
@@ -153,7 +154,7 @@ public class SearchCall
         return "0: sc" + id + " N:" + sc.result.size();
     }
 
-    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd )
+    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level )
     {
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
         if (m_ctx == null)
@@ -163,7 +164,7 @@ public class SearchCall
         SearchCall sc = new SearchCall(m_ctx);
         try
         {
-            sc.search_lucene( user, pwd, compressed_filter, n );
+            sc.search_lucene( user, pwd, compressed_filter, n, level );
         }
         catch (Exception e)
         {
@@ -431,7 +432,7 @@ public class SearchCall
         return searcher.doc(doc_index);
     }
 
-    void search_lucene( String user, String pwd, String compressed_filter, int n ) throws IOException, IllegalArgumentException, ParseException
+    void search_lucene( String user, String pwd, String compressed_filter, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
     {
         ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list(compressed_filter, true);
 
@@ -443,12 +444,18 @@ public class SearchCall
         Analyzer ana = dsh_list.get(0).create_read_analyzer();
 
 
-        ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
-        if (mail_aliases == null || mail_aliases.size() == 0)
+        // BUILD USER FILTER
+        TermsFilter filter = null;
+        if (level != USERMODE.UL_ADMIN  && level != USERMODE.UL_SYSADMIN)
         {
-            throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
+            ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
+            if (mail_aliases == null || mail_aliases.size() == 0)
+            {
+                throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
+            }
+
+            build_lucene_filter( mail_aliases );
         }
-        TermsFilter filter = build_lucene_filter( mail_aliases );
 
         Query qry = build_lucene_qry( logic_list, ana );
 
@@ -520,8 +527,8 @@ public class SearchCall
         {
             case BEGINS_WITH: return "*" + entry.getValue();
             case ENDS_WITH: return entry.getValue() + "*";
-            case CONTAINS: return "*" + entry.getValue() + "*";
-            case EXACTLY: return entry.getValue();
+            case CONTAINS_SUBSTR: return "*" + entry.getValue() + "*";
+            case CONTAINS: return entry.getValue();
             case REGEXP: return entry.getValue();
         }
         return "???";

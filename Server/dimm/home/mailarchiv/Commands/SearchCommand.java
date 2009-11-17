@@ -7,6 +7,7 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.CS_Constants.USERMODE;
 import java.util.ArrayList;
 
 /**
@@ -83,8 +84,9 @@ public class SearchCommand extends AbstractCommand
             String pwd = pt.GetString("PW:");
             String compressed_filter = pt.GetString("FL:");
             int n = (int)pt.GetLongValue("CNT:");
+            USERMODE level = USERMODE.valueOf( pt.GetString("UL:") );
 
-            answer = SearchCall.open_filtersearch_call( ma_id, compressed_filter, n, user, pwd);
+            answer = SearchCall.open_filtersearch_call( ma_id, compressed_filter, n, user, pwd, level);
 
             return true;
         }        

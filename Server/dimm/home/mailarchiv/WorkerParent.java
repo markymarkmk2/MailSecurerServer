@@ -22,6 +22,7 @@ public abstract class WorkerParent
     private boolean shutdown;
     private String statusTxt = "Startup";
     private boolean goodState;
+    String last_status = "";
     
     /** Creates a new instance of WorkerParent */
     public WorkerParent(String _name)
@@ -57,14 +58,18 @@ public abstract class WorkerParent
     public void setStatusTxt(String statusTxt)
     {
         this.statusTxt = statusTxt;
-        if (statusTxt.length() > 0)
+        if (statusTxt.length() > 0 && statusTxt.compareTo(last_status) != 0)
+        {
             LogManager.log(Level.FINEST, statusTxt );
+        }
+        last_status = statusTxt;
     }
 
     public void clrStatusTxt(String statusTxt)
     {
         if (statusTxt.compareTo(this.statusTxt) == 0)
             this.statusTxt = "";
+        last_status = statusTxt;
     }
 
     public boolean isGoodState()

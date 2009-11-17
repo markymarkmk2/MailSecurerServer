@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.IOException;
 
 public class POP3Connection extends ProxyConnection
 {
@@ -19,9 +20,9 @@ public class POP3Connection extends ProxyConnection
 
     static int thread_count = 0;
 
-    public POP3Connection(ProxyEntry pe)
+    public POP3Connection(ProxyEntry pe,Socket s)
     {
-        super( pe );
+        super( pe, s );
     }
     
     @Override
@@ -39,13 +40,13 @@ public class POP3Connection extends ProxyConnection
  
    
     @Override
-    public void runConnection(Socket _clientSocket)
+    public void runConnection()
     {
         boolean do_quit = false;
         m_error = -1;
         m_Command = -1;
         
-        clientSocket = _clientSocket;
+        
                     
 
         try
@@ -153,6 +154,7 @@ public class POP3Connection extends ProxyConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
+
                     if (RETRBYTE() > 0)
                     {
                         clientWriter.write(getErrorMessage().getBytes());
@@ -217,6 +219,31 @@ public class POP3Connection extends ProxyConnection
 
     private int RETRBYTE()
     {
+        // FIRST CHECK HEADER:
+        byte[] first_line = new byte[256];
+        int rlen = read_one_line(serverReader, first_line);
+        if (rlen == 0)
+        {
+            m_error = ERROR_NO_ANSWER;
+            return m_error;
+        }
+        try
+        {
+            // WRITE TO CLIENT
+            clientWriter.write(first_line, 0, rlen);
+
+            // IF SERVER GAVE ERR WE ARE DONE
+            if (first_line[0] == '-')
+            {
+                return 0;
+            }
+        }
+        catch (IOException iOException)
+        {
+            m_error = ERROR_NO_ANSWER;
+            return m_error;
+        }
+        
 
         File rfc_dump = new File(Main.RFC_PATH + "pop3_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         

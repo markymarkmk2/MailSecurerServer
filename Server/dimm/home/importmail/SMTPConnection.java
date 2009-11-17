@@ -37,9 +37,9 @@ public class SMTPConnection extends ProxyConnection
         return multi_line_commands;
     }
 
-    public SMTPConnection(ProxyEntry pe)
+    public SMTPConnection(ProxyEntry pe, Socket s)
     {
-        super( pe );
+        super( pe, s );
     }
 
     
@@ -57,14 +57,13 @@ public class SMTPConnection extends ProxyConnection
     
    
     @Override
-    public void runConnection(Socket _clientSocket)
+    public void runConnection()
     {
         boolean do_quit = false;
         
         m_error = -1;
         m_Command = -1;
 
-        clientSocket = _clientSocket;
         try
         {
             // set the socket timeout

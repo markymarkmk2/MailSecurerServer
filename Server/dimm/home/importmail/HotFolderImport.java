@@ -12,6 +12,7 @@ import home.shared.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
@@ -145,6 +146,8 @@ class DirectoryEntry
     DirectoryEntry( File f )
     {
         file = f;
+        children = new ArrayList<DirectoryEntry>();
+        
         if (file.isDirectory())
         {
             File[] list = file.listFiles();
@@ -369,6 +372,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
             catch (Exception e)
             {
                 status.set_status(StatusEntry.ERROR, Main.Txt("error") + " " + e.getMessage() );
+                e.printStackTrace();
             }
         }
         finished = true;
@@ -392,18 +396,20 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         if (entry.getFile().isDirectory() || (flags & HF_FLAG_ZIP_FILES) == HF_FLAG_ZIP_FILES)
         {
             String name = entry.getFile().getAbsolutePath();
+            
             // FIND UNIQUE ZIPNAME BASED ON NAME
-            while (true)
+            int idx = 0;
+            zipfile = new File( name + ".zip" );
+            while (zipfile.exists() && idx-- < 1000)
             {
-                zipfile = new File( name + ".zip" );
-                if (!zipfile.exists())
-                    break;
-                name += "_";
-
-                ZipUtilities zu = new ZipUtilities();
-                zu.zip(entry.getFile().getAbsolutePath(), zipfile.getAbsolutePath());
-                arch_file = zipfile;
+                LogicControl.sleep(5);
+                zipfile = new File( name + "_" + System.currentTimeMillis() + ".zip" );
             }
+            
+            // DO ZIP
+            ZipUtilities zu = new ZipUtilities();
+            zu.zip(entry.getFile().getAbsolutePath(), zipfile.getAbsolutePath());
+            arch_file = zipfile;
         }
         
         if (handle_hotfolder_file( arch_file ))
@@ -431,7 +437,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         
             Message m = mm.getMsg();
 
-            RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(hfolder.getMandant(), m, "hf_imp");
+            RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(hfolder.getMandant(), m, "hf_imp", hfolder.getDiskArchive());
 
             Main.get_control().add_rfc_file_mail(mail, hfolder.getMandant(), hfolder.getDiskArchive(), /*bg*/true, /*delete_afterwards*/true);
            

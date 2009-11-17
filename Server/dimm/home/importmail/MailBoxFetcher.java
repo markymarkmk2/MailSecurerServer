@@ -485,7 +485,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         {
             status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
             
-            mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf_");
+            mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf", imfetcher.getDiskArchive());
 
             Main.get_control().add_rfc_file_mail(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
            

@@ -26,6 +26,7 @@ import java.util.logging.Level;
  */
 public class TempFileHandler
 {
+    public static final String IMPORT_PREFIX = "import";
     public static final String IMPMAIL_PREFIX = "mailimp";
     public static final String QUARANTINE_PREFIX = "quarantine";
     public static final String HOLD_PREFIX = "hold";
@@ -112,10 +113,23 @@ public class TempFileHandler
         }
     }
 
-    public File create_new_import_file( String name )
+    int get_da_id_from_import_file( String filename )
+    {
+        try
+        {
+            String[] s = filename.split("\\.");
+            return Integer.parseInt(s[0]);
+        }
+        catch (Exception numberFormatException)
+        {
+            LogManager.err_log("Invalid import filename " + filename, numberFormatException);
+            return -1;
+        }
+    }
+    public File create_new_import_file( String name,  int da_id )
     {
         // MOVE TO IMPORT PATH
-        String new_path = ctx.get_tmp_path() + "/" + Main.IMPORTRELPATH + name;
+        String new_path = get_clientimport_path() + "/" +  da_id + "." + name;
 
         File nf = new File(new_path);
 
@@ -125,8 +139,12 @@ public class TempFileHandler
         // VERY UNLIKELY THERE IS ALREADY A FILE WITH SAME NAME...
         int i = 10;
         while (nf.exists() && i > 0)
-        {            
-            nf = new File(new_path + Long.toString(System.currentTimeMillis() % 10000));
+        {
+            LogicControl.sleep(4);
+            String rand = Long.toString(System.currentTimeMillis() % 10000);
+            new_path = get_clientimport_path() + "/" +  da_id + "." + rand + "_" + name;
+            
+            //nf = new File(new_path + Long.toString(System.currentTimeMillis() % 10000) + suffix);
             i--;
         }
         return nf;
@@ -257,6 +275,15 @@ public class TempFileHandler
     public File get_import_mail_path( )
     {
         File d = new File( ctx.get_tmp_path() , IMPMAIL_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
+    }
+
+    public File get_clientimport_path( )
+    {
+        File d = new File( ctx.get_tmp_path() , IMPORT_PREFIX );
         if (!d.exists())
             d.mkdirs();
 

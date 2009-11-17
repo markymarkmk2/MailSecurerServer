@@ -10,6 +10,27 @@ import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.util.PDFTextStripper;
 
+// QUICK AND DIRTY: GET RID OF TEXT FILE AFTER INDEXING
+
+class PDFFileDeleteReader extends FileReader
+{
+    File del_file ;
+    public PDFFileDeleteReader( File f ) throws FileNotFoundException
+    {
+        super(f);
+        del_file = f;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+        super.close();
+        if (del_file.exists())
+            del_file.delete();
+    }
+
+
+}
 public class PDFExtractor implements TextExtractor, Serializable
 {
     MandantContext m_ctx;
@@ -61,7 +82,7 @@ public class PDFExtractor implements TextExtractor, Serializable
                 {
                     document.close();
                 }
-           /*     if (pdf_file != null)
+             /*   if (pdf_file != null)
                 {
                      m_ctx.getTempFileHandler().delete( pdf_file );
                 }*/
@@ -72,7 +93,7 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         try
         {
-            return new FileReader(file);
+            return new PDFFileDeleteReader(file);
         }
         catch (Exception ex)
         {

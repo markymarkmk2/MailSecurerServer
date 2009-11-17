@@ -53,7 +53,7 @@ public class Main
     public static final String LOG_PATH = "logs/";
     public static final String SCRIPT_PATH = "scripts/";
     public static final String DATABASEPATH = "db/";
-    public static final String IMPORTRELPATH = "import/";
+//    public static final String IMPORTRELPATH = "import/";
     
     
     public static final String PROGNAME = "MailArchiv.jar";
@@ -694,10 +694,11 @@ System.out.println("Core POI came from " + path);
         {
         }
 
-        System.err.println("Missing translation resource: " + string);
 
         if (!missing_transl_tokens.contains(string))
         {
+            System.err.println("Missing translation resource: " + string);
+
             missing_transl_tokens.add(string);
             try
             {

@@ -135,6 +135,49 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot close read index: " , iex);
         }
     }
+    public IndexWriter open_write_index() throws VaultException
+    {
+        if (!is_open())
+        {
+            open();
+        }
+        try
+        {
+            if (is_index())
+            {
+                synchronized( idx_lock )
+                {
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+                }
+                return write_index;
+            }
+            else
+                throw new VaultException( ds, "Cannot open write index on non-index ds: " + ds.getPath());
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot open write index: " + iex.getMessage());
+        }
+    }
+    public void close_write_index() throws VaultException
+    {
+        try
+        {
+            if (is_index())
+            {
+                synchronized( idx_lock )
+                {
+                    write_index.commit();
+                    write_index.close();
+                }
+            }
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot close write index: " , iex);
+        }
+    }
+
 
 
     public void open() throws VaultException
@@ -145,20 +188,7 @@ public class DiskSpaceHandler
         }
 
         read_info();
-        try
-        {
-            if (is_index())
-            {
-                synchronized( idx_lock )
-                {
-                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
-                }
-            }
-        }
-        catch (IOException iex)
-        {
-            throw new VaultException( ds, "Cannot open index: " + iex);
-        }
+
        _open = true;
     }
 
@@ -182,8 +212,6 @@ public class DiskSpaceHandler
             dsi = null;
 
             read_info();
-
-
         }
         catch (Exception ex)
         {
@@ -201,6 +229,7 @@ public class DiskSpaceHandler
 
         try
         {
+            // TOUCH (NOT OPEN!) INDEX
             if (is_index())
             {
                 synchronized( idx_lock )
@@ -283,21 +312,6 @@ public class DiskSpaceHandler
     public void close() throws VaultException
     {
         update_info();
-        try
-        {
-            if (is_index())
-            {
-                synchronized( idx_lock )
-                {
-                    write_index.commit();
-                    write_index.close();
-                }
-            }
-        }
-        catch (IOException iex)
-        {
-            throw new VaultException( ds, "Cannot close index: " , iex);
-        }
 
         _open = false;
     }
@@ -353,11 +367,25 @@ public class DiskSpaceHandler
 
 
     // THIS IS THE FIXED MAIL UID STRUCT
-    // MA_ID.DA_ID.DS_ID.Messagedate(long)
+    // MA_ID.DA_ID.DS_ID.Messagedate(long)[.enc]
     public String get_message_uuid( RFCGenericMail msg )
     {
-        String ret = m_ctx.getMandant().getId() + "." + ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime();
-        return ret;
+        StringBuffer sb = new StringBuffer();
+        sb.append(m_ctx.getMandant().getId() );
+        sb.append(".");
+        sb.append(ds.getDiskArchive().getId());
+        sb.append(".");
+        sb.append(ds.getId());
+        sb.append(".");
+        sb.append(msg.getDate().getTime() );
+        if (msg.isEncoded())
+        {
+            sb.append(RFCGenericMail.get_suffix_for_encoded());
+        }
+        return sb.toString();
+
+        //String ret = m_ctx.getMandant().getId() + "." + ds.getDiskArchive().getId() + "." + ds.getId() + "." + msg.getDate().getTime() + (msg.isEncoded() ? RFCGenericMail.get_suffix_for_encoded() : "");
+        //return ret;
     }
 
     public long build_time_from_path( String absolutePath ) throws VaultException
@@ -453,6 +481,10 @@ public class DiskSpaceHandler
         }
 
         return id;
+    }
+    public static boolean is_encoded_from_uuid( String uuid ) throws VaultException
+    {
+        return uuid.endsWith(RFCGenericMail.get_suffix_for_encoded());
     }
     
     private DiskSpaceInfo info_recursive(File f, DiskSpaceInfo local_dsi)
@@ -672,7 +704,7 @@ public class DiskSpaceHandler
         return ds.getPath() + "/index";
     }
 
-    public static boolean  no_encryption = true;
+    public static boolean  no_encryption = false;
     public void write_encrypted_file(RFCGenericMail msg, String password ) throws  VaultException
     {
         OutputStream bos = null;
@@ -681,7 +713,8 @@ public class DiskSpaceHandler
 
         try
         {
-            int enc_mode = no_encryption ? RFCGenericMail.ENC_NONE : RFCGenericMail.ENC_AES;
+//            int enc_mode = no_encryption ? RFCGenericMail.ENC_NONE : RFCGenericMail.ENC_AES;
+            int enc_mode = dsi.getEncMode();
             File out_file = msg.create_unique_mailfile(getMailPath(), enc_mode );
 
             if (out_file == null)
@@ -695,7 +728,7 @@ public class DiskSpaceHandler
 
 
 
-            if (no_encryption)
+            if (enc_mode == RFCGenericMail.ENC_NONE)
             {
                 LogManager.err_log_fatal( "No encryption!");
                 bos = os;
@@ -705,7 +738,6 @@ public class DiskSpaceHandler
                 bos = new CryptAESOutputStream(os,
                         m_ctx.getPrefs().get_KeyPBEIteration(),
                         m_ctx.getPrefs().get_KeyPBESalt(), password);
-//                bos = CryptTools.create_crypt_AES_outstream(m_ctx, os, password, encrypt);
             }
 
 
@@ -758,10 +790,10 @@ public class DiskSpaceHandler
 
             InputStream mis = msg.open_inputstream();
 
-            if ( no_encryption)
+            if ( dsi.getEncMode() == RFCGenericMail.ENC_NONE)
                 return mis;
 
-                mis = new CryptAESInputStream(mis,
+            mis = new CryptAESInputStream(mis,
                         m_ctx.getPrefs().get_KeyPBEIteration(),
                         m_ctx.getPrefs().get_KeyPBESalt(), password);
 
@@ -780,7 +812,7 @@ public class DiskSpaceHandler
         if (!is_open())
             return;
         
-        if (is_index())
+        if (is_index() && write_index != null)
         {
             try
             {

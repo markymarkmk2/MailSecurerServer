@@ -18,7 +18,7 @@ import dimm.home.mailarchiv.MandantContext;
  */
 public interface Vault
 {
-    boolean archive_mail( RFCGenericMail msg, MandantContext mandant, DiskArchive diskArchive ) throws ArchiveMsgException, VaultException, IndexException;
+    boolean archive_mail( RFCGenericMail msg, MandantContext mandant, DiskArchive diskArchive, boolean index_background ) throws ArchiveMsgException, VaultException, IndexException;
 
     void flush();
     void close() throws VaultException;

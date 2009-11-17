@@ -76,7 +76,7 @@ public class MailProxyServer extends ListWorkerParent
                     Socket theSocket = ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the pop3 host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
-                    POP3Connection m_POP3Connection = new POP3Connection( pe );
+                    POP3Connection m_POP3Connection = new POP3Connection( pe, theSocket );
                     
                     if (isShutdown())
                     {
@@ -89,7 +89,7 @@ public class MailProxyServer extends ListWorkerParent
                         connection_list.add(m_POP3Connection);
                     }
                     
-                    m_POP3Connection.handleConnection(theSocket);
+                    m_POP3Connection.handleConnection();
 
                 }
                 catch (SocketTimeoutException ste)
@@ -154,7 +154,7 @@ public class MailProxyServer extends ListWorkerParent
                     Socket theSocket = ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the smtp host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
                     
-                    SMTPConnection m_SMTPConnection = new SMTPConnection(pe);
+                    SMTPConnection m_SMTPConnection = new SMTPConnection(pe, theSocket);
                     
                     if (isShutdown())
                     {
@@ -168,7 +168,7 @@ public class MailProxyServer extends ListWorkerParent
                     }
                     
                     
-                    m_SMTPConnection.handleConnection(theSocket);
+                    m_SMTPConnection.handleConnection();
 
                 } catch (SocketTimeoutException ste)
                 {
@@ -321,7 +321,7 @@ public class MailProxyServer extends ListWorkerParent
                 if (this.isGoodState())
                 {
                     if (connection_list.size() > 0)
-                        this.setStatusTxt("Connected to " + connection_list.size() + " client(s)" );
+                        this.setStatusTxt("Proxy is connected to " + connection_list.size() + " client(s)" );
                     else
                         this.setStatusTxt("");
                 }

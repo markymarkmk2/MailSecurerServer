@@ -177,7 +177,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
         {
             status.set_status(StatusEntry.BUSY, "Archiving message from Mail server <" + smtp_db_entry.getServer() + ">");
 
-            mail = Main.get_control().create_import_filemail_from_eml_stream(smtp_db_entry.getMandant(), data, "smtpimp_");
+            mail = Main.get_control().create_import_filemail_from_eml_stream(smtp_db_entry.getMandant(), data, "smtpimp", smtp_db_entry.getDiskArchive());
 
             Main.get_control().add_rfc_file_mail(mail, smtp_db_entry.getMandant(), smtp_db_entry.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
 

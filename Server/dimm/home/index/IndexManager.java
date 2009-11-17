@@ -184,7 +184,7 @@ class IndexJobEntry
             byte[] hash = msg.get_hash();
             if (hash != null)
             {
-                String txt_hash = new String(hash);
+                String txt_hash = new String(Base64.encodeBase64(hash));
                 doc.add( new Field( CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED ) );
             }
 
@@ -900,6 +900,8 @@ public class IndexManager extends WorkerParent
                     String uuid = file.getName();
                     int da_id = DiskSpaceHandler.get_da_id_from_uuid(uuid);
                     int ds_id = DiskSpaceHandler.get_ds_id_from_uuid(uuid);
+                    long time = DiskSpaceHandler.get_time_from_uuid(uuid);
+                    boolean encoded = DiskSpaceHandler.is_encoded_from_uuid( uuid );
 
                     DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
                     DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
@@ -907,7 +909,7 @@ public class IndexManager extends WorkerParent
                     
                     if (index_dsh != null)
                     {
-                        RFCFileMail msg = new RFCFileMail(file, RFCFileMail.dflt_encoded);
+                        RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
 
                         // NO, DO RIGHT HERE
                         handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
