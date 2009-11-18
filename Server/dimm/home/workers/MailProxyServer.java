@@ -10,6 +10,7 @@ package dimm.home.workers;
  * @author Jocca Jocaf
  *
  */
+import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.hibernate.Proxy;
 import dimm.home.importmail.SMTPConnection;
 import dimm.home.importmail.POP3Connection;
@@ -50,32 +51,46 @@ public class MailProxyServer extends ListWorkerParent
   //      m_Stop = false;
         connection_list = new ArrayList<ProxyConnection>();
     }
+
+   
+
+
     
 
     void go_pop( ProxyEntry pe )
     {
-        ServerSocket ss = null;
         
+        ServerSocket pop3_ss = null;
         String host = pe.get_proxy().getRemoteServer();
         int LocalPort = pe.get_proxy().getLocalPort();
         int RemotePort = pe.get_proxy().getRemotePort();
         try
         {
-            ss = new ServerSocket(LocalPort);
+            pop3_ss = new ServerSocket(LocalPort);
             // 1 second timeout
-            ss.setSoTimeout(1000);
+            pop3_ss.setSoTimeout(1000);
+
+            pe.set_server_sock( pop3_ss );
+
             Main.info_msg("MailProxy is running for the host 'pop3://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
            
 
-            while (!isShutdown() && !pe.get_finish())
+            while (!isShutdown() && !pe.is_finished())
             {
                 try
                 {
-                    ss.setSoTimeout(1000);
-                    Socket theSocket = ss.accept();
+                    pop3_ss.setSoTimeout(1000);
+                    Socket theSocket = pop3_ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the pop3 host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
-                    
+
+                    if (pe.is_finished())
+                    {
+                        pop3_ss.close();
+                        pop3_ss = null;
+                        break;
+                    }
+
                     POP3Connection m_POP3Connection = new POP3Connection( pe, theSocket );
                     
                     if (isShutdown())
@@ -112,16 +127,17 @@ public class MailProxyServer extends ListWorkerParent
         } 
         catch (java.io.IOException ex)
         {
-            Main.err_log(ex.getMessage());
+            if (!pe.is_finished())
+                Main.err_log(ex.getMessage());
         }
 
         // close the server connection
-        if (ss != null)
+        if (pop3_ss != null)
         {
             try
             {
-                ss.close();
-                ss = null;
+                pop3_ss.close();
+                pop3_ss = null;
             } catch (Exception e)
             {
                 Main.err_log(e.getMessage());
@@ -130,30 +146,38 @@ public class MailProxyServer extends ListWorkerParent
 
     }  // go	
 
+    
     void go_smtp(ProxyEntry pe)
     {
-        ServerSocket ss = null;
+        ServerSocket smtp_ss = null;
+        
         String host = pe.get_proxy().getRemoteServer();
         int LocalPort = pe.get_proxy().getLocalPort();
         int RemotePort = pe.get_proxy().getRemotePort();
 
         try
         {
-            ss = new ServerSocket(LocalPort);
+            smtp_ss = new ServerSocket(LocalPort);
             // 1 second timeout
-            ss.setSoTimeout(1000);
+            smtp_ss.setSoTimeout(1000);
             Main.info_msg("MailProxy is running for the host 'smtp://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
+            pe.set_server_sock( smtp_ss );
 
             
 
-            while (!isShutdown() && !pe.get_finish())
+            while (!isShutdown() && !pe.is_finished())
             {
                 try
                 {
-                    Socket theSocket = ss.accept();
+                    Socket theSocket = smtp_ss.accept();
                     Main.debug_msg( 2, "Connection accepted for the smtp host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
-                    
+
+                    if (pe.is_finished())
+                    {                       
+                        break;
+                    }
+
                     SMTPConnection m_SMTPConnection = new SMTPConnection(pe, theSocket);
                     
                     if (isShutdown())
@@ -195,12 +219,12 @@ public class MailProxyServer extends ListWorkerParent
         }
 
         // close the server connection
-        if (ss != null)
+        if (smtp_ss != null)
         {
             try
             {
-                ss.close();
-                ss = null;
+                smtp_ss.close();
+                smtp_ss = null;
             } catch (Exception e)
             {
                 Main.err_log(e.getMessage());
@@ -209,25 +233,37 @@ public class MailProxyServer extends ListWorkerParent
 
     }  // go
 
-        
-    
-    public void StopServer()
+    @Override
+    public void setShutdown( boolean shutdown )
     {
+        super.setShutdown(shutdown);
+        if (!shutdown)
+            return;
+        
+   
+
         for (int i = 0; i < child_list.size(); i++)
         {
             final ProxyEntry pe = (ProxyEntry)child_list.get(i);
             pe.finish();
         }
-        setShutdown(true);
-        
+
         LogicControl.sleep(1100);
-        
+
         while (!idle_worker.finished())
         {
             LogicControl.sleep(1000);
         }
     }
 
+
+/*
+    public void StopServer()
+    {
+        setShutdown(true);
+        
+    }
+*/
   
     boolean is_pop3( Proxy pe )
     {
@@ -257,12 +293,12 @@ public class MailProxyServer extends ListWorkerParent
             this.setGoodState(false);
             return false;
         }
-       
-        setShutdown(false);
-        
+               
         for (int i = 0; i < child_list.size(); i++)
         {
             final ProxyEntry pe = (ProxyEntry)child_list.get(i);
+            if (pe.is_started())
+                continue;
             
             SwingWorker worker = new SwingWorker()
             {
@@ -274,11 +310,13 @@ public class MailProxyServer extends ListWorkerParent
                    else if (is_smtp(pe.get_proxy()))
                        go_smtp( pe );
 
-                    return null;
+                   pe.set_started(false);
+                   return null;
                 }
             };
 
             worker.start();
+            pe.set_started(true);
         }
 
         idle_worker = new SwingWorker()

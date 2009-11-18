@@ -93,6 +93,7 @@ public abstract class ProxyConnection
         m_error = -1;
         m_Command = -1;
         clientSocket = _clientSocket;
+        pe.set_connection( this );
     }
 
     public boolean is_connected()
@@ -155,7 +156,7 @@ public abstract class ProxyConnection
             pe.incInstanceCnt();
         }
 
-        log(2, Main.Txt("Opening_Connection"));
+        log(DBG_VERB - 2, Main.Txt("Opening_Connection"));
 
         if (get_thread_count() > MAX_THREADS)
         {
@@ -194,7 +195,7 @@ public abstract class ProxyConnection
     public void closeConnections()
     {
         // close the connections
-        log(2, Main.Txt("Closing_Connection"));
+        log(DBG_VERB - 2, Main.Txt("Closing_Connection"));
         try
         {
             if (serverWriter != null)
@@ -250,7 +251,8 @@ public abstract class ProxyConnection
         }
         if ( i == END_OF_LINE.length)
         {
-            log( 6, Main.Txt("Detected_EOL") );
+            if (Main.get_debug_lvl() >= DBG_VERB)
+                log( DBG_VERB, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -271,7 +273,8 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_LINE.length)
         {
-            log( 6, Main.Txt("Detected_EOL") );
+            if (Main.get_debug_lvl() >= DBG_VERB)
+                log( DBG_VERB, Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -292,7 +295,8 @@ public abstract class ProxyConnection
 
         if ( i == END_OF_MULTILINE.length)
         {
-            log( 6, Main.Txt("Detected_MEOL") );
+            if (Main.get_debug_lvl() >= DBG_VERB)
+                log( DBG_VERB, Main.Txt("Detected_MEOL") );
             return true;
         }
 
@@ -304,7 +308,8 @@ public abstract class ProxyConnection
         {
             if (sData.substring(0,4).toUpperCase().compareTo("QUIT") == 0)
             {
-                log( 4, Main.Txt("Detected_QUIT") );
+                if (Main.get_debug_lvl() >= DBG_VERB)
+                    log( DBG_VERB, Main.Txt("Detected_QUIT") );
                 return true;
             }
         }
@@ -313,12 +318,18 @@ public abstract class ProxyConnection
 
     void log( String txt )
     {
+        if (Main.get_debug_lvl() < DBG_VERB)
+            return;
+
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(4, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(DBG_VERB, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
     }
     void log( int dbg, String txt )
     {
+        if (Main.get_debug_lvl() < dbg)
+            return;
+
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
 
@@ -377,7 +388,7 @@ public abstract class ProxyConnection
                 }
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     return output;
                 }
@@ -500,7 +511,8 @@ public abstract class ProxyConnection
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                Main.err_log("Exception: " + e.getMessage());
+                if (!finished)
+                    Main.err_log("Exception: " + e.getMessage());
             }
         }
 
@@ -528,12 +540,16 @@ public abstract class ProxyConnection
         return null;
     }
 
-  
+
+    protected static final int DBG_VERB = 10;
+    protected static final int DBG_DATA_VERB = 12;
 
     protected int get_multiline_proxy_data(InputStream Reader, OutputStream Writer, File rfc_dump, BufferedOutputStream bos)
     {
         // NOW MOVE DATA FROM READER TO WRITERCLIENT TO SERVER
         boolean finished = false;
+
+
 
         final int MAX_BUF = 2048;  						// buffer 8 Kb
         byte buffer[] = new byte[MAX_BUF];			// buffer array
@@ -560,7 +576,7 @@ public abstract class ProxyConnection
         if (maxwait <= 0)
             Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
 
-        long dgb_level = Main.get_long_prop(MandantPreferences.DEBUG);
+        long dgb_level = Main.get_debug_lvl();
         byte[] last_4 = new byte[4];
 
 
@@ -571,7 +587,7 @@ public abstract class ProxyConnection
             {
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     return 1;
                 }
@@ -597,9 +613,9 @@ public abstract class ProxyConnection
                 if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
                     rlen = Reader.read(buffer);
-                    if (dgb_level > 3)
+                    if (dgb_level >= DBG_DATA_VERB)
                     {
-                        log(7, new String(buffer, 0, rlen));
+                        log(DBG_DATA_VERB, new String(buffer, 0, rlen));
                     }
 
                 }
@@ -608,16 +624,16 @@ public abstract class ProxyConnection
                     if (avail > END_OF_MULTILINE.length)
                     {
                         rlen = Reader.read(buffer, 0, avail - END_OF_MULTILINE.length);
-                        if (dgb_level > 3)
+                        if (dgb_level >= DBG_DATA_VERB)
                         {
-                            log(7, new String(buffer, 0, rlen));
+                            log(DBG_DATA_VERB, new String(buffer, 0, rlen));
                         }
                     }
                     else
                     {
                         rlen = Reader.read(buffer, 0, avail);
-                        if (dgb_level > 3)
-                            log( 7, new String( buffer, 0, rlen ) );
+                        if (dgb_level >= DBG_DATA_VERB)
+                            log( DBG_DATA_VERB, new String( buffer, 0, rlen ) );
 
                         if (rlen < END_OF_MULTILINE.length)
                         {
@@ -639,8 +655,8 @@ public abstract class ProxyConnection
                             while (avail > 0 && (rlen + avail) <= buffer.length)
                             {
                                 rlen += Reader.read(buffer, rlen, avail);
-                                if (dgb_level > 3)
-                                    log( 7, new String( buffer, 0, rlen ) );
+                                if (dgb_level >= DBG_DATA_VERB)
+                                    log( DBG_DATA_VERB, new String( buffer, 0, rlen ) );
 
                                 Main.sleep(2000);
                                 avail = Reader.available();

@@ -175,7 +175,11 @@ class IndexJobEntry
             // DO THE REAL WORK (EXTRACT AND INDEX)
             ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, docw);
 
+        
             IndexWriter writer = index_dsh.get_write_index();
+            if (writer == null)
+                writer = index_dsh.open_write_index();
+
 
             // DETECT LANG OF INDEX AND PUT INTO LUCENE
             String lang = ixm.get_lang_by_analyzer( writer.getAnalyzer() );
@@ -1193,9 +1197,11 @@ public class IndexManager extends WorkerParent
         return ret;
     }
 
-    void update_document( Document doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException
+    void update_document( Document doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException, VaultException
     {
         IndexWriter writer = index_dsh.get_write_index();
+        if (writer == null)
+            writer = index_dsh.open_write_index();
 
 
         Term term = new Term( CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME) );

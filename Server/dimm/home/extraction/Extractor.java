@@ -66,6 +66,7 @@ public class Extractor implements Serializable
 
 
 
+    public static ArrayList<String> mime_not_supported_list = new ArrayList<String>();
 
     public Reader getText( final InputStream is, final DocumentWrapper doc, final String mimetype, final Charset fromCharset ) throws ExtractionException
     {
@@ -73,7 +74,11 @@ public class Extractor implements Serializable
         extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
         if (extractor == null)
         {
-            LogManager.err_log_fatal("Cannot get text handler from document of this type: " + mimetype);
+            if (!mime_not_supported_list.contains(mimetype))
+            {
+                LogManager.err_log_warn("Cannot get text handler from document of this type: " + mimetype);
+                mime_not_supported_list.add(mimetype);
+            }
             return new StringReader("");
         }
         else
@@ -130,32 +135,3 @@ public class Extractor implements Serializable
 
     
 }
-/*
-	tests=[RCVD_IN_UCEPROTECT2=1]>
-DEBUG - Indexing attachment TM Freie_Beratung220708.doc to 1.1.1.1255021940665
-Exception in thread "Thread-14" java.lang.NoSuchMethodError: org.apache.poi.poifs.filesystem.POIFSFileSystem.getRoot()Lorg/apache/poi/poifs/filesystem/DirectoryEntry;
-	at org.textmining.extraction.word.WordExtractorFactory.initWordHeader(Unknown Source)
-	at org.textmining.extraction.word.WordTextExtractorFactory.textExtractor(Unknown Source)
-	at dimm.home.extraction.WordExtractor.getText(WordExtractor.java:29)
-	at dimm.home.extraction.Extractor.getText(Extractor.java:76)
-	at dimm.home.index.IndexManager.extract_octet_stream(IndexManager.java:740)
-	at dimm.home.index.IndexManager.index_content(IndexManager.java:608)
-	at dimm.home.index.IndexManager.index_part_content(IndexManager.java:580)
-	at dimm.home.index.IndexManager.index_mp_content(IndexManager.java:539)
-	at dimm.home.index.IndexManager.index_mail_file(IndexManager.java:442)
-	at dimm.home.index.IndexJobEntry.handle_index(IndexManager.java:176)
-	at dimm.home.index.IndexManager.handle_IndexJobEntry(IndexManager.java:1040)
-	at dimm.home.vault.DiskVault.write_mail_file(DiskVault.java:289)
-	at dimm.home.vault.DiskVault.low_level_archive_mail(DiskVault.java:226)
-	at dimm.home.vault.DiskVault.archive_mail(DiskVault.java:154)
-	at dimm.home.mailarchiv.LogicControl.add_mail_file(LogicControl.java:310)
-	at dimm.home.mailarchiv.LogicControl.add_mail_file(LogicControl.java:334)
-	at dimm.home.workers.MBoxImportServer.run_import(MBoxImportServer.java:189)
-	at dimm.home.workers.MBoxImportServer.work_jobs(MBoxImportServer.java:131)
-	at dimm.home.workers.MBoxImportServer.do_idle(MBoxImportServer.java:142)
-	at dimm.home.workers.MBoxImportServer$1.construct(MBoxImportServer.java:94)
-	at dimm.home.mailarchiv.Utilities.SwingWorker$2.run(SwingWorker.java:167)
-	at java.lang.Thread.run(Thread.java:637)
-Answer is <0: >
-Received ip command <call_import_mail_file>
-*/

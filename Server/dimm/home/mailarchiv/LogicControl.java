@@ -136,6 +136,8 @@ public class LogicControl
     MBoxImportServer mb_import_server;
     private boolean shutdown;
 
+    
+    
 
 
     void check_db_changes()
@@ -566,8 +568,9 @@ public class LogicControl
         Mandant old_m = ctx.getMandant();
 
 
+        org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = param_session.beginTransaction();
-        read_param_db_qry = param_session.createQuery("from Mandant where id=" + mid);
+        org.hibernate.Query read_param_db_qry = param_session.createQuery("from Mandant where id=" + mid);
 
         List l = read_param_db_qry.list();
 
@@ -1113,8 +1116,6 @@ public class LogicControl
         return prefs;
     }
 
-    org.hibernate.classic.Session param_session;
-    org.hibernate.Query read_param_db_qry;
 
     boolean check_db_changes(org.hibernate.classic.Session change_session, String check_qry, boolean on_fail, String alter_cmd, String fill_cmd)
     {
@@ -1181,9 +1182,9 @@ public class LogicControl
 
         try
         {
-            param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+            org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
             org.hibernate.Transaction tx = param_session.beginTransaction();
-            read_param_db_qry = param_session.createQuery("from Mandant");
+            org.hibernate.Query read_param_db_qry = param_session.createQuery("from Mandant");
 
             List l = read_param_db_qry.list();
 
@@ -1224,12 +1225,8 @@ public class LogicControl
                     }
                 }
             }
-            /*
-            tx = param_session.beginTransaction();
-            q = param_session.createQuery("from Hotfolder");
-            l = q.list();
+
             tx.commit();
-             * */
         }
         catch (Exception e)
         {

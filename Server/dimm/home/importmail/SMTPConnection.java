@@ -81,9 +81,9 @@ public class SMTPConnection extends ProxyConnection
             serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
             // set the socket timeout
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+          /*  LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
             LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            LogManager.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
+            LogManager.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());*/
 
             // get the server output stream
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(),
@@ -104,11 +104,11 @@ public class SMTPConnection extends ProxyConnection
             {
 
                 // read the answer from the server
-                log( 5, Main.Txt("Waiting_for_Server..."));
+                log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -140,7 +140,7 @@ public class SMTPConnection extends ProxyConnection
                 }
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -159,12 +159,12 @@ public class SMTPConnection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 5, Main.Txt("Waiting_for_Client..."));
+                log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -210,7 +210,8 @@ public class SMTPConnection extends ProxyConnection
         }
         catch (Exception e)
         {
-            LogManager.err_log(e.getMessage());
+            if (!pe.is_finished())
+                LogManager.err_log(e.getMessage());
         }
         finally
         {
@@ -218,7 +219,7 @@ public class SMTPConnection extends ProxyConnection
 
             System.gc();
         }
-        log(2, Main.Txt("Finished") );
+        log(DBG_VERB -2, Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer() );
         
     }  // handleConnection
 

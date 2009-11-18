@@ -49,6 +49,7 @@ public class Communicator extends WorkerParent
     
     int udp_listeners = 0;
     int tcp_listeners = 0;
+    boolean is_started;
     
     /** Creates a new instance of Communicator */
     public Communicator()
@@ -72,6 +73,7 @@ public class Communicator extends WorkerParent
         cmd_list.add( new StartVPN() );
         cmd_list.add( new ImportMailFile() );
         cmd_list.add( new UploadMailFile() );
+        is_started = false;
     }
 
     public ArrayList<AbstractCommand> get_cmd_array()
@@ -83,14 +85,7 @@ public class Communicator extends WorkerParent
     {
         using_fallback = false;
         
-        try
-        {
-            udp_s = new DatagramSocket(null);         
-        } catch (SocketException ex)
-        {
-            Main.err_log_fatal("Communication cannot be initialized: " + ex.getMessage());
-            return false;
-        }     
+        
         if (System.getProperty("os.name").startsWith("Linux"))
         {
             IPConfig ipc = new IPConfig();
@@ -150,7 +145,11 @@ public class Communicator extends WorkerParent
     
     @Override
     public boolean start_run_loop()
-    {       
+    {
+        // SINGLE INSTANCE
+        if (is_started)
+            return true;
+
         Main.debug_msg(1, "Starting communicator tasks" );
         
         start_broadcast_task();
@@ -168,6 +167,8 @@ public class Communicator extends WorkerParent
         };
         
         worker.start();
+
+        is_started = true;
         return true;
          
       
@@ -595,12 +596,12 @@ public class Communicator extends WorkerParent
     public boolean check_requirements(StringBuffer sb)
     {
         boolean ok = true;        
-        if (udp_s == null)
+/*        if (udp_s == null)
         {
             sb.append( "UDP Network init failed" );
             ok = false;
         }
-        
+  */
         return ok;
     }
 

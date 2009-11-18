@@ -5,12 +5,14 @@
 package dimm.home.auth;
 
 import com.sun.mail.smtp.SMTPTransport;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.Socket;
 
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.AuthenticationFailedException;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.URLName;
@@ -180,11 +182,18 @@ public class SMTPAuth extends GenericRealmAuth
             {
                 String ret = transport.getLastServerResponse();
                 LogManager.err_log( "SMTP auth failed: " + ret);
+                error_txt = ret;
             }
+        }
+        catch (AuthenticationFailedException exc)
+        {
+            LogManager.info_msg( "SMTP auth failed");
+            error_txt = Main.Txt("Authentication_failed");
         }
         catch (MessagingException messagingException)
         {
             LogManager.err_log( "SMTP auth aborted: ", messagingException);
+            error_txt = messagingException.getMessage();
         }
         return null;
     }

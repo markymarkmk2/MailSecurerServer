@@ -7,7 +7,6 @@ package dimm.home.auth;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import java.util.Properties;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -75,9 +74,9 @@ public class LDAPAuth extends GenericRealmAuth
         user_context = null;
     }
 
-    Hashtable create_sec_env()
+    Hashtable<String,String> create_sec_env()
     {
-        Hashtable env = new Hashtable();
+        Hashtable<String,String> env = new Hashtable<String,String>();
         String protokoll = "ldap://";
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
@@ -107,7 +106,7 @@ public class LDAPAuth extends GenericRealmAuth
         try
         {            
 
-            Hashtable connect_env = create_sec_env();
+            Hashtable<String,String> connect_env = create_sec_env();
 
             connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
@@ -284,7 +283,7 @@ public class LDAPAuth extends GenericRealmAuth
 
             // NOW GO FOR LOGIN USER WITH DN
             LdapContext user_ctx;
-            Hashtable connect_env = create_sec_env();
+            Hashtable<String,String> connect_env = create_sec_env();
 
 
             connect_env.put(Context.SECURITY_PRINCIPAL, user_dn);
@@ -296,6 +295,7 @@ public class LDAPAuth extends GenericRealmAuth
         }
         catch (Exception namingException)
         {
+            error_txt = namingException.getMessage();
             namingException.printStackTrace();
         }
         return null;

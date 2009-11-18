@@ -367,13 +367,14 @@ public class SearchCall
 
 
 
-        throw new UnsupportedOperationException("Not yet implemented");
+        return "0: ok";
     }
 
     public SearchCall( MandantContext m_ctx )
     {
         this.m_ctx = m_ctx;
         result = new ArrayList<SearchResult>();
+        searcher_list = new ArrayList<IndexSearcher>();
     }
     static DiskSpaceHandler last_dsh;
 
@@ -454,7 +455,7 @@ public class SearchCall
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
             }
 
-            build_lucene_filter( mail_aliases );
+            filter = build_lucene_filter( mail_aliases );
         }
 
         Query qry = build_lucene_qry( logic_list, ana );
@@ -500,12 +501,13 @@ public class SearchCall
     {
         TermsFilter filter = null;
 
+        filter = new TermsFilter();
         for (int i = 0; i < mail_aliases.size(); i++)
         {
             String mail_adress = mail_aliases.get(i);
             if (mail_adress.length() > 0)
             {
-                filter = new TermsFilter();
+                
                 filter.addTerm(new Term("To", mail_adress));
                 filter.addTerm(new Term("From", mail_adress));
                 filter.addTerm(new Term("CC", mail_adress));

@@ -4,15 +4,6 @@
  */
 package dimm.home.index.IMAP;
 
-import SK.gnome.dwarf.ServiceException;
-import SK.gnome.dwarf.config.XMLConfiguration;
-import SK.gnome.dwarf.config.XMLConfigurationException;
-import SK.gnome.dwarf.log.FileLogger;
-import SK.gnome.dwarf.log.LogServer;
-import SK.gnome.dwarf.mail.MailException;
-import SK.gnome.dwarf.mail.auth.MailPermission;
-import SK.gnome.dwarf.mail.store.ACLStore;
-import SK.gnome.dwarf.main.MainServer;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -25,7 +16,7 @@ import java.net.ServerSocket;
 
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
+import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
@@ -138,7 +129,8 @@ public class IMAPBrowser implements WorkerParentChild
             }
             catch (IOException iOException)
             {
-                iOException.printStackTrace();
+                if (!do_finish)
+                    iOException.printStackTrace();
             }
         }
 /*
@@ -218,14 +210,7 @@ public class IMAPBrowser implements WorkerParentChild
 
         while (!do_finish)
         {
-            try
-            {
                 LogicControl.sleep(1000);
-            }
-            catch (Exception e)
-            {
-                log_debug(Main.Txt("Unexpected_exception"), e);
-            }
         }
         finished = true;
     }
@@ -287,6 +272,12 @@ public class IMAPBrowser implements WorkerParentChild
     public String get_task_status_txt()
     {
         return "";
+    }
+
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+         return EqualsBuilder.reflectionEquals( get_db_object(), db_object);
     }
 
     

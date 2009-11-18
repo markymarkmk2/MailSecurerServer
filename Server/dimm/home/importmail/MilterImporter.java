@@ -39,6 +39,7 @@ import javax.mail.Address;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
@@ -455,7 +456,8 @@ public class MilterImporter implements WorkerParentChild
             }
             catch (IOException e)
             {
-                log_debug(Main.Txt("Unexpected_exception"), e);
+                if (!do_finish)
+                    log_debug(Main.Txt("Unexpected_exception"), e);
             }
             catch (InstantiationException e)
             {
@@ -518,6 +520,13 @@ public class MilterImporter implements WorkerParentChild
     public String get_task_status_txt()
     {
         return "";
+    }
+
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+        return EqualsBuilder.reflectionEquals( milter, db_object);
+
     }
 
 }

@@ -13,6 +13,7 @@ import dimm.home.mailarchiv.Commands.HelloCommand;
 import dimm.home.mailarchiv.Commands.IPConfig;
 import dimm.home.mailarchiv.Commands.ImportMailFile;
 import dimm.home.mailarchiv.Commands.ListOptions;
+import dimm.home.mailarchiv.Commands.ListUsers;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Commands.ReadLog;
 import dimm.home.mailarchiv.Commands.Reboot;
@@ -87,6 +88,7 @@ public class TCPCallConnect extends WorkerParent
     int server_port;
     MandantContext m_ctx;
     boolean use_ssl;
+    private boolean is_started;
 
     public TCPCallConnect( MandantContext m_ctx)
     {
@@ -154,6 +156,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new SearchCommand() );
         cmd_list.add( new RestartMandant() );
         cmd_list.add( new AuthUser() );
+        cmd_list.add( new ListUsers() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
@@ -738,6 +741,8 @@ public class TCPCallConnect extends WorkerParent
     public boolean start_run_loop()
     {
         Main.debug_msg(1, "Starting communicator tasks");
+        if (is_started)
+            return true;
 
         start_tcpip_task();
 
@@ -753,6 +758,7 @@ public class TCPCallConnect extends WorkerParent
             }
         };
 
+        is_started = true;
         worker.start();
         return true;
 

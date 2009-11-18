@@ -38,18 +38,19 @@ public class ListWorkerParent extends WorkerParent
             child_list.add( child );
         }
     }
-    public void remove_child( Object db_object )
+    public WorkerParentChild remove_child( Object db_object )
     {
         for (int i = 0; i < child_list.size(); i++)
         {
             WorkerParentChild child_entry = child_list.get(i);
-            if (child_entry.get_db_object() == db_object)
+            if (child_entry.is_same_db_object( db_object) )
             {
                 child_entry.finish();
                 child_list.remove(child_entry);
-                break;
+                return child_entry;
             }
         }
+        return null;
     }
 
 

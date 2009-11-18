@@ -18,6 +18,7 @@ import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.CS_Constants;
 import home.shared.Utilities.ZipUtilities;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import org.apache.commons.lang.builder.EqualsBuilder;
 
 class HFFilenameFilter implements FilenameFilter
 {
@@ -317,7 +319,19 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
             catch (InterruptedException ex)
             {
             }
+            try
+            {
+                int flags = Integer.parseInt(hfolder.getFlags());
+                if ((flags & CS_Constants.HF_FLAG_DISABLED) == CS_Constants.HF_FLAG_DISABLED)
+                {
+                    continue;
+                }
+            }
+            catch (Exception numberFormatException)
+            {
+            }
 
+            
             try
             {
                 status.set_status(StatusEntry.BUSY, Main.Txt("searching") );
@@ -491,6 +505,12 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     public Object get_db_object()
     {
         return hfolder;
+    }
+
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+        return EqualsBuilder.reflectionEquals( hfolder, db_object);
     }
 
 

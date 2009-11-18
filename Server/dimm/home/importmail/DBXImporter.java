@@ -783,4 +783,10 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         return "";
     }
 
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
 }

@@ -64,10 +64,10 @@ public class POP3Connection extends ProxyConnection
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             
-            Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+        /*    Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
             Main.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
             Main.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());
-
+*/
             // get the server output stream
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(), serverSocket.getSendBufferSize());
             // get the server input stream
@@ -82,11 +82,11 @@ public class POP3Connection extends ProxyConnection
             {
 
                 // read the answer from the server
-                log( 5, Main.Txt("Waiting_for_Server..."));
+                log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -106,7 +106,7 @@ public class POP3Connection extends ProxyConnection
 
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -127,13 +127,13 @@ public class POP3Connection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( 5, Main.Txt("Waiting_for_Client..."));
+                log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
                 
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
 
                 // verify if the user stopped the thread
-                if (pe.get_finish())
+                if (pe.is_finished())
                 {
                     break;
                 }
@@ -162,7 +162,7 @@ public class POP3Connection extends ProxyConnection
                         break;
                     }      
                     // verify if the user stopped the thread
-                    if (pe.get_finish())
+                    if (pe.is_finished())
                     {
                         break;
                     }
@@ -172,7 +172,7 @@ public class POP3Connection extends ProxyConnection
 
                     
                     // verify if the user stopped the thread
-                    if (pe.get_finish())
+                    if (pe.is_finished())
                     {
                         break;
                     }
@@ -202,16 +202,18 @@ public class POP3Connection extends ProxyConnection
             String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.get_proxy().getRemoteServer() + Main.Txt("'_exists.");
             //Common.showError(msgerror);
             Main.err_log(msgerror);
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
-            Main.err_log(e.getMessage());
+            if (!pe.is_finished())
+                Main.err_log(e.getMessage());
         }
         finally
         {
             closeConnections();
             System.gc();
         }
-        log(2, Main.Txt("Finished") );
+        log(DBG_VERB -2, Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer()  );
     }  // handleConnection
 
 

@@ -159,7 +159,18 @@ public abstract class GenericRealmAuth
 
     public ArrayList<String> list_users_for_group( String group ) throws NamingException
     {
-        return new ArrayList<String>();
+        ArrayList<String>users = new ArrayList<String>();
+
+        Set<MailUser> mail_users = act.getMandant().getMailusers();
+        for (Iterator<MailUser> it = mail_users.iterator(); it.hasNext();)
+        {
+            MailUser mailUser = it.next();
+            if ((mailUser.getFlags() & CS_Constants.ACCT_DISABLED) == CS_Constants.ACCT_DISABLED)
+                continue;
+
+            users.add( mailUser.getUsername() );
+        }
+        return users;
     }
     public String get_user_attribute( String attr_name )
     {

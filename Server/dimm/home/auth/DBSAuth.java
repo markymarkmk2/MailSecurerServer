@@ -4,6 +4,8 @@
  */
 package dimm.home.auth;
 
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.hibernate.MailUser;
 import home.shared.hibernate.Mandant;
 import java.util.Iterator;
@@ -91,6 +93,9 @@ public class DBSAuth extends GenericRealmAuth
                 return new DBSUserContext(mailUser);
             }
         }
+        LogManager.info_msg( "DBS auth failed");
+        error_txt = Main.Txt("Authentication_failed");
+
         return null;
     }
 

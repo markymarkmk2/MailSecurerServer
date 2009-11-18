@@ -6,6 +6,8 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.auth.GenericRealmAuth;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
@@ -31,15 +33,18 @@ public class TestLogin extends AbstractCommand
         String command = pt.GetString("CMD:");
         if (command.compareTo("test") == 0)
         {
+            int m_id = (int)pt.GetLongValue("MA:");
             String admin_name = pt.GetString("NM:");
             String admin_pwd = pt.GetString("PW:");
-            String ldap_host = pt.GetString("HO:");
+            String auth_host = pt.GetString("HO:");
             String type = pt.GetString("TY:");
-            int ldap_port = (int)pt.GetLongValue("PO:");
-            boolean ssl = pt.GetBoolean("SSL:");
+            int auth_port = (int)pt.GetLongValue("PO:");
+            int acct_flags = (int)pt.GetLongValue("FL:");
+
+            MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
 
             // CREATE NEW ACT WITH NO MANDANT; NO ROLES AND ID == -1)
-            AccountConnector act = new AccountConnector(-1, null, type, ldap_host, ldap_port, admin_name, admin_pwd, ssl ? CS_Constants.ACCT_USE_SSL : 0, null);
+            AccountConnector act = new AccountConnector(-1, m_ctx.getMandant(), type, auth_host, auth_port, admin_name, admin_pwd, acct_flags, null);
 
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( act);
 
@@ -49,7 +54,7 @@ public class TestLogin extends AbstractCommand
             // ON NON-LDAP CONNECTIONS WE HAVE TO CHECK USERNAME DIRECTLY IF USER WAS GIVEN TOO
             if (auth_ok && type.compareTo("ldap") != 0 && admin_name.length() > 0)
             {
-                if (auth_realm.open_user_context(admin_pwd, admin_pwd))
+                if (auth_realm.open_user_context(admin_name, admin_pwd))
                 {
                     auth_realm.close_user_context();
                 }

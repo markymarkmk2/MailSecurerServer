@@ -32,6 +32,7 @@ import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.event.MessageCountAdapter;
 import javax.mail.event.MessageCountEvent;
+import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
@@ -673,6 +674,12 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     public String get_task_status_txt()
     {
         return "";
+    }
+
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+        return EqualsBuilder.reflectionEquals( imfetcher, db_object);
     }
 
 

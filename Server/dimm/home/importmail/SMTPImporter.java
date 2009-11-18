@@ -23,6 +23,7 @@ import java.util.*;
 import java.net.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.builder.EqualsBuilder;
 import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.auth.LoginFailedException;
 import org.subethamail.smtp.auth.PlainAuthenticationHandlerFactory;
@@ -272,6 +273,12 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
     public String get_task_status_txt()
     {
         return "";
+    }
+
+    @Override
+    public boolean is_same_db_object( Object db_object )
+    {
+        return EqualsBuilder.reflectionEquals( smtp_db_entry, db_object);
     }
 
 }

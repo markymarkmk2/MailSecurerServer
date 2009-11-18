@@ -19,4 +19,6 @@ public interface WorkerParentChild
     public Object get_db_object();
     public String get_task_status_txt();
 
+    public boolean is_same_db_object( Object db_object );
+
 }
