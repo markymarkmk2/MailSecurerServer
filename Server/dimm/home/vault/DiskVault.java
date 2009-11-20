@@ -57,7 +57,13 @@ public class DiskVault implements Vault, StatusHandler
 
         while (it.hasNext())
         {
-            dsh_list.add( new DiskSpaceHandler( context, it.next()));
+            DiskSpace ds = it.next();
+            DiskSpaceHandler dsh = new DiskSpaceHandler( context, ds);
+
+            if (dsh.is_disabled())
+                continue;
+
+            dsh_list.add( dsh );
         }
     }
 
@@ -100,6 +106,10 @@ public class DiskVault implements Vault, StatusHandler
         while (it.hasNext())
         {
             DiskSpaceHandler dsh = it.next();
+
+            if (dsh.is_disabled())
+                continue;
+            
             DiskSpace ds = dsh.getDs();
             if ( ds.getStatus().compareTo( CS_Constants.DS_FULL) == 0 ||
                  ds.getStatus().compareTo( CS_Constants.DS_ERROR) == 0 ||
@@ -172,7 +182,7 @@ public class DiskVault implements Vault, StatusHandler
     }
 
     public DiskSpaceHandler open_dsh( DiskSpaceHandler dsh, long free_space) throws VaultException
-    {      
+    {
         try
         {
             if (!dsh.is_open())

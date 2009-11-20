@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
-import javax.naming.NamingException;
 
 /**
  *
@@ -118,6 +117,18 @@ public class MandantContext
         while( it.hasNext() )
         {
             DiskArchive da =  it.next();
+            try
+            {
+                int flags = Integer.parseInt(da.getFlags());
+                if ((flags & CS_Constants.DA_DISABLED) == CS_Constants.DA_DISABLED)
+                {
+                    continue;
+                }
+            }
+            catch (NumberFormatException numberFormatException)
+            {
+            }
+
             getVaultArray().add( new DiskVault( this, da ));
         }
     }
@@ -225,9 +236,12 @@ public class MandantContext
 
     void initialize_mandant( LogicControl control )
     {        
-        // ATTACH COMM
-        tcp_conn = new TCPCallConnect(this);
-        worker_list.add(tcp_conn);
+        // ATTACH COMM IF NOT ALREADY DONE
+        if (tcp_conn == null)
+        {
+            tcp_conn = new TCPCallConnect(this);
+            worker_list.add(tcp_conn);
+        }
         //set_tcp_call_connect( tcp_conn );
 
         // ATTACH INDEXMANAGER
@@ -240,6 +254,9 @@ public class MandantContext
 
         // BUILD VAULT LIST FROM DISKARRAYS
         build_vault_list();
+
+        // BUILD CACHE SEARCHERLIST
+        idx_util.create_hash_searcher_list();
 
 
         Set<Milter> milters = getMandant().getMilters();
@@ -284,7 +301,12 @@ public class MandantContext
         MailBoxFetcherServer mb_fetcher_server = control.get_mb_fetcher_server();
         while (if_it.hasNext())
         {
-            MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory( if_it.next() );
+            ImapFetcher imf = if_it.next();
+            int fl = Integer.parseInt(imf.getFlags());
+            if ((fl & CS_Constants.IMF_DISABLED) == CS_Constants.IMF_DISABLED)
+                continue;
+
+            MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory( imf );
              mb_fetcher_server.add_child(  child );
         }
 
@@ -312,13 +334,18 @@ public class MandantContext
         for (int i = 0; i < worker_list.size(); i++)
         {
             WorkerParent wp = worker_list.get(i);
-            wp.setShutdown(true);
+            if (!(wp instanceof TCPCallConnect))
+            {
+                wp.setShutdown(true);
+            }
         }
 
-        // REMOVE COMM
-        worker_list.remove( tcp_conn );
+        // DO NOT REMOVE COMM; WE ARE IN COMM RIGHT NOW
+      /*  tcp_conn.setShutdown(true);
+        worker_list.remove( tcp_conn );*/
 
-        // REMOVE INDEXMANAGER       
+        // REMOVE INDEXMANAGER
+        index_manager.setShutdown(true);
         worker_list.remove(index_manager);
 
 
@@ -383,9 +410,7 @@ public class MandantContext
     }
 
     public ArrayList<String> get_mailaliases( String user, String pwd )
-    {
-        ArrayList<String> mail_list = new ArrayList<String>();
-
+    {        
         UserSSOcache ussc = get_from_sso_cache( user,  pwd );
         if (ussc != null)
         {

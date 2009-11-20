@@ -40,8 +40,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -480,17 +478,12 @@ public class SearchCall
                 for (int ds_idx = dv.get_dsh_list().size() - 1; ds_idx >= 0; ds_idx--)
                 {
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(ds_idx);
+                    if (dsh.is_disabled())
+                        continue;
+
                     if (dsh.is_index())
                     {
-                        try
-                        {
-                            dsh.open_read_index();
-                            dsh_list.add(dsh);
-                        }
-                        catch (VaultException vaultException)
-                        {
-                            LogManager.err_log_warn(Main.Txt("Cannot_open_index_space") + " " + dsh.getDs().getPath());
-                        }
+                        dsh_list.add(dsh);
                     }
                 }
             }
@@ -597,6 +590,7 @@ public class SearchCall
     }
 
 
+
     void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list,  Query qry, Filter filter, int n ) throws IOException
     {
         // RESET LISTS
@@ -607,9 +601,17 @@ public class SearchCall
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
-            IndexReader reader = dsh.get_read_index();
-            IndexSearcher searcher = new IndexSearcher(reader);
-            searcher_list.add(searcher);
+            IndexReader reader = null;
+            try
+            {
+                reader = dsh.create_read_index();
+                IndexSearcher searcher = new IndexSearcher(reader);
+                searcher_list.add(searcher);
+            }
+            catch (VaultException vaultException)
+            {
+                LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
+            }
         }
 
         // BUILD SEARCHABLE ARRAY
@@ -680,10 +682,13 @@ public class SearchCall
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(ds_idx);
                     if (dsh.is_index())
                     {
+                        if (dsh.is_disabled())
+                            continue;
+
                         // START A SERACH TODO: DO THIS IN BACKGROUND
                         try
                         {
-                            IndexReader reader = dsh.open_read_index();
+                            IndexReader reader = dsh.create_read_index();
                             IndexSearcher searcher = new IndexSearcher(reader);
 
                             FilterIndexReader fir = new FilterIndexReader(reader);

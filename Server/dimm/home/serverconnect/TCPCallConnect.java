@@ -89,6 +89,7 @@ public class TCPCallConnect extends WorkerParent
     MandantContext m_ctx;
     boolean use_ssl;
     private boolean is_started;
+    private static final int DBG_LVL_VERB = 7;
 
     public TCPCallConnect( MandantContext m_ctx)
     {
@@ -550,7 +551,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, String ret, OutputStream out ) throws IOException
     {
-        Main.debug_msg(0, "Answer is <" + ret + ">");
+        Main.debug_msg( DBG_LVL_VERB, "Answer is <" + ret + ">");
         StringBuffer answer = new StringBuffer();
 
         if (ok)
@@ -588,7 +589,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, long alen, InputStream in, OutputStream out ) throws IOException
     {
-        Main.debug_msg(0, "Answer is stream with len " + alen + ">");
+        Main.debug_msg(DBG_LVL_VERB, "Answer is stream with len " + alen + ">");
 
         StringBuffer answer = new StringBuffer();
 
@@ -688,7 +689,7 @@ public class TCPCallConnect extends WorkerParent
 
                 args.append( params.get(i) );
             }
-            Main.debug_msg(1, "Received ip command <" + cmd + " " + args + "> ");
+            Main.debug_msg(DBG_LVL_VERB - 1, "Received ip command <" + cmd + " " + args + "> ");
 
             // call_ ARE THE OLDSTYLE FUNCS
             if (cmd.substring(0,5).compareTo("call_") == 0 )
@@ -767,7 +768,7 @@ public class TCPCallConnect extends WorkerParent
     private void run_loop()
     {
         int fallback_cnt = 0;
-        while (true)
+        while (!isShutdown())
         {
             LogicControl.sleep(1000);
 

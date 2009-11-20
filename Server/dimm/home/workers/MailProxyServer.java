@@ -319,18 +319,22 @@ public class MailProxyServer extends ListWorkerParent
             pe.set_started(true);
         }
 
-        idle_worker = new SwingWorker()
+        if (!is_started)
         {
-            @Override
-            public Object construct()
+            idle_worker = new SwingWorker()
             {
-                do_idle();
+                @Override
+                public Object construct()
+                {
+                    do_idle();
 
-                return null;
-            }
-        };
+                    return null;
+                }
+            };
 
-        idle_worker.start();
+            idle_worker.start();
+            is_started = true;
+        }
         
        this.setStatusTxt("Running");
        this.setGoodState(true);        

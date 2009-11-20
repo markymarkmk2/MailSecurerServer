@@ -85,7 +85,7 @@ public class Extractor implements Serializable
         {
             try
             {
-                LogManager.log(Level.FINE, "Extracting with extractor " + extractor.getClass().getName());
+                LogManager.debug_msg(3, "Extracting with extractor " + extractor.getClass().getName());
                 Reader rdr = null;
                 SwingWorker sw = new SwingWorker()
                 {

@@ -21,6 +21,7 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
+import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.hibernate.MailHeaderVariable;
 import java.io.File;
@@ -62,16 +63,20 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Searchable;
+import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 
-
-
 class ZipEntryInputStream extends InputStream
 {
+
     InputStream is;
     ZipEntry ze;
 
@@ -83,7 +88,7 @@ class ZipEntryInputStream extends InputStream
 
     @Override
     public int available() throws IOException
-    {        
+    {
         return is.available();
     }
 
@@ -99,7 +104,6 @@ class ZipEntryInputStream extends InputStream
         return is.markSupported();
     }
 
-
     @Override
     public int read( byte[] b ) throws IOException
     {
@@ -111,8 +115,6 @@ class ZipEntryInputStream extends InputStream
     {
         return is.read(b, off, len);
     }
-
-
 
     @Override
     public int read() throws IOException
@@ -136,7 +138,6 @@ class MyMimetype
         return mimetype.compareToIgnoreCase(t) == 0;
     }
 }
-
 
 class IndexJobEntry
 {
@@ -167,37 +168,39 @@ class IndexJobEntry
         Document doc = new Document();
         DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
 
-        ixm.setStatusTxt(Main.Txt("Indexing mail file" + " "+ unique_id));
-        
+        ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
+
 
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
             ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, docw);
 
-        
+
             IndexWriter writer = index_dsh.get_write_index();
             if (writer == null)
+            {
                 writer = index_dsh.open_write_index();
+            }
 
 
             // DETECT LANG OF INDEX AND PUT INTO LUCENE
-            String lang = ixm.get_lang_by_analyzer( writer.getAnalyzer() );
-            doc.add( new Field( CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED ) );
+            String lang = ixm.get_lang_by_analyzer(writer.getAnalyzer());
+            doc.add(new Field(CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
 
             byte[] hash = msg.get_hash();
             if (hash != null)
             {
                 String txt_hash = new String(Base64.encodeBase64(hash));
-                doc.add( new Field( CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED ) );
+                doc.add(new Field(CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
 
             // SHOVE IT RIGHT OUT!!!
-            synchronized( index_dsh.idx_lock )
+            synchronized (index_dsh.idx_lock)
             {
                 writer.addDocument(doc);
             }
-            
+
 
             // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
             List field_list = doc.getFields();
@@ -239,12 +242,14 @@ public class IndexManager extends WorkerParent
     //boolean do_index_body = false;
     boolean do_index_attachments = false;
     boolean do_detect_lang = false;
-
     Map<String, String> analyzerMap;
     Extractor extractor;
     MandantContext m_ctx;
     private SwingWorker idle_worker;
     ArrayList<String> allowed_headers;
+
+    ArrayList <IndexSearcher> hash_searcher_list;
+    private boolean is_started;
 
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -278,6 +283,8 @@ public class IndexManager extends WorkerParent
         allowed_headers.add("To");
         allowed_headers.add("CC");
         allowed_headers.add("BCC");
+        is_started = false;
+
     }
 
     public IndexWriter open_index( String path, String language, boolean do_index ) throws IOException
@@ -314,7 +321,7 @@ public class IndexManager extends WorkerParent
 
         // CHECK IF INDEX EXISTS
         boolean create = !IndexReader.indexExists(path);
-        
+
         if (IndexWriter.isLocked(dir))
         {
             Main.err_log("Unlocking already locked IndexWriter");
@@ -346,7 +353,7 @@ public class IndexManager extends WorkerParent
         }
         return "de";
     }
-    
+
     public Analyzer create_analyzer( String language, boolean do_index )
     {
         Analyzer analyzer = null;
@@ -400,8 +407,9 @@ public class IndexManager extends WorkerParent
 
     String to_field( int i )
     {
-        return Integer.toString( i );
+        return Integer.toString(i);
     }
+
     String to_hex_field( long l )
     {
         return Long.toString(l, 16);
@@ -423,15 +431,21 @@ public class IndexManager extends WorkerParent
         // SUBJECT IS STORED AND ANALYZED
         String subject = mime_msg.getMsg().getSubject();
         if (subject == null)
+        {
             subject = "";
+        }
         doc.add(new Field(CS_Constants.FLD_SUBJECT, subject, Field.Store.YES, Field.Index.ANALYZED));
 
         // LONGS AS HEX
         Date d = mime_msg.getMsg().getReceivedDate();
         if (d == null)
+        {
             d = mime_msg.getMsg().getSentDate();
+        }
         if (d == null)
+        {
             d = mail_file.getDate();
+        }
 
         doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
         doc.add(new Field(CS_Constants.FLD_TM, to_hex_field(mail_file.getDate().getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -441,7 +455,7 @@ public class IndexManager extends WorkerParent
         try
         {
             Enumeration mail_header_list = msg.getAllHeaders();
-            
+
             index_headers(doc, unique_id, msg.getAllHeaders());
 
             Object content = msg.getContent();
@@ -457,7 +471,7 @@ public class IndexManager extends WorkerParent
                 index_part_content(docw, unique_id, p);
             }
 
-            if (doc.getField( CS_Constants.FLD_ATTACHMENT_NAME) != null)
+            if (doc.getField(CS_Constants.FLD_ATTACHMENT_NAME) != null)
             {
                 doc.add(new Field(CS_Constants.FLD_HAS_ATTACHMENT, "1", Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
@@ -480,7 +494,9 @@ public class IndexManager extends WorkerParent
                         }
                     }
                     if (!is_already_in_doc)
-                        doc.add(new Field("BCC", bcc.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED ) );
+                    {
+                        doc.add(new Field("BCC", bcc.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
+                    }
                 }
             }
         }
@@ -529,12 +545,12 @@ public class IndexManager extends WorkerParent
                 else
                 {
                     LogManager.log(Level.FINEST, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
-                }                
+                }
             }
         }
     }
 
-    public  void index_mp_content( DocumentWrapper doc, String uid, Multipart mp ) throws MessagingException, IOException
+    public void index_mp_content( DocumentWrapper doc, String uid, Multipart mp ) throws MessagingException, IOException
     {
 
         for (int i = 0; i < mp.getCount(); i++)
@@ -551,7 +567,7 @@ public class IndexManager extends WorkerParent
         }
     }
 
-    public  void index_part_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException, IOException
+    public void index_part_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException, IOException
     {
         // SELECT THE PLAIN PART OF AN ALTERNATIVE MP
         if (p.isMimeType("multipart/alternative"))
@@ -606,9 +622,11 @@ public class IndexManager extends WorkerParent
             if (filename != null || (disposition != null && disposition.compareToIgnoreCase(Part.ATTACHMENT) == 0))
             {
                 if (filename == null)
+                {
                     filename = "";
+                }
 
-                LogManager.log(Level.FINER, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc "+ doc.get_uuid());
+                LogManager.log(Level.FINER, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc " + doc.get_uuid());
 
                 // YES
                 if (do_index_attachments)
@@ -669,7 +687,9 @@ public class IndexManager extends WorkerParent
         catch (Exception ee)
         {
             if (filename == null)
+            {
                 filename = "";
+            }
 
             LogManager.log(Level.SEVERE, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: ", ee);
             return;
@@ -804,7 +824,7 @@ public class IndexManager extends WorkerParent
         try
         {
             LocZipInputStream zis = new LocZipInputStream(is);
-           
+
             while ((entry = zis.getNextEntry()) != null)
             {
                 String name = entry.getName();
@@ -817,7 +837,7 @@ public class IndexManager extends WorkerParent
                 LogManager.log(Level.FINER, "Indexing zip entry " + name + " + to " + doc.get_uuid());
                 String extention = name.substring(dot + 1, name.length());
 
-                ZipEntryInputStream zeis = new ZipEntryInputStream( zis, entry );
+                ZipEntryInputStream zeis = new ZipEntryInputStream(zis, entry);
 
 
                 try
@@ -834,11 +854,11 @@ public class IndexManager extends WorkerParent
                 }
                 catch (ExtractionException extractionException)
                 {
-                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name , extractionException);
+                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name, extractionException);
                 }
             }
         }
-        catch ( IllegalArgumentException wrong_zip_entry )
+        catch (IllegalArgumentException wrong_zip_entry)
         {
             LogManager.log(Level.SEVERE, "Error in zip file " + doc.get_uuid(), wrong_zip_entry);
         }
@@ -905,19 +925,19 @@ public class IndexManager extends WorkerParent
                     int da_id = DiskSpaceHandler.get_da_id_from_uuid(uuid);
                     int ds_id = DiskSpaceHandler.get_ds_id_from_uuid(uuid);
                     long time = DiskSpaceHandler.get_time_from_uuid(uuid);
-                    boolean encoded = DiskSpaceHandler.is_encoded_from_uuid( uuid );
+                    boolean encoded = DiskSpaceHandler.is_encoded_from_uuid(uuid);
 
                     DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
                     DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
-                    index_dsh = dv.open_dsh(index_dsh, 1024*1024);
-                    
+                    index_dsh = dv.open_dsh(index_dsh, 1024 * 1024);
+
                     if (index_dsh != null)
                     {
                         RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
 
                         // NO, DO RIGHT HERE
                         handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
-                    }                
+                    }
                 }
 
             }
@@ -927,20 +947,24 @@ public class IndexManager extends WorkerParent
             LogManager.err_log("Error while cleaning up index holf buffer", e);
             e.printStackTrace();
         }
-
-        idle_worker = new SwingWorker()
+        if (!is_started)
         {
 
-            @Override
-            public Object construct()
+            idle_worker = new SwingWorker()
             {
-                do_idle();
 
-                return null;
-            }
-        };
+                @Override
+                public Object construct()
+                {
+                    do_idle();
 
-        idle_worker.start();
+                    return null;
+                }
+            };
+
+            idle_worker.start();
+            is_started = true;
+        }
 
         this.setStatusTxt("Running");
         this.setGoodState(true);
@@ -952,7 +976,9 @@ public class IndexManager extends WorkerParent
         synchronized (index_job_list)
         {
             if (index_job_list.size() == 0)
+            {
                 return;
+            }
         }
 
         setStatusTxt(Main.Txt("Updating_index"));
@@ -1037,7 +1063,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exc)
         {
-            throw new IndexException( exc.getMessage() );
+            throw new IndexException(exc.getMessage());
         }
 
         synchronized (index_job_list)
@@ -1078,26 +1104,35 @@ public class IndexManager extends WorkerParent
     {
         String val = doc.get(fld);
         if (val != null)
+        {
             return true;
+        }
 
         return false;
     }
+
     static int _doc_get_int( Document doc, String fld ) throws Exception
     {
         String val = doc.get(fld);
         if (val == null)
-            throw new Exception( "field " + fld + " does not exist" );
+        {
+            throw new Exception("field " + fld + " does not exist");
+        }
 
         return Integer.parseInt(val);
     }
+
     static long _doc_get_long( Document doc, String fld, int radix ) throws Exception
     {
         String val = doc.get(fld);
         if (val == null)
-            throw new Exception( "field " + fld + " does not exist" );
+        {
+            throw new Exception("field " + fld + " does not exist");
+        }
 
         return Long.parseLong(val, radix);
     }
+
     static public int doc_get_int( Document doc, String fld )
     {
         int ret = -1;
@@ -1108,11 +1143,12 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse int field " + fld + " from index" , exception);
+            LogManager.err_log("Cannot parse int field " + fld + " from index", exception);
         }
 
         return ret;
     }
+
     static public boolean doc_get_bool( Document doc, String fld )
     {
         boolean ret = false;
@@ -1121,15 +1157,18 @@ public class IndexManager extends WorkerParent
         {
             String val = doc.get(fld);
             if (val.charAt(0) == '1')
+            {
                 ret = true;
+            }
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse bool field " + fld + " from index" , exception);
+            LogManager.err_log("Cannot parse bool field " + fld + " from index", exception);
         }
 
         return ret;
     }
+
     static public long doc_get_hex_long( Document doc, String fld )
     {
         long ret = -1;
@@ -1140,58 +1179,65 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse hex long field " + fld + " from index" , exception);
+            LogManager.err_log("Cannot parse hex long field " + fld + " from index", exception);
         }
 
         return ret;
     }
-    public boolean handle_existing_mail_in_vault( DiskVault dv,  RFCGenericMail msg )
+
+    public boolean handle_existing_mail_in_vault( DiskVault dv, RFCGenericMail msg )
     {
+
+        // return false;
         boolean ret = false;
-        // GO THROUGH ALL DISKSPACES OF THIS VAULT
+        String hash = new String(Base64.encodeBase64( msg.get_hash() ));
 
 
-        // TODO: MAYBE WE SHOULD SPEED THIS UP WITH LOCAL DB?
-
-        String hash = new String(Base64.encodeBase64(msg.get_hash()));
-
-        for (int j = 0; j < dv.get_dsh_list().size(); j++)
+        // BUILD SEARCHABLE ARRAY
+        Searchable[] search_arr = new Searchable[hash_searcher_list.size()];
+        for (int i = 0; i < hash_searcher_list.size(); i++)
         {
-            DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
-            if (dsh.is_index())
+            search_arr[i] = hash_searcher_list.get(i);
+        }
+
+        // SORT BY DATE REVERSE
+        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+
+        try
+        {
+            // PARALLEL SEARCH
+            ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
+
+            Term term = new Term(CS_Constants.FLD_HASH, hash);
+            Query qry = new MatchAllDocsQuery();
+
+            TermsFilter filter = new TermsFilter();
+            filter.addTerm(term);
+            // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE ONE RESULT
+            TopDocs tdocs = pms.search(qry, filter, 1, sort);
+
+            if (tdocs.totalHits > 0)
             {
-                // START A SERACH TODO: DO THIS IN BACKGROUND
-                try
+                // FOUND SAME MAIL
+                Document doc = pms.doc(tdocs.scoreDocs[0].doc);
+                int doc_ds_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DS);
+                int doc_da_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DA);
+                String doc_hash = doc.get(CS_Constants.FLD_HASH);
+                
+                DiskSpaceHandler dsh = dv.get_dsh(doc_ds_id);
+
+                if (dsh.getDs().getId() == doc_ds_id)
                 {
-                    IndexReader reader = dsh.open_read_index();
-                    IndexSearcher searcher = new IndexSearcher(reader);
-
-                    Term term = new Term(CS_Constants.FLD_HASH, hash);
-                    Query qry = new TermQuery(term);
-
-                    TermsFilter filter = null;
-
-                    // SSSSEEEEAAAARRRRCHHHHHHH
-                    TopDocs tdocs = searcher.search(qry, filter, 1);
-                    if (tdocs.totalHits > 0)
-                    {
-                        // FOUND SAME MAIL
-                        Document doc = searcher.doc(0);
-
-                        // UPDATE IF NECESSARY WITH  NEW BCC
-                        ret = handle_bcc_and_update( dsh, doc, msg );
-
-                        
-                        break;
-                    }
-                }
-                catch (VaultException vaultException)
-                {
-                }
-                catch (IOException iOException)
-                {
+                    // UPDATE IF NECESSARY WITH  NEW BCC
+                    ret = handle_bcc_and_update(dsh, doc, msg);
                 }
             }
+        }
+        catch (IOException iOException)
+        {
+        }
+        catch (NumberFormatException numberFormatException)
+        {
         }
 
         return ret;
@@ -1201,72 +1247,124 @@ public class IndexManager extends WorkerParent
     {
         IndexWriter writer = index_dsh.get_write_index();
         if (writer == null)
+        {
             writer = index_dsh.open_write_index();
+        }
 
 
-        Term term = new Term( CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME) );
+        Term term = new Term(CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME));
         // SHOVE IT RIGHT OUT!!!
 
-        synchronized( index_dsh.idx_lock )
+        synchronized (index_dsh.idx_lock)
         {
             writer.updateDocument(term, doc);
         }
     }
 
-
     boolean handle_bcc_and_update( DiskSpaceHandler index_dsh, Document doc, RFCGenericMail msg )
     {
         boolean needs_updated_index = false;
-           // TODO: DO WE REALLY NEED THE SECOND ENTRY? THE HASH SAYS THE MESSAGE IS IDENTICAL, SO WHY BOTHER?
-            // NOW WE CHECK IF ALL BCC ARE IN MESSAGE, IF NOT WE NEED A NEW INDEX
-            if (msg.get_bcc_list().size() > 0)
+        // TODO: DO WE REALLY NEED THE SECOND ENTRY? THE HASH SAYS THE MESSAGE IS IDENTICAL, SO WHY BOTHER?
+        // NOW WE CHECK IF ALL BCC ARE IN MESSAGE, IF NOT WE NEED A NEW INDEX
+        if (msg.get_bcc_list().size() > 0)
+        {
+            Field[] bcc_fields = doc.getFields("BCC");
+            for (int i = 0; i < msg.get_bcc_list().size(); i++)
             {
-                Field[] bcc_fields = doc.getFields("BCC");
-                for (int i = 0; i < msg.get_bcc_list().size(); i++)
-                {
-                    Address mail_bcc = msg.get_bcc_list().get(i);
+                Address mail_bcc = msg.get_bcc_list().get(i);
 
-                    for (int f = 0; f < bcc_fields.length; f++)
+                for (int f = 0; f < bcc_fields.length; f++)
+                {
+                    String doc_bcc = bcc_fields[f].stringValue();
+                    if (!doc_bcc.contains(mail_bcc.toString()))
                     {
-                        String doc_bcc = bcc_fields[f].stringValue();
-                        if (!doc_bcc.contains( mail_bcc.toString() ))
-                        {
-                            needs_updated_index = true;
-                            doc.add(new Field( "BCC", mail_bcc.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED)  );
-                        }
+                        needs_updated_index = true;
+                        doc.add(new Field("BCC", mail_bcc.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED));
                     }
                 }
             }
+        }
 
-            String uuid = doc.get(CS_Constants.FLD_UID_NAME);
-            int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
-            int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
+        String uuid = doc.get(CS_Constants.FLD_UID_NAME);
+        int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
+        int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
 
-            if (needs_updated_index)
+        if (needs_updated_index)
+        {
+            try
             {
-                try
-                {
-                    // IF WE CAN UPDATE, EVERY THING IS FINE, DEl MESSAGE
-                    LogManager.log(Level.INFO, "Updating index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME) );
-                    update_document(doc, index_dsh);
+                // IF WE CAN UPDATE, EVERY THING IS FINE, DEl MESSAGE
+                LogManager.log(Level.INFO, "Updating index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME));
+                update_document(doc, index_dsh);
 
-                    // AND MARK AS "BEEN OFFICIALLY PIMPED"
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    LogManager.log(Level.SEVERE, "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
-                    // CONTINUE ANYWAY INDEX COULD BE READ ONLY
-                }
-            }
-            else
-            {
-                LogManager.log(Level.INFO, "Skipping existing mail " + doc.get(CS_Constants.FLD_UID_NAME) + ",  exists already in da:" + da_id + " ds:" + ds_id );
+                // AND MARK AS "BEEN OFFICIALLY PIMPED"
                 return true;
             }
-            return false;
+            catch (Exception ex)
+            {
+                LogManager.log(Level.SEVERE, "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
+                // CONTINUE ANYWAY INDEX COULD BE READ ONLY
+                }
+        }
+        else
+        {
+            LogManager.log(Level.INFO, "Skipping existing mail " + doc.get(CS_Constants.FLD_UID_NAME) + ",  exists already in da:" + da_id + " ds:" + ds_id);
+            return true;
+        }
+        return false;
     }
 
+    public void create_hash_searcher_list()
+    {
+        boolean ret = false;
+        // GO THROUGH ALL DISKSPACES OF THIS VAULT
+        ArrayList<DiskSpaceHandler> dsh_list = new ArrayList<DiskSpaceHandler>();
 
+        // TODO: MAYBE WE SHOULD SPEED THIS UP WITH LOCAL DB?
+
+        ArrayList<Vault> vault_array = m_ctx.getVaultArray();
+        for (int i = 0; i < vault_array.size(); i++)
+        {
+            Vault vault = vault_array.get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault)vault;
+                for (int j = 0; j < dv.get_dsh_list().size(); j++)
+                {
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
+                    if (dsh.is_disabled())
+                    {
+                        continue;
+                    }
+
+                    if (dsh.is_index())
+                    {
+                        dsh_list.add(dsh);
+                    }
+                }
+            }
+        }
+
+        ArrayList<IndexSearcher> searcher_list = new ArrayList<IndexSearcher>();
+
+        // FIRST PASS, OPEN INDEX READERS
+        for (int i = 0; i < dsh_list.size(); i++)
+        {
+            DiskSpaceHandler dsh = dsh_list.get(i);
+            IndexReader reader = null;
+            try
+            {
+                reader = dsh.create_read_index();
+                IndexSearcher searcher = new IndexSearcher(reader);
+                searcher_list.add(searcher);
+            }
+            catch (VaultException vaultException)
+            {
+                LogManager.err_log("Cannot add index to hash search list " + dsh.getDs().getPath(), vaultException);
+            }
+        }
+
+        hash_searcher_list = searcher_list;
+    }
 }
 

@@ -22,11 +22,13 @@ public class ListWorkerParent extends WorkerParent
 
     final ArrayList<WorkerParentChild> child_list;
     SwingWorker idle_worker;
+    boolean is_started;
 
     public ListWorkerParent( String _name )
     {
         super(_name);
         child_list = new ArrayList<WorkerParentChild>();
+        is_started = false;
     }
 
 
@@ -115,17 +117,21 @@ public class ListWorkerParent extends WorkerParent
                 worker.start();
             }
         }
-        idle_worker = new SwingWorker()
+        if (!is_started)
         {
-
-            @Override
-            public Object construct()
+            idle_worker = new SwingWorker()
             {
-                do_idle();
-                return null;
-            }
-        };
-        idle_worker.start();
+
+                @Override
+                public Object construct()
+                {
+                    do_idle();
+                    return null;
+                }
+            };
+            idle_worker.start();
+            is_started = true;
+        }
         this.setStatusTxt("Running");
         this.setGoodState(true);
         return true;

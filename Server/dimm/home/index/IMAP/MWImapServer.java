@@ -17,19 +17,27 @@
  */
 package dimm.home.index.IMAP;
 
-import dimm.home.mailarchiv.Exceptions.AuthException;
-import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.*;
 import java.io.*;
 import java.util.*;
-import javax.mail.MessagingException;
+
 
 
 
 public class MWImapServer extends Thread
 {
+    private final static String RESTAG = "* ";
+
+    
+   void add( ImapCmd cmd )
+   {
+        if (cmd_map == null)
+        {
+            cmd_map = new HashMap<String, ImapCmd>();
+        }
+        cmd_map.put(cmd.getCmd(), cmd);
+    }
 
     PrintWriter out;
     BufferedReader in;
@@ -39,15 +47,36 @@ public class MWImapServer extends Thread
     boolean trace = false;
     int con = 0;
     MandantContext m_ctx;
+    boolean has_searched = false;
+
+    static HashMap<String, ImapCmd> cmd_map;
 
     public MWImapServer( MandantContext m_ctx, Socket s, boolean trace )
     {
         this.s = s;
         this.m_ctx = m_ctx;
         this.trace = trace;
-    }
 
-    private void write( String message )
+        add( new Capability() );
+        add( new Check() );
+        add( new Examine());
+        add( new Close());
+        add( new Fetch());
+        add( new Idle());
+        add( new List());
+        add( new Login());
+        add( new Logout());
+        add( new Lsub());
+        add( new Noop());
+        add( new Select());
+        add( new Status());
+        add( new Subscribe());
+        add( new Uid());
+        add( new Unsubscribe());
+    }
+    
+
+    void write( String message )
     {
         if (trace)
         {
@@ -58,7 +87,7 @@ public class MWImapServer extends Thread
         out.flush();
     }
 
-    private void rawwrite( String message )
+    void rawwrite( String message )
     {
         if (trace)
         {
@@ -67,14 +96,13 @@ public class MWImapServer extends Thread
         out.write(message);
         out.flush();
     }
-    private final static String RESTAG = "* ";
-
-    private void response( String message )
+    
+    void response( String message )
     {
         write(RESTAG + message);
     }
 
-    private void response( String sid, boolean ok, String message )
+    void response( String sid, boolean ok, String message )
     {
         String res = "";
         if (sid == null)
@@ -96,7 +124,6 @@ public class MWImapServer extends Thread
         write(res + message);
     }
 
-    boolean has_searched = false;
     private int techno( String line )
     {
         line = line.trim();
@@ -122,14 +149,89 @@ public class MWImapServer extends Thread
                 par = rest.substring(i + 1).trim();
             }
 
+            int result = -1;
             //System.out.println("In: [" + sid + "]  "+cmd);
+            ImapCmd imapCmd = cmd_map.get( cmd );
+            if (imapCmd != null)
+            {
+                result = imapCmd.action(this, sid, par);
+            }
+            else
+            {
+                response(sid, false, "unknown command");
+                result = 1;
+            }
+            return result;
+        }
+        return 1;
+    }
+
+    @Override
+    public void run()
+    {
+        try
+        {
+            out = new PrintWriter(s.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            response(null, true, "localhost IMAP4 31.08.2006");
+            while (true)
+            {
+                String line = in.readLine();
+                if (line == null)
+                {
+                    break;
+                }
+               /* if (trace)
+                {
+                    System.out.println("[" + con + "] " + line);
+                }*/
+                line = line.trim();
+                if (!line.equals(""))
+                {
+                    techno(line);
+                }
+            }
+            out.close();
+            in.close();
+            s.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
 
 
-            if (cmd.equals("capability"))
+    public static String cleanup( String name )
+    {
+        char org[] = name.toCharArray();
+        int i, j;
+        //clean from spaces etc
+        for (i = 0, j = 0; i < org.length; i++)
+        {
+            if (('a' <= org[i] && org[i] <= 'z') || ('A' <= org[i] && org[i] <= 'Z') || ('0' <= org[i] && org[i] <= '9') || '_' == org[i])
+            {
+                if (j < i)
+                {
+                    org[j] = org[i];
+                }
+                j++;
+            }
+        }
+        return new String(org, 0, j);
+    }
+    public void close() throws IOException
+    {
+        s.close();
+    }
+
+
+           /* if (cmd.equals("capability"))
             {
                 return capability(sid, par);
             }
-            if (cmd.equals("login"))
+            * */
+      /*      if (cmd.equals("login"))
             {
                 return login(sid, par);
             }
@@ -278,66 +380,13 @@ public class MWImapServer extends Thread
             //BAD COMANND / login firdst
         }
         return 1;
-    }
+    }*/
 
-    @Override
-    public void run()
-    {
-        try
-        {
-            out = new PrintWriter(s.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            response(null, true, "localhost IMAP4 31.08.2006");
-            while (true)
-            {
-                String line = in.readLine();
-                if (line == null)
-                {
-                    break;
-                }
-               /* if (trace)
-                {
-                    System.out.println("[" + con + "] " + line);
-                }*/
-                line = line.trim();
-                if (!line.equals(""))
-                {
-                    techno(line);
-                }
-            }
-            out.close();
-            in.close();
-            s.close();
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-   
-    public static String cleanup( String name )
-    {
-        char org[] = name.toCharArray();
-        int i, j;
-        //clean from spaces etc 
-        for (i = 0, j = 0; i < org.length; i++)
-        {
-            if (('a' <= org[i] && org[i] <= 'z') || ('A' <= org[i] && org[i] <= 'Z') || ('0' <= org[i] && org[i] <= '9') || '_' == org[i])
-            {
-                if (j < i)
-                {
-                    org[j] = org[i];
-                }
-                j++;
-            }
-        }
-        return new String(org, 0, j);
-    }
-    private static Hashtable kontos = new Hashtable();
+  
+    //private static Hashtable kontos = new Hashtable();
 
 
-
+/*
     private static MailKonto getKonto( String user, String passwd )
     {
 
@@ -350,12 +399,13 @@ public class MWImapServer extends Thread
         }
         return null;
     }
+ * */
     /*
      * Split line to arguments 
      * "user" "passwd"
      * 
      */
-
+/*
     public static String[] imapsplit( String line )
     {
 
@@ -446,26 +496,26 @@ public class MWImapServer extends Thread
         return part;
     }
 
-
+*/
     /* Funktionalitaet
      *
      * Funktionalitaet des ImapServers wird abgefragt 
      */
-    private int capability( String sid, String par )
+   /* private int capability( String sid, String par )
     {
         response("CAPABILITY IMAP4 LOGIN IDLE");
 //        response("CAPABILITY IMAP4 IDLE LOGIN");
         response(sid, true, "CAPABILITY completed");
         return 0;
     }
+*/
 
-
-    static String storefunc[] = new String[]
+   /* static String storefunc[] = new String[]
     {
         "+flags", "-flags"
     };
-
-    boolean search( int min, int max, int offset, String part[] )
+*/
+  /*  boolean search( int min, int max, int offset, String part[] )
     {        
         mailfolder.search( min, max, offset, part) ;
 
@@ -478,8 +528,8 @@ public class MWImapServer extends Thread
         response( result );
         has_searched = true;
         return true;
-    }
-
+    }*/
+/*
     boolean fetch( int min, int max, int offset, boolean is_uid, String part[] )
     {
         int zaehler = 1;
@@ -662,7 +712,7 @@ public class MWImapServer extends Thread
         
         return true;
     }
-
+*//*
     private int uid( String sid, String par )
     {
         if (konto != null && mailfolder != null)
@@ -675,7 +725,7 @@ public class MWImapServer extends Thread
                 boolean success = true;
                 while (!range.equals(""))
                 {
-                    /* uid range could be 34:38,42:43,45 */
+                    
                     String bereich = "";
                     int i = range.indexOf(",");
                     if (i < 0)
@@ -737,7 +787,7 @@ public class MWImapServer extends Thread
                     }
                     else if (command.toLowerCase().equals("fetch"))
                     {
-                        success &= fetch(min, max, 2, /*is_uid*/ true, part);
+                        success &= fetch(min, max, 2,  true, part);
                     }
                     else
                     {
@@ -755,7 +805,8 @@ public class MWImapServer extends Thread
         response(sid, false, "UID failed");
         return 1;
     }
-
+*/
+    /*
     private int select( String sid, String par )
     {
         if (konto != null)
@@ -780,9 +831,9 @@ public class MWImapServer extends Thread
         response(sid, false, "SELECT failed");
         return 1;
     }
-
+*/
    
-
+/*
    
     private int list( String sid, String par )
     {
@@ -856,8 +907,8 @@ public class MWImapServer extends Thread
         response(sid, false, "LIST failed");
         return 1;
     }
-
-    private int status( String sid, String par )
+*/
+ /*   private int status( String sid, String par )
     {
         int h;
         int anz;
@@ -930,9 +981,10 @@ public class MWImapServer extends Thread
         response(sid, false, "LIST failed");
         return 1;
     }
-
+*/
    
-    private int lsub( String sid, String par )
+ /*
+  private int lsub( String sid, String par )
     {
         if (konto != null)
         {
@@ -973,7 +1025,8 @@ public class MWImapServer extends Thread
         response(sid, false, "LSUB failed");
         return 1;
     }
-
+*/
+   /*
     private int login( String sid, String par )
     {
         String auth[] = imapsplit(par);
@@ -1015,13 +1068,9 @@ public class MWImapServer extends Thread
         response(sid, false, "LOGIN failed");
         return 1;
     }
+*/
 
-    public void close() throws IOException
-    {
-        s.close();
-    }
-
-
+/*
       int  raw_fetch( String sid, String par )
       {
             String part[] = imapsplit(par);
@@ -1029,7 +1078,7 @@ public class MWImapServer extends Thread
             boolean success = true;
             while (!range.equals(""))
             {
-                /* range could be 34:38,42:43,45 */
+                
                 String bereich = "";
                 int i = range.indexOf(",");
                 if (i < 0)
@@ -1092,4 +1141,6 @@ public class MWImapServer extends Thread
             response(sid, success, "FETCH " + (success ? "completed" : "failed"));
             return success ? 0 : 1;
       }
+*/
+
 }

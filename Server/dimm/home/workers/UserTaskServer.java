@@ -59,6 +59,7 @@ public class UserTaskServer extends WorkerParent
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
+    private boolean is_started = false;
     
     
     /** Creates a new instance of StatusDisplay */
@@ -86,18 +87,22 @@ public class UserTaskServer extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        idle_worker = new SwingWorker()
+        if (!is_started)
         {
-            @Override
-            public Object construct()
+            idle_worker = new SwingWorker()
             {
-                do_idle();
+                @Override
+                public Object construct()
+                {
+                    do_idle();
 
-                return null;
-            }
-        };
+                    return null;
+                }
+            };
 
-        idle_worker.start();
+            idle_worker.start();
+            is_started = true;
+        }
 
        this.setStatusTxt("Running");
        this.setGoodState(true);

@@ -98,6 +98,7 @@ MySQL root /eKmIklz37T
     {
         return connect;
     }
+    private boolean is_started = false;
 
     
     /** Creates a new instance of SQLWorker */
@@ -544,28 +545,33 @@ MySQL root /eKmIklz37T
     @Override
     public boolean start_run_loop()
     {
-        SwingWorker worker = new SwingWorker()
+        if (!is_started)
         {
-            @Override
-            public Object construct()
+            SwingWorker worker = new SwingWorker()
             {
-                int ret = -1;
-                try
+                @Override
+                public Object construct()
                 {
-                    sql_worker();
+                    int ret = -1;
+                    try
+                    {
+                        sql_worker();
+                    }
+                    catch (Exception err)
+                    {
+                        err.printStackTrace();
+                        ret = -2;
+                    }
+                    Integer iret = new Integer(ret);
+                    return iret;
                 }
-                catch (Exception err)
-                {
-                    err.printStackTrace();
-                    ret = -2;
-                }
-                Integer iret = new Integer(ret);
-                return iret;
-            }
-        };
-        
-        worker.start();
-        return true;    }
+            };
+
+            worker.start();
+            is_started = true;
+        }
+        return true;
+    }
 
     @Override
     public boolean check_requirements(StringBuffer sb)

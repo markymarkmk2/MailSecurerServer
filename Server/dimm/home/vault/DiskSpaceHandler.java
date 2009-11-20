@@ -5,6 +5,7 @@
 
 package dimm.home.vault;
 
+import dimm.home.DAO.DiskSpaceDAO;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
@@ -45,7 +46,7 @@ public class DiskSpaceHandler
     DiskSpace ds;
     DiskSpaceInfo dsi;
     boolean _open;
-    IndexReader read_index;
+    //IndexReader read_index;
     IndexWriter write_index;
     MandantContext m_ctx;
     public final String idx_lock = "idx";
@@ -66,11 +67,12 @@ public class DiskSpaceHandler
     {
         return dsi.getEncMode();
     }
-
+/*
     public IndexReader get_read_index()
     {
         return read_index;
     }
+ * */
     public IndexWriter get_write_index()
     {
         return write_index;
@@ -100,7 +102,7 @@ public class DiskSpaceHandler
         return ((f & flag) == flag);
     }
 
-    public IndexReader open_read_index() throws VaultException
+    public IndexReader create_read_index() throws VaultException
     {
         if (!is_open())
         {
@@ -110,8 +112,10 @@ public class DiskSpaceHandler
         {
             if (is_index())
             {
-                read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
+                return m_ctx.get_index_manager().open_read_index(getIndexPath());
+              /*  read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
                 return read_index;
+               * */
             }
             else
                 throw new VaultException( ds, "Cannot open read index on non-index ds: " + ds.getPath());
@@ -121,7 +125,7 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot open read index: " + iex.getMessage());
         }
     }
-    public void close_read_index() throws VaultException
+  /*  public void close_read_index() throws VaultException
     {
         try
         {
@@ -134,7 +138,7 @@ public class DiskSpaceHandler
         {
             throw new VaultException( ds, "Cannot close read index: " , iex);
         }
-    }
+    }*/
     public IndexWriter open_write_index() throws VaultException
     {
         if (!is_open())
@@ -147,6 +151,9 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
+                    if (write_index != null)
+                        return write_index;
+
                     write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
                 }
                 return write_index;
@@ -169,6 +176,7 @@ public class DiskSpaceHandler
                 {
                     write_index.commit();
                     write_index.close();
+                    write_index = null;
                 }
             }
         }
@@ -328,6 +336,13 @@ public class DiskSpaceHandler
         catch (Exception ex)
         {
             throw new VaultException( ds, "Cannot write info file: " , ex);
+        }
+        if (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0)
+        {
+            ds.setStatus( CS_Constants.DS_DATA);
+
+            DiskSpaceDAO dao = new DiskSpaceDAO();
+            dao.update(ds);
         }
     }
     
@@ -841,5 +856,21 @@ public class DiskSpaceHandler
                 LogManager.log(Level.SEVERE, "Update info failed on Diskspace " + ds.getPath() + ": ", ex);
             }
         }
+    }
+
+    public boolean is_disabled()
+    {
+        try
+        {
+            int flags = Integer.parseInt(getDs().getFlags());
+            if ((flags & CS_Constants.DS_DISABLED) == CS_Constants.DS_DISABLED)
+            {
+                return true;
+            }
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        return false;
     }
 }

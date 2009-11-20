@@ -68,6 +68,17 @@ public class LogManager
     public static void set_debug_lvl( long l)
     {
         dbg_level = l;
+        
+        if (l >8)
+            main_logger.setLevel(org.apache.log4j.Level.ALL);
+        else if (l >6)
+            main_logger.setLevel(org.apache.log4j.Level.TRACE);
+        else if (l >4)
+            main_logger.setLevel(org.apache.log4j.Level.DEBUG);
+        else if (l >1)
+            main_logger.setLevel(org.apache.log4j.Level.INFO);
+        else
+            main_logger.setLevel(org.apache.log4j.Level.WARN);
     }
 
 
@@ -197,6 +208,7 @@ public class LogManager
     static
     {
         main_logger = Logger.getLogger("dimm.MailSecurerServer");
+        
 
         try
         {

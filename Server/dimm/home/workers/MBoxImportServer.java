@@ -59,6 +59,7 @@ public class MBoxImportServer extends WorkerParent
     final ArrayList<MBoxImporterEntry> import_list;
     SwingWorker idle_worker;
     boolean m_Stop = false;
+    boolean is_started = false;
 
     /** Creates a new instance of StatusDisplay */
     public MBoxImportServer()
@@ -85,6 +86,9 @@ public class MBoxImportServer extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
+        if (is_started)
+            return true;
+
         idle_worker = new SwingWorker()
         {
 
@@ -98,6 +102,7 @@ public class MBoxImportServer extends WorkerParent
         };
 
         idle_worker.start();
+        is_started = true;
 
         this.setStatusTxt("Running");
         this.setGoodState(true);

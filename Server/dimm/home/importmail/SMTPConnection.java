@@ -66,45 +66,43 @@ public class SMTPConnection extends ProxyConnection
 
         try
         {
-            // set the socket timeout
-            //clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            // get the client output stream
             clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(),
                     clientSocket.getSendBufferSize());
-            // get the client input stream	
+
             clientReader = new BufferedInputStream(clientSocket.getInputStream(),
                     clientSocket.getReceiveBufferSize());
 
-//            clientReader = clientSocket.getInputStream();
             
-            // connect to the real POP3 server
+            // CREATE SERVERSOCKET
             serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
-            // set the socket timeout
-            serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-          /*  LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
-            LogManager.debug_msg(2, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            LogManager.debug_msg(2, "getSoTimeout: " + serverSocket.getSoTimeout());*/
 
-            // get the server output stream
+            serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
+            
+            LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+            LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
+            LogManager.debug_msg(DBG_VERB, "getSoTimeout: " + serverSocket.getSoTimeout());
+
             serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(),
                     serverSocket.getSendBufferSize());
-            // get the server input stream
+
             serverReader = new BufferedInputStream(serverSocket.getInputStream(),
                     serverSocket.getReceiveBufferSize());
  
- //           serverReader = serverSocket.getInputStream();
-
+ 
             
             String sData = "";
 
             // FIRST RESPONSE IS SINGLE LINE
             m_Command = SMTP_SINGLELINE;
+            int dbg_level = (int)Main.get_debug_lvl();
             
             while (true)
             {
 
                 // read the answer from the server
-                log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
+                if (dbg_level >= DBG_VERB)
+                    log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader).toString();
 
                 // verify if the user stopped the thread
@@ -145,7 +143,8 @@ public class SMTPConnection extends ProxyConnection
                     break;
                 }
 
-                log( "S: " + sData);
+                if (dbg_level >= DBG_VERB)
+                    log( "S: " + sData);
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
@@ -159,7 +158,8 @@ public class SMTPConnection extends ProxyConnection
                 // reset the command
                 m_Command = -1;
 
-                log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
+                if (dbg_level >= DBG_VERB)
+                    log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
 
@@ -175,7 +175,8 @@ public class SMTPConnection extends ProxyConnection
                     break;
                 }
 
-                log( "C: " + sData);
+                if (dbg_level >= DBG_VERB)
+                    log( "C: " + sData);
 
                 // write it to the POP server
                 serverWriter.write(sData.getBytes());
@@ -205,7 +206,6 @@ public class SMTPConnection extends ProxyConnection
         catch (UnknownHostException uhe)
         {
             String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_SMTP_server_'") + pe.get_proxy().getRemoteServer() + Main.Txt("'_exists.");
-            //Common.showError(msgerror);
             LogManager.err_log(msgerror);
         }
         catch (Exception e)
