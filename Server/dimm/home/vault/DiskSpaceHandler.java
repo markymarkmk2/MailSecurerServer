@@ -6,6 +6,7 @@
 package dimm.home.vault;
 
 import dimm.home.DAO.DiskSpaceDAO;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
@@ -270,11 +271,17 @@ public class DiskSpaceHandler
 
     private void write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
     {
-        OutputStream bos = new FileOutputStream(ds.getPath() + "/" + filename);
+        File save_file = new File(ds.getPath() + "/" + filename + ".sav");
+        if (save_file.exists())
+            save_file.delete();
+        File file = new File(ds.getPath() + "/" + filename);
+        if (file.exists())
+            file.renameTo(save_file);
+
+        OutputStream bos = new FileOutputStream(file);
         XMLEncoder e = new XMLEncoder(bos);
         e.writeObject(o);
         e.close();
-
         bos.close();
     }
 
@@ -314,6 +321,20 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
+            try
+            {
+                Object o = read_info_object("dsinfo.xml.sav");
+                if (o instanceof DiskSpaceInfo)
+                {
+                    LogManager.err_log_warn("Recovering from broken ds info object: " + ex.getMessage());
+                    dsi = (DiskSpaceInfo)o;
+                    return;
+                }
+            }
+            catch (IOException iOException)
+            {
+            }
+            
             throw new VaultException( ds, "Cannot read info file: " + ex.getMessage());
         }
     }
@@ -822,7 +843,7 @@ public class DiskSpaceHandler
         }
     }
 
-    void flush()
+    void flush() throws IndexException, VaultException
     {
         if (!is_open())
             return;
@@ -839,10 +860,17 @@ public class DiskSpaceHandler
             catch (CorruptIndexException ex)
             {
                 LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " is corrupted: ", ex);
+                throw new IndexException( ex.getMessage() );
             }
             catch (IOException ex)
             {
                 LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " cannot be accessed: ", ex);
+                throw new IndexException( ex.getMessage() );
+            }
+            catch (Exception ex)
+            {
+                LogManager.log(Level.SEVERE, "Error in Index " + ds.getPath() + " cannot be accessed: ", ex);
+                throw new IndexException( ex.getMessage() );
             }
         }
         if (is_data())
@@ -851,9 +879,11 @@ public class DiskSpaceHandler
             {
                 update_info();
             }
-            catch (VaultException ex)
+           
+            catch (Exception ex)
             {
                 LogManager.log(Level.SEVERE, "Update info failed on Diskspace " + ds.getPath() + ": ", ex);
+                throw new VaultException( ex.getMessage() );
             }
         }
     }

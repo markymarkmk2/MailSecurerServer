@@ -35,29 +35,13 @@ public class Idle extends ImapCmd
 
         is.write("+ Waiting for done");
 
-        if (is.mailfolder != null && is.has_searched)
-        {
-            for (int m = 0; m < is.mailfolder.lastanzMessages(); m++)
-            {
-                MailInfo msginfo = is.mailfolder.get_last_mail_message(m);
-                is.response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
-            }
-            for (int m = 0; m < is.mailfolder.anzMessages(); m++)
-            {
-                MailInfo msginfo = is.mailfolder.get_mail_message(m);
-                is.response(Integer.toString(msginfo.getUID()) + " RECENT");
-            }
-            is.has_searched = false;
-        }
-
+        // HANDLE BACKGROUND SEARCH
+        Noop.handle_messages_searched( is );
+        
 
         //Idle schleife
-        long last = 0;
-        int manz = 0;
-        if (is.mailfolder != null)
-        {
-            manz = is.mailfolder.anzMessages();
-        }
+        
+        
         while (true)
         {
             try
@@ -70,7 +54,12 @@ public class Idle extends ImapCmd
                         is.response(sid, true, "IDLE completed");
                         return 0;
                     }
-                    if (!rline.toLowerCase().endsWith("noop"))
+                    if (rline.toLowerCase().endsWith("noop"))
+                    {
+                        // HANDLE BACKGROUND SEARCH
+                        Noop.handle_messages_searched( is );
+                    }
+                    else
                     {
                         throw new Exception(rline);
                     }
@@ -90,11 +79,6 @@ public class Idle extends ImapCmd
             catch (InterruptedException e)
             {
                 is.konto.log(e);
-            }
-            if ((is.mailfolder != null) && manz != is.mailfolder.anzMessages())
-            {
-                is.response(is.mailfolder.anzMessages() + " EXISTS");
-                is.response("0 RECENT");
             }
         }
     }

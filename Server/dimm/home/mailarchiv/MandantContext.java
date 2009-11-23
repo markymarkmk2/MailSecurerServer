@@ -15,6 +15,7 @@ import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
@@ -105,6 +106,57 @@ public class MandantContext
                 DiskVault dv = (DiskVault)vault;
                 if (dv.get_da().getId() == id)
                     return dv;
+            }
+        }
+        return null;
+    }
+
+    DiskSpaceHandler last_dsh = null;
+    public DiskSpaceHandler get_dsh( int ds_idx )
+    {
+        if (last_dsh != null && last_dsh.getDs().getId() == ds_idx)
+        {
+            return last_dsh;
+        }
+
+        for (int i = 0; i < getVaultArray().size(); i++)
+        {
+            Vault vault = getVaultArray().get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault) vault;
+                dv.get_dsh_list();
+                for (int j = 0; j < dv.get_dsh_list().size(); j++)
+                {
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
+                    if (dsh.getDs().getId() == ds_idx)
+                    {
+                        return dsh;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public Vault get_vault_for_ds_idx( int ds_idx )
+    {
+
+        for (int i = 0; i < getVaultArray().size(); i++)
+        {
+            Vault vault = getVaultArray().get(i);
+            if (vault instanceof DiskVault)
+            {
+                DiskVault dv = (DiskVault) vault;
+                dv.get_dsh_list();
+                for (int j = 0; j < dv.get_dsh_list().size(); j++)
+                {
+                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
+                    if (dsh.getDs().getId() == ds_idx)
+                    {
+                        return dv;
+                    }
+                }
             }
         }
         return null;

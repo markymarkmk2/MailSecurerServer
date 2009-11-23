@@ -52,53 +52,9 @@ import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 
-class SearchResult
-{
 
-    Searcher searcher;
-    int doc_index;
-    float score;
-    int da_id;
-    int ds_id;
-    String uuid;
-    long time;
-    long size;
-    String subject;
-    boolean has_attachment;
-    
 
-    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment )
-    {
-        this.searcher = searcher;
-        this.doc_index = doc_index;
-        this.score = score;
-        this.da_id = da_id;
-        this.ds_id = ds_id;
-        this.uuid = uuid;
-        this.time = time;
-        this.size = size;
-        subject = s;
-        this.has_attachment = has_attachment;
-    }
-}
 
-class SearchCallEntry
-{
-
-    SearchCall call;
-    int id;
-
-    public SearchCallEntry( SearchCall call, int id )
-    {
-        this.call = call;
-        this.id = id;
-    }
-
-    String get_id()
-    {
-        return "sc" + id;
-    }
-}
 
 /**
  *
@@ -201,7 +157,7 @@ public class SearchCall
         try
         {
             ArrayList<String> row_list = new ArrayList<String>();
-            Document doc = sce.call.get_doc(result.searcher, result.doc_index);
+            Document doc = sce.call.get_doc(result.getSearcher(), result.getDoc_index());
 
             for (int j = 0; j < field_list.size(); j++)
             {
@@ -211,7 +167,7 @@ public class SearchCall
             }
             return row_list;
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             LogManager.err_log_fatal("Cannot retrieve results from index", iOException);
         }
@@ -329,11 +285,11 @@ public class SearchCall
                 int j = rowi[i];
 
                 SearchResult result = sce.call.result.get(rowi[i]);
-                DiskSpaceHandler dsh = sce.call.get_dsh(result.ds_id);
-                Vault vault = sce.call.get_vault(result.ds_id);
+                DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
+                Vault vault = m_ctx.get_vault_for_ds_idx(result.getDs_id());
                 try
                 {
-                    long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
+                    long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
 
                     RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
                     InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
@@ -376,64 +332,21 @@ public class SearchCall
     }
     static DiskSpaceHandler last_dsh;
 
-    DiskSpaceHandler get_dsh( int ds_idx )
-    {
-        if (last_dsh != null && last_dsh.getDs().getId() == ds_idx)
-        {
-            return last_dsh;
-        }
 
-        for (int i = 0; i < m_ctx.getVaultArray().size(); i++)
-        {
-            Vault vault = m_ctx.getVaultArray().get(i);
-            if (vault instanceof DiskVault)
-            {
-                DiskVault dv = (DiskVault) vault;
-                dv.get_dsh_list();
-                for (int j = 0; j < dv.get_dsh_list().size(); j++)
-                {
-                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
-                    if (dsh.getDs().getId() == ds_idx)
-                    {
-                        return dsh;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    Vault get_vault( int ds_idx )
-    {
-
-        for (int i = 0; i < m_ctx.getVaultArray().size(); i++)
-        {
-            Vault vault = m_ctx.getVaultArray().get(i);
-            if (vault instanceof DiskVault)
-            {
-                DiskVault dv = (DiskVault) vault;
-                dv.get_dsh_list();
-                for (int j = 0; j < dv.get_dsh_list().size(); j++)
-                {
-                    DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
-                    if (dsh.getDs().getId() == ds_idx)
-                    {
-                        return dv;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 
     Document get_doc( Searcher searcher, int doc_index ) throws CorruptIndexException, IOException
     {
         return searcher.doc(doc_index);
     }
 
-    void search_lucene( String user, String pwd, String compressed_filter, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    public void search_lucene( String user, String pwd, String compressed_filter, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
     {
         ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list(compressed_filter, true);
+        search_lucene(user, pwd, logic_list, n, level);
+    }
+    
+    public void search_lucene( String user, String pwd, ArrayList<LogicEntry> logic_list, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    {
 
         ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
         if (dsh_list.size() == 0)
@@ -452,11 +365,13 @@ public class SearchCall
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
             }
+ //           filter = null;
 
             filter = build_lucene_filter( mail_aliases );
         }
 
         Query qry = build_lucene_qry( logic_list, ana );
+        LogManager.debug_msg(2, "Qry is: " + qry.toString());
 
         run_lucene_searcher(dsh_list, qry, filter, n);
     }
@@ -504,32 +419,33 @@ public class SearchCall
                 filter.addTerm(new Term("To", mail_adress));
                 filter.addTerm(new Term("From", mail_adress));
                 filter.addTerm(new Term("CC", mail_adress));
+                filter.addTerm(new Term("BCC", mail_adress));
             }
         }
         return filter;
     }
 
 
-    void add_level_txt( StringBuffer sb, int level, String txt )
+    static void add_level_txt( StringBuffer sb, int level, String txt )
     {
         sb.append(" ");
         sb.append( txt );
         sb.append( " " );
     }
-    String get_op_val_txt( ExprEntry entry )
+    static String get_op_val_txt( ExprEntry entry )
     {
         switch( entry.getOperation() )
         {
-            case BEGINS_WITH: return "*" + entry.getValue();
-            case ENDS_WITH: return entry.getValue() + "*";
-            case CONTAINS_SUBSTR: return "*" + entry.getValue() + "*";
+            case BEGINS_WITH: return entry.getValue() + "*";
+            case ENDS_WITH: return "*" + entry.getValue();
+            case CONTAINS_SUBSTR: return "[*]" + entry.getValue() + "[*]";
             case CONTAINS: return entry.getValue();
             case REGEXP: return entry.getValue();
         }
         return "???";
     }
 
-    String get_lucene_txt( ExprEntry e)
+    static String get_lucene_txt( ExprEntry e)
     {
         String val_txt = get_op_val_txt( e );
 
@@ -537,7 +453,7 @@ public class SearchCall
     }
 
 
-    void gather_lucene_qry_text( StringBuffer sb, ArrayList<LogicEntry> list, int level )
+    public static void gather_lucene_qry_text( StringBuffer sb, ArrayList<LogicEntry> list, int level )
     {
         for (int i = 0; i < list.size(); i++)
         {
@@ -799,14 +715,14 @@ public class SearchCall
     {
         try
         {
-            DiskSpaceHandler dsh = get_dsh(result.ds_id);
-            Vault vault = get_vault(result.ds_id);
-            long time = DiskSpaceHandler.get_time_from_uuid(result.uuid);
+            DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
+            Vault vault = m_ctx.get_vault_for_ds_idx(result.getDs_id());
+            long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
 
             RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
             InputStream is = dsh.open_decrypted_mail_stream(mail, vault.get_password());
 
-            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is, result.size);
+            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is,result.getSize());
 
             return ret;
         }
@@ -816,4 +732,33 @@ public class SearchCall
             return "1: cannot open";
         }
     }
+    public RFCGenericMail get_generic_mail_from_res( int idx  )
+    {
+        SearchResult res_entry = this.result.get(idx);
+        try
+        {
+            DiskSpaceHandler dsh = m_ctx.get_dsh(res_entry.getDs_id());
+            long time = DiskSpaceHandler.get_time_from_uuid(res_entry.getUuid());
+
+            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+
+
+            return mail;
+        }
+        catch (VaultException ex)
+        {
+            LogManager.err_log("Cannot open mail stream", ex);
+            return null;
+        }
+    }
+    public SearchResult get_res( int idx  )
+    {
+        SearchResult res_entry = this.result.get(idx);
+        return res_entry;
+    }
+    public int get_result_cnt()
+    {
+        return result.size();
+    }
+
 }

@@ -19,9 +19,11 @@ package dimm.home.index.IMAP;
 
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCMimeMail;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -38,12 +40,12 @@ public class MWMailMessage implements MailInfo
     int mesgsize = 0;
     boolean ishead = true;
     int uid = 0;
-    String messageid = null;
+    //String messageid = null;
     MailKonto parent = null;
     MailFolder mailfile = null;
     boolean read = false;
 
-    RFCFileMail rfc;
+    //RFCFileMail rfc;
     RFCMimeMail mmail;
     SimpleDateFormat internaldate_sdf;
 
@@ -70,14 +72,14 @@ public class MWMailMessage implements MailInfo
     {
         this.parent = parent;
         this.mailfile = mailfile;
-        this.messageid = messageid;
+       // this.messageid = messageid;
         this.uuid = messageid;
         this.uid = uid;
 
         //21-Apr-2009 16:50:44 +0100
         internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
 
-        rfc = new RFCFileMail(new File( messageid ), false);
+        RFCFileMail rfc = new RFCFileMail(new File( messageid ), false);
         mmail = new RFCMimeMail();
         try
         {
@@ -95,10 +97,55 @@ public class MWMailMessage implements MailInfo
         {
             Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCMimeMail mm, int uid, String uuid )
+    {
+        this.parent = parent;
+        this.mailfile = mailfile;
+
+        this.uuid = uuid;
+        this.uid = uid;
+
+        //21-Apr-2009 16:50:44 +0100
+        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
+
+        mmail = mm;
 
     }
 
-   
+
+    public MWMailMessage( MailFolder mailfile, MailKonto parent, InputStream is, int uid, String uuid )
+    {
+        this.parent = parent;
+        this.mailfile = mailfile;
+
+        this.uuid = uuid;
+        this.uid = uid;
+
+        //21-Apr-2009 16:50:44 +0100
+        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
+       
+        mmail = new RFCMimeMail();
+        try
+        {
+            mmail.parse(is);
+        }
+        catch (FileNotFoundException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (MessagingException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+
 
     @Override
     public int getUID()
@@ -159,7 +206,24 @@ public class MWMailMessage implements MailInfo
      @Override
     public int getRFC822size()
     {
-        return (int)rfc.get_length();
+        try
+        {
+            int s = mmail.getMsg().getSize();
+            if (s == -1)
+            {
+                ByteArrayOutputStream byas = new ByteArrayOutputStream();
+                mmail.getMsg().writeTo(byas);
+                byas.close();
+                s = byas.size();
+            }
+            return s;
+
+        }
+        catch (Exception messagingException)
+        {
+            messagingException.printStackTrace();
+        }
+        return -1;
     }
 
  

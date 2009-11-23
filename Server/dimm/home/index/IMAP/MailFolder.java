@@ -1,13 +1,34 @@
 
 package dimm.home.index.IMAP;
+import dimm.home.index.SearchCall;
+import dimm.home.index.SearchResult;
+import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskSpaceHandler;
+import dimm.home.vault.Vault;
+import home.shared.CS_Constants;
+import home.shared.filter.ExprEntry;
+import home.shared.filter.GroupEntry;
+import home.shared.mail.RFCGenericMail;
+import home.shared.mail.RFCMimeMail;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
 
 public class MailFolder
 {
     String file;
     MailKonto konto;
     String key = null;
-    ArrayList<MWMailMessage> uid_map;
+    ArrayList<MWMailMessage> uid_map_list;
     ArrayList<MWMailMessage> last_uid_map;
     String uid_validity;
 
@@ -29,44 +50,55 @@ public class MailFolder
 
     public static final String QRYTOKEN = "Suchen";
 
-    public static int uid = 10;
+    public static int uid = 42;
     public MailFolder(MailKonto konto, String file,String key)
     {
         this.konto = konto;        
         this.file = file;
         this.key = key;
-        uid_map = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MWMailMessage>();
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
 
 
-        if (file.equals(QRYTOKEN))
+        if (key.startsWith(QRYTOKEN))
         {
+            RFCMimeMail mm = new RFCMimeMail();
+            try
+            {
+                mm.create("status@MailSecurer.de", "status@MailSecurer.de", Main.Txt("Anzahl_Treffer:") + " " + 0, "", null);
+            }
+            catch (MessagingException ex)
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+                uid_map_list.add( new MWMailMessage( this, konto, mm, /*uid++*/42, "0000" ) );
             //uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", uid++  ));
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid++ ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
+            
+            //uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
         }
         int level = cnt_level(file);
 
-        if (file.startsWith("INBOX") && level == 4)
+        if (key.startsWith("INBOX") && level == 4)
         {
 //            select_mail_per_date(
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", 1  ));
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test0.eml", 2 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test1.eml", 3 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test2.eml", 4 ) );
+            uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", 1  ));
+            uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test0.eml", 2 ) );
+            uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test1.eml", 3 ) );
+            uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test2.eml", 4 ) );
         }
     }
-    public void create_new_mail()
+/*    public void create_new_mail()
     {
-        last_uid_map = uid_map;
+        last_uid_map = uid_map_list;
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
-        uid_map = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MWMailMessage>();
         uid++;
-        uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid++ ) );
-        uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
-    }
+        uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid++ ) );
+        //uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
+    }*/
   /*  private MailFolder(String file) //temporraer, darf nichgt nach aussen gegeben werden
     {
         this.konto = null;
@@ -132,18 +164,8 @@ public class MailFolder
         return null;
     }
     public MWMailMessage getMesg(int index)
-    { 
-        try
-        {
-           String uuid = uuid_from_imap_uindex( index );
-          
-           return getMessage(uuid);
-        }
-	catch(Exception e)
-        {
-            konto.log(e);
-        }
-        return null;
+    {
+        return uid_map_list.get(index);
     }
     public MailInfo getInfo(String uuid)
     {
@@ -191,7 +213,7 @@ public class MailFolder
 
     public int anzMessages()
     {
-        return uid_map.size();
+        return uid_map_list.size();
     }
     public int lastanzMessages()
     {
@@ -203,9 +225,9 @@ public class MailFolder
 
     MWMailMessage get_mail_message(  String uuid )
     {
-        for (int i = 0; i < uid_map.size(); i++)
+        for (int i = 0; i < uid_map_list.size(); i++)
         {
-            MWMailMessage mm = uid_map.get(i);
+            MWMailMessage mm = uid_map_list.get(i);
             if (mm.uuid.compareTo(uuid) == 0)
                 return mm;
 
@@ -215,7 +237,7 @@ public class MailFolder
     }
     MWMailMessage get_mail_message( int idx )
     {
-         return uid_map.get(idx);
+         return uid_map_list.get(idx);
     }
     MWMailMessage get_last_mail_message(  int idx  )
     {
@@ -227,14 +249,14 @@ public class MailFolder
     
     private String uuid_from_imap_uindex( int index )
     {
-        return uid_map.get(index).uuid;
+        return uid_map_list.get(index).uuid;
     }
 
     private String uuid_from_imap_uid( int uid )
     {
-        for (int i = 0; i < uid_map.size(); i++)
+        for (int i = 0; i < uid_map_list.size(); i++)
         {
-            MWMailMessage mm = uid_map.get(i);
+            MWMailMessage mm = uid_map_list.get(i);
             if (mm.uid == uid)
                 return mm.uuid;
 
@@ -247,10 +269,280 @@ public class MailFolder
         return uid_validity;
     }
 
-    void search( int min, int max, int offset, String[] part )
+    boolean is_ign_search_token( String string )
     {
+        String[] ign_cmd = {"all","answered", "deleted", "undeleted","draft","draft","seen","flagged","new","recent",
+        "unseen","old", "unaswered","undraft","unflagged"};
+        boolean ret = false;
+        for (int j = 0; j < ign_cmd.length; j++)
+        {
+            String string1 = ign_cmd[j];
+            if (string1.compareToIgnoreCase(string) == 0)
+            {
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
+    boolean is_val_token( String string )
+    {
+        String[] ign_cmd = {"bcc","cc", "from", "header","keyword","unkeyword","larger","on","sentbefore","senton","sentsince",
+        "since","smaller", "subject", "text", "body", "to", "uid"};
+        boolean ret = false;
+        for (int j = 0; j < ign_cmd.length; j++)
+        {
+            String string1 = ign_cmd[j];
+            if (string1.compareToIgnoreCase(string) == 0)
+            {
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
 
-        throw new UnsupportedOperationException("Not yet implemented");
+    boolean is_date_arg( String string )
+    {
+        String[] ign_cmd = {"on","sentbefore","senton","sentsince","since"};
+        boolean ret = false;
+        for (int j = 0; j < ign_cmd.length; j++)
+        {
+            String string1 = ign_cmd[j];
+            if (string1.compareToIgnoreCase(string) == 0)
+            {
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
+
+    boolean is_2val_token( String string )
+    {
+        String[] ign_cmd = {"header"};
+        boolean ret = false;
+        for (int j = 0; j < ign_cmd.length; j++)
+        {
+            String string1 = ign_cmd[j];
+            if (string1.compareToIgnoreCase(string) == 0)
+            {
+                ret = true;
+                break;
+            }
+        }
+        return ret;
+    }
+    boolean is_token( String s1, String s2 )
+    {
+        return s1.compareToIgnoreCase(s2) == 0;
+    }
+
+
+    boolean search( int min, int max, int offset, String[] part )
+    {
+        String arg1 = null;
+        String arg2 = null;
+        int skip = 1;
+        GroupEntry ge = new GroupEntry();
+        GroupEntry work_ge = ge;
+        boolean next_is_or = false;
+        
+        boolean next_is_not = false;
+        Date date = null;
+
+        last_uid_map = uid_map_list;
+
+        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        uid_map_list = new ArrayList<MWMailMessage>();
+        uid++;
+
+
+        String pattern = "EEE, d MMM yyyy HH:mm:ss Z";
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.ENGLISH);
+
+        // 0 IS THE COMMAND ITSELF
+        for (int i = 1; i < part.length; i += skip)
+        {
+            skip = 1;
+            String token = part[i].toLowerCase();
+
+            if (is_token(token, "and"))
+            {
+             
+                next_is_or = false;
+                continue;
+            }
+            if (is_token(token, "or"))
+            {
+             
+                next_is_or = true;
+                continue;
+            }
+            if (is_token(token, "not"))
+            {
+                next_is_not = true;
+                continue;
+            }
+
+            if (is_ign_search_token( token ))
+                continue;
+            
+            if (is_val_token( token))
+            {
+                if (i > part.length - 1)
+                    return false;
+                skip = 2;
+                arg1 = part[i+1];
+            }
+            if (is_2val_token( token))
+            {
+                if (i > part.length - 1)
+                    return false;
+                skip = 3;
+                arg1 = part[i+1];
+                arg2 = part[i+2];
+            }
+            if (is_date_arg( token ))
+            {
+                try
+                {
+                    date = sdf.parse(arg1);
+                }
+                catch (ParseException ex)
+                {
+                    Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid date: " + arg1, ex);
+                    continue;
+                }
+            }
+
+            if (is_token(token, "bcc"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), "BCC", arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "cc"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), "CC", arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "from"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), "From", arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "to"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), "To", arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "subject"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_SUBJECT, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "text"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "body"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+            else if (is_token(token, "before"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else if (is_token(token, "sentbefore"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else if (is_token(token, "since"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else if (is_token(token, "sentsince"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else if (is_token(token, "on"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else if (is_token(token, "senton"))
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+            else
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid search token: " + token );
+            }
+           
+
+            
+            
+
+            
+            // RESET FLAGS
+        /*    next_is_or = false;
+   
+            next_is_not = false;*/
+        }
+
+        SearchCall sc = new SearchCall(konto.m_ctx);
+        try
+        {
+            MandantContext m_ctx = konto.m_ctx;
+            sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
+            int results = sc.get_result_cnt();
+
+            RFCMimeMail mm = null;
+            try
+            {
+                StringBuffer sb = new StringBuffer();
+                SearchCall.gather_lucene_qry_text(sb, ge.getChildren(), 0);
+
+                mm = new RFCMimeMail();
+                mm.create("status@MailSecurer.de", "status@MailSecurer.de",
+                        Main.Txt("Anzahl_Treffer:") + " " + results,
+                        Main.Txt("Die_Abfrage_lautete:") + " " + sb.toString(), null);
+                
+                uid_map_list.add( new MWMailMessage( this, konto, mm, 42/*uid++*/, "0000" ) );
+            }
+            catch (MessagingException messagingException)
+            {
+            }
+
+
+            
+
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Results found: " + results );
+            for (int i = 0; i < results; i++)
+            {
+                SearchResult result = sc.get_res(i);
+
+                //RFCGenericMail rfc = sc.get_generic_mail_from_res(i);
+                Vault vault = m_ctx.get_vault_by_da_id(result.getDa_id());
+
+                DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
+                if (dsh == null)
+                {
+                    LogManager.err_log_fatal("Found ds " +result.getDs_id() + " in index, but index is gone" );
+                    continue;
+                }
+                long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
+                RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+                try
+                {
+                    InputStream is = dsh.open_decrypted_mail_stream(rfc, vault.get_password());
+
+                    MWMailMessage mail = new MWMailMessage( this, konto, is, uid++, result.getUuid() );
+
+                    is.close();
+
+                    uid_map_list.add( mail );
+                }
+                catch (VaultException ex)
+                {
+                    Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+        catch (VaultException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (org.apache.lucene.queryParser.ParseException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+
+        return true;
+        
+        
+    }
+
+    void update_uid_validity()
+    {
+        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
     }
     
     

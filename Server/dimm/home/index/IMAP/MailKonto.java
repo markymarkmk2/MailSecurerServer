@@ -17,6 +17,7 @@
 */
 package dimm.home.index.IMAP;
 
+import dimm.home.mailarchiv.MandantContext;
 import java.util.ArrayList;
 
 public class MailKonto
@@ -26,12 +27,23 @@ public class MailKonto
     String user;
     String pwd;
     String name;
+    ArrayList<String> mail_alias_list;
+    ArrayList<MailFolder> mail_folders;
+    MandantContext m_ctx;
 
-    public MailKonto(String user, String pwd)
+
+    public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list)
     {
         this.user = user;
         this.pwd = pwd;
         this.name = user;
+        m_ctx = _mtx;
+        this.mail_alias_list = mail_alias_list;
+
+        mail_folders = new ArrayList<MailFolder>();
+
+        mail_folders.add( new MailFolder(this, "INBOX", "INBOX"));
+        mail_folders.add( new MailFolder(this, "Query", MailFolder.QRYTOKEN));
         
         try
         {
@@ -84,16 +96,6 @@ public class MailKonto
         
     }
     
-    public MailFolder select(String folder)
-    {
-        System.out.println("select " + folder);
-
-        MailFolder f = new MailFolder(this, folder, MWImapServer.cleanup(folder));
-        if(f.isValid())
-            return f;
-        return null;
-
-    }
     
    
     //verwaltung
@@ -129,13 +131,12 @@ public class MailKonto
         if(o instanceof Exception)
             ((Exception)o).printStackTrace();
         else
-            System.out.println(o);
-        
-            
+            System.out.println(o);                    
     }
+
+
     int cnt_level( String path )
     {
-
         if (path.length() == 0 || path.compareTo(".") == 0)
             return 0;
 
@@ -148,6 +149,24 @@ public class MailKonto
         }
         return lvl;
     }
+
+
+    public MailFolder select(String key)
+    {
+        System.out.println("select " + key);
+
+        for (int i = 0; i < mail_folders.size(); i++)
+        {
+            MailFolder mf = mail_folders.get(i);
+            if (mf.key.compareTo(key) == 0)
+            {
+                mf.update_uid_validity();
+                return mf;
+            }
+        }
+        return null;
+    }
+
 
     String[] getDirlist( String string )
     {

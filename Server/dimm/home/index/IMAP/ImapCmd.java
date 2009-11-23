@@ -55,8 +55,10 @@ public abstract class ImapCmd
             int i = -1;
             if (tr == ' ')
                 i = line.indexOf(tr);
-            else
+            else if (tr == ')')
                 i = line.lastIndexOf(tr);
+            else
+                i = line.indexOf(tr);
 
 
             if (line.startsWith("BODY"))
@@ -81,6 +83,8 @@ public abstract class ImapCmd
             }
 
             v.add(line.substring(0, i));
+            if (tr != ' ' && i < line.length() - 1)
+                i++;
             line = line.substring(i + 1);
         }
         String part[] = new String[v.size()];

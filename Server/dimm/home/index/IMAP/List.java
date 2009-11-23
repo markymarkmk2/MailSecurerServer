@@ -35,26 +35,26 @@ public class List extends ImapCmd
             {
                 if (part[1].length() == 0)
                 {
-                    is.response("LIST  \"/\" ");  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" ");  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;
                 }
                 if (part[1].compareTo("*") == 0)
                 {
-                    is.response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
-                    is.response("LIST (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;
                 }
                 if (part[1].startsWith("INBOX"))
                 {
-                    is.response("LIST (\\HasNoChildren) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;
                 }
                 if (part[1].startsWith( MailFolder.QRYTOKEN ))
                 {
-                    is.response("LIST (\\HasNoChildren) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;
                 }
@@ -85,7 +85,7 @@ public class List extends ImapCmd
                         continue;
                     }
 
-                    is.response("LIST (" + "" + ") \"/\" " + dirlist[i]);  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" " + dirlist[i]);  // \\NoInferiors \\HasNoChildren
                 }
                 is.response(sid, true, "LIST completed");
                 return 0;

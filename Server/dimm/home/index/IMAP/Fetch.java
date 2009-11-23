@@ -4,16 +4,84 @@
  */
 package dimm.home.index.IMAP;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.mail.MessagingException;
 
 /**
  *
  * @author mw
  */
+class Range
+{
+    int start;
+    int len;
+
+    static Range range_factory(String s )
+    {
+        int sk_start  = s.indexOf('<');
+        int sk_end =  s.indexOf('>');
+        try
+        {
+            if (sk_start >= 0 && sk_end > sk_start)
+            {
+                String r_str = s.substring(sk_start + 1, sk_end);
+                String[] r_arr = r_str.split("\\.");
+                if (r_arr.length == 1)
+                {
+                    Range r = new Range();
+                    r.start = 0;
+                    r.len = Integer.parseInt(r_arr[0]);
+                    return r;
+                }
+                if (r_arr.length == 2)
+                {
+                    Range r = new Range();
+                    r.start = Integer.parseInt(r_arr[0]);
+                    r.len = Integer.parseInt(r_arr[1]);
+                    return r;
+                }
+            }
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        LogManager.err_log("Invalid IMAP range str: " + s);
+        throw new IllegalArgumentException("Invalid Range");
+    }
+
+}
 public class Fetch extends ImapCmd
 {
+
+    private static void write_header_fields( MWImapServer is, MWMailMessage msg, String orig_tag, String tag )
+    {
+
+                            //message
+                            String header = msg.get_header_fields(tag);
+
+                            is.rawwrite(orig_tag + " {" + header.length() + "}\r\n");
+                            is.rawwrite(header);
+
+
+    }
+
+    private static void write_text( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
+    {
+        Range range = Range.range_factory(tag);
+        InputStream stream = msg.mmail.getMsg().getInputStream();
+        stream.skip(range.start);
+        byte[] data = new byte[range.len];
+        stream.read(data);
+        String text = new String(data);
+        is.rawwrite(orig_tag + " {" + text.length() + "}\r\n");
+        is.rawwrite(text);
+        is.close();
+    }
 
 
     public Fetch()
@@ -81,24 +149,35 @@ public class Fetch extends ImapCmd
                 if (min > 100000)
                 {
                     min = 0; //Mop: ob das wohl richtig ist
-                    }
+                }
                 if (max == 0)
                 {
                     max = -1;
                 }
             }
-            //debug
-            //System.out.println("call "+command+" from:"+min+" to:"+max);
-
-
-            success &= fetch(is, min, max, 1, false, part);
+            try
+            {
+                //debug
+                //System.out.println("call "+command+" from:"+min+" to:"+max);
+                success &= fetch(is, min, max, 1, false, part);
+                is.response(sid, success, "FETCH " + (success ? "completed" : "failed"));
+                return success ? 0 : 1;
+            }
+            catch (IOException ex)
+            {
+                Logger.getLogger(Fetch.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            catch (MessagingException ex)
+            {
+                Logger.getLogger(Fetch.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
-        is.response(sid, success, "FETCH " + (success ? "completed" : "failed"));
-        return success ? 0 : 1;
+        is.response(sid, false, "FETCH failed");
+        return 1;
     }
 
-    static boolean fetch( MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] )
+    static boolean fetch( MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
         int zaehler = 1;
         MailFolder mailfolder = is.mailfolder;
@@ -111,6 +190,7 @@ public class Fetch extends ImapCmd
                 continue;
             }
             int uid = msginfo.getUID();
+            MWMailMessage msg = mailfolder.getMesg(i);
 
             if (is_uid)
             {
@@ -212,7 +292,7 @@ public class Fetch extends ImapCmd
                         is.rawwrite("UID " + uid);
                         had_uid = true;
                     }
-                    else if (tag.startsWith("body.peek[header.fields"))
+                    else if (tag.startsWith("body.peek["))
                     {
                         if (needs_space)
                         {
@@ -220,16 +300,19 @@ public class Fetch extends ImapCmd
                         }
                         needs_space = true;
 
-                        MWMailMessage msg = mailfolder.getMesg(i);
-                        //message
-                        String header = msg.get_header_fields(tag);
-
-                        is.rawwrite(orig_tag + " {" + header.length() + "}\r\n");
-                        is.rawwrite(header);
+                        String peek_content = tag.substring(10);
+                        if (peek_content.startsWith("header.fields"))
+                        {
+                            write_header_fields( is, msg, orig_tag, tag );
+                        }
+                        if (peek_content.startsWith("text"))
+                        {
+                            write_text( is, msg, orig_tag, tag );
+                        }
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
                     {
-                        MWMailMessage msg = mailfolder.getMesg(i);
+                        
                         //message
                         int tsize = msg.getRFC822size();
                         if (needs_space)
@@ -241,30 +324,21 @@ public class Fetch extends ImapCmd
 
                         ByteArrayOutputStream byas = new ByteArrayOutputStream();
 
-                        try
-                        {
 //                            System.out.println("Writing Message body...");
-                            //msg.getRFC822body(s.getOutputStream());
-                            msg.getRFC822body(byas);
-                            byte[] mdata = byas.toByteArray();
-                            tsize = mdata.length;
-                            is.rawwrite("" + tag.toUpperCase() + " {" + tsize + "}\r\n");
-                            is.s.getOutputStream().write(mdata);
-                            is.s.getOutputStream().flush();
+                        //msg.getRFC822body(s.getOutputStream());
+                        msg.getRFC822body(byas);
+                        byte[] mdata = byas.toByteArray();
+                        tsize = mdata.length;
+                        is.rawwrite("" + tag.toUpperCase() + " {" + tsize + "}\r\n");
+                        is.s.getOutputStream().write(mdata);
+                        is.s.getOutputStream().flush();
 
+                        System.out.print(byas.toString());
 
-                            System.out.print(byas.toString());
-                        }
-                        catch (IOException iOException)
-                        {
-                        }
-                        catch (MessagingException messagingException)
-                        {
-                        }
                     }
                     else if (tag.equals("internaldate"))
                     {
-                        MWMailMessage msg = mailfolder.getMesg(i);
+                       
                         if (needs_space)
                         {
                             is.rawwrite(" ");

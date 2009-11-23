@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -196,10 +197,17 @@ public class DiskVault implements Vault, StatusHandler
         catch (VaultException vaultException)
         {
             LogManager.err_log(Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
-            dsh.create();
-            dsh.open();
-            // OPEN WRITE_INDEX
-            dsh.open_write_index();
+            if (dsh.getDs().getStatus().compareTo(CS_Constants.DS_EMPTY) == 0)
+            {
+                dsh.create();
+                dsh.open();
+                // OPEN WRITE_INDEX
+                dsh.open_write_index();
+            }
+            else
+            {
+                throw new VaultException( vaultException.getMessage() );
+            }
         }
 
 
@@ -345,7 +353,18 @@ public class DiskVault implements Vault, StatusHandler
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
-            dsh.flush();
+            try
+            {
+                dsh.flush();
+            }
+            catch (IndexException ex)
+            {
+                Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            catch (VaultException ex)
+            {
+                Logger.getLogger(DiskVault.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     @Override

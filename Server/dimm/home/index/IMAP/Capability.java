@@ -24,7 +24,7 @@ public class Capability extends ImapCmd
 
     private int capability( MWImapServer is, String sid, String par )
     {
-        is.response("CAPABILITY IMAP4 LOGIN IDLE");
+        is.response("CAPABILITY IMAP4 IDLE LOGIN");
 //        response("CAPABILITY IMAP4 IDLE LOGIN");
         is.response(sid, true, "CAPABILITY completed");
         return 0;

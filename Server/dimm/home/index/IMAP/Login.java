@@ -37,7 +37,7 @@ public class Login extends ImapCmd
                 if (is.m_ctx.authenticate_user(user, pwd))
                 {
                     //Alles Ok
-                    is.konto = new MailKonto(user, pwd);                    
+                    is.konto = new MailKonto(user, pwd, is.m_ctx, is.m_ctx.get_mailaliases(user, pwd));
                     is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged in");
                     return 0;
                 }

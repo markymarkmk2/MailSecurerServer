@@ -169,26 +169,55 @@ public class MWImapServer extends Thread
     @Override
     public void run()
     {
+        HashMap<String, String[]> cmd_map = new HashMap<String,  String[]>();
+
+        String[] list = {"4 login mw 12345", "5 select Suchen", "6 UID fetch 16 (UID BODY.PEEK[HEADER.FIELDS (Content-Type Content-Transfer-Encoding)] BODY.PEEK[TEXT]<0.2048>)"};
+        cmd_map.put("test1", list);
+        String cmd = "test1";
+
+        boolean test = false;
         try
         {
-            out = new PrintWriter(s.getOutputStream(), true);
+            if (test)
+            {
+                out = new PrintWriter( System.out, true);
+            }
+            else
+            {
+                out = new PrintWriter(s.getOutputStream(), true);
+            }
             in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             response(null, true, "localhost IMAP4 31.08.2006");
             while (true)
             {
-                String line = in.readLine();
-                if (line == null)
+                String line = null;
+                if (test)
                 {
-                    break;
+                    String[] lines = cmd_map.get(cmd);
+                    for (int i = 0; i < lines.length; i++)
+                    {
+                        line = lines[i];
+                        line = line.trim();
+                        if (!line.equals(""))
+                        {
+                            techno(line);
+                        }
+                    }
                 }
-               /* if (trace)
+                else
                 {
-                    System.out.println("[" + con + "] " + line);
-                }*/
-                line = line.trim();
-                if (!line.equals(""))
-                {
-                    techno(line);
+                    line = in.readLine();
+
+                    if (line == null)
+                    {
+                        break;
+                    }
+
+                    line = line.trim();
+                    if (!line.equals(""))
+                    {
+                        techno(line);
+                    }
                 }
             }
             out.close();
