@@ -41,7 +41,8 @@ public class List extends ImapCmd
                 }
                 if (part[1].compareTo("*") == 0)
                 {
-                    is.response("LIST (\\Marked) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    if (MailKonto.qry_folder)
+                        is.response("LIST (\\Marked) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
                     is.response("LIST (\\Marked) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;

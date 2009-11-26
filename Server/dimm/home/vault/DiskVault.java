@@ -20,6 +20,7 @@ import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
+import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import java.io.File;
@@ -29,6 +30,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.lucene.index.IndexWriter;
 
 /**
  *
@@ -268,6 +270,10 @@ public class DiskVault implements Vault, StatusHandler
         {
             throw new VaultException("No diskspace for index found" );
         }
+        if (index_dsh.islock_for_rebuild() || data_dsh.islock_for_rebuild())
+        {
+            throw new VaultException("Index Rebuild in process" );
+        }
 
         // GET THE DISKSPACES FOR DATA AND INDEX
         data_dsh = open_dsh( data_dsh, msg.get_length() );
@@ -382,4 +388,7 @@ public class DiskVault implements Vault, StatusHandler
     {
         return password;
     }
+
+
+
 }

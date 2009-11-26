@@ -8,6 +8,7 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
@@ -76,11 +77,29 @@ public class Fetch extends ImapCmd
         InputStream stream = msg.mmail.getMsg().getInputStream();
         stream.skip(range.start);
         byte[] data = new byte[range.len];
-        stream.read(data);
-        String text = new String(data);
-        is.rawwrite(orig_tag + " {" + text.length() + "}\r\n");
-        is.rawwrite(text);
-        is.close();
+        int rlen = stream.read(data);
+
+        stream.close();
+
+        String return_tag = orig_tag;
+        
+        if (rlen < range.len)
+        {
+            int idx_range = return_tag.indexOf('<');
+            if (idx_range > 0)
+            {
+                return_tag = return_tag.substring(0, idx_range) + '<' + range.start + '>';
+            }
+        }
+
+
+        OutputStream os = is.s.getOutputStream();
+
+        os.write( new String(return_tag + " {" + rlen + "}\r\n").getBytes());
+        os.write(data, 0, rlen);
+//        is.rawwrite(return_tag + " {" + rlen + "}\r\n");
+//        is.rawwrite( text );
+        //is.rawwrite(data, 0, rlen);
     }
 
 
@@ -294,19 +313,26 @@ public class Fetch extends ImapCmd
                     }
                     else if (tag.startsWith("body.peek["))
                     {
-                        if (needs_space)
-                        {
-                            is.rawwrite(" ");
-                        }
-                        needs_space = true;
 
                         String peek_content = tag.substring(10);
                         if (peek_content.startsWith("header.fields"))
                         {
+                            if (needs_space)
+                            {
+                                is.rawwrite(" ");
+                            }
+                            needs_space = true;
                             write_header_fields( is, msg, orig_tag, tag );
                         }
                         if (peek_content.startsWith("text"))
                         {
+                            
+                            if (needs_space)
+                            {
+                                is.rawwrite(" ");
+                            }
+                            needs_space = true;
+
                             write_text( is, msg, orig_tag, tag );
                         }
                     }

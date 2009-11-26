@@ -30,6 +30,7 @@ public class MailKonto
     ArrayList<String> mail_alias_list;
     ArrayList<MailFolder> mail_folders;
     MandantContext m_ctx;
+    public static final boolean qry_folder = false;
 
 
     public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list)
@@ -43,7 +44,8 @@ public class MailKonto
         mail_folders = new ArrayList<MailFolder>();
 
         mail_folders.add( new MailFolder(this, "INBOX", "INBOX"));
-        mail_folders.add( new MailFolder(this, "Query", MailFolder.QRYTOKEN));
+        if (qry_folder)
+            mail_folders.add( new MailFolder(this, "Query", MailFolder.QRYTOKEN));
         
         try
         {
@@ -181,7 +183,8 @@ public class MailKonto
                 // LEVEL 1 IS "."
                 ArrayList<String> fs = new ArrayList<String>();
                 fs.add("INBOX");
-                fs.add(MailFolder.QRYTOKEN);
+                if (qry_folder)
+                    fs.add(MailFolder.QRYTOKEN);
 
 /*                for (int i = 0; i < 1; i++)
                 {

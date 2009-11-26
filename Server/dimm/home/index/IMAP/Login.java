@@ -34,6 +34,15 @@ public class Login extends ImapCmd
 
             try
             {
+                if (is.konto != null)
+                {
+                    if (is.konto.user.compareTo(user) == 0)
+                    {
+                        is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged in");
+                        return 0;
+                    }
+                }
+
                 if (is.m_ctx.authenticate_user(user, pwd))
                 {
                     //Alles Ok

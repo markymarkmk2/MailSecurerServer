@@ -19,6 +19,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
+import dimm.home.vault.ReIndexContext;
 import dimm.home.vault.Vault;
 import dimm.home.workers.HotfolderServer;
 import dimm.home.workers.IMAPBrowserServer;
@@ -53,6 +54,8 @@ public class MandantContext
     
     
     ArrayList<WorkerParent> worker_list;
+
+    private ReIndexContext rctx;
 
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
@@ -469,6 +472,22 @@ public class MandantContext
             return ussc.mail_list;
         }
         return null;
+    }
+
+    /**
+     * @return the rctx
+     */
+    public ReIndexContext getRctx()
+    {
+        return rctx;
+    }
+
+    /**
+     * @param rctx the rctx to set
+     */
+    public void setRctx( ReIndexContext rctx )
+    {
+        this.rctx = rctx;
     }
 
     class UserSSOcache

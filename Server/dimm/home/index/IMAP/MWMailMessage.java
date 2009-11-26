@@ -181,7 +181,7 @@ public class MWMailMessage implements MailInfo
     //}
     Hashtable h = new Hashtable();
 
-
+/*
     public final static String FROM = "from";
     public final static String TO = "to";
     public final static String SUBJECT = "subject";
@@ -189,7 +189,7 @@ public class MWMailMessage implements MailInfo
     {
         FROM, TO, SUBJECT
     };
-
+*/
     public String get( String key )
     {
         try

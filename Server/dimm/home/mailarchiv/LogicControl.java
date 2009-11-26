@@ -94,7 +94,7 @@ class MailBGEntry
                 }
             }
         }
-        catch (IndexException ex)
+        catch (Exception ex)
         {
             Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
         }

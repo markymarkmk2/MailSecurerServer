@@ -16,14 +16,13 @@ import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
+import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.CS_Constants;
 import home.shared.Utilities.ZipUtilities;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
@@ -140,130 +139,6 @@ class HFFilenameFilter implements FilenameFilter
 
 
 
-class DirectoryEntry
-{
-    private File file;
-    private ArrayList<DirectoryEntry> children;
-
-    DirectoryEntry( File f )
-    {
-        file = f;
-        children = new ArrayList<DirectoryEntry>();
-        
-        if (file.isDirectory())
-        {
-            File[] list = file.listFiles();
-
-            for (int i = 0; i < list.length; i++)
-            {
-                children.add( new DirectoryEntry( list[i] ) );
-            }
-        }
-    }
-
-    void delete_recursive()
-    {
-        for (int i = 0; i < children.size(); i++)
-        {
-            DirectoryEntry directoryEntry = children.get(i);
-            if (directoryEntry.getFile().isDirectory())
-            {
-                directoryEntry.delete_recursive();
-
-            }
-            else
-            {
-                directoryEntry.getFile().delete();
-            }
-        }
-        file.delete();
-    }
-    boolean is_unchanged(DirectoryEntry de)
-    {
-        // COMPARE NAMES
-        if (file.getAbsolutePath().compareTo( de.getFile().getAbsolutePath()) != 0)
-            return false;
-        
-        // COMPARE STAMP
-        if (file.lastModified() != de.getFile().lastModified())
-            return false;
-        
-        // COMPARE SIZE
-        if (file.length() != de.getFile().length())
-            return false;
-        
-        // TRY TO OPEN REG FILES
-        if (file.isFile())
-        {
-            RandomAccessFile raf = null;
-            try
-            {
-                raf = new RandomAccessFile(file, "r");
-                if (file.length() > 0)
-                {
-                    raf.seek( file.length() - 1);
-                    raf.read();
-                }
-                raf.close();
-            }
-            catch (IOException ex)
-            {
-                // NOT COMPLETE, WE FAIL
-                return false;
-            }            
-            finally
-            {
-                if (raf != null)
-                {
-                    try
-                    {
-                        raf.close();
-                    }
-                    catch (IOException ex)
-                    {                        
-                    }
-                }
-            }
-        }
-
-        if (children != null && de.getChildren() == null)
-            return false;
-        if (children == null && de.getChildren() != null)
-            return false;
-        
-        // COMPARE CHILDREN COUNT
-        if (children != null)
-        {
-            if ( children.size() != de.getChildren().size())
-            return false;
-        
-            // RECURSIVELY CHECK CHILDREN
-            for (int i = 0; i < children.size(); i++)
-            {
-                DirectoryEntry directoryEntry = children.get(i);
-                if (!directoryEntry.is_unchanged( de.getChildren().get(i) ))
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * @return the file
-     */
-    public File getFile()
-    {
-        return file;
-    }
-
-    /**
-     * @return the children
-     */
-    public ArrayList<DirectoryEntry> getChildren()
-    {
-        return children;
-    }
-}
 /**
  *
  * @author mw

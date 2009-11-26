@@ -96,7 +96,17 @@ public class MWImapServer extends Thread
         out.write(message);
         out.flush();
     }
-    
+
+   void rawwrite( byte[] data, int start, int len ) throws IOException
+    {
+        if (trace)
+        {
+            System.out.print( new String( data, start, len ));
+        }
+        s.getOutputStream().write( data, start, len);
+        s.getOutputStream().flush();
+    }
+
     void response( String message )
     {
         write(RESTAG + message);

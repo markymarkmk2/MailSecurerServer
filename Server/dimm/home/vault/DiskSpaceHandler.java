@@ -13,6 +13,7 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
+import home.shared.SQL.SQLArrayResult;
 import home.shared.hibernate.DiskSpace;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
@@ -49,14 +50,14 @@ public class DiskSpaceHandler
     boolean _open;
     //IndexReader read_index;
     IndexWriter write_index;
-    MandantContext m_ctx;
+    MandantContext m_ctx;  
     public final String idx_lock = "idx";
     public final String data_lock = "data";
 
     public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
     {
         m_ctx = _m_ctx;
-        ds = _ds;
+        ds = _ds;        
         _open = false;
     }
 
@@ -125,6 +126,31 @@ public class DiskSpaceHandler
         {
             throw new VaultException( ds, "Cannot open read index: " + iex.getMessage());
         }
+    }
+    public IndexWriter create_write_index() throws VaultException
+    {
+        if (!is_open())
+        {
+            open();
+        }
+        try
+        {
+            if (is_index())
+            {
+                synchronized( idx_lock )
+                {
+                    write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+                    write_index.commit();
+                    return write_index;
+                }
+            }
+            else
+                throw new VaultException( ds, "Cannot create write index on non-index ds: " + ds.getPath());
+        }
+        catch (IOException iex)
+        {
+            throw new VaultException( ds, "Cannot create write index: " + iex.getMessage());
+        }        
     }
   /*  public void close_read_index() throws VaultException
     {
@@ -424,13 +450,13 @@ public class DiskSpaceHandler
         //return ret;
     }
 
-    public long build_time_from_path( String absolutePath ) throws VaultException
+    public long build_time_from_path( String absolutePath, int enc_mode ) throws VaultException
     {
         try
         {
             String rel_path = absolutePath.substring(getMailPath().length());
 
-            return RFCFileMail.get_time_from_mailfile(rel_path);
+            return RFCFileMail.get_time_from_mailfile(rel_path, enc_mode);
         }
         catch (ParseException parseException)
         {
@@ -448,7 +474,12 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
 
         Date d = new Date(time);
-        RFCGenericMail mail = new RFCFileMail( mail_file, d, false );
+        RFCFileMail mail = new RFCFileMail( mail_file, d, (enc_mode == RFCFileMail.ENC_NONE) ? false : true);
+        if (enc_mode != RFCGenericMail.ENC_NONE)
+        {
+            Vault vault = m_ctx.get_vault_for_ds_idx(ds.getId());
+            mail.set_encryption(vault.get_password(), m_ctx.getPrefs().get_KeyPBEIteration(), m_ctx.getPrefs().get_KeyPBESalt());
+        }
         return mail;
     }
 
@@ -538,7 +569,7 @@ public class DiskSpaceHandler
             local_dsi.setCapacity( local_dsi.getCapacity() + f.length());
             try
             {
-                long time = build_time_from_path(f.getAbsolutePath());
+                long time = build_time_from_path(f.getAbsolutePath(), local_dsi.getEncMode() );
                 if (time > 0)
                 {
                     if (time > local_dsi.getLastEntryTS())
@@ -731,13 +762,13 @@ public class DiskSpaceHandler
         return cap;
     }
 */
-    private String getMailPath()
+    public String getMailPath()
     {
-        return ds.getPath() + "/mail";
+        return SQLArrayResult.decode(ds.getPath()) + "/mail";
     }
-    private String getIndexPath()
+    public String getIndexPath()
     {
-        return ds.getPath() + "/index";
+        return SQLArrayResult.decode(ds.getPath()) + "/index";
     }
 
     public static boolean  no_encryption = false;
@@ -902,5 +933,21 @@ public class DiskSpaceHandler
         {
         }
         return false;
+    }
+
+    boolean rebuild_lock;
+    public void lock_for_rebuild()
+    {
+        rebuild_lock = true;
+        LogManager.log(Level.SEVERE, "ReIndex Lock fehlt");
+    }
+    public void unlock_for_rebuild()
+    {
+        rebuild_lock = false;
+        LogManager.log(Level.SEVERE, "ReIndex Lock fehlt");
+    }
+    public boolean islock_for_rebuild()
+    {
+        return rebuild_lock ;
     }
 }

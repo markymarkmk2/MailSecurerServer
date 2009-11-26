@@ -15,6 +15,7 @@ import dimm.home.mailarchiv.Commands.ImportMailFile;
 import dimm.home.mailarchiv.Commands.ListOptions;
 import dimm.home.mailarchiv.Commands.ListUsers;
 import dimm.home.mailarchiv.Commands.Ping;
+import dimm.home.mailarchiv.Commands.ReIndex;
 import dimm.home.mailarchiv.Commands.ReadLog;
 import dimm.home.mailarchiv.Commands.Reboot;
 import dimm.home.mailarchiv.Commands.Restart;
@@ -158,6 +159,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new RestartMandant() );
         cmd_list.add( new AuthUser() );
         cmd_list.add( new ListUsers() );
+        cmd_list.add( new ReIndex() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
