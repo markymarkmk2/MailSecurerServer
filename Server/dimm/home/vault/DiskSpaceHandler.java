@@ -106,8 +106,13 @@ public class DiskSpaceHandler
 
     public IndexReader create_read_index() throws VaultException
     {
+
         if (!is_open())
         {
+            if (!exists_info() && (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0))
+            {
+                create();
+            }
             open();
         }
         try
@@ -272,6 +277,7 @@ public class DiskSpaceHandler
                     write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
                     write_index.commit();
                     write_index.close();
+                    write_index = null;
                 }
             }
         }
@@ -330,7 +336,13 @@ public class DiskSpaceHandler
     {
         return test_flag( ds, CS_Constants.DS_MODE_INDEX);
     }
-    
+
+    private boolean exists_info()
+    {
+        File f = new File(ds.getPath() + "/" + "dsinfo.xml");
+        return f.exists();
+
+    }
     private void read_info() throws VaultException
     {
         try

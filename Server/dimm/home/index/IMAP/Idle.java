@@ -46,6 +46,8 @@ public class Idle extends ImapCmd
         {
             try
             {
+                Noop.handle_messages_searched( is );
+                 
                 if (is.in.ready())
                 {
                     String rline = is.in.readLine();

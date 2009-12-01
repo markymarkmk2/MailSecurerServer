@@ -74,6 +74,15 @@ public class MWImapServer extends Thread
         add( new Uid());
         add( new Unsubscribe());
     }
+    public MailKonto get_konto()
+    {
+        return konto;
+    }
+    public MailFolder get_folder()
+    {
+        return mailfolder;
+    }
+
     
 
     void write( String message )

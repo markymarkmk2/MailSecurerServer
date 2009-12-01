@@ -85,8 +85,9 @@ public class SearchCommand extends AbstractCommand
             String compressed_filter = pt.GetString("FL:");
             int n = (int)pt.GetLongValue("CNT:");
             USERMODE level = USERMODE.valueOf( pt.GetString("UL:") );
+            boolean with_imap = pt.GetBoolean("IM:");
 
-            answer = SearchCall.open_filtersearch_call( ma_id, compressed_filter, n, user, pwd, level);
+            answer = SearchCall.open_filtersearch_call( ma_id, compressed_filter, n, user, pwd, level, with_imap);
 
             return true;
         }        

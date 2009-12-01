@@ -191,10 +191,11 @@ public class DiskVault implements Vault, StatusHandler
             if (!dsh.is_open())
             {
                 dsh.open();
-
-                // OPEN WRITE_INDEX
-                dsh.open_write_index();
             }
+
+            // OPEN WRITE_INDEX
+            dsh.open_write_index();
+            
         }
         catch (VaultException vaultException)
         {

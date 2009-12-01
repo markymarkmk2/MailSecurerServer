@@ -357,11 +357,6 @@ public class MailFolder
         boolean next_is_not = false;
         Date date = null;
 
-        last_uid_map = uid_map_list;
-
-        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
-        uid_map_list = new ArrayList<MWMailMessage>();
-        uid++;
 
 
         String pattern = "EEE, d MMM yyyy HH:mm:ss Z";
@@ -453,11 +448,6 @@ public class MailFolder
                 Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid search token: " + token );
             }
            
-
-            
-            
-
-            
             // RESET FLAGS
         /*    next_is_or = false;
    
@@ -469,60 +459,8 @@ public class MailFolder
         {
             MandantContext m_ctx = konto.m_ctx;
             sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
-            int results = sc.get_result_cnt();
 
-            RFCMimeMail mm = null;
-            /*try
-            {*/
-               /* StringBuffer sb = new StringBuffer();
-                SearchCall.gather_lucene_qry_text(sb, ge.getChildren(), 0);
-
-                mm = new RFCMimeMail();
-                mm.create("status@MailSecurer.de", "status@MailSecurer.de",
-                        Main.Txt("Anzahl_Treffer:") + " " + results,
-                        Main.Txt("Die_Abfrage_lautete:") + " " + sb.toString(), null);
-                */
-                //uid_map_list.add( new MWMailMessage( this, konto, mm, 42/*uid++*/, "0000" ) );
-           /* }
-            catch (MessagingException messagingException)
-            {
-            }*/
-
-
-            
-
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Results found: " + results );
-            for (int i = 0; i < results; i++)
-            {
-                SearchResult result = sc.get_res(i);
-
-                //RFCGenericMail rfc = sc.get_generic_mail_from_res(i);
-                Vault vault = m_ctx.get_vault_by_da_id(result.getDa_id());
-
-                DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
-                if (dsh == null)
-                {
-                    LogManager.err_log_fatal("Found ds " +result.getDs_id() + " in index, but index is gone" );
-                    continue;
-                }
-                try
-                {
-                    long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
-                    RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode());
-
-                    InputStream stream =  rfc.open_inputstream();
-
-                    MWMailMessage mail = new MWMailMessage( this, konto, stream, uid++, result.getUuid() );
-
-                    stream.close();
-
-                    uid_map_list.add( mail );
-                }
-                catch (VaultException ex)
-                {
-                    Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
+            add_new_mail_resultlist( m_ctx, sc );
         }        
         catch (IOException ex)
         {
@@ -538,9 +476,71 @@ public class MailFolder
         }
 
 
-        return true;
+        return true;                
+    }
+    public void add_new_mail_resultlist( MandantContext m_ctx, SearchCall sc ) throws IOException
+    {
+        last_uid_map = uid_map_list;
+
+        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        uid_map_list = new ArrayList<MWMailMessage>();
         
-        
+
+        int results = sc.get_result_cnt();
+
+        RFCMimeMail mm = null;
+        /*try
+        {*/
+           /* StringBuffer sb = new StringBuffer();
+            SearchCall.gather_lucene_qry_text(sb, ge.getChildren(), 0);
+
+            mm = new RFCMimeMail();
+            mm.create("status@MailSecurer.de", "status@MailSecurer.de",
+                    Main.Txt("Anzahl_Treffer:") + " " + results,
+                    Main.Txt("Die_Abfrage_lautete:") + " " + sb.toString(), null);
+            */
+            //uid_map_list.add( new MWMailMessage( this, konto, mm, 42/*uid++*/, "0000" ) );
+       /* }
+        catch (MessagingException messagingException)
+        {
+        }*/
+
+
+
+
+        Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Results found: " + results );
+        for (int i = 0; i < results; i++)
+        {
+            SearchResult result = sc.get_res(i);
+
+            //RFCGenericMail rfc = sc.get_generic_mail_from_res(i);
+            Vault vault = m_ctx.get_vault_by_da_id(result.getDa_id());
+
+            DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
+            if (dsh == null)
+            {
+                LogManager.err_log_fatal("Found ds " +result.getDs_id() + " in index, but index is gone" );
+                continue;
+            }
+            try
+            {
+                long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
+                RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+
+                InputStream stream =  rfc.open_inputstream();
+
+                MWMailMessage mail = new MWMailMessage( this, konto, stream, uid++, result.getUuid() );
+
+                stream.close();
+
+                uid_map_list.add( mail );
+            }
+            catch (VaultException ex)
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        update_uid_validity();
     }
 
     void update_uid_validity()

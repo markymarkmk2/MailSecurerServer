@@ -64,7 +64,15 @@ public class MailKonto
     {
         return name;
     }
-    
+
+    public String get_username()
+    {
+        return user;
+    }
+    public String get_pwd()
+    {
+        return pwd;
+    }
     public boolean authenticate(String user,String passwd)
     {
         try

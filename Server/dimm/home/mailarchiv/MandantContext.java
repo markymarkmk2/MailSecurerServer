@@ -51,6 +51,7 @@ public class MandantContext
     private TempFileHandler tempFileHandler;
     private TCPCallConnect tcp_conn;
     private IndexManager index_manager;
+    private IMAPBrowser imap_browser;
     
     
     ArrayList<WorkerParent> worker_list;
@@ -372,7 +373,8 @@ public class MandantContext
             {
                 LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port() );
 
-                ibs.add_child( new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port()) );
+                imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port());
+                ibs.add_child( imap_browser );
             }
             catch (IOException ex)
             {
@@ -488,6 +490,11 @@ public class MandantContext
     public void setRctx( ReIndexContext rctx )
     {
         this.rctx = rctx;
+    }
+
+    public IMAPBrowser get_imap_server()
+    {
+        return imap_browser;
     }
 
     class UserSSOcache

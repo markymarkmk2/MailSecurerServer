@@ -104,7 +104,7 @@ public class SearchCall
         return "0: sc" + id + " N:" + sc.result.size();
     }
 
-    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level )
+    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level, boolean with_imap )
     {
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
         if (m_ctx == null)
@@ -127,6 +127,10 @@ public class SearchCall
             id = call_list.size();
             SearchCallEntry sce = new SearchCallEntry(sc, id);
             call_list.add(sce);
+        }
+        if (m_ctx.get_imap_server() != null)
+        {
+            m_ctx.get_imap_server().set_search_results( sc, user, pwd );
         }
 
         return "0: sc" + id + " N:" + sc.result.size();

@@ -1087,7 +1087,17 @@ public class IndexManager extends WorkerParent
                     boolean encoded = DiskSpaceHandler.is_encoded_from_uuid(uuid);
 
                     DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log_fatal("Found mail without diskvault");
+                        continue;
+                    }
                     DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log_fatal("Found mail without diskvault");
+                        continue;
+                    }
                     index_dsh = dv.open_dsh(index_dsh, 1024 * 1024);
 
                     if (index_dsh != null)
@@ -1098,12 +1108,11 @@ public class IndexManager extends WorkerParent
                         handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
                     }
                 }
-
             }
         }
         catch (Exception e)
         {
-            LogManager.err_log("Error while cleaning up index holf buffer", e);
+            LogManager.err_log("Error while cleaning up index hold buffer", e);
             e.printStackTrace();
         }
         if (!is_started)
@@ -1360,7 +1369,7 @@ public class IndexManager extends WorkerParent
         }
 
         // SORT BY DATE REVERSE
-        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+       // Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
 
         try
         {
@@ -1373,7 +1382,7 @@ public class IndexManager extends WorkerParent
             TermsFilter filter = new TermsFilter();
             filter.addTerm(term);
             // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE ONE RESULT
-            TopDocs tdocs = pms.search(qry, filter, 1, sort);
+            TopDocs tdocs = pms.search(qry, filter, 1, null);
 
             if (tdocs.totalHits > 0)
             {
@@ -1392,10 +1401,7 @@ public class IndexManager extends WorkerParent
                 }
             }
         }
-        catch (IOException iOException)
-        {
-        }
-        catch (NumberFormatException numberFormatException)
+        catch (Exception iOException)
         {
         }
 

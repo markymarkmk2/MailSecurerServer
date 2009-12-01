@@ -4,6 +4,7 @@
  */
 package dimm.home.index.IMAP;
 
+import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -56,6 +57,31 @@ public class IMAPBrowser implements WorkerParentChild
     {
         return port;
     }
+
+    public void set_search_results( SearchCall sc, String user, String pwd )
+    {
+        LogManager.debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
+        for (int i = 0; i < srv_list.size(); i++)
+        {
+            MWImapServer mWImapServer = srv_list.get(i);
+            if (user.compareTo( mWImapServer.get_konto().get_username()) == 0 &&
+                pwd.compareTo( mWImapServer.get_konto().get_pwd()) == 0)
+            {
+                try
+                {
+                    if (mWImapServer.get_folder() == null)
+                        continue;
+                    
+                    mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
+                    mWImapServer.has_searched = true;
+                }
+                catch (IOException iOException)
+                {
+                }
+            }
+        }
+    }
+
 
 
     public IMAPBrowser( MandantContext m_ctx, String host, int port ) throws IOException
