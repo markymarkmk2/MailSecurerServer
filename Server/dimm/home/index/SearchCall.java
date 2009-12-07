@@ -511,7 +511,13 @@ public class SearchCall
         QueryParser parser = new QueryParser("FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
 
-        Query qry = parser.parse(sb.toString());
+        String qry_str = sb.toString();
+        if (qry_str.length() == 0)
+        {
+            return new MatchAllDocsQuery();
+        }
+        
+        Query qry = parser.parse(qry_str);
 
         return qry;
     }
@@ -526,9 +532,15 @@ public class SearchCall
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
+            if (dsh.islock_for_rebuild())
+            {
+                LogManager.debug("Skipping index " + dsh.getDs().getPath() + " during rebuild");
+                continue;
+            }
             IndexReader reader = null;
             try
             {
+
                 reader = dsh.create_read_index();
                 IndexSearcher searcher = new IndexSearcher(reader);
                 searcher_list.add(searcher);
@@ -553,6 +565,7 @@ public class SearchCall
         ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
 
         // SSSSEEEEAAAARRRRCHHHHHHH
+
 
         TopDocs tdocs = pms.search(qry, filter, n, sort);
 
@@ -613,9 +626,15 @@ public class SearchCall
                             continue;
                         }
 
-                        // START A SERACH TODO: DO THIS IN BACKGROUND
+                        // START A SEARCH TODO: DO THIS IN BACKGROUND
                         try
                         {
+                            if (dsh.islock_for_rebuild())
+                            {
+                                LogManager.debug("Skipping index " + dsh.getDs().getPath() + " during rebuild");
+                                continue;
+                            }
+
                             IndexReader reader = dsh.create_read_index();
                             IndexSearcher searcher = new IndexSearcher(reader);
 

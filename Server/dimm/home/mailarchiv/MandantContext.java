@@ -33,9 +33,12 @@ import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -58,6 +61,8 @@ public class MandantContext
 
     private ReIndexContext rctx;
 
+    long next_reinit_importbuffer;
+
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
         prefs = _prefs;
@@ -65,6 +70,8 @@ public class MandantContext
         vaultArray = new ArrayList<Vault>();
         tempFileHandler = new TempFileHandler( this );
         worker_list = new ArrayList<WorkerParent>();
+
+        next_reinit_importbuffer = System.currentTimeMillis() + 60*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
     }
 
    
@@ -277,8 +284,6 @@ public class MandantContext
 
     public void start_run_loop()
     {
-
-
         for (int i = 0; i < worker_list.size(); i++)
         {
             if (!worker_list.get(i).start_run_loop())
@@ -497,6 +502,33 @@ public class MandantContext
         return imap_browser;
     }
 
+    public void reinit_importbuffer()
+    {
+        next_reinit_importbuffer = System.currentTimeMillis();
+    }
+
+    // CALLED REGULARLY FROM OUTSIDE
+    void idle_call()
+    {
+        long now = System.currentTimeMillis();
+
+        if (now > next_reinit_importbuffer)
+        {
+            next_reinit_importbuffer = System.currentTimeMillis() + 60*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
+            
+            try
+            {
+                resolve_hold_buffer();
+                resolve_clientimport_buffer();
+                resolve_mailimport_buffer();
+            }
+            catch (Exception e)
+            {
+                LogManager.err_log("Error while cleaning importbuffers", e);
+            }
+        }
+    }
+
     class UserSSOcache
     {
         String user;
@@ -517,8 +549,6 @@ public class MandantContext
             this.checked = checked;
             this.last_auth = last_auth;
         }
-
-
     }
 
     ArrayList< UserSSOcache> user_sso_list = new ArrayList<UserSSOcache>();
@@ -535,6 +565,7 @@ public class MandantContext
             }
         }
     }
+
     UserSSOcache get_from_sso_cache( String user, String pwd )
     {
         for (int i = 0; i < user_sso_list.size(); i++)
@@ -658,6 +689,139 @@ public class MandantContext
         // BENUTZER WAR OK / NICHT OK, BYE BYE
         return auth_ok;
     }
+
+    void resolve_hold_buffer( )
+    {
+        try
+        {
+            File hold_buffer_dir = getTempFileHandler().get_hold_mail_path();
+            if (hold_buffer_dir.exists() && hold_buffer_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_hold_buffer") );
+
+                File[] flist = hold_buffer_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String hold_uuid = file.getName();
+
+                    int da_id = Main.get_control().get_da_id_from_hold_buffer_filename(hold_uuid);
+                    long time = Main.get_control().get_date_from_hold_buffer_filename(hold_uuid);
+                    DiskVault dv = get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_hold_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+                    boolean encoded = hold_uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
+
+                    RFCFileMail mf = new RFCFileMail( file, new Date(time), encoded );
+
+                    // HANDLE A NOT IN BG
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_hold_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up hold buffer", e);
+            return;
+        }
+    }
+    
+    void resolve_mailimport_buffer()
+    {
+        try
+        {
+            File import_buffer_dir = getTempFileHandler().get_import_mail_path();
+            if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer") );
+
+                File[] flist = import_buffer_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String uuid = file.getName();
+
+                    int da_id = Main.get_control().get_da_id_from_import_filemail(uuid);
+                    boolean encoded = uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
+
+                    // SKIP INVALID ENTRIES
+                    if (da_id == -1)
+                        continue;
+
+                    DiskVault dv = get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_import_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+                    RFCFileMail mf = new RFCFileMail( file, new Date(), encoded );
+
+                    // HANDLE ADD NOT IN BG
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
+
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up import buffer", e);
+            return;
+        }
+    }
+
+    void resolve_clientimport_buffer( )
+    {
+        try
+        {
+            File import_dir = getTempFileHandler().get_clientimport_path();
+            if (import_dir.exists() && import_dir.listFiles().length > 0)
+            {
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer") );
+
+                File[] flist = import_dir.listFiles();
+
+                for (int i = 0; i < flist.length; i++)
+                {
+                    File file = flist[i];
+                    String uuid = file.getName();
+
+                    int da_id = getTempFileHandler().get_da_id_from_import_file(uuid);
+
+
+                    // SKIP INVALID ENTRIES
+                    if (da_id == -1)
+                        continue;
+
+                    DiskVault dv = get_vault_by_da_id(da_id);
+                    if (dv == null)
+                    {
+                        LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
+                        continue;
+                    }
+
+                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                    Main.get_control().register_new_import( this,  dv.get_da(), file.getAbsolutePath() );
+
+                }
+                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
+            }
+        }
+        catch (Exception e) // CATCH ANY ERROR HERE
+        {
+            LogManager.err_log("Error while cleaning up import buffer", e);
+            return;
+        }
+    }
+
 
 
 

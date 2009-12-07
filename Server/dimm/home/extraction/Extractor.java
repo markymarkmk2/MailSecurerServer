@@ -21,7 +21,7 @@ public class Extractor implements Serializable
     public Extractor( MandantContext m_ctx )
     {
 
-        extr_timeout_s = (int)Main.get_long_prop(GeneralPreferences.INDEX_TIMEOUT, 60);
+        extr_timeout_s = (int)Main.get_long_prop(GeneralPreferences.INDEX_TIMEOUT, 180);
         this.m_ctx = m_ctx;
         handlers = new HashMap<String, TextExtractor>();
         TextExtractor plain = new PlainTextExtractor();
@@ -85,7 +85,7 @@ public class Extractor implements Serializable
         {
             try
             {
-                LogManager.debug_msg(3, "Extracting with extractor " + extractor.getClass().getName());
+                LogManager.debug_msg(7, "Extracting with extractor " + extractor.getClass().getName());
                 Reader rdr = null;
                 SwingWorker sw = new SwingWorker()
                 {

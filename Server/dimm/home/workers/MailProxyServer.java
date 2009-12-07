@@ -10,7 +10,6 @@ package dimm.home.workers;
  * @author Jocca Jocaf
  *
  */
-import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.hibernate.Proxy;
 import dimm.home.importmail.SMTPConnection;
 import dimm.home.importmail.POP3Connection;
@@ -19,9 +18,11 @@ import dimm.home.importmail.ProxyEntry;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import home.shared.mail.EncodedMailOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -371,7 +372,7 @@ public class MailProxyServer extends ListWorkerParent
         }
     }
     
-    public static BufferedOutputStream get_rfc_stream( File rfc_dump)
+    public static BufferedOutputStream get_rfc_stream( File rfc_dump, boolean encoded)
     {
 
         BufferedOutputStream bos = null;
@@ -383,8 +384,10 @@ public class MailProxyServer extends ListWorkerParent
                 rfc_dump.delete();
             }
 
-            FileOutputStream fos = new FileOutputStream(rfc_dump);
-            bos = new BufferedOutputStream(fos);
+            OutputStream os = new FileOutputStream(rfc_dump);
+            if (encoded)
+                os = new EncodedMailOutputStream(os);
+            bos = new BufferedOutputStream(os);
 
             rfc_dump.getFreeSpace();
         }

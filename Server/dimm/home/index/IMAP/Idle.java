@@ -56,7 +56,7 @@ public class Idle extends ImapCmd
                         is.response(sid, true, "IDLE completed");
                         return 0;
                     }
-                    if (rline.toLowerCase().endsWith("noop"))
+                    if (rline.toLowerCase().endsWith("noop")  || rline.toLowerCase().endsWith("idle"))
                     {
                         // HANDLE BACKGROUND SEARCH
                         Noop.handle_messages_searched( is );

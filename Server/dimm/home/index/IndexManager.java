@@ -35,7 +35,6 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -69,7 +68,6 @@ import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Searchable;
-import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
@@ -139,99 +137,6 @@ class MyMimetype
     }
 }
 
-class IndexJobEntry
-{
-
-    private MandantContext m_ctx;
-    String unique_id;
-    int da_id;
-    int ds_id;
-    private DiskSpaceHandler index_dsh;
-    RFCGenericMail msg;
-    boolean delete_after_index;
-    IndexManager ixm;
-
-    public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
-    {
-        this.ixm = ixm;
-        this.m_ctx = m_ctx;
-        this.unique_id = unique_id;
-        this.da_id = da_id;
-        this.ds_id = ds_id;
-        this.index_dsh = index_dsh;
-        this.msg = msg;
-        this.delete_after_index = delete_after_index;
-    }
-
-    boolean handle_index()
-    {
-        Document doc = new Document();
-        DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
-
-        ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
-
-
-        try
-        {
-            // DO THE REAL WORK (EXTRACT AND INDEX)
-            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, docw);
-
-
-            IndexWriter writer = index_dsh.get_write_index();
-            if (writer == null)
-            {
-                writer = index_dsh.open_write_index();
-            }
-
-
-            // DETECT LANG OF INDEX AND PUT INTO LUCENE
-            String lang = ixm.get_lang_by_analyzer(writer.getAnalyzer());
-            doc.add(new Field(CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
-
-            byte[] hash = msg.get_hash();
-            if (hash != null)
-            {
-                String txt_hash = new String(Base64.encodeBase64(hash));
-                doc.add(new Field(CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED));
-            }
-
-            // SHOVE IT RIGHT OUT!!!
-            synchronized (index_dsh.idx_lock)
-            {
-                writer.addDocument(doc);
-
-            }
-
-
-            // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
-            List field_list = doc.getFields();
-            for (int i = 0; i < field_list.size(); i++)
-            {
-                if (field_list.get(i) instanceof Field)
-                {
-                    Field field = (Field) field_list.get(i);
-                    Reader rdr = field.readerValue();
-                    if (rdr != null)
-                    {
-                        rdr.close();
-                    }
-                }
-            }
-
-
-            if (delete_after_index)
-            {
-                msg.delete();
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
-        }
-        return false;
-    }
-}
 
 /**
  *
@@ -255,6 +160,8 @@ public class IndexManager extends WorkerParent
 
     ArrayList <IndexSearcher> hash_searcher_list;
     private boolean is_started;
+
+
 
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -292,13 +199,18 @@ public class IndexManager extends WorkerParent
         email_headers.add(CS_Constants.FLD_DELIVEREDTO);
         is_started = false;
 
+
     }
 
-    public IndexWriter open_index( String path, String language, boolean do_index ) throws IOException
+    // OPEN AND IF NOT EXISTS, CREATE, SO OPEN ALWAYS SUCCEEDS
+    public IndexWriter open_index( String path, String language) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
-        Analyzer analyzer = create_analyzer(language, do_index);
+        Analyzer analyzer = create_analyzer(language, true);
+
+        // CHECK IF INDEX EXISTS
+        boolean create = !IndexReader.indexExists(path);
 
         if (IndexWriter.isLocked(dir))
         {
@@ -306,7 +218,12 @@ public class IndexManager extends WorkerParent
             IndexWriter.unlock(dir);
         }
 
-        IndexWriter writer = new IndexWriter(dir, analyzer, false, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
+        IndexWriter writer = new IndexWriter(dir, analyzer, create, new IndexWriter.MaxFieldLength(100000));
+        writer.setRAMBufferSizeMB(32);
+        writer.setMergeFactor(16);
+        writer.setMaxMergeDocs(32);
+        //writer.setMaxFieldLength(100000);
+        //writer.setUseCompoundFile(false);
 
         return writer;
     }
@@ -320,14 +237,13 @@ public class IndexManager extends WorkerParent
         return reader;
     }
 
+    // CREATE (AND DELETE OLD STUFF!!!!) SHOULD ONLY BE USED BY REINDEX OR MANUAL FUNCS
     public IndexWriter create_index( String path, String language ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
         Analyzer analyzer = create_analyzer(language, true);
-
-        // CHECK IF INDEX EXISTS
-        boolean create = !IndexReader.indexExists(path);
+       
 
         if (IndexWriter.isLocked(dir))
         {
@@ -336,13 +252,13 @@ public class IndexManager extends WorkerParent
         }
 
         // AND CREATE IF NOT
-        IndexWriter writer = new IndexWriter(dir, analyzer, create, IndexWriter.MaxFieldLength.UNLIMITED /*new IndexWriter.MaxFieldLength(50000)*/);
+        IndexWriter writer = new IndexWriter(dir, analyzer, true, new IndexWriter.MaxFieldLength(100000));
         writer.setMergeScheduler(new org.apache.lucene.index.SerialMergeScheduler());
-                writer.setRAMBufferSizeMB(32);
-                writer.setMergeFactor(16);
-                writer.setMaxMergeDocs(32);
-                writer.setMaxFieldLength(Integer.MAX_VALUE);
-                writer.setUseCompoundFile(false);
+        writer.setRAMBufferSizeMB(32);
+        writer.setMergeFactor(16);
+        writer.setMaxMergeDocs(32);
+        //writer.setMaxFieldLength(Integer.MAX_VALUE);
+        //writer.setUseCompoundFile(false);
         return writer;
     }
 

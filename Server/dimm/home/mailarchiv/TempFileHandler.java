@@ -137,14 +137,13 @@ public class TempFileHandler
             nf.getParentFile().mkdirs();
 
         // VERY UNLIKELY THERE IS ALREADY A FILE WITH SAME NAME...
-        int i = 10;
+        int i = 100;
         while (nf.exists() && i > 0)
         {
             LogicControl.sleep(4);
             String rand = Long.toString(System.currentTimeMillis() % 10000);
             new_path = get_clientimport_path() + "/" +  da_id + "." + rand + "_" + name;
-            
-            //nf = new File(new_path + Long.toString(System.currentTimeMillis() % 10000) + suffix);
+                        
             i--;
         }
         return nf;
@@ -255,6 +254,7 @@ public class TempFileHandler
 
         return d;
     }
+    
     public File get_hold_mail_path( )
     {
         File d = new File( ctx.get_tmp_path() , HOLD_PREFIX );
@@ -263,6 +263,7 @@ public class TempFileHandler
 
         return d;
     }
+    
     public File get_index_buffer_mail_path( )
     {
         File d = new File( ctx.get_tmp_path() , INDEX_BUFFER_PREFIX );
@@ -272,6 +273,7 @@ public class TempFileHandler
         return d;
     }
 
+    // FOR NON-ENCODED FILE DATA (LIKE MBOXES, IMPORTED EML ETC.)
     public File get_import_mail_path( )
     {
         File d = new File( ctx.get_tmp_path() , IMPMAIL_PREFIX );
@@ -281,6 +283,7 @@ public class TempFileHandler
         return d;
     }
 
+    // FOR ENCODED FILE DATA
     public File get_clientimport_path( )
     {
         File d = new File( ctx.get_tmp_path() , IMPORT_PREFIX );
@@ -303,6 +306,4 @@ public class TempFileHandler
             }
         }
     }
-
-
 }

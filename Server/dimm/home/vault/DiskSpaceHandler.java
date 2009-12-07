@@ -6,11 +6,13 @@
 package dimm.home.vault;
 
 import dimm.home.DAO.DiskSpaceDAO;
+import dimm.home.index.AsyncIndexWriter;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import home.shared.SQL.SQLArrayResult;
@@ -50,6 +52,8 @@ public class DiskSpaceHandler
     boolean _open;
     //IndexReader read_index;
     IndexWriter write_index;
+    AsyncIndexWriter async_index_writer;
+
     MandantContext m_ctx;  
     public final String idx_lock = "idx";
     public final String data_lock = "data";
@@ -59,6 +63,10 @@ public class DiskSpaceHandler
         m_ctx = _m_ctx;
         ds = _ds;        
         _open = false;
+    }
+    public AsyncIndexWriter get_async_index_writer()
+    {
+        return async_index_writer;
     }
 
     public boolean is_open()
@@ -131,6 +139,12 @@ public class DiskSpaceHandler
         {
             throw new VaultException( ds, "Cannot open read index: " + iex.getMessage());
         }
+
+    }
+
+    int get_indexthreads()
+    {
+        return (int)m_ctx.getPrefs().get_long_prop( MandantPreferences.INDEX_THREADS, MandantPreferences.DFTL_INDEX_THREADS );
     }
     public IndexWriter create_write_index() throws VaultException
     {
@@ -146,6 +160,14 @@ public class DiskSpaceHandler
                 {
                     write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
                     write_index.commit();
+                    
+                    if (async_index_writer != null)
+                    {
+                        async_index_writer.close();
+                    }
+
+                    async_index_writer = new AsyncIndexWriter(get_indexthreads());
+
                     return write_index;
                 }
             }
@@ -186,7 +208,12 @@ public class DiskSpaceHandler
                     if (write_index != null)
                         return write_index;
 
-                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /* do_index*/true);
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage());
+                    if (async_index_writer != null)
+                    {
+                        async_index_writer.close();
+                    }
+                    async_index_writer = new AsyncIndexWriter(get_indexthreads());
                 }
                 return write_index;
             }
@@ -206,9 +233,11 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
+                    async_index_writer.close();
                     write_index.commit();
                     write_index.close();
                     write_index = null;
+                    async_index_writer = null;
                 }
             }
         }
@@ -274,7 +303,7 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
-                    write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage());
                     write_index.commit();
                     write_index.close();
                     write_index = null;

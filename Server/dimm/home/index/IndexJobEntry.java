@@ -1,0 +1,174 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+package dimm.home.index;
+
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskSpaceHandler;
+import home.shared.CS_Constants;
+import home.shared.mail.RFCGenericMail;
+import java.io.Reader;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexWriter;
+
+/**
+ *
+ * @author mw
+ */
+public class IndexJobEntry  implements Runnable
+{
+    private MandantContext m_ctx;
+    String unique_id;
+    int da_id;
+    int ds_id;
+    private DiskSpaceHandler index_dsh;
+    RFCGenericMail msg;
+    boolean delete_after_index;
+    IndexManager ixm;
+    Document doc;
+    IndexWriter writer;
+    Thread thread;
+
+    public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
+    {
+        this.ixm = ixm;
+        this.m_ctx = m_ctx;
+        this.unique_id = unique_id;
+        this.da_id = da_id;
+        this.ds_id = ds_id;
+        this.index_dsh = index_dsh;
+        this.msg = msg;
+        this.delete_after_index = delete_after_index;
+        doc = null;
+        writer = null;
+        thread = null;
+    }
+
+    @Override
+    public void run()
+    {
+        try
+        {
+            boolean ret = handle_pre_index();
+            index_dsh.get_async_index_writer().remove_from_extract_queue(this);
+
+            if (ret)
+            {
+                LogManager.debug_msg(1, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
+                index_dsh.get_async_index_writer().add_to_write_queue(this);
+            }
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(IndexJobEntry.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    boolean handle_index()
+    {
+        ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
+
+        try
+        {
+            LogManager.debug_msg(1, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
+            index_dsh.get_async_index_writer().add_to_extract_queue(this);
+            thread = new Thread(this, "AsynchronousIndexExtractor");
+            thread.start();
+            
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(IndexJobEntry.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return true;
+    }
+
+    boolean handle_pre_index()
+    {
+        doc = new Document();
+        DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
+
+
+        try
+        {
+            // DO THE REAL WORK (EXTRACT AND INDEX)
+            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, docw);
+
+
+            writer = index_dsh.get_write_index();
+            if (writer == null)
+            {
+                writer = index_dsh.open_write_index();
+            }
+
+
+            // DETECT LANG OF INDEX AND PUT INTO LUCENE
+            String lang = ixm.get_lang_by_analyzer(writer.getAnalyzer());
+            doc.add(new Field(CS_Constants.FLD_LANG, lang, Field.Store.YES, Field.Index.NOT_ANALYZED));
+
+            byte[] hash = msg.get_hash();
+            if (hash != null)
+            {
+                String txt_hash = new String(Base64.encodeBase64(hash));
+                doc.add(new Field(CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED));
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
+        }
+        return false;
+    }
+
+    boolean handle_post_index()
+    {
+        try
+        {
+            // SHOVE IT RIGHT OUT!!!
+            synchronized (index_dsh.idx_lock)
+            {
+                writer.addDocument(doc);
+            }
+
+
+            // CLOSE ALL PENDING READERS, WE STARTED WITH A CLOSED DOCUMENT
+            List field_list = doc.getFields();
+            for (int i = 0; i < field_list.size(); i++)
+            {
+                if (field_list.get(i) instanceof Field)
+                {
+                    Field field = (Field) field_list.get(i);
+                    Reader rdr = field.readerValue();
+                    if (rdr != null)
+                    {
+                        rdr.close();
+                    }
+                }
+            }
+
+
+            if (delete_after_index)
+            {
+                msg.delete();
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
+        }
+        return false;
+    }
+
+}

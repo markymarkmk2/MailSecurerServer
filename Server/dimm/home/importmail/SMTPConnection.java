@@ -3,6 +3,7 @@ package dimm.home.importmail;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
+import home.shared.mail.RFCGenericMail;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -243,11 +244,18 @@ public class SMTPConnection extends ProxyConnection
     
     private int DATA()
     {
+        boolean encoded = true;
+        String suffix = ".eml";
+        if (encoded)
+            suffix = RFCGenericMail.get_suffix_for_encoded();
 
-        File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
+        MandantContext m_ctx = Main.get_control().get_m_context(pe.get_proxy().getMandant());
+        File rfc_dump = m_ctx.getTempFileHandler().create_new_import_file("pop3_" + this_thread_id + "_" + System.currentTimeMillis() + suffix,
+                            pe.get_proxy().getDiskArchive().getId());
+//        File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump);
+        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump, encoded);
 
         if (bos == null)
         {        
@@ -268,7 +276,8 @@ public class SMTPConnection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_mail_file( rfc_dump, pe.get_proxy().getMandant(), pe.get_proxy().getDiskArchive(), /*bg*/ true, /*del_after*/ true );
+               Main.get_control().add_mail_file( rfc_dump, pe.get_proxy().getMandant(), pe.get_proxy().getDiskArchive(), 
+                                            /*bg*/ true, /*del_after*/ true, /*encoded*/ encoded );
             }  
             else
             {                

@@ -151,7 +151,8 @@ public class Fetch extends ImapCmd
             {
                 try
                 {
-                    min = Integer.parseInt(bereich.substring(0, i));
+                    long l = Long.parseLong(bereich.substring(0, i) );
+                    min = (int)l;
                 }
                 catch (Exception e)
                 {
@@ -159,7 +160,8 @@ public class Fetch extends ImapCmd
 
                 try
                 {
-                    max = Integer.parseInt(bereich.substring(i + 1));
+                    long l = Long.parseLong(bereich.substring(i + 1) );
+                    max = (int)l;
                 }
                 catch (Exception e)
                 {

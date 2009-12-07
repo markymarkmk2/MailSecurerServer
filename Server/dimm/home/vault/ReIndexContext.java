@@ -18,6 +18,7 @@ import home.shared.hibernate.DiskSpace;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.logging.Level;
@@ -280,16 +281,16 @@ public class ReIndexContext
                 set_status(Main.Txt("Deleting_index_data"));
 
                 // DELETE INDEX
-                String path = index_dsh.getIndexPath();
+               /* String path = index_dsh.getIndexPath();
                 DirectoryEntry index_dir = new DirectoryEntry(new File(path));
                 index_dir.delete_recursive();
-                
+                */
                 // AND CREATE NEW FROM SCRATCH
                 index_dsh.create_write_index();
 
 
                 // BUILD RECUSIVE ENTRYLIST
-                path = data_dsh.getMailPath();
+                String path = data_dsh.getMailPath();
                 DirectoryEntry data_dir = new DirectoryEntry(new File(path));
 
 
@@ -373,6 +374,25 @@ public class ReIndexContext
                         throw new VaultException("Cannot_index_files,_too_many_errors_in_a_row");
                     }
                 }
+
+                while (data_dsh.get_async_index_writer().get_queue_entries() > 0)
+                {
+                    set_status(Main.Txt("Waiting_for_queues_to_finish: ") + data_dsh.get_async_index_writer().get_queue_entries());
+                    LogicControl.sleep(500);
+                }
+
+                set_status(Main.Txt("Optimizing_index"));
+                try
+                {
+                    data_dsh.get_write_index().optimize();
+                }
+                catch (IOException iOException)
+                {
+                    set_status(Main.Txt("Index_is_corrupted") + " " + iOException.getMessage());
+                }
+                
+                set_status(Main.Txt("Finished_reindex"));
+                this.context.reinit_importbuffer();
             }
             /*catch (IndexException indexException)
             {
@@ -636,6 +656,8 @@ public class ReIndexContext
                 stat_sb.append( "\"");
                 stat_sb.append( " RDS:" );
                 stat_sb.append( reIndexDSHEntry.getData_dsh().getDs().getId() );
+                stat_sb.append( " RDA:" );
+                stat_sb.append( reIndexDSHEntry.getData_dsh().getDs().getDiskArchive().getId() );
                 stat_sb.append( " TRCNT:" );
                 stat_sb.append( getTotal_cnt() );
                 stat_sb.append( " TRSIZ:" );

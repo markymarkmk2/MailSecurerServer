@@ -39,6 +39,9 @@ public class MandantPreferences extends Preferences
     
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
+    public static final String INDEX_THREADS = "IndexyThreads";
+    public static final long DFTL_INDEX_THREADS = 8;
+
 /*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
     public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";
 */
@@ -75,6 +78,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( SERVER_PORT );
         prop_names.add( SERVER_IP );
         prop_names.add( SSO_TIMEOUT_S );
+        prop_names.add( INDEX_THREADS );
     }
     public void setContext( MandantContext _context )
     {
