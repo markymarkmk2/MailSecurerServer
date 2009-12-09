@@ -345,11 +345,14 @@ public class IndexManager extends WorkerParent
         return Long.toString(l, 16);
     }
 
-    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
+    public RFCMimeMail load_mail_file( RFCGenericMail mail_file ) throws MessagingException, IOException
     {
         RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
-
+        return mime_msg;
+    }
+    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
+    {
         String subject = mime_msg.getMsg().getSubject();
         if (mime_msg.getMsg().getFrom() == null &&
                 mime_msg.getMsg().getHeader("To") == null &&

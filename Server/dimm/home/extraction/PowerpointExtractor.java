@@ -38,6 +38,10 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
         }
         catch (Exception ex)
         {
+            if (file != null && file.exists())
+            {
+                file.delete();
+            }
             throw new ExtractionException("failed to extract text from powerpoint document");
         }
         finally
@@ -55,7 +59,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
         }
         try
         {
-            return new FileReader(file);
+            return new FileDeleteReader(file);
         }
         catch (Exception ex)
         {

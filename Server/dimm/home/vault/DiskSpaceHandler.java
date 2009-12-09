@@ -13,6 +13,7 @@ import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
+import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import home.shared.SQL.SQLArrayResult;
@@ -30,6 +31,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.CorruptIndexException;
@@ -395,11 +397,46 @@ public class DiskSpaceHandler
                 {
                     LogManager.err_log_warn("Recovering from broken ds info object: " + ex.getMessage());
                     dsi = (DiskSpaceInfo)o;
+                    update_info();
+
                     return;
                 }
             }
-            catch (IOException iOException)
+            catch (Exception iOException)
             {
+                LogManager.err_log_warn("Recovering from broken ds info object failed: " + iOException.getMessage());
+            }
+            // DATAPATH EXISTS AND INFO IS BROKEN???
+            File mail_path = new File(getMailPath());
+            if (mail_path.exists())
+            {
+                // WE ARE LOST, BUILD A NEW ONE FROM SCRATCH, WE PROBABLY NEED TO REINDEX
+                dsi = new DiskSpaceInfo();
+                dsi.setLanguage( m_ctx.getPrefs().get_language());
+                DirectoryEntry de = new DirectoryEntry( mail_path );
+                Iterator<File> it = de.get_file_iterator();
+                int enc_mode = RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE;
+                long capacity = 0;
+
+                LogManager.err_log_warn("Rescanning disk space " + ds.getPath());
+                while (it.hasNext())
+                {
+                    File f = it.next();
+
+                    // DETECT ENCODING
+                    int local_enc_mode = RFCFileMail.get_encrypt_mode_for_suffix( f.getName() );
+                    if (local_enc_mode != RFCFileMail.ENC_NONE)
+                        enc_mode = local_enc_mode;
+
+                    capacity += f.length();
+                }
+                
+                dsi.setCapacity(capacity);
+                dsi.setEncMode(  enc_mode );
+                LogManager.err_log_fatal("We recovered disk info and need reindex for: " + ds.getPath());
+                update_info();
+
+                return;
             }
             
             throw new VaultException( ds, "Cannot read info file: " + ex.getMessage());

@@ -148,6 +148,29 @@ public class TempFileHandler
         }
         return nf;
     }
+    public File create_new_mailimp_file( String name,  int da_id )
+    {
+        // MOVE TO IMPORT PATH
+        String new_path = get_import_mail_path() + "/" +  da_id + "." + name;
+
+        File nf = new File(new_path);
+
+        if (!nf.getParentFile().exists())
+            nf.getParentFile().mkdirs();
+
+        // VERY UNLIKELY THERE IS ALREADY A FILE WITH SAME NAME...
+        int i = 100;
+        while (nf.exists() && i > 0)
+        {
+            LogicControl.sleep(4);
+            String rand = Long.toString(System.currentTimeMillis() % 10000);
+            new_path = get_import_mail_path() + "/" +  da_id + "." + rand + "_" + name;
+
+            i--;
+        }
+        return nf;
+    }
+
     
     public void clean_up()
     {

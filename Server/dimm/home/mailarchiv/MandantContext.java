@@ -519,8 +519,10 @@ public class MandantContext
             try
             {
                 resolve_hold_buffer();
-                resolve_clientimport_buffer();
-                resolve_mailimport_buffer();
+
+                // NOT THESE, THEY ARE HANDLAD AUTOMAGICALLY
+                //resolve_clientimport_buffer();
+                //resolve_mailimport_buffer();
             }
             catch (Exception e)
             {
@@ -731,17 +733,27 @@ public class MandantContext
             return;
         }
     }
-    
-    void resolve_mailimport_buffer()
+
+    File[] get_mailimport_buffer_list()
     {
-        try
-        {
             File import_buffer_dir = getTempFileHandler().get_import_mail_path();
             if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
             {
                 LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer") );
 
                 File[] flist = import_buffer_dir.listFiles();
+                return flist;
+            }
+            return null;
+    }
+    void resolve_mailimport_buffer(File[] flist)
+    {
+        if (flist == null || flist.length == 0)
+            return;
+
+        LogManager.debug_msg(Main.Txt("Trying_to_resolve_mailimport_buffer") );
+        try
+        {
 
                 for (int i = 0; i < flist.length; i++)
                 {
@@ -769,7 +781,7 @@ public class MandantContext
 
                 }
                 LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
-            }
+            
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
@@ -778,17 +790,24 @@ public class MandantContext
         }
     }
 
-    void resolve_clientimport_buffer( )
+    File[] get_clientimport_buffer_list()
     {
-        try
-        {
-            File import_dir = getTempFileHandler().get_clientimport_path();
-            if (import_dir.exists() && import_dir.listFiles().length > 0)
+            File import_buffer_dir = getTempFileHandler().get_clientimport_path();
+            if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
             {
                 LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer") );
 
-                File[] flist = import_dir.listFiles();
+                File[] flist = import_buffer_dir.listFiles();
+                return flist;
+            }
+            return null;
+    }
 
+    void resolve_clientimport_buffer(File[] flist )
+    {
+        try
+        {
+           
                 for (int i = 0; i < flist.length; i++)
                 {
                     File file = flist[i];
@@ -813,7 +832,7 @@ public class MandantContext
 
                 }
                 LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
-            }
+           
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {

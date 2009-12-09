@@ -254,7 +254,7 @@ public class POP3Connection extends ProxyConnection
         if (encoded)
             suffix = RFCGenericMail.get_suffix_for_encoded();
 
-        File rfc_dump = m_ctx.getTempFileHandler().create_new_import_file("pop3_" + this_thread_id + "_" + System.currentTimeMillis() + suffix,
+        File rfc_dump = m_ctx.getTempFileHandler().create_new_mailimp_file("pop3_" + this_thread_id + "_" + System.currentTimeMillis() + suffix,
                 pe.get_proxy().getDiskArchive().getId());
 
         //File rfc_dump = new File(Main.RFC_PATH + "pop3_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");

@@ -216,7 +216,7 @@ public class LogManager
             FileAppender fileAppender = new FileAppender(layout, LOG_PATH + LOG_L4J, true);
 
             main_logger.addAppender(fileAppender);
-            Logger.getRootLogger().addAppender(fileAppender);
+            //Logger.getRootLogger().addAppender(fileAppender);
 
             
             ConsoleAppender con = new ConsoleAppender( new SimpleLayout(), ConsoleAppender.SYSTEM_OUT );

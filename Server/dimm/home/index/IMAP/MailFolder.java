@@ -418,31 +418,31 @@ public class MailFolder
             }
 
             if (is_token(token, "bcc"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BCC, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BCC, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "cc"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_CC, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_CC, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "from"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_FROM, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_FROM, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "to"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TO, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TO, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "subject"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_SUBJECT, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_SUBJECT, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "text"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "body"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_BODY, arg1, ExprEntry.OPERATION.CONTAINS, ExprEntry.TYPE.STRING, next_is_not, next_is_or));
             else if (is_token(token, "before"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else if (is_token(token, "sentbefore"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "< " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else if (is_token(token, "since"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else if (is_token(token, "sentsince"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "> " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else if (is_token(token, "on"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else if (is_token(token, "senton"))
-                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, next_is_not, next_is_or));
+                ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else
             {
                 Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid search token: " + token );

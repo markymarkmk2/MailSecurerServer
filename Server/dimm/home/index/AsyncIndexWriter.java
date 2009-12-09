@@ -14,18 +14,15 @@ import java.util.concurrent.BlockingQueue;
 
 import org.apache.lucene.index.CorruptIndexException;
 
-
-
-class WriteRunner  implements Runnable
+class WriteRunner implements Runnable
 {
+
     AsyncIndexWriter aiw;
 
     public WriteRunner( AsyncIndexWriter aiw )
     {
         this.aiw = aiw;
     }
-
-
 
     @Override
     public void run()
@@ -45,43 +42,44 @@ class WriteRunner  implements Runnable
                      * Nothing in queue so lets wait
                      */
                     Thread.sleep(aiw.sleepMilisecondOnEmpty);
-                }
 
-                for (int i = 0; i< aiw.index_extract_queue.size(); i++)
-                {
-                    // LOOK FOR DEAD THREADS  (OOM-EXCEPTIONS DURING EXTRACT)
-                    IndexJobEntry xije = aiw.index_extract_queue.peek();
-                    if (xije != null)
+
+                    try
                     {
-                        if (!xije.thread.isAlive() || xije.thread.isInterrupted())
+                        // LOOK FOR DEAD THREADS  (OOM-EXCEPTIONS DURING EXTRACT)
+                        IndexJobEntry xije = aiw.index_extract_queue.peek();
+                        if (xije != null)
                         {
-                            Thread.sleep(aiw.sleepMilisecondOnEmpty);
-                            if (!xije.thread.isAlive() || xije.thread.isInterrupted())
+                            if (xije.thread != null && !xije.thread.isAlive() || xije.thread.isInterrupted())
                             {
-                                LogManager.err_log( "Reviving dead extract thread" );
-                                xije.thread = new Thread(xije, "AsynchronousIndexExtractor");
-                                xije.thread.start();
+                                Thread.sleep(aiw.sleepMilisecondOnEmpty);
+                                if (!xije.thread.isAlive() || xije.thread.isInterrupted())
+                                {
+                                    LogManager.err_log("Reviving dead extract thread");
+                                    xije.thread = new Thread(xije, "RevivedExtractorRunner");
+                                    xije.thread.start();
+                                }
                             }
                         }
                     }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
                 }
+
             }
-            catch (ClassCastException e)
+            catch (Exception e)
             {
+                LogManager.err_log("Error in index write runner", e );
                 e.printStackTrace();
-                throw new RuntimeException(e);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-                throw new RuntimeException(e);
+                
             }
         }
 
         aiw.isWRunning = false;
     }
 }
-
 
 /**
 
@@ -98,14 +96,10 @@ public class AsyncIndexWriter
      */
     BlockingQueue<IndexJobEntry> index_write_queue;
     BlockingQueue<IndexJobEntry> index_extract_queue;
-
-
     /*
      * Thread which makes writing asynchronous
      */
     private Thread writerThread;
-    
-
     /*
      * We need to set this to false if the document addition is completed. This
      * will not immediately stop the writing as there could be some documents in
@@ -118,15 +112,12 @@ public class AsyncIndexWriter
      * This flag is set to false once writer is done with the queue data
      * writing.
      */
-    
-
     /*
      * Duration in miliseconds for which the writer should sleep when it finds
      * the queue empty and job is still not completed
      */
     long sleepMilisecondOnEmpty = 100;
     boolean isWRunning;
-    
 
     /**
      * This method should be used to add documents to index queue. If the queue
@@ -139,10 +130,12 @@ public class AsyncIndexWriter
     {
         index_write_queue.put(ije);
     }
+
     public void add_to_extract_queue( IndexJobEntry ije ) throws InterruptedException
     {
         index_extract_queue.put(ije);
     }
+
     void remove_from_extract_queue( IndexJobEntry ije )
     {
         index_extract_queue.remove(ije);
@@ -150,14 +143,13 @@ public class AsyncIndexWriter
 
     public void startWriting()
     {
-        WriteRunner wr = new WriteRunner( this );
+        WriteRunner wr = new WriteRunner(this);
         writerThread = new Thread(wr, "WriteRunner");
         writerThread.start();
-       
+
 
     }
 
-    
     /**
      * Constructor with indexwriter and queue size as input. It Uses
      * ArrayBlockingQueue with size queueSize and sleepMilisecondOnEmpty is
@@ -170,21 +162,8 @@ public class AsyncIndexWriter
     {
         this(queueSize, 100);
     }
-    /**
-     * Constructor with indexwriter, queueSize as input. It Uses
-     * ArrayBlockingQueue with size queueSize
-     *
-     * @param 
-     * @param queueSize
-     * @param sleepMilisecondOnEmpty
-     */
-    public AsyncIndexWriter( int queueSize,
-            long sleepMilisecondOnEmpty )
-    {
-        this(new ArrayBlockingQueue<IndexJobEntry>(queueSize),
-                new ArrayBlockingQueue<IndexJobEntry>(queueSize),
-                sleepMilisecondOnEmpty);
-    }
+
+    
 
     /**
      * A implementation of BlockingQueue can be used
@@ -193,11 +172,11 @@ public class AsyncIndexWriter
      * @param queueSize
      * @param sleepMilisecondOnEmpty
      */
-    public AsyncIndexWriter( BlockingQueue<IndexJobEntry> write_queue,BlockingQueue<IndexJobEntry> extract_queue,
+    public AsyncIndexWriter( int queueSize,
             long sleepMilisecondOnEmpty )
-    {       
-        index_write_queue = write_queue;
-        index_extract_queue = extract_queue;
+    {
+        index_write_queue = new ArrayBlockingQueue<IndexJobEntry>(100);
+        index_extract_queue = new ArrayBlockingQueue<IndexJobEntry>(queueSize);
         this.sleepMilisecondOnEmpty = sleepMilisecondOnEmpty;
         startWriting();
     }
@@ -206,7 +185,6 @@ public class AsyncIndexWriter
      *
      * @see java.lang.Runnable#run()
      */
-   
 
     /**
 
@@ -243,6 +221,7 @@ public class AsyncIndexWriter
     {
         return index_write_queue.size();
     }
+
     public int get_extract_queue_size()
     {
         return index_extract_queue.size();
@@ -252,5 +231,4 @@ public class AsyncIndexWriter
     {
         return get_write_queue_size() + get_extract_queue_size();
     }
-
 }

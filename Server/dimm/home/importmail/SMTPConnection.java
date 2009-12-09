@@ -250,7 +250,7 @@ public class SMTPConnection extends ProxyConnection
             suffix = RFCGenericMail.get_suffix_for_encoded();
 
         MandantContext m_ctx = Main.get_control().get_m_context(pe.get_proxy().getMandant());
-        File rfc_dump = m_ctx.getTempFileHandler().create_new_import_file("pop3_" + this_thread_id + "_" + System.currentTimeMillis() + suffix,
+        File rfc_dump = m_ctx.getTempFileHandler().create_new_mailimp_file("pop3_" + this_thread_id + "_" + System.currentTimeMillis() + suffix,
                             pe.get_proxy().getDiskArchive().getId());
 //        File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         

@@ -12,25 +12,7 @@ import org.apache.pdfbox.util.PDFTextStripper;
 
 // QUICK AND DIRTY: GET RID OF TEXT FILE AFTER INDEXING
 
-class PDFFileDeleteReader extends FileReader
-{
-    File del_file ;
-    public PDFFileDeleteReader( File f ) throws FileNotFoundException
-    {
-        super(f);
-        del_file = f;
-    }
 
-    @Override
-    public void close() throws IOException
-    {
-        super.close();
-        if (del_file.exists())
-            del_file.delete();
-    }
-
-
-}
 public class PDFExtractor implements TextExtractor, Serializable
 {
     MandantContext m_ctx;
@@ -72,6 +54,10 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         catch (Exception e)
         {
+            if (file != null && file.exists())
+            {
+                file.delete();
+            }
             throw new ExtractionException("Failed to parse PDF",  e);
         }
         finally
@@ -93,7 +79,7 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         try
         {
-            return new PDFFileDeleteReader(file);
+            return new FileDeleteReader(file);
         }
         catch (Exception ex)
         {

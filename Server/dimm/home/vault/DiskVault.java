@@ -333,7 +333,7 @@ public class DiskVault implements Vault, StatusHandler
 
         // AND INDEX IT AFTERWARDS
         // USE THREAD ?
-        boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, false);
+        boolean parallel_index = m_ctx.getPrefs().get_boolean_prop(MandantPreferences.INDEX_TASK, true);
         //
 
         

@@ -90,12 +90,13 @@ public class OOExtractor implements TextExtractor, Serializable
     @Override
     public Reader getText( InputStream is, DocumentWrapper ldoc, Charset charset ) throws ExtractionException
     {
+        File f = null;
         try
         {
             StringBuffer textBuffer = new StringBuffer();
 
 
-            File f = m_ctx.getTempFileHandler().writeTemp("Extract", "OO", "tmp", is);
+            f = m_ctx.getTempFileHandler().writeTemp("Extract", "OO", "tmp", is);
             ZipFile zipFile = new ZipFile( f );
             Enumeration entries = zipFile.entries();
             ZipEntry entry;
@@ -113,10 +114,16 @@ public class OOExtractor implements TextExtractor, Serializable
                     break;
                 }
             }
+            f.delete();
             return new StringReader(textBuffer.toString());
         }
         catch (Exception io)
         {
+            if (f != null && f.exists())
+            {
+                f.delete();
+            }
+
             throw new ExtractionException("failed to extract text from open office:" + io.getMessage());
         }
     }

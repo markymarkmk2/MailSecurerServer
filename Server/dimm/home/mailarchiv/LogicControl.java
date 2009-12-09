@@ -820,6 +820,38 @@ public class LogicControl
         }
     }
 
+    void clean_import_buffers_bg(final MandantContext ctx)
+    {
+        // RESOLVE ANY LEFT OVER CLIENTIMPORTS (MBOX, EML, FROM ABORTED SERVER)
+        final File[] client_flist = ctx.get_clientimport_buffer_list();
+        Runnable r = new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                ctx.resolve_clientimport_buffer(client_flist);
+                
+            }
+        };
+        Thread thr = new Thread( r, "ClientImportCleaner" );
+        thr.start();
+
+        final File[] mail_flist = ctx.get_mailimport_buffer_list();
+        Runnable mr = new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                ctx.resolve_mailimport_buffer(mail_flist);
+                
+            }
+        };
+        Thread mthr = new Thread( mr, "MailImportCleaner" );
+        mthr.start();
+
+    }
 
     // MAIN WORK LOOP
     void run()
@@ -850,24 +882,15 @@ public class LogicControl
 
             for (int i = 0; i < mandanten_list.size(); i++)
             {
-                MandantContext ctx = mandanten_list.get(i);
+                final MandantContext ctx = mandanten_list.get(i);
 
-                // RESOLVE ANY LEFT OVER MAILS (WRONG DS...)
-                ctx.resolve_hold_buffer();
-                
                 // RESOLVE ANY LEFT OVER IMPORTS (ABORTED SERVER)
-                ctx.resolve_mailimport_buffer();
-
-                // RESOLVE ANY LEFT OVER CLIENTIMPORTS (MBOX, EML, FROM ABORTED SERVER)
-                ctx.resolve_clientimport_buffer();
-
+                clean_import_buffers_bg( ctx );
 
                 // RESTART LOCAL WORKER LIST
                 ctx.start_run_loop();
+                              
             }
-
-
-
 
 
             while (!shutdown)
@@ -882,7 +905,6 @@ public class LogicControl
                     set_system_time();
                     last_date_set = now;
                 }
-
 
 
                 // ALLE 10 SEKUNDEN INET PINGENSETZEN

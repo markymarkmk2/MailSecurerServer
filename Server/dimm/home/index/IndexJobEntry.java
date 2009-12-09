@@ -5,16 +5,20 @@
 
 package dimm.home.index;
 
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCGenericMail;
+import home.shared.mail.RFCMimeMail;
+import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.mail.MessagingException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -37,6 +41,7 @@ public class IndexJobEntry  implements Runnable
     Document doc;
     IndexWriter writer;
     Thread thread;
+    RFCMimeMail mime_msg;
 
     public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
     {
@@ -51,6 +56,7 @@ public class IndexJobEntry  implements Runnable
         doc = null;
         writer = null;
         thread = null;
+        mime_msg = null;
     }
 
     @Override
@@ -58,14 +64,15 @@ public class IndexJobEntry  implements Runnable
     {
         try
         {
-            boolean ret = handle_pre_index();
-            index_dsh.get_async_index_writer().remove_from_extract_queue(this);
-
+            boolean ret = handle_pre_index(mime_msg);
+            
             if (ret)
             {
-                LogManager.debug_msg(1, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
+                LogManager.debug_msg(4, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
                 index_dsh.get_async_index_writer().add_to_write_queue(this);
             }
+
+            index_dsh.get_async_index_writer().remove_from_extract_queue(this);
         }
         catch (InterruptedException ex)
         {
@@ -73,17 +80,43 @@ public class IndexJobEntry  implements Runnable
         }
     }
 
+   
+
     boolean handle_index()
     {
+        boolean parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, false);
+
         ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
+
+        // LOAD MAIL DATA NOT IN THREAD
+        try
+        {
+            mime_msg = ixm.load_mail_file(msg);
+        }
+        catch (Exception ex)
+        {
+            LogManager.log(Level.SEVERE, "Error occured while loading message " + unique_id + ": ", ex);
+
+            return false;
+        }
+        if (!parallel_index)
+        {           
+             boolean ret = handle_pre_index(mime_msg);
+            if (ret)
+            {
+                ret = handle_post_index();
+            }
+            return ret;
+        }
+
+
 
         try
         {
-            LogManager.debug_msg(1, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
+            LogManager.debug_msg(4, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
             index_dsh.get_async_index_writer().add_to_extract_queue(this);
-            thread = new Thread(this, "AsynchronousIndexExtractor");
+            thread = new Thread(this, "ExtractorRunner");
             thread.start();
-            
         }
         catch (InterruptedException ex)
         {
@@ -93,7 +126,7 @@ public class IndexJobEntry  implements Runnable
         return true;
     }
 
-    boolean handle_pre_index()
+    boolean handle_pre_index( RFCMimeMail mime_mail)
     {
         doc = new Document();
         DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
@@ -102,7 +135,7 @@ public class IndexJobEntry  implements Runnable
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
-            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, docw);
+            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, mime_mail, docw);
 
 
             writer = index_dsh.get_write_index();
