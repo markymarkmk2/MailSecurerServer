@@ -13,12 +13,10 @@ import dimm.home.vault.DiskSpaceHandler;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
-import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.mail.MessagingException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -68,7 +66,7 @@ public class IndexJobEntry  implements Runnable
             
             if (ret)
             {
-                LogManager.debug_msg(4, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
+                LogManager.debug_msg(8, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
                 index_dsh.get_async_index_writer().add_to_write_queue(this);
             }
 
@@ -80,25 +78,65 @@ public class IndexJobEntry  implements Runnable
         }
     }
 
-   
-
-    boolean handle_index()
+    boolean load_mail_file()
     {
-        boolean parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, false);
-
-        ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
-
-        // LOAD MAIL DATA NOT IN THREAD
+        Runnable r = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    mime_msg = ixm.load_mail_file(msg);
+                }
+                catch (Exception ex)
+                {
+                     LogManager.log(Level.SEVERE, "Error occured while loading message " + unique_id + ": ", ex);
+                     mime_msg = null;
+                }
+            }
+        };
+        Thread read_thread = new Thread( r, "MailLoadThread" );
+        read_thread.start();
         try
         {
-            mime_msg = ixm.load_mail_file(msg);
+            read_thread.join();
         }
         catch (Exception ex)
         {
             LogManager.log(Level.SEVERE, "Error occured while loading message " + unique_id + ": ", ex);
-
             return false;
         }
+        // CATCH EXCEPTION IN RUNNABLE
+        if (mime_msg == null)
+            return false;
+
+        return true;
+    }
+   
+
+    boolean handle_index()
+    {
+        boolean parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, true);
+
+        ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
+
+        // LOAD MAIL IN AN OWN THREAD, WE CAN CATCH OOMs BETTER
+        int max_load_tries = 5;
+
+        while (max_load_tries > 0)
+        {
+            if (load_mail_file())
+                break;
+
+            max_load_tries--;
+        }
+        if (max_load_tries <= 0)
+        {
+            LogManager.log(Level.SEVERE, "Could not load message " + unique_id );
+            return false;
+        }
+
         if (!parallel_index)
         {           
              boolean ret = handle_pre_index(mime_msg);
@@ -109,11 +147,9 @@ public class IndexJobEntry  implements Runnable
             return ret;
         }
 
-
-
         try
         {
-            LogManager.debug_msg(4, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
+            LogManager.debug_msg(8, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
             index_dsh.get_async_index_writer().add_to_extract_queue(this);
             thread = new Thread(this, "ExtractorRunner");
             thread.start();
@@ -131,7 +167,6 @@ public class IndexJobEntry  implements Runnable
         doc = new Document();
         DocumentWrapper docw = new DocumentWrapper(doc, unique_id);
 
-
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
@@ -143,7 +178,6 @@ public class IndexJobEntry  implements Runnable
             {
                 writer = index_dsh.open_write_index();
             }
-
 
             // DETECT LANG OF INDEX AND PUT INTO LUCENE
             String lang = ixm.get_lang_by_analyzer(writer.getAnalyzer());

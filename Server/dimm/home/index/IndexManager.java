@@ -769,7 +769,7 @@ public class IndexManager extends WorkerParent
                 filename = "";
             }
 
-            LogManager.log(Level.SEVERE, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: ", ee);
+            LogManager.log(Level.SEVERE, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: "/*, ee*/);
             return;
         }
 
@@ -783,7 +783,7 @@ public class IndexManager extends WorkerParent
         }
         catch (IOException io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tgz_file " + doc.get_uuid(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_tgz_file " + doc.get_uuid()/*, io*/);
         }
     }
 
@@ -816,7 +816,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid()/*, io*/);
         }
     }
 
@@ -853,7 +853,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception io)
             {
-                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid(), io);
+                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid()/*, io*/);
             }
         }
     }
@@ -892,7 +892,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid()/*, io*/);
         }
     }
 
@@ -932,7 +932,7 @@ public class IndexManager extends WorkerParent
                 }
                 catch (ExtractionException extractionException)
                 {
-                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name, extractionException);
+                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name/*, extractionException*/);
                 }
             }
         }
