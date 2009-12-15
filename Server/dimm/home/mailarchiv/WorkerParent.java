@@ -10,7 +10,6 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.mailarchiv.Utilities.LogManager;
-import java.util.logging.Level;
 
 /**
  *
@@ -23,6 +22,7 @@ public abstract class WorkerParent
     private String statusTxt = "Startup";
     private boolean goodState;
     String last_status = "";
+    protected boolean finished = false;
     
     /** Creates a new instance of WorkerParent */
     public WorkerParent(String _name)
@@ -48,6 +48,10 @@ public abstract class WorkerParent
     public void setShutdown(boolean shutdown)
     {
         this.shutdown = shutdown;
+    }
+    public boolean isFinished()
+    {
+        return finished;
     }
 
     public String getStatusTxt()

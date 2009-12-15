@@ -225,56 +225,7 @@ public class Main
 
         info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
 
-       /* httpd = new Httpd(8100);
-        try
-        {
-            httpd.start_regular(ws_ip, ws_port);
-            while (true)
-            {
-                try
-                {
-                    Thread.sleep(100);
-                }
-                catch (InterruptedException interruptedException)
-                {
-                }
-            }
-        }
-        catch (ClassNotFoundException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (InstantiationException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (IllegalAccessException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }        catch (IOException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (KeyStoreException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (CertificateException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (UnrecoverableKeyException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (KeyManagementException ex)
-        {
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
+       
         
         
     }
@@ -304,50 +255,6 @@ public class Main
     
     void work()
     {
-
-        try
-        {
-        /*    SessionFactory s = HibernateUtil.getSessionFactory();
-            ClassMetadata clmd = s.getClassMetadata(Mandant.class.getName());
-            if (clmd instanceof SingleTableEntityPersister)
-            {
-                SingleTableEntityPersister step = (SingleTableEntityPersister) clmd;
-                String[] tables = step.getConstraintOrderedTableNameClosure();
-                for (int i = 0; i < tables.length; i++)
-                {
-                    String string = tables[i];
-
-                }
-            }
-            org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
-            org.hibernate.Transaction tx = param_session.beginTransaction();
-
-            Mandant m = new Mandant();
-            m.setId(1);
-            m.setName("mmm");
-            m.setLicense("LL");
-            m.setPassword("ppp");
-            m.setLoginname("ooo");
-            m.setFlags("");
-            param_session.refresh(m);
-            */
-            /*param_session.save(m);
-            MailHeaderVariable hmv = new MailHeaderVariable();
-            hmv.setMandant(m);
-            m.getMailHeaderVariable().add(hmv);
-            param_session.save(m);
-            param_session.save(hmv);
-
-            param_session.delete(m);*/
-
-            //tx.commit();
-        }
-        catch (HibernateException hibernateException)
-        {
-            hibernateException.printStackTrace();
-        }
-
-
         while (true)
         {
             try
@@ -365,13 +272,29 @@ public class Main
                 
                 
                 control.run();
+
+                if (control.is_shutdown())
+                {                    
+                    break;
+                }
             }
             catch (Exception exc)
             {
                 err_log_fatal( "Caught unhandled exception, restarting application:" + exc.getMessage() );
                 exc.printStackTrace( );               
             }
-        }        
+        }
+        info_msg( Main.APPNAME + " is shut down");
+        try
+        {
+            File f = new File("shutdown_ok.txt");
+            f.createNewFile();
+        }
+        catch (IOException iOException)
+        {
+        }
+        
+        System.exit(0);
     }
     
     public static LogicControl get_control()

@@ -73,7 +73,9 @@ public class SearchCommand extends AbstractCommand
             String id = pt.GetString("ID:");
             int row = (int)pt.GetLongValue("ROW:");
 
+            System.out.println("sci: " + data);
             answer = SearchCall.retrieve_mail(id, row);
+            System.out.println("sco: " + answer);
 
             return true;
         }

@@ -487,7 +487,7 @@ MySQL root /eKmIklz37T
     void sql_worker()    
     {
         
-        while( true )
+        while( !isShutdown() )
         {            
             // SOMETHING TO DO ?
             lock_list();
@@ -504,6 +504,7 @@ MySQL root /eKmIklz37T
            
             LogicControl.sleep(1 * 1000);                        
         }
+        finished = true;
     }
     
     public static String html_to_native( String txt )

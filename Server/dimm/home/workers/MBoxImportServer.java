@@ -146,6 +146,7 @@ public class MBoxImportServer extends WorkerParent
 
             work_jobs();
          }
+        finished = true;
     }
 
     void run_import( MBoxImporterEntry mbie )

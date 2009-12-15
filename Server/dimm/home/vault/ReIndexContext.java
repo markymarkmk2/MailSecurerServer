@@ -346,7 +346,7 @@ public class ReIndexContext
 
                         // AND INDEX IT
                         System.out.println(mailfile.getAbsolutePath() + " " + mailfile.length());
-                        boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc, /*delete_after_index*/ false);
+                        boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc, /*delete_after_index*/ false, /*parakek*/ true);
                         //index_dsh.flush();
                         
                         if (!ok)

@@ -76,6 +76,7 @@ public class ListWorkerParent extends WorkerParent
             WorkerParentChild hf = child_list.get(i);
             hf.finish();
         }
+        finished = true;
     }
 
     @Override

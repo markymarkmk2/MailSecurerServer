@@ -62,6 +62,7 @@ public class MandantContext
     private ReIndexContext rctx;
 
     long next_reinit_importbuffer;
+    private boolean shutdown;
 
     public MandantContext(  MandantPreferences _prefs, Mandant _m )
     {
@@ -388,8 +389,38 @@ public class MandantContext
         }
 
     }
+    void setShutdown( boolean b )
+    {
+        shutdown = b;
+        for (int i = 0; i < worker_list.size(); i++)
+        {
+            worker_list.get(i).setShutdown(b);
+        }
+    }
 
 
+    public boolean wait_for_shutdown( int secs)
+    {
+
+        while (secs-- > 0)
+        {
+            boolean ok = true;
+            for (int i = 0; i < worker_list.size(); i++)
+            {
+                WorkerParent wp = worker_list.get(i);
+                if (!(wp instanceof TCPCallConnect))
+                {
+                    if (!wp.isFinished())
+                        ok = false;
+                }
+            }
+            if (ok)
+                return true;
+
+            LogicControl.sleep(1000);
+        }
+        return false;
+    }
 
     void teardown_mandant( )
     {
@@ -408,10 +439,13 @@ public class MandantContext
 
         // REMOVE INDEXMANAGER
         index_manager.setShutdown(true);
+        
+        wait_for_shutdown(5);
+
         worker_list.remove(index_manager);
 
 
-        if (worker_list.size() > 0)
+        if (worker_list.size() > 1)
         {
             LogManager.err_log_fatal(Main.Txt("Workerlist is not empty") + " " + getMandant().getName());
             worker_list.clear();

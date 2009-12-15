@@ -370,6 +370,7 @@ public class MailProxyServer extends ListWorkerParent
                 }
             }
         }
+        finished = true;
     }
     
     public static BufferedOutputStream get_rfc_stream( File rfc_dump, boolean encoded)

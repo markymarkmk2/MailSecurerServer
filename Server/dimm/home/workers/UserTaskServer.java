@@ -139,7 +139,8 @@ public class UserTaskServer extends WorkerParent
             LogicControl.sleep(1000);
 
             work_jobs();
-        } 
+        }
+        finished = true;
     }
 
   

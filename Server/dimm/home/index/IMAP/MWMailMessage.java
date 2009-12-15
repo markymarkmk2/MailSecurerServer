@@ -18,6 +18,7 @@
 package dimm.home.index.IMAP;
 
 import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,29 +46,15 @@ public class MWMailMessage implements MailInfo
     MailFolder mailfile = null;
     boolean read = false;
 
-    //RFCFileMail rfc;
+    
     RFCMimeMail mmail;
     SimpleDateFormat internaldate_sdf;
+    RFCGenericMail rfc;
 
-    public MWMailMessage()
+    private MWMailMessage()
     {
-        throw new NullPointerException("Constructor not supported");
     }
-/*
-    public MailMessage( MailFile mailfile, MailKonto parent )
-    {
-        if (parent == null)
-        {
-            throw new NullPointerException("parent == null");
-        }
-        if (mailfile == null)
-        {
-            throw new NullPointerException("mailfile == null");
-        }
-        this.parent = parent;
-        this.mailfile = mailfile;
-    }
-*/
+
     public MWMailMessage( MailFolder mailfile, MailKonto parent, String messageid, int uid )
     {
         this.parent = parent;
@@ -79,24 +66,8 @@ public class MWMailMessage implements MailInfo
         //21-Apr-2009 16:50:44 +0100
         internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
 
-        RFCFileMail rfc = new RFCFileMail(new File( messageid ), false);
-        mmail = new RFCMimeMail();
-        try
-        {
-            mmail.parse(rfc);
-        }
-        catch (FileNotFoundException ex)
-        {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (MessagingException ex)
-        {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (IOException ex)
-        {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        rfc = new RFCFileMail(new File( messageid ), false);
+       
     }
     public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCMimeMail mm, int uid, String uuid )
     {
@@ -113,22 +84,17 @@ public class MWMailMessage implements MailInfo
 
     }
 
-
-    public MWMailMessage( MailFolder mailfile, MailKonto parent, InputStream is, int uid, String uuid )
+    void load_rfc_mail()
     {
-        this.parent = parent;
-        this.mailfile = mailfile;
-
-        this.uuid = uuid;
-        this.uid = uid;
-
-        //21-Apr-2009 16:50:44 +0100
-        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
-       
+        if (mmail != null)
+            return;
+        
         mmail = new RFCMimeMail();
         try
         {
+            InputStream is = rfc.open_inputstream();
             mmail.parse(is);
+            is.close();
         }
         catch (FileNotFoundException ex)
         {
@@ -142,6 +108,20 @@ public class MWMailMessage implements MailInfo
         {
             Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCGenericMail rfc, int uid, String uuid )
+    {
+        this.parent = parent;
+        this.mailfile = mailfile;
+
+        this.uuid = uuid;
+        this.uid = uid;
+        this.rfc = rfc;
+
+        //21-Apr-2009 16:50:44 +0100
+        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
+       
 
     }
 
@@ -156,6 +136,8 @@ public class MWMailMessage implements MailInfo
     @Override
     public String getMID()
     {
+        load_rfc_mail();
+
         try
         {
             return mmail.getMsg().getMessageID();
@@ -192,6 +174,7 @@ public class MWMailMessage implements MailInfo
 */
     public String get( String key )
     {
+        load_rfc_mail();
         try
         {
             return mmail.getMsg().getHeader(key, null);
@@ -206,6 +189,7 @@ public class MWMailMessage implements MailInfo
      @Override
     public int getRFC822size()
     {
+        load_rfc_mail();
         try
         {
             int s = mmail.getMsg().getSize();
@@ -230,6 +214,7 @@ public class MWMailMessage implements MailInfo
     @Override
     public String getRFC822header()
     {
+        load_rfc_mail();
         String ret = "";
         try
         {
@@ -253,6 +238,7 @@ public class MWMailMessage implements MailInfo
   
     public void getRFC822body( OutputStream os) throws IOException, MessagingException
     {
+        load_rfc_mail();
         mmail.getMsg().writeTo(os);
     }
 
@@ -278,6 +264,7 @@ public class MWMailMessage implements MailInfo
 
     String get_internaldate()
     {
+        load_rfc_mail();
         Date d = null;
 
         try
@@ -314,6 +301,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
     @Override
     public String getEnvelope()
     {
+        load_rfc_mail();
         StringBuffer sb = new StringBuffer();
 
         try
@@ -336,6 +324,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
 
     String get_header_fields( String tag )
     {
+        load_rfc_mail();
         StringBuffer sb = new StringBuffer();
 
         int idx = tag.indexOf('(');

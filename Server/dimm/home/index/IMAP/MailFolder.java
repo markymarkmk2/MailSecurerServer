@@ -527,11 +527,11 @@ public class MailFolder
                 long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
                 RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode());
 
-                InputStream stream =  rfc.open_inputstream();
+               // InputStream stream =  rfc.open_inputstream();
 
-                MWMailMessage mail = new MWMailMessage( this, konto, stream, uid++, result.getUuid() );
+                MWMailMessage mail = new MWMailMessage( this, konto, rfc, uid++, result.getUuid() );
 
-                stream.close();
+              //  stream.close();
 
                 uid_map_list.add( mail );
             }

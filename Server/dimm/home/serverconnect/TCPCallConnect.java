@@ -323,8 +323,9 @@ public class TCPCallConnect extends WorkerParent
     {
         synchronized( istream_list )
         {
-        InputStreamEntry c = get_istream(id);
-        istream_list.remove(c);
+            InputStreamEntry c = get_istream(id);
+            if (c != null)
+                istream_list.remove(c);
         }
     }
 
@@ -618,6 +619,7 @@ public class TCPCallConnect extends WorkerParent
         int buff_len = CS_Constants.STREAM_BUFFER_LEN;
         byte[] buff = new byte[buff_len];
 
+        long start_len = alen;
         while (alen > 0)
         {
             long blen = alen;
@@ -627,12 +629,20 @@ public class TCPCallConnect extends WorkerParent
             }
 
             int rlen = in.read(buff, 0, (int) blen);
+            if (rlen < 0)
+            {
+                System.out.println("Short read wants: " + start_len + " left over: " + alen);
+                
+                while (alen-- > 0)
+                    out.write(' ');
+
+                break;
+                //throw new IOException("Short read wants: " + start_len + " left over: " + alen);
+            }
             out.write(buff, 0, rlen);
             alen -= rlen;
         }
-
         in.close();
-
         out.flush();
     }
 
@@ -734,6 +744,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 catch (Exception exc)
                 {
+                    exc.printStackTrace();
                     write_tcp_answer(false, exc.getMessage(), out);
                 }
             }
@@ -789,6 +800,7 @@ public class TCPCallConnect extends WorkerParent
             }
             }*/
         }
+        finished = true;
 
     }
 
@@ -1347,7 +1359,7 @@ public class TCPCallConnect extends WorkerParent
 
             return "0: ";
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1368,7 +1380,7 @@ public class TCPCallConnect extends WorkerParent
 
             return "0: ";
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1412,7 +1424,7 @@ public class TCPCallConnect extends WorkerParent
             bos.flush();
             return "0: ";
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1431,7 +1443,7 @@ public class TCPCallConnect extends WorkerParent
 
             return "0: ";
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1464,7 +1476,7 @@ public class TCPCallConnect extends WorkerParent
 
             return "0: " + id + " LEN:" + len;
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1480,13 +1492,17 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-            InputStream is = get_istream(get_id(stream_id)).is;
 
-            is.close();
+            InputStreamEntry ise = get_istream(get_id(stream_id));
+            if (ise != null)
+            {
+                ise.is.close();
 
-            return "0: ";
+                return "0: ";
+            }
+            return "1: not found: " + stream_id;
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return "1: Exception: " + iOException.getMessage();
         }
@@ -1507,7 +1523,7 @@ public class TCPCallConnect extends WorkerParent
             write_tcp_answer( true, len, is, s.getOutputStream());
             return null; // NO ANSWER NEEDE
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return new String("2: Exception: " + iOException.getMessage());
         }
@@ -1528,7 +1544,7 @@ public class TCPCallConnect extends WorkerParent
 
             return ret;
         }
-        catch (IOException iOException)
+        catch (Exception iOException)
         {
             return new String("2: Exception: " + iOException.getMessage());
         }

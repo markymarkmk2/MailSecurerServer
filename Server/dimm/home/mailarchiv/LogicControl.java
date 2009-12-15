@@ -262,9 +262,36 @@ public class LogicControl
     }
 
 
-    public void add_mandant( MandantPreferences prefs, Mandant m )
+    private void add_mandant( MandantPreferences prefs, Mandant m )
     {
         mandanten_list.add(new MandantContext(prefs, m));
+    }
+    private void add_mandant( Mandant m )
+    {
+        try
+        {
+            Set<Hotfolder> hfs = (Set<Hotfolder>)m.getHotfolders();
+            Iterator<Hotfolder> hfi = hfs.iterator();
+
+            while (hfi.hasNext())
+            {
+                Hotfolder hf = hfi.next();
+                String p = hf.getPath();
+            }
+
+            MandantPreferences prefs = read_mandant_prefs( m );
+            add_mandant(prefs, m);
+
+            // PREFS NEEDS CONTEXT FOR ENCRYPTION
+            prefs.setContext( get_m_context(m));
+            prefs.read_props();
+
+        }
+        catch (Exception ex )
+        {
+            ex.printStackTrace();
+            LogManager.err_log_fatal("Cannot read preferences for Mandant " +  m.getName(), ex);
+        }
     }
 
     public MandantContext get_m_context( Mandant m )
@@ -585,7 +612,11 @@ public class LogicControl
     public void reinit_mandant( int mid)
     {
         MandantContext ctx = get_mandant_by_id(mid);
-        Mandant old_m = ctx.getMandant();
+        Mandant old_m = null;
+        if (ctx != null) // NEW MANADANT?
+        {
+            old_m = ctx.getMandant();
+        }
 
 
         org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
@@ -597,8 +628,11 @@ public class LogicControl
         // SHUT DOWN OLD MANDANT
         try
         {
-            LogManager.info_msg("Tearing down old mandant");
-            ctx.teardown_mandant();
+            if (ctx != null)
+            {
+                LogManager.info_msg("Tearing down old mandant");
+                ctx.teardown_mandant();
+            }
         }
         catch (Exception e)
         {
@@ -612,10 +646,18 @@ public class LogicControl
                 LogManager.info_msg("Loading new mandant");
 
                 Mandant new_m = (Mandant) l.get(0);
+                if (ctx != null)
+                {
+                    ctx.reload_mandant(new_m);
 
-                ctx.reload_mandant(new_m);
-
-                ctx.initialize_mandant(this);
+                    ctx.initialize_mandant(this);
+                }
+                else
+                {
+                    add_mandant(new_m);
+                    ctx = get_mandant_by_id(mid);
+                    ctx.initialize_mandant(this);
+                }
 
             }
         }
@@ -623,20 +665,26 @@ public class LogicControl
         {
             LogManager.err_log("Loading new mandant failed", e);
 
-            ctx.reload_mandant(old_m);
+            if (ctx != null && old_m != null)
+            {
+                ctx.reload_mandant(old_m);
 
-            ctx.initialize_mandant(this);
+                ctx.initialize_mandant(this);
+            }
         }
 
         // RESTART LOCAL WORKER LIST
-        ctx.start_run_loop();
-
-        // RESTART ALL NEW ENTRIES
-        for (int i = 0; i < worker_list.size(); i++)
+        if (ctx != null)
         {
-            if (!worker_list.get(i).start_run_loop())
+            ctx.start_run_loop();
+
+            // RESTART ALL NEW ENTRIES
+            for (int i = 0; i < worker_list.size(); i++)
             {
-                LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+                if (!worker_list.get(i).start_run_loop())
+                {
+                    LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+                }
             }
         }
     }
@@ -824,32 +872,38 @@ public class LogicControl
     {
         // RESOLVE ANY LEFT OVER CLIENTIMPORTS (MBOX, EML, FROM ABORTED SERVER)
         final File[] client_flist = ctx.get_clientimport_buffer_list();
-        Runnable r = new Runnable()
+        if (client_flist != null)
         {
-
-            @Override
-            public void run()
+            Runnable r = new Runnable()
             {
-                ctx.resolve_clientimport_buffer(client_flist);
-                
-            }
-        };
-        Thread thr = new Thread( r, "ClientImportCleaner" );
-        thr.start();
+
+                @Override
+                public void run()
+                {
+                    ctx.resolve_clientimport_buffer(client_flist);
+
+                }
+            };
+            Thread thr = new Thread( r, "ClientImportCleaner" );
+            thr.start();
+        }
 
         final File[] mail_flist = ctx.get_mailimport_buffer_list();
-        Runnable mr = new Runnable()
+        if (mail_flist != null)
         {
-
-            @Override
-            public void run()
+            Runnable mr = new Runnable()
             {
-                ctx.resolve_mailimport_buffer(mail_flist);
-                
-            }
-        };
-        Thread mthr = new Thread( mr, "MailImportCleaner" );
-        mthr.start();
+
+                @Override
+                public void run()
+                {
+                    ctx.resolve_mailimport_buffer(mail_flist);
+
+                }
+            };
+            Thread mthr = new Thread( mr, "MailImportCleaner" );
+            mthr.start();
+        }
 
     }
 
@@ -896,6 +950,22 @@ public class LogicControl
             while (!shutdown)
             {
                 sleep(1000);
+
+                File sf = new File("shutdown.txt");
+                if (sf.exists())
+                {
+                    LogManager.info_msg("Detected shut down");
+                    sf.delete();
+                    if (!sf.exists())
+                    {
+                        for (int i = 0; i < mandanten_list.size(); i++)
+                        {
+                            MandantContext ctx = mandanten_list.get(i);
+                            ctx.teardown_mandant();
+                        }
+                        set_shutdown(true);
+                    }
+                }
 
                 long now = System.currentTimeMillis();
 
@@ -947,6 +1017,9 @@ public class LogicControl
         {
             ex.printStackTrace();
         }
+        LogManager.info_msg("Waiting for workers...");
+
+        wait_for_shutdown(10);
 
 
         LogManager.info_msg("Closing down " + Main.APPNAME);
@@ -959,7 +1032,33 @@ public class LogicControl
         {
             worker_list.get(i).setShutdown(b);
         }
+        for (int i = 0; i < mandanten_list.size(); i++)
+        {
+            MandantContext ctx = mandanten_list.get(i);
+            ctx.setShutdown(b);
+        }
+
+
         shutdown = b;
+    }
+    public boolean wait_for_shutdown( int secs)
+    {
+
+        while (secs-- > 0)
+        {
+            boolean ok = true;
+            for (int i = 0; i < worker_list.size(); i++)
+            {
+                if (!worker_list.get(i).isFinished())
+                    ok = false;
+            }
+            if (ok)
+                return true;
+
+            sleep(1000);
+        }
+        return false;
+
     }
 /*
     static public Date get_actual_rel_date()
@@ -1112,34 +1211,7 @@ public class LogicControl
                 for (int i = 0; i < l.size(); i++)
                 {
                     Mandant m = (Mandant)l.get(i);
-                    try
-                    {
-                        Set<Hotfolder> hfs = (Set<Hotfolder>)m.getHotfolders();
-                        Iterator<Hotfolder> hfi = hfs.iterator();
-
-                        while (hfi.hasNext())
-                        {
-                            Hotfolder hf = hfi.next();
-                            String p = hf.getPath();
-                        }
-
-//                        param_session = HibernateUtil.getSessionFactory().getCurrentSession();
-//                        m.setName( m.getName() + "s");
-//                        GenericDAO.save(param_session, m);
-
-                        MandantPreferences prefs = read_mandant_prefs( m );
-                        add_mandant(prefs, m);
-
-                        // PREFS NEEDS CONTEXT FOR ENCRYPTION
-                        prefs.setContext( get_m_context(m));
-                        prefs.read_props();
-                        
-                    }
-                    catch (Exception ex )
-                    {
-                        ex.printStackTrace();
-                        LogManager.err_log_fatal("Cannot read preferences for Mandant " +  m.getName(), ex);
-                    }
+                    add_mandant( m );
                 }
             }
 
@@ -1393,5 +1465,10 @@ public class LogicControl
     IMAPBrowserServer get_imap_browser_server()
     {
         return ibs;
+    }
+
+    public boolean is_shutdown()
+    {
+        return shutdown;
     }
 }

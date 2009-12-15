@@ -1023,8 +1023,13 @@ public class IndexManager extends WorkerParent
                     {
                         RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
 
-                        // NO, DO RIGHT HERE
-                        handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true);
+                        // TRY INDEX IN FOREGROUND
+                        if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true, /*parallel_index*/ false))
+                        {
+                            // IF THIS FAILES, WE DEL MSG -> NOT IN INDEX
+                            // THIS SHOULD ONLY HAPPEN ON HEAVILY BROKEN FILES
+                            msg.delete();
+                        }
                     }
                 }
             }
@@ -1070,7 +1075,7 @@ public class IndexManager extends WorkerParent
 
         setStatusTxt(Main.Txt("Updating_index"));
 
-        while (true)
+        while (!isShutdown())
         {
             IndexJobEntry ije = null;
             synchronized (index_job_list)
@@ -1097,7 +1102,7 @@ public class IndexManager extends WorkerParent
     {
         long last_index_flush = 0;
 
-        while (!this.isShutdown())
+        while (!isShutdown())
         {
             LogicControl.sleep(1000);
             long now = System.currentTimeMillis();
@@ -1111,6 +1116,7 @@ public class IndexManager extends WorkerParent
                 last_index_flush = now;
             }
         }
+        finished = true;
     }
 
     public String get_status_txt()
@@ -1159,10 +1165,10 @@ public class IndexManager extends WorkerParent
         }
     }
 
-    public boolean handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
+    public boolean handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean parallel_index )
     {
         IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
-        return ije.handle_index();
+        return ije.handle_index(parallel_index);
     }
 
     @Override

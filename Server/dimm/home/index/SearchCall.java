@@ -46,12 +46,85 @@ import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.ScoreDocComparator;
 import org.apache.lucene.search.Searchable;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.SortComparatorSource;
+import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
 
+
+class HexLongComparator implements SortComparatorSource
+{
+
+    @Override
+    public ScoreDocComparator newComparator(final IndexReader indexReader, final String str) throws IOException
+    {
+        return new ScoreDocComparator()
+        {
+            @Override
+            public int compare(ScoreDoc scoreDoc1, ScoreDoc scoreDoc2)
+            {
+                try
+                {
+                    final Document doc1 = indexReader.document(scoreDoc1.doc);
+                    final Document doc2 = indexReader.document(scoreDoc2.doc);
+                    final String strVal1 = doc1.get(str);
+                    final String strVal2 = doc2.get(str);
+
+                    long l1 = 0;
+                    if (strVal1 != null)
+                        Long.parseLong(strVal1, 16);
+                    long l2 = 0;
+                    if (strVal1 != null)
+                        Long.parseLong(strVal2, 16);
+
+
+                   // System.out.println("cp:" + l1 + " " + l2);
+
+                    if (l1 > l2)
+                        return -1;
+                    if (l2 > l1)
+                        return 1;
+                    return 0;
+                } 
+                catch (Exception e)
+                {
+                    LogManager.err_log("Cannot read doc", e);
+                }
+                return 0;
+            }
+
+            @Override
+            public Comparable sortValue(ScoreDoc scoreDoc)
+            {
+                try
+                {
+                    final Document doc1 = indexReader.document(scoreDoc.doc);
+                    final String strVal1 = doc1.get(str);
+                    long l1 = Long.parseLong(strVal1, 16);
+                    //System.out.println("sv:" + scoreDoc.doc + " : " + l1);
+                    return new Long(l1);
+                }
+                catch (IOException iOException)
+                {
+                }
+                catch (NumberFormatException numberFormatException)
+                {
+                }
+                return new Long(0);
+            }
+
+            @Override
+            public int sortType()
+            {
+                return SortField.CUSTOM;
+            }
+        };
+    }
+}
 /**
  *
  * @author mw
@@ -441,7 +514,7 @@ public class SearchCall
             case ENDS_WITH:
                 return "*" + entry.getValue();
             case CONTAINS_SUBSTR:
-                return "[*]" + entry.getValue() + "[*]";
+                return "*" + entry.getValue() + "*";
             case CONTAINS:
                 return entry.getValue();
             case REGEXP:
@@ -452,10 +525,53 @@ public class SearchCall
 
     static String get_lucene_txt( MandantContext m_ctx, ExprEntry e )
     {
-        String val_txt = get_op_val_txt(e);
         String name = e.getName();
+        String[] flist = null;
+        StringBuffer sb = new StringBuffer();
 
-        return (e.isNeg() ? "NOT " : "") + name + ":" + val_txt;
+        // HANDLE VIRTUAL FIELDS
+        if (name.compareTo( CS_Constants.VFLD_MAIL) == 0)
+        {
+            flist = CS_Constants.VFLD_MAIL_FIELDS;
+        }
+        else if (name.compareTo( CS_Constants.VFLD_TXT) == 0)
+        {
+            flist = CS_Constants.VFLD_TXT_FIELDS;
+        }
+        else if (name.compareTo( CS_Constants.VFLD_ALL) == 0)
+        {
+            flist = CS_Constants.VFLD_ALL_FIELDS;
+        }
+        if (flist != null)
+        {
+            if (e.isNeg())
+                sb.append("NOT ");
+            sb.append("(");
+            for (int i = 0; i < flist.length; i++)
+            {
+                if ( i > 0)
+                    sb.append(" OR ");
+
+                String field = flist[i];
+                String val_txt = get_op_val_txt(e);
+
+                 sb.append( field );
+                 sb.append(":");
+                 sb.append(val_txt);
+            }
+            sb.append(")");
+        }
+        else
+        {
+            String val_txt = get_op_val_txt(e);
+
+            if (e.isNeg())
+                sb.append("NOT ");
+            sb.append( name );
+            sb.append(":");
+            sb.append(val_txt);
+        }
+        return sb.toString();
     }
 
     public static void gather_lucene_qry_text( MandantContext m_ctx, StringBuffer sb, ArrayList<LogicEntry> list, int level )
@@ -559,7 +675,12 @@ public class SearchCall
         }
 
         // SORT BY DATE REVERSE
-        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+//        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+        
+        HexLongComparator hlc = new HexLongComparator();
+        Sort sort = new Sort(new SortField(CS_Constants.FLD_DATE, hlc));
+
+
 
         // PARALLEL SEARCH
         ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
@@ -571,7 +692,7 @@ public class SearchCall
 
 
         ScoreDoc[] sdocs = tdocs.scoreDocs;
-        for (int k = 0; k < sdocs.length; k++)
+        for (int k = sdocs.length - 1; k >= 0; k--)
         {
             ScoreDoc scoreDoc = sdocs[k];
 

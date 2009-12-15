@@ -349,7 +349,7 @@ public class DiskVault implements Vault, StatusHandler
                 LogManager.log(Level.SEVERE, "No parallel index");
             
             // NO, DO RIGHT HERE
-            idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true);
+            idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true, parallel_index);
         }
     }
 

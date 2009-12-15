@@ -121,7 +121,7 @@ public class Communicator extends WorkerParent
     private void run_loop()
     {
         int fallback_cnt = 0;
-        while (true)
+        while (!isShutdown())
         {
             Main.sleep(1000);
            
@@ -140,6 +140,7 @@ public class Communicator extends WorkerParent
                 }
             }
         }
+        finished = true;
                     
     }
     

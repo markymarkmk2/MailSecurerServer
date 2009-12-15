@@ -114,11 +114,14 @@ public class IndexJobEntry  implements Runnable
         return true;
     }
    
-
     boolean handle_index()
     {
         boolean parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, true);
+        return handle_index(parallel_index);
+    }
 
+    boolean handle_index(boolean parallel_index)
+    {
         ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
 
         // LOAD MAIL IN AN OWN THREAD, WE CAN CATCH OOMs BETTER
