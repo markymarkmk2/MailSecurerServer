@@ -150,10 +150,15 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(flags));
             props.put("mail." + protocol + ".socketFactory.port", port);
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
+
+            String java_home = System.getProperty("java.home").trim();
+            String ca_cert_file = java_home + "/lib/security/cacerts";
+            System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
+            props.put("javax.net.ssl.trustStore", ca_cert_file);
         }
 
         // DEFAULTTIMOUT IS 300 S
-        props.put("mail." + protocol + ".connectiontimeout", 300 * 1000);
+        props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
         props.put("mail." + protocol + ".timeout", 300 * 1000);
         props.put( "mail.debug", "false");
 

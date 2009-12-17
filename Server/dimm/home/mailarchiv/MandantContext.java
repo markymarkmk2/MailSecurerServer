@@ -72,7 +72,7 @@ public class MandantContext
         tempFileHandler = new TempFileHandler( this );
         worker_list = new ArrayList<WorkerParent>();
 
-        next_reinit_importbuffer = System.currentTimeMillis() + 60*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
+        next_reinit_importbuffer = System.currentTimeMillis() + 5*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
     }
 
    

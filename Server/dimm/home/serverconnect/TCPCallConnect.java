@@ -119,9 +119,8 @@ public class TCPCallConnect extends WorkerParent
             if (server_port == 0)
             {
                 server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
-                LogManager.err_log_warn("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
-            }
-            
+                LogManager.info_msg("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
+            }            
         }
         else
         {

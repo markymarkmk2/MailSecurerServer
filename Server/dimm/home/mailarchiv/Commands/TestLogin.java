@@ -37,6 +37,7 @@ public class TestLogin extends AbstractCommand
             String admin_name = pt.GetString("NM:");
             String admin_pwd = pt.GetString("PW:");
             String auth_host = pt.GetString("HO:");
+            String search_base = pt.GetString("SB:");
             String type = pt.GetString("TY:");
             int auth_port = (int)pt.GetLongValue("PO:");
             int acct_flags = (int)pt.GetLongValue("FL:");
@@ -44,7 +45,7 @@ public class TestLogin extends AbstractCommand
             MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
 
             // CREATE NEW ACT WITH NO MANDANT; NO ROLES AND ID == -1)
-            AccountConnector act = new AccountConnector(-1, m_ctx.getMandant(), type, auth_host, auth_port, admin_name, admin_pwd, acct_flags, null);
+            AccountConnector act = new AccountConnector(-1, m_ctx.getMandant(), type, auth_host, auth_port, admin_name, admin_pwd, search_base, acct_flags, null);
 
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( act);
 

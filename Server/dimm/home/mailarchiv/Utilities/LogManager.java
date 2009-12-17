@@ -122,8 +122,8 @@ public class LogManager
 
         if (level <= debug_level)
         {
-//            main_logger.debug(string);
-            file_log( "debug.log", string );
+            main_logger.debug(string);
+//            file_log( "debug.log", string );
         }
     }
     public static void debug_msg( String string )

@@ -8,6 +8,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
 import home.shared.Utilities.ZipUtilities;
@@ -58,6 +59,7 @@ public class ListUsers extends AbstractCommand
                 {
                     continue;
                 }
+                String realm_name = acct.getType() + "://" + acct.getIp() + ":" + acct.getPort();
 
                 ArrayList<String> user_list = new ArrayList<String>();
 
@@ -65,11 +67,19 @@ public class ListUsers extends AbstractCommand
                 try
                 {
                     auth_realm = GenericRealmAuth.factory_create_realm(acct);
+                    if (!auth_realm.connect())
+                    {
+                        LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" + acct.getIp());
+                        continue;
+                    }
+
                     ArrayList<String> group_list = auth_realm.list_groups();
 
                     ArrayList<String> local_user_list = auth_realm.list_users_for_group("");
                     user_list.addAll(local_user_list);
 
+                    
+                    
                     for (int i = 0; i < group_list.size(); i++)
                     {
                         String group = group_list.get(i);
@@ -77,8 +87,14 @@ public class ListUsers extends AbstractCommand
                         user_list.addAll(local_user_list);
                     }
                 }
-                catch (NamingException namingException)
+                catch (Exception namingException)
                 {
+                    LogManager.err_log("Error while getting userlist from realm " + realm_name, namingException);
+                }
+                finally
+                {
+                    if (auth_realm != null)
+                        auth_realm.disconnect();
                 }
 
                 Role role = new Role(-1);
