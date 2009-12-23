@@ -196,7 +196,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
+            LogManager.log(Level.WARNING, "Error occured while indexing message " + unique_id + ": ", ex);
         }
         return false;
     }
@@ -236,7 +236,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.SEVERE, "Error occured while indexing message " + unique_id + ": ", ex);
+            LogManager.log(Level.WARNING, "Error occured while indexing message " + unique_id + ": ", ex);
         }
         return false;
     }

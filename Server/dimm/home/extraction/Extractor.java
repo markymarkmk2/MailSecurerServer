@@ -66,7 +66,7 @@ public class Extractor implements Serializable
 
 
 
-    public static ArrayList<String> mime_not_supported_list = new ArrayList<String>();
+    public static Map<String,String> mime_not_supported_list = Collections.synchronizedMap(new HashMap<String,String>());
 
     public Reader getText( final InputStream is, final DocumentWrapper doc, final String mimetype, final Charset fromCharset ) throws ExtractionException
     {
@@ -74,10 +74,10 @@ public class Extractor implements Serializable
         extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
         if (extractor == null)
         {
-            if (!mime_not_supported_list.contains(mimetype))
+            if (!mime_not_supported_list.containsKey(mimetype))
             {
                 LogManager.err_log_warn("Cannot get text handler from document of this type: " + mimetype);
-                mime_not_supported_list.add(mimetype);
+                mime_not_supported_list.put(mimetype, null);
             }
             return new StringReader("");
         }

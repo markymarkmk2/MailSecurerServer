@@ -42,8 +42,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import home.shared.zip.LocZipInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import javax.mail.Address;
@@ -402,7 +405,63 @@ public class IndexManager extends WorkerParent
 
             index_headers(doc, unique_id, msg.getAllHeaders());
 
-            Object content = msg.getContent();
+            Object content = null;
+
+            try
+            {
+                content = msg.getContent();
+            }
+            catch (UnsupportedEncodingException exc)
+            {
+                InputStream is = msg.getDataHandler().getDataSource().getInputStream();
+                if (is != null)
+                {
+                    try
+                    {
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        byte[] buff = new byte[CS_Constants.STREAM_BUFFER_LEN];
+                        while (true)
+                        {
+                            int len = is.read(buff);
+                            if (len < 0)
+                            {
+                                break;
+
+                            }
+                            baos.write(buff, 0, len);
+
+                        }
+                        is.close();
+                        baos.close();
+                        String cs = "utf-8";
+                        Field f = doc.getField(CS_Constants.FLD_CHARSET);
+                        if (f != null)
+                        {
+                            cs = f.stringValue().toLowerCase();
+                            if (cs.contains("utf") && cs.contains("8"))
+                            {
+                                cs = "utf-8";
+                            }
+                            if (cs.contains("utf") && cs.contains("16"))
+                            {
+                                cs = "utf-16";
+                            }
+                            if (cs.contains("iso"))
+                            {
+                                cs = "ISO-8859-1";
+                            }
+                        }
+                        if (!Charset.isSupported(cs))
+                            cs = "ISO-8859-1";
+                        content = baos.toString(cs);
+                    }
+                    catch (Exception iOException)
+                    {
+                        LogManager.err_log_fatal("Cannot detect characterset for message object " + unique_id + ": " + exc.getMessage());
+                    }
+                }
+            }
+
             if (content instanceof Multipart)
             {
                 Multipart mp = (Multipart) content;
