@@ -20,7 +20,6 @@ import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
-import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import java.io.File;
@@ -30,7 +29,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.lucene.index.IndexWriter;
 
 /**
  *
@@ -289,7 +287,7 @@ public class DiskVault implements Vault, StatusHandler
         data_dsh.add_message_info(msg);
 
         // TODO: MAYBE THIS SLOWS DOWN
-        data_dsh.flush();
+       // data_dsh.flush();
 
         return true;
     }

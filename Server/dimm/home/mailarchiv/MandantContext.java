@@ -11,6 +11,8 @@ import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
 import dimm.home.importmail.ProxyEntry;
 import dimm.home.index.IMAP.IMAPBrowser;
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.AuthException;
@@ -41,6 +43,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -278,8 +282,23 @@ public class MandantContext
     {
         for (int i = 0; i < vaultArray.size(); i++)
         {
-            Vault vault = vaultArray.get(i);
-            vault.flush();
+            try
+            {
+                Vault vault = vaultArray.get(i);
+                vault.flush();
+            }
+            catch (IndexException ex)
+            {
+                LogManager.err_log_fatal( Main.Txt("Index_error_while_flushing_index"), ex);
+            }
+            catch (VaultException ex)
+            {
+                LogManager.err_log_fatal( Main.Txt("Vault_error_while_flushing_index"), ex);
+            }
+            catch (Exception ex)
+            {
+                LogManager.err_log_fatal( Main.Txt("Unknown_error_while_flushing_index"), ex);
+            }
         }        
     }
 

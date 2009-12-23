@@ -11,6 +11,8 @@ import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.GeneralPreferences;
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.DirectoryEntry;
@@ -52,19 +54,25 @@ public class DiskSpaceHandler
     DiskSpace ds;
     DiskSpaceInfo dsi;
     boolean _open;
-    //IndexReader read_index;
     IndexWriter write_index;
     AsyncIndexWriter async_index_writer;
 
     MandantContext m_ctx;  
     public final String idx_lock = "idx";
     public final String data_lock = "data";
+    private long next_flush_optimize_ts;
+
+    private static long FLUSH_OPTIMIZE_CYCLE_MS = 60*60*1000;
 
     public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
     {
         m_ctx = _m_ctx;
         ds = _ds;        
         _open = false;
+
+        FLUSH_OPTIMIZE_CYCLE_MS = Main.get_long_prop(GeneralPreferences.OPTIMIZE_FLUSH_CYCLETIME, FLUSH_OPTIMIZE_CYCLE_MS);
+        next_flush_optimize_ts = 0;  // OPTIMIZE AT STARTUP
+//        next_flush_optimize_ts = System.currentTimeMillis() + FLUSH_OPTIMIZE_CYCLE_MS;
     }
     public AsyncIndexWriter get_async_index_writer()
     {
@@ -79,12 +87,12 @@ public class DiskSpaceHandler
     {
         return dsi.getEncMode();
     }
-/*
-    public IndexReader get_read_index()
+    public RFCGenericMail.FILENAME_MODE get_fmode()
     {
-        return read_index;
+        return dsi.getFmode();
     }
- * */
+
+
     public IndexWriter get_write_index()
     {
         return write_index;
@@ -129,10 +137,7 @@ public class DiskSpaceHandler
         {
             if (is_index())
             {
-                return m_ctx.get_index_manager().open_read_index(getIndexPath());
-              /*  read_index = m_ctx.get_index_manager().open_read_index(getIndexPath());
-                return read_index;
-               * */
+                return m_ctx.get_index_manager().open_read_index(getIndexPath());              
             }
             else
                 throw new VaultException( ds, "Cannot open read index on non-index ds: " + ds.getPath());
@@ -181,20 +186,7 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot create write index: " + iex.getMessage());
         }        
     }
-  /*  public void close_read_index() throws VaultException
-    {
-        try
-        {
-            if (is_index())
-            {
-                read_index.close();
-            }
-        }
-        catch (IOException iex)
-        {
-            throw new VaultException( ds, "Cannot close read index: " , iex);
-        }
-    }*/
+  
     public IndexWriter open_write_index() throws VaultException
     {
         if (!is_open())
@@ -273,7 +265,11 @@ public class DiskSpaceHandler
         File path = new File( ds.getPath() );
         if (!path.getParentFile().exists())
         {
-            throw new VaultException( ds, "Missing parent directory");
+            throw new VaultException( ds, Main.Txt("Missing_parent_directory"));
+        }
+        if (!path.exists())
+        {
+            throw new VaultException( ds, Main.Txt("Path_for_diskspace_doesnt_exist"));
         }
 
         path.mkdir();
@@ -291,12 +287,15 @@ public class DiskSpaceHandler
         if (dsi != null)
         {
             if (dsi.getCapacity() > 0)
-                throw new VaultException( ds, "Contains index data and info, should be empty" );
+                throw new VaultException( ds, Main.Txt("Contains_index_data_and_info,_should_be_empty") );
         }
 
+        // CREATE NEW DISKINFO UND SET DEFAULT VALUES
         dsi = new DiskSpaceInfo();
         dsi.setLanguage( m_ctx.getPrefs().get_language());
         dsi.setEncMode( RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE);
+        dsi.setFmode( m_ctx.getPrefs().get_boolean_prop(MandantPreferences.DSH_HOUR_DIRS, true) ?
+            RFCGenericMail.FILENAME_MODE.H_DIR_MS_FILE : RFCGenericMail.FILENAME_MODE.HMS_FILE);
 
         try
         {
@@ -314,7 +313,7 @@ public class DiskSpaceHandler
         }
         catch (IOException iex)
         {
-            throw new VaultException( ds, "Cannot create index: " , iex);
+            throw new VaultException( ds, Main.Txt("Cannot_create_index") , iex);
         }
 
 
@@ -395,7 +394,7 @@ public class DiskSpaceHandler
                 Object o = read_info_object("dsinfo.xml.sav");
                 if (o instanceof DiskSpaceInfo)
                 {
-                    LogManager.err_log_warn("Recovering from broken ds info object: " + ex.getMessage());
+                    LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
                     dsi = (DiskSpaceInfo)o;
                     update_info();
 
@@ -404,7 +403,7 @@ public class DiskSpaceHandler
             }
             catch (Exception iOException)
             {
-                LogManager.err_log_warn("Recovering from broken ds info object failed: " + iOException.getMessage());
+                LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object_failed") + ": " + iOException.getMessage());
             }
             // DATAPATH EXISTS AND INFO IS BROKEN???
             File mail_path = new File(getMailPath());
@@ -418,7 +417,7 @@ public class DiskSpaceHandler
                 int enc_mode = RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE;
                 long capacity = 0;
 
-                LogManager.err_log_warn("Rescanning disk space " + ds.getPath());
+                LogManager.err_log_warn(Main.Txt("Rescanning_disk_space") + " " + ds.getPath());
                 while (it.hasNext())
                 {
                     File f = it.next();
@@ -433,7 +432,7 @@ public class DiskSpaceHandler
                 
                 dsi.setCapacity(capacity);
                 dsi.setEncMode(  enc_mode );
-                LogManager.err_log_fatal("We recovered disk info and need reindex for: " + ds.getPath());
+                LogManager.err_log_fatal(Main.Txt("We_recovered_disk_info_and_need_reindex_for") + ": " + ds.getPath());
                 update_info();
 
                 return;
@@ -460,7 +459,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            throw new VaultException( ds, "Cannot write info file: " , ex);
+            throw new VaultException( ds, Main.Txt("Cannot_write_info_file") + ": " , ex);
         }
         if (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0)
         {
@@ -528,13 +527,12 @@ public class DiskSpaceHandler
         //return ret;
     }
 
-    public long build_time_from_path( String absolutePath, int enc_mode ) throws VaultException
+    public long build_time_from_path( String absolutePath, int enc_mode, RFCGenericMail.FILENAME_MODE fmode ) throws VaultException
     {
+        String rel_path = absolutePath.substring(getMailPath().length());
         try
         {
-            String rel_path = absolutePath.substring(getMailPath().length());
-
-            return RFCFileMail.get_time_from_mailfile(rel_path, enc_mode);
+            return RFCFileMail.get_time_from_mailfile(rel_path, enc_mode, fmode);
         }
         catch (ParseException parseException)
         {
@@ -542,14 +540,17 @@ public class DiskSpaceHandler
         }
     }
     
-    public RFCGenericMail get_mail_from_time( long time, int enc_mode ) throws VaultException
+    public RFCGenericMail get_mail_from_time( long time, int enc_mode, RFCGenericMail.FILENAME_MODE fmode  ) throws VaultException
     {
         String parent_path = getMailPath();
-        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode );
+        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode, fmode );
+
 
         File mail_file = new File( absolutePath );
         if (!mail_file.exists())
-            throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
+        {
+           throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
+        }
 
         Date d = new Date(time);
         RFCFileMail mail = new RFCFileMail( mail_file, d, (enc_mode == RFCFileMail.ENC_NONE) ? false : true);
@@ -647,7 +648,7 @@ public class DiskSpaceHandler
             local_dsi.setCapacity( local_dsi.getCapacity() + f.length());
             try
             {
-                long time = build_time_from_path(f.getAbsolutePath(), local_dsi.getEncMode() );
+                long time = build_time_from_path(f.getAbsolutePath(), local_dsi.getEncMode(), local_dsi.getFmode() );
                 if (time > 0)
                 {
                     if (time > local_dsi.getLastEntryTS())
@@ -679,6 +680,8 @@ public class DiskSpaceHandler
         }
         
         DiskSpaceInfo local_dsi = new DiskSpaceInfo();
+
+        // TODO: CHECK ENCMODE AND FMODE
         dsi = info_recursive( path, local_dsi );
     }
 
@@ -860,7 +863,7 @@ public class DiskSpaceHandler
         {
 //            int enc_mode = no_encryption ? RFCGenericMail.ENC_NONE : RFCGenericMail.ENC_AES;
             int enc_mode = dsi.getEncMode();
-            File out_file = msg.create_unique_mailfile(getMailPath(), enc_mode );
+            File out_file = msg.create_unique_mailfile(getMailPath(), enc_mode, dsi.getFmode() );
 
             if (out_file == null)
             {
@@ -959,11 +962,23 @@ public class DiskSpaceHandler
         
         if (is_index() && write_index != null)
         {
+            boolean optimize = false;
+            if (System.currentTimeMillis() > next_flush_optimize_ts)
+            {
+                next_flush_optimize_ts = System.currentTimeMillis() + FLUSH_OPTIMIZE_CYCLE_MS;
+                optimize = true;
+            }
             try
             {
                 synchronized( idx_lock )
                 {
                     write_index.commit();
+                    if (optimize)
+                    {
+                        LogManager.log(Level.INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
+                        write_index.optimize();
+                    }
+
                 }
             }
             catch (CorruptIndexException ex)

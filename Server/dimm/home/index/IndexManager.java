@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import home.shared.zip.LocZipInputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
@@ -387,6 +388,7 @@ public class IndexManager extends WorkerParent
         if (d == null)
         {
             d = mail_file.getDate();
+            LogManager.log(Level.WARNING, "Mail " + unique_id + " has no Sent- or ReceivedDate" );
         }
 
         doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -415,6 +417,11 @@ public class IndexManager extends WorkerParent
             else if (content instanceof String)
             {
                 StringReader reader =  new StringReader(content.toString());
+                doc.add(new Field(CS_Constants.FLD_BODY, reader));
+            }
+            else if (content instanceof InputStream )
+            {
+                Reader reader =  new InputStreamReader((InputStream)content);
                 doc.add(new Field(CS_Constants.FLD_BODY, reader));
             }
             else
@@ -588,7 +595,7 @@ public class IndexManager extends WorkerParent
                 }
                 else
                 {
-                    LogManager.log(Level.FINEST, "Mail " + uid + " skipping header <" + header_field_name + "> Val <" + ih.getValue() + ">");
+                    LogManager.log(Level.FINEST, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
                 }
             }
         }
@@ -597,58 +604,74 @@ public class IndexManager extends WorkerParent
     public void index_mp_content( DocumentWrapper doc, String uid, Multipart mp ) throws MessagingException, IOException
     {
 
-        for (int i = 0; i < mp.getCount(); i++)
+        try
         {
-            Part p = mp.getBodyPart(i);
-            if (p instanceof Multipart)
+            for (int i = 0; i < mp.getCount(); i++)
             {
-                index_mp_content(doc, uid, (Multipart) p);
-            }
-            else
-            {
-                index_part_content(doc, uid, p);
+                Part p = mp.getBodyPart(i);
+                if (p instanceof Multipart)
+                {
+                    index_mp_content(doc, uid, (Multipart) p);
+                }
+                else
+                {
+                    index_part_content(doc, uid, p);
+                }
             }
         }
+        catch (Exception messagingException)
+        {
+            LogManager.log(Level.WARNING, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage() );
+        }
+
     }
 
     public void index_part_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException, IOException
     {
-        // SELECT THE PLAIN PART OF AN ALTERNATIVE MP
-        if (p.isMimeType("multipart/alternative"))
+        try
         {
-            Multipart mp = (Multipart) p.getContent();
-            Part chosen = null;
-            for (int i = 0; i < mp.getCount(); i++)
+            // SELECT THE PLAIN PART OF AN ALTERNATIVE MP
+            if (p.isMimeType("multipart/alternative"))
             {
-                Part bp = mp.getBodyPart(i);
-                if (bp.isMimeType("text/plain"))
+                Multipart mp = (Multipart) p.getContent();
+                Part chosen = null;
+                for (int i = 0; i < mp.getCount(); i++)
                 {
-                    chosen = bp;
-                    break;
+                    Part bp = mp.getBodyPart(i);
+                    if (bp.isMimeType("text/plain"))
+                    {
+                        chosen = bp;
+                        break;
+                    }
+                    else
+                    {
+                        chosen = bp;
+                    }
                 }
-                else
+                index_content(doc, uid, chosen);
+            }
+            else if (p.isMimeType("message/rfc822"))
+            {
+                index_part_content(doc, uid, (Part) p.getContent());
+            }
+            else if (p.isMimeType("multipart/*"))
+            {
+                Multipart mp = (Multipart) p.getContent();
+                for (int i = 0; i < mp.getCount(); i++)
                 {
-                    chosen = bp;
+                    index_part_content(doc, uid, mp.getBodyPart(i));
                 }
             }
-            index_content(doc, uid, chosen);
-        }
-        else if (p.isMimeType("message/rfc822"))
-        {
-            index_part_content(doc, uid, (Part) p.getContent());
-        }
-        else if (p.isMimeType("multipart/*"))
-        {
-            Multipart mp = (Multipart) p.getContent();
-            for (int i = 0; i < mp.getCount(); i++)
+            else
             {
-                index_part_content(doc, uid, mp.getBodyPart(i));
+                index_content(doc, uid, p);
             }
         }
-        else
+        catch (Exception messagingException)
         {
-            index_content(doc, uid, p);
+            LogManager.log(Level.WARNING, "Error in index_part_content for " + uid + ": " + messagingException.getMessage() );
         }
+
     }
 
     protected void index_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException
@@ -769,7 +792,7 @@ public class IndexManager extends WorkerParent
                 filename = "";
             }
 
-            LogManager.log(Level.SEVERE, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: "/*, ee*/);
+            LogManager.log(Level.WARNING, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: " + ee.getMessage());
             return;
         }
 
@@ -781,7 +804,7 @@ public class IndexManager extends WorkerParent
         {
             extract_tar_file(new GZIPInputStream(is), doc, charset);
         }
-        catch (IOException io)
+        catch (Exception io)
         {
             LogManager.log(Level.SEVERE, "Error in extract_tgz_file " + doc.get_uuid()/*, io*/);
         }
@@ -816,7 +839,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid()/*, io*/);
+            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -853,7 +876,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception io)
             {
-                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid()/*, io*/);
+                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid() + " " + io.getMessage());
             }
         }
     }
@@ -892,7 +915,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid()/*, io*/);
+            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -932,17 +955,17 @@ public class IndexManager extends WorkerParent
                 }
                 catch (ExtractionException extractionException)
                 {
-                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name/*, extractionException*/);
+                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name + " " + extractionException.getMessage());
                 }
             }
         }
         catch (IllegalArgumentException wrong_zip_entry)
         {
-            LogManager.log(Level.SEVERE, "Error in zip file " + doc.get_uuid(), wrong_zip_entry);
+            LogManager.log(Level.SEVERE, "Error in zip file " + doc.get_uuid() + " " + wrong_zip_entry.getMessage());
         }
-        catch (IOException io)
+        catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_zip_file " + doc.get_uuid(), io);
+            LogManager.log(Level.SEVERE, "Error in extract_zip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1012,9 +1035,9 @@ public class IndexManager extends WorkerParent
                         continue;
                     }
                     DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
-                    if (dv == null)
+                    if (index_dsh == null)
                     {
-                        LogManager.err_log_fatal("Found mail without diskvault");
+                        LogManager.err_log_fatal("Found mail without diskspace");
                         continue;
                     }
                     index_dsh = dv.open_dsh(index_dsh, 1024 * 1024);

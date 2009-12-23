@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
@@ -459,8 +458,7 @@ public class LogicControl
         if (found_ds == null)
             throw new VaultException( "Cannot find ds for get mail file " + mail_uuid );
 
-        RFCFileMail msg = new RFCFileMail( null, new Date(time), false);
-        File mail_file = msg.create_unique_mailfile( found_ds.getDs().getPath(), found_ds.get_enc_mode() );
+        File mail_file = new File( RFCGenericMail.get_mailpath_from_time( found_ds.getDs().getPath(), time, found_ds.get_enc_mode(), found_ds.get_fmode() ));
 
         return mail_file;
     }

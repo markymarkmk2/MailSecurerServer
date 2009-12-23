@@ -53,6 +53,8 @@ public class MandantPreferences extends Preferences
     public static final String DFLT_PASSWORD = "12345";
     public static final String SSO_TIMEOUT_S = "SSOTimeout_s";
     public static final long   DFTL_SSO_TIMEOUT_S = 120;
+
+    public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
     
     MandantContext context;
     
@@ -79,6 +81,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( SERVER_IP );
         prop_names.add( SSO_TIMEOUT_S );
         prop_names.add( INDEX_THREADS );
+        prop_names.add( DSH_HOUR_DIRS );
     }
     public void setContext( MandantContext _context )
     {

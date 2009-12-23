@@ -61,6 +61,7 @@ public class GeneralPreferences extends Preferences
     public static final String INDEX_TIMEOUT = "IndexTimeoutSecs";
     public static final String SERVER_SSL = "ServerSSL";
     public static final String COUNTRYCODE = "CountryCode";
+    public static final String OPTIMIZE_FLUSH_CYCLETIME = "OptimizeCycleSecs";
 
     
     /** Creates a new instance of Preferences */
@@ -107,6 +108,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( INDEX_MAIL_IN_BG );
         prop_names.add( SERVER_SSL );
         prop_names.add( COUNTRYCODE );
+        prop_names.add( OPTIMIZE_FLUSH_CYCLETIME );
         
                 
         read_props();

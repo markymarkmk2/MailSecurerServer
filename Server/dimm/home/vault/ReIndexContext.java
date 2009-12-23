@@ -338,8 +338,8 @@ public class ReIndexContext
                     {
                         // RETRIEVE MAILFILE
                         String norm_path = mailfile.getAbsolutePath().replace('\\', '/');
-                        long time = data_dsh.build_time_from_path(norm_path, data_dsh.get_enc_mode());
-                        RFCFileMail rfc = (RFCFileMail)data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode());
+                        long time = data_dsh.build_time_from_path(norm_path, data_dsh.get_enc_mode(), data_dsh.get_fmode());
+                        RFCFileMail rfc = (RFCFileMail)data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode(), data_dsh.get_fmode());
                         
 
                         String uuid = data_dsh.get_message_uuid(rfc);

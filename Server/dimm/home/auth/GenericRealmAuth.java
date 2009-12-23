@@ -211,11 +211,16 @@ public abstract class GenericRealmAuth
             props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(with_cert));
             props.put("mail." + protocol + ".socketFactory.port", port);
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
+            
+            String ca_cert_file = System.getProperty("javax.net.ssl.trustStore");
+            props.put("javax.net.ssl.trustStore", ca_cert_file);
+
         }
 
         // DEFAULTTIMOUT IS 10 S
-        props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
-        props.put("mail." + protocol + ".timeout", 10 * 1000);
+        // FAILS ON IMAP LOGIN
+    //    props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
+    //    props.put("mail." + protocol + ".timeout", 10 * 1000);
 
         return props;
     }

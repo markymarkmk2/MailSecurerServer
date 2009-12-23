@@ -76,10 +76,10 @@ class HexLongComparator implements SortComparatorSource
 
                     long l1 = 0;
                     if (strVal1 != null)
-                        Long.parseLong(strVal1, 16);
+                        l1 = Long.parseLong(strVal1, 16);
                     long l2 = 0;
-                    if (strVal1 != null)
-                        Long.parseLong(strVal2, 16);
+                    if (strVal2 != null)
+                        l2 = Long.parseLong(strVal2, 16);
 
 
                    // System.out.println("cp:" + l1 + " " + l2);
@@ -364,7 +364,7 @@ public class SearchCall
                 {
                     long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
 
-                    RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+                    RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
                     InputStream is = mail.open_inputstream();
                     Properties props = new Properties();
                     props.put("mail.smtp.host", host);
@@ -882,7 +882,7 @@ public class SearchCall
             {
                 throw new VaultException(Main.Txt("Cannot_access_diskvault_with_id") + ": " + result.getDa_id());
             }
-            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
             InputStream is = mail.open_inputstream();
             String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is, result.getSize());
             return ret;
@@ -907,7 +907,7 @@ public class SearchCall
             DiskSpaceHandler dsh = m_ctx.get_dsh(res_entry.getDs_id());
             long time = DiskSpaceHandler.get_time_from_uuid(res_entry.getUuid());
 
-            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode());
+            RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
 
 
             return mail;

@@ -151,16 +151,17 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             props.put("mail." + protocol + ".socketFactory.port", port);
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
 
-            String java_home = System.getProperty("java.home").trim();
-            String ca_cert_file = java_home + "/lib/security/cacerts";
-            System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
+            String ca_cert_file = System.getProperty("javax.net.ssl.trustStore");
             props.put("javax.net.ssl.trustStore", ca_cert_file);
         }
 
         // DEFAULTTIMOUT IS 300 S
-        props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
-        props.put("mail." + protocol + ".timeout", 300 * 1000);
+        // FAILS ON IMAP LOGIN
+       // props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
+       // props.put("mail." + protocol + ".timeout", 300 * 1000);
         props.put( "mail.debug", "false");
+        if (LogManager.get_debug_lvl() > 5)
+            props.put( "mail.debug", "true");
 
         connect(protocol, server, port, username, password, props);
     }
@@ -201,6 +202,10 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         }
         catch (MessagingException me)
         {
+
+            LogManager.err_log("Connect failed for " + protocol + "://" + server + ":" + port + " Usr:" + username + " PWDHash:" + password.hashCode());
+            LogManager.err_log("StoreProps where " + props.toString() );
+           // LogManager.err_log("SystmProps where " + System.getProperties().toString() );
             if (me.getMessage().contains("sun.security.validator.ValidatorException"))
             {
                 status.set_status(StatusEntry.ERROR, "TLS Server Certificate could not be validated for mail server <" + server + ">");
@@ -589,14 +594,14 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             Message[] messages = null;
             try
             {
-                if (store.isConnected())
-                {
+                /*if (store.isConnected())
+                {*/
                     messages = inboxFolder.getMessages();
-                }
+                /*}
                 else
                 {
                     return;
-                }
+                }*/
             }
             catch (FolderClosedException fce)
             {
@@ -628,8 +633,14 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
                 LogManager.err_log(status.get_status_txt(), me);
                 return;
             }
+            catch (Exception me)
+            {
+                status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> exception at get_messages call");
+                LogManager.err_log(status.get_status_txt(), me);
+                return;
+            }
 
-            if (messages.length < 1)
+            if (messages == null || messages.length < 1)
             {
                 break;
             }

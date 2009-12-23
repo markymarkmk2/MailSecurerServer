@@ -151,6 +151,8 @@ public class Main
         // SETTING SECURITY PROPERTIES
         init_mail_security();
 
+        // SETTING JAVA MAIL PARAMS
+        init_mail_settings();
       
 
 
@@ -230,6 +232,15 @@ public class Main
         
     }
 
+    void init_mail_settings()
+    {
+        /*System.setProperty("mail.mime.address.strict", "false");
+        System.setProperty("mail.mime.decodetext.strict", "false");
+        System.setProperty("mail.mime.parameters.strict", "false");*/
+        System.setProperty("mail.mime.applefilenames", "true");
+        //System.setProperty("mail.mime.ignoreunknownencoding", "true");
+    }
+
         // SETTING SECURITY PROPERTIES
     void init_mail_security()
     {
@@ -242,13 +253,18 @@ public class Main
         Properties props = System.getProperties();
 
         // IMAP provider
-        props.setProperty( "mail.imap.socketFactory.class", SSL_FACTORY);
+        props.setProperty( "mail.imaps.socketFactory.class", SSL_FACTORY);
         
         // POP3 provider
         props.setProperty( "mail.pop3.socketFactory.class", SSL_FACTORY);
 
         // MAYBEE NEEDED BY KERBEROS, I DUNNO
         ///        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+
+        String java_home = System.getProperty("java.home").trim();
+        String ca_cert_file = java_home + "/lib/security/cacerts";
+        System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
+        props.put("javax.net.ssl.trustStore", ca_cert_file);
 
    
     }

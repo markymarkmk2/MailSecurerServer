@@ -20,7 +20,7 @@ public interface Vault
 {
     boolean archive_mail( RFCGenericMail msg, MandantContext mandant, DiskArchive diskArchive, boolean index_background ) throws ArchiveMsgException, VaultException, IndexException;
 
-    void flush();
+    void flush() throws IndexException, VaultException;
     void close() throws VaultException;
 
     public String get_password();

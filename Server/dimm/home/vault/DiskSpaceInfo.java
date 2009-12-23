@@ -6,6 +6,7 @@
 package dimm.home.vault;
 
 import home.shared.mail.RFCGenericMail;
+import home.shared.mail.RFCGenericMail.FILENAME_MODE;
 
 /**
  *
@@ -18,6 +19,9 @@ public class DiskSpaceInfo
     long lastEntryTS;
     String language;
     private int encMode;
+    RFCGenericMail.FILENAME_MODE fmode;
+
+
 
     public DiskSpaceInfo()
     {
@@ -26,7 +30,10 @@ public class DiskSpaceInfo
         lastEntryTS = 0;
         language = "de";
         encMode = RFCGenericMail.ENC_NONE;
+        fmode = RFCGenericMail.FILENAME_MODE.HMS_FILE;
     }
+
+    
     /**
      * @return the capacity
      */
@@ -105,5 +112,16 @@ public class DiskSpaceInfo
     public void setEncMode( int encMode )
     {
         this.encMode = encMode;
+    }
+
+    
+    public FILENAME_MODE getFmode()
+    {
+        return fmode;
+    }
+
+    public void setFmode( FILENAME_MODE fmode )
+    {
+        this.fmode = fmode;
     }
 }

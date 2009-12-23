@@ -6,6 +6,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.AuthUser;
+import dimm.home.mailarchiv.Commands.FileSystemViewCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
 import dimm.home.mailarchiv.Commands.GetStatus;
@@ -159,6 +160,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new AuthUser() );
         cmd_list.add( new ListUsers() );
         cmd_list.add( new ReIndex() );
+        cmd_list.add( new FileSystemViewCommand() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
@@ -1130,13 +1132,14 @@ public class TCPCallConnect extends WorkerParent
     }
     public String RMX_DeleteObject(  String cmd )
     {
+        org.hibernate.Transaction tx = null;
         try
         {
             XStream xstream = new XStream();
             Object o = xstream.fromXML(cmd);
 
             SessionFactory s = HibernateUtil.getSessionFactory();
-            org.hibernate.Transaction tx = s.getCurrentSession().beginTransaction();
+            tx = s.getCurrentSession().beginTransaction();
             s.getCurrentSession().refresh(o);
             s.getCurrentSession().delete(o);
             tx.commit();
@@ -1145,6 +1148,10 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
+            if (tx != null)
+            {
+                tx.rollback();
+            }
             Main.err_log("Call of delete object failed:" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
