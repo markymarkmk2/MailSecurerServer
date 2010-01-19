@@ -263,7 +263,7 @@ public class DiskSpaceHandler
     public void create() throws VaultException
     {
         File path = new File( ds.getPath() );
-        if (!path.getParentFile().exists())
+        if (path.getParentFile() == null || !path.getParentFile().exists())
         {
             throw new VaultException( ds, Main.Txt("Missing_parent_directory"));
         }

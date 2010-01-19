@@ -96,7 +96,7 @@ public class OOExtractor implements TextExtractor, Serializable
             StringBuffer textBuffer = new StringBuffer();
 
 
-            f = m_ctx.getTempFileHandler().writeTemp("Extract", "OO", "tmp", is);
+            f = m_ctx.getTempFileHandler().writeTemp("Extract", "OO", "tmp", is, /*del_on_exit*/true);
             ZipFile zipFile = new ZipFile( f );
             Enumeration entries = zipFile.entries();
             ZipEntry entry;
@@ -114,7 +114,7 @@ public class OOExtractor implements TextExtractor, Serializable
                     break;
                 }
             }
-            f.delete();
+            m_ctx.getTempFileHandler().delete(f);
             return new StringReader(textBuffer.toString());
         }
         catch (Exception io)

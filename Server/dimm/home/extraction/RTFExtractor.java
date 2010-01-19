@@ -40,7 +40,7 @@ public class RTFExtractor implements TextExtractor, Serializable
         {
             if (file != null && file.exists())
             {
-                file.delete();
+                m_ctx.getTempFileHandler().delete(file);
             }
             throw new ExtractionException("failed to parse rtf document");
         }
@@ -70,7 +70,7 @@ public class RTFExtractor implements TextExtractor, Serializable
         }
         try
         {
-            return new FileDeleteReader(file);
+            return new FileDeleteReader(m_ctx.getTempFileHandler(), file);
         }
         catch (Exception ex)
         {

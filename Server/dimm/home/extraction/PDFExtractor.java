@@ -56,7 +56,7 @@ public class PDFExtractor implements TextExtractor, Serializable
         {
             if (file != null && file.exists())
             {
-                file.delete();
+                m_ctx.getTempFileHandler().delete(file);
             }
             throw new ExtractionException("Failed to parse PDF",  e);
         }
@@ -79,7 +79,7 @@ public class PDFExtractor implements TextExtractor, Serializable
         }
         try
         {
-            return new FileDeleteReader(file);
+            return new FileDeleteReader(m_ctx.getTempFileHandler(), file);
         }
         catch (Exception ex)
         {

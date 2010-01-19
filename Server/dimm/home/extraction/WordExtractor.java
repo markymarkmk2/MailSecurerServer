@@ -29,13 +29,13 @@ public class WordExtractor implements TextExtractor, Serializable
             WordTextExtractorFactory wtef = new WordTextExtractorFactory();
             wtef.textExtractor(is).getText(out);
             out.close();
-            return new FileDeleteReader(file);
+            return new FileDeleteReader(m_ctx.getTempFileHandler(), file);
         }
         catch (Exception io)
         {
             if (file != null && file.exists())
             {
-                file.delete();
+                m_ctx.getTempFileHandler().delete(file);
             }
             throw new ExtractionException("failed to extract text from word document:" + io.getMessage());
         }

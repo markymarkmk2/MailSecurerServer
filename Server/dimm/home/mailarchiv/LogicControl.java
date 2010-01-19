@@ -479,7 +479,7 @@ public class LogicControl
 
         return tmp_file;
     }
-    public RFCFileMail dump_msg_to_temp_file( Mandant mandant, Message msg, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
+    public RFCFileMail dump_msg_to_file( Mandant mandant, Message msg, String subdir, String prefix, String suffix, boolean encoded, boolean delete_on_exit ) throws ArchiveMsgException
     {
         OutputStream bos = null;
         RFCFileMail fm = null;
@@ -489,7 +489,7 @@ public class LogicControl
         }
 
 
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
 
         try
         {
@@ -520,7 +520,7 @@ public class LogicControl
         return fm;
     }
 
-    public RFCFileMail dump_msg_stream_to_temp_file( Mandant mandant, InputStream is, String subdir, String prefix, String suffix, boolean encoded ) throws ArchiveMsgException
+    public RFCFileMail dump_msg_stream_to_temp_file( Mandant mandant, InputStream is, String subdir, String prefix, String suffix, boolean encoded, boolean del_on_exit ) throws ArchiveMsgException
     {
         RFCFileMail fm = null;
         OutputStream bos = null;
@@ -530,7 +530,7 @@ public class LogicControl
             suffix = suffix + RFCGenericMail.get_suffix_for_encoded();
         }
 
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix);
+        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix, del_on_exit);
         
 
         try
@@ -568,30 +568,24 @@ public class LogicControl
         return fm;
     }
 
-    public RFCFileMail create_filemail_from_msg( Mandant mandant, Message msg, String subdir, String prefix, String suffix ) throws ArchiveMsgException
-    {
-        RFCFileMail f = dump_msg_to_temp_file(mandant, msg, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
-
-        return f;
-    }
-
-    public RFCFileMail create_filemail_from_msg_stream( Mandant mandant, InputStream is, String subdir, String prefix, String suffix ) throws ArchiveMsgException
-    {
-        RFCFileMail f = dump_msg_stream_to_temp_file(mandant, is, subdir, prefix, suffix, RFCFileMail.dflt_encoded );
-
-        return f;
-    }
+  
 
     public RFCFileMail create_import_filemail_from_eml_stream( Mandant mandant, InputStream is, String prefix, DiskArchive da) throws ArchiveMsgException
     {
         // CREATE DA.ID AS FIRST ENTRY IN NAME
         prefix = "" + da.getId() + "." + prefix + ".";
-        return create_filemail_from_msg_stream(mandant, is, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml");
+  
+        RFCFileMail f = dump_msg_stream_to_temp_file(mandant, is, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml", RFCFileMail.dflt_encoded, /*del_on_exit*/false );
+
+        return f;
     }
     public RFCFileMail create_import_filemail_from_eml( Mandant mandant, Message msg, String prefix, DiskArchive da) throws ArchiveMsgException
     {
         prefix = "" + da.getId() + "." + prefix + ".";
-        return create_filemail_from_msg(mandant, msg, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml");
+  
+        RFCFileMail f = dump_msg_to_file(mandant, msg, TempFileHandler.IMPMAIL_PREFIX, prefix, "eml", RFCFileMail.dflt_encoded, /*del_on_exit*/false );
+
+        return f;
     }
     public int get_da_id_from_import_filemail( String name )
     {

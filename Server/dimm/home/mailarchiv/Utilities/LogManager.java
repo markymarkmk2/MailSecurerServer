@@ -24,6 +24,7 @@ public class LogManager
 {
 
     public static final String LOG_ERR = "error.log";
+    public static final String LOG_DEBUG = "debug.log";
     public static final String LOG_INFO = "info.log";
     public static final String LOG_WARN = "warn.log";
 
@@ -228,6 +229,30 @@ public class LogManager
             System.out.println("Logger init failed! " + iOException.getMessage());
         }
 
+    }
+
+    public static final String L4J = "L4J";
+    public static final String ERR = "ERR";
+    public static final String INFO = "INFO";
+    public static final String WRN = "WRN";
+    public static final String DBG = "DBG";
+    public static final String SYS = "SYS";
+    public static File get_file_by_type( String log_type )
+    {
+        if (log_type.compareTo(L4J) == 0)
+            return new File(LOG_PATH + LOG_L4J);
+        if (log_type.compareTo(ERR) == 0)
+            return new File(LOG_PATH + LOG_ERR);
+        if (log_type.compareTo(INFO) == 0)
+            return new File(LOG_PATH + LOG_INFO);
+        if (log_type.compareTo(WRN) == 0)
+            return new File(LOG_PATH + LOG_WARN);
+        if (log_type.compareTo(DBG) == 0)
+            return new File(LOG_PATH + LOG_DEBUG);
+        if (log_type.compareTo(SYS) == 0)
+            return new File(LOG_PATH + LOG_DEBUG);
+
+        return null;
     }
 
 

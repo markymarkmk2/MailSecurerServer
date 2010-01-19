@@ -44,7 +44,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     public static final int WAIT_PERIOD_S = 60;
     public static final int IMAP_IDLE_PERIOD = 10;
 
-    public static final int CONN_MODE_MASK = 0x000f;
+    /*public static final int CONN_MODE_MASK = 0x000f;
     public static final int CONN_MODE_INSECURE = 0x0001;
     public static final int CONN_MODE_FALLBACK = 0x0002;
     public static final int CONN_MODE_TLS = 0x0003;
@@ -53,12 +53,12 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     public static final int FLAG_AUTH_CERT = 0x0010;
     public static final int FLAG_POP3 = 0x0020;
     public static final int FLAG_IMAP_IDLE = 0x0040;
+*/
 
-
-    private final String DEFAULT_SSL_FACTORY = "dimm.home.auth.DefaultSSLSocketFactory";
+    private final String DEFAULT_SSL_FACTORY = "home.shared.Utilities.DefaultSSLSocketFactory";
     private final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
 
-    private int conn_mode;
+    
     private int flags;
     String ipAddress = "";
     Store store;
@@ -77,7 +77,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     String get_mailbox_protokoll()
     {
 
-        if ((flags & FLAG_POP3) == FLAG_POP3)
+        if ((flags & CS_Constants.IMF_POP3) == CS_Constants.IMF_POP3)
         {
             return "pop3";
         }
@@ -99,15 +99,17 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     protected MailBoxFetcher( ImapFetcher _imfetcher )
     {
         imfetcher = _imfetcher;
-        int i_flags = Integer.parseInt( imfetcher.getFlags() );
-        conn_mode = i_flags & CONN_MODE_MASK;
-        flags = i_flags & FLAG_MASK;
+        flags = Integer.parseInt( imfetcher.getFlags() );
     }
 
+    boolean test_flag( int test_flag )
+    {
+        return ((flags & test_flag) == test_flag);
+    }
 
     public String get_ssl_socket_classname( int flags )
     {
-        if ((flags & FLAG_AUTH_CERT) == FLAG_AUTH_CERT)
+        if (test_flag(CS_Constants.IMF_HAS_TLS_CERT))
         {
             return SSL_FACTORY;
         }
@@ -129,22 +131,20 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         int port = imfetcher.getPort();
         String protocol = get_mailbox_protokoll();
 
-        if (conn_mode == CONN_MODE_INSECURE)
-        {
-        }
-        else if (conn_mode == CONN_MODE_FALLBACK)
+        
+        if (test_flag(CS_Constants.IMF_USE_TLS_IF_AVAIL))
         {
             props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "true");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(flags));
         }
-        else if (conn_mode == CONN_MODE_TLS)
+        else if (test_flag(CS_Constants.IMF_USE_TLS_FORCE))
         {
             props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(flags));
         }
-        else if (conn_mode == CONN_MODE_SSL)
+        else if (test_flag(CS_Constants.IMF_USE_SSL))
         {
             protocol = protocol + "s";            
             props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(flags));
@@ -212,10 +212,10 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
                 LogManager.err_log(status.get_status_txt());
                 throw new Exception(status.get_status_txt(), me);
             }
-            else if (conn_mode == CONN_MODE_FALLBACK && me.getMessage().contains("javax.net.ssl.SSLHandshakeException"))
+            else if (test_flag(CS_Constants.ACCT_USE_TLS_IF_AVAIL) && me.getMessage().contains("javax.net.ssl.SSLHandshakeException"))
             {
                 status.set_status(StatusEntry.ERROR, "SSL Handshake failed, retrying regular connect");
-                conn_mode = CONN_MODE_INSECURE;
+                flags &= ~CS_Constants.ACCT_USE_TLS_IF_AVAIL;
             }
             else
             {
@@ -338,7 +338,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
             status.set_status(StatusEntry.BUSY, "Connected to mail server <" + imfetcher.getServer() + ">");
 
-            if ((flags & FLAG_IMAP_IDLE) == FLAG_IMAP_IDLE)
+            if (test_flag(CS_Constants.IMF_USE_IDLE))
             {
                 do_imap_idle();
             }
@@ -563,7 +563,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         }
 
         // DELETE MESSAGES FROM FOLDER WITH EXPUNGE
-        if (!((flags & FLAG_POP3) == FLAG_POP3) && messages != null && messages.length > 0)
+        if (!test_flag(CS_Constants.IMF_POP3) && messages != null && messages.length > 0)
         {
             IMAPFolder f = (IMAPFolder) inboxFolder;
             try

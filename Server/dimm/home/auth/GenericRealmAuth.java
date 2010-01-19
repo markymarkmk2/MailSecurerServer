@@ -45,7 +45,7 @@ public abstract class GenericRealmAuth
     public static final int CONN_MODE_TLS = 0x0003;
     public static final int CONN_MODE_SSL = 0x0004;
 
-    private final String DEFAULT_SSL_FACTORY = "dimm.home.auth.DefaultSSLSocketFactory";
+    private final String DEFAULT_SSL_FACTORY = "home.shared.Utilities.DefaultSSLSocketFactory";
     private final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
 
   //  Role role;
@@ -76,10 +76,14 @@ public abstract class GenericRealmAuth
         {
             realm = new DBSAuth( act.getMandant() );
         }
+        if (act.getType().compareTo("ad") == 0)
+        {
+            realm = new ActiveDirectoryAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getSearchbase(), act.getPort(), act.getFlags() );
+        }
         if (act.getType().compareTo("ldap") == 0)
         {
-            realm = new LDAPAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getSearchbase(), act.getPort(), act.getFlags() );
-        }        
+            realm = new LDAPAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getSearchbase(), act.getPort(), act.getFlags(), act.getSearchattribute(), act.getMailattribute() );
+        }
         if (act.getType().compareTo("smtp") == 0)
         {
             realm = new SMTPAuth( act.getIp(), act.getPort(), act.getFlags() );

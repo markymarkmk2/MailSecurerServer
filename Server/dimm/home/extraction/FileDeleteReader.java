@@ -5,6 +5,7 @@
 
 package dimm.home.extraction;
 
+import dimm.home.mailarchiv.TempFileHandler;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -17,18 +18,27 @@ import java.io.IOException;
 public class FileDeleteReader extends FileReader
 {
     File del_file ;
-    public FileDeleteReader( File f ) throws FileNotFoundException
+    TempFileHandler tfh;
+    public FileDeleteReader( TempFileHandler tfh, File f ) throws FileNotFoundException
     {
         super(f);
         del_file = f;
+        this.tfh = tfh;
     }
 
     @Override
     public void close() throws IOException
     {
         super.close();
-        if (del_file.exists())
-            del_file.delete();
+        if (tfh != null)
+        {
+            tfh.delete( del_file );
+        }
+        else
+        {
+            if (del_file.exists())
+                del_file.delete();
+        }
     }
 
 

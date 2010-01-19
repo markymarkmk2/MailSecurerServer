@@ -188,8 +188,16 @@ public class TempFileHandler
             }
         }
     }
-
     public File create_temp_file(String subdir, String prefix, String suffix) throws ArchiveMsgException
+    {
+        return create_temp_file(subdir, prefix, suffix, true);
+    }
+    public File create_file(String subdir, String prefix, String suffix) throws ArchiveMsgException
+    {
+        return create_temp_file(subdir, prefix, suffix, false);
+    }
+
+    public File create_temp_file(String subdir, String prefix, String suffix, boolean del_on_exit) throws ArchiveMsgException
     {
         File tmp_file = null;
         File directory = null;
@@ -242,29 +250,44 @@ public class TempFileHandler
         }
 
         // GET RID OF FILE ON EXIT OF JVM
-        //tmp_file.deleteOnExit();
-        delete_list.add(tmp_file);
+        if (del_on_exit)
+        {
+            //tmp_file.deleteOnExit();
+            delete_list.add(tmp_file);
+        }
 
         return tmp_file;
     }
 
-    public File writeTemp( String subdir, String prefix, String suffix, InputStream is ) throws IOException, ArchiveMsgException
+    public File writeTemp( String subdir, String prefix, String suffix, InputStream is, boolean del_on_exit ) throws IOException, ArchiveMsgException
     {
-        File file = ctx.getTempFileHandler().create_temp_file(subdir, prefix, suffix);
+        File file = create_temp_file(subdir, prefix, suffix, del_on_exit);
 
-        OutputStream os = new BufferedOutputStream(new FileOutputStream(file));
-        //InputStream bis = new BufferedInputStream(is);
-        InputStream bis = is;
-        byte[] buff = new byte[ CS_Constants.STREAM_BUFFER_LEN ];
-        int rlen;
-        while ((rlen = bis.read(buff)) != -1)
+        OutputStream os = null;
+        try
         {
-            os.write(buff, 0, rlen);
+            os = new BufferedOutputStream(new FileOutputStream(file));
+            //InputStream bis = new BufferedInputStream(is);
+            InputStream bis = is;
+            byte[] buff = new byte[ CS_Constants.STREAM_BUFFER_LEN ];
+            int rlen;
+            while ((rlen = bis.read(buff)) != -1)
+            {
+                os.write(buff, 0, rlen);
+            }
         }
-        os.close();
+        catch (IOException ex)
+        {
+            LogManager.log(Level.SEVERE, null, ex);
+            throw new ArchiveMsgException("Cannot write to temp file: " + ex.getMessage());
+        }
+        finally
+        {
+            if (os != null)
+                os.close();
+        }
 
-        //file.deleteOnExit();
-        delete_list.add(file);
+        
         
         return file;
     }
@@ -328,5 +351,6 @@ public class TempFileHandler
                 return;
             }
         }
+        tmp_file.delete();
     }
 }

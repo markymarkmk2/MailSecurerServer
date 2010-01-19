@@ -16,6 +16,7 @@ import com.moonrug.exchange.Session;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
+import home.shared.Utilities.ZipUtilities;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.File;
@@ -30,8 +31,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.zip.ZipOutputStream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.hibernate.HibernateException;
 
 /**
  *
@@ -553,27 +554,41 @@ System.out.println("Core POI came from " + path);
         }
        return false; 
     }
+    public static final String LOGDUMPFILE = "LogDump.zip";
+
     public static File build_log_dump( boolean delete_after_fetch)
     {        
         try
         {
-            String[] cp_cmd = {"cp", "/var/log/messages", LOG_PATH };
-            CmdExecutor exe = new CmdExecutor(cp_cmd);
-            exe.exec();
-                
-            String[] cmd = {"tar", "-czvf", "full_log.tgz", LOG_PATH };
-            exe = new CmdExecutor(cmd);
-            if (exe.exec() != 0)
-                return null;
-            
+            ZipUtilities zip = new ZipUtilities();
+
+            //create a ZipOutputStream to zip the data to
+            ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(LOGDUMPFILE));
+            File messages = new File("/var/log/messages");
+            if (messages.exists())
+            {
+                zip.zipFile( messages.getParent(), messages.getAbsolutePath(), zos);
+            }
+            File log = LogManager.get_file_by_type(LogManager.L4J);
+            if (log.exists())
+            {
+                zip.zipFile( log.getParent(), log.getAbsolutePath(), zos);
+            }
+            zos.close();
+
             if (delete_after_fetch)
             {
-                String[] rmcmd = {"rm", "-f ", LOG_PATH + "*.log" };
-                exe = new CmdExecutor(rmcmd);
-                exe.exec();
+                if (messages.exists())
+                {
+                    messages.delete();
+                }
+                if (log.exists())
+                {
+                    log.delete();
+                }
             }
             
-            return new File( "full_log.tgz" );
+            return new File( LOGDUMPFILE );
         }             
         catch ( Exception exc)
         {

@@ -437,7 +437,7 @@ public class CryptTools
         FileInputStream fis = new FileInputStream(f);
 
 
-        RFCFileMail result = instance.dump_msg_stream_to_temp_file(ctx.getMandant(), fis, "test", "test", "eml", false);
+        RFCFileMail result = instance.dump_msg_stream_to_temp_file(ctx.getMandant(), fis, "test", "test", "eml", false, true);
         if (f.length() !=  result.get_length())
             System.err.println("Length doensz fit");
 

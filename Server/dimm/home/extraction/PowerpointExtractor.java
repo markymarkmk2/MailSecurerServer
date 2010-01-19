@@ -40,7 +40,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
         {
             if (file != null && file.exists())
             {
-                file.delete();
+                m_ctx.getTempFileHandler().delete(file);
             }
             throw new ExtractionException("failed to extract text from powerpoint document");
         }
@@ -59,7 +59,7 @@ public class PowerpointExtractor implements TextExtractor, POIFSReaderListener, 
         }
         try
         {
-            return new FileDeleteReader(file);
+            return new FileDeleteReader(m_ctx.getTempFileHandler(), file);
         }
         catch (Exception ex)
         {
