@@ -37,12 +37,12 @@ public class IMAPBrowser implements WorkerParentChild
     private boolean started;
     private boolean finished;
 
-
+/*
     static int get_folder_validity( SKMailFolder fld )
     {
         return fld.uid_validity;
     }
-
+*/
     public String getHost()
     {
         return host;

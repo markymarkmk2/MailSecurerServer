@@ -62,6 +62,10 @@ public class GeneralPreferences extends Preferences
     public static final String SERVER_SSL = "ServerSSL";
     public static final String COUNTRYCODE = "CountryCode";
     public static final String OPTIMIZE_FLUSH_CYCLETIME = "OptimizeCycleSecs";
+    public static final String AUTO_UPDATE = "AutoUpdate";
+    public static final String UPDATESERVER = "UpdateServer";
+    public static final String HTTPUSER = "HttpUser";
+    public static final String HTTPPWD = "HttpPwd";
 
     
     /** Creates a new instance of Preferences */
@@ -109,6 +113,10 @@ public class GeneralPreferences extends Preferences
         prop_names.add( SERVER_SSL );
         prop_names.add( COUNTRYCODE );
         prop_names.add( OPTIMIZE_FLUSH_CYCLETIME );
+        prop_names.add( AUTO_UPDATE );
+        prop_names.add( UPDATESERVER );
+        prop_names.add( HTTPUSER );
+        prop_names.add( HTTPPWD );
         
                 
         read_props();

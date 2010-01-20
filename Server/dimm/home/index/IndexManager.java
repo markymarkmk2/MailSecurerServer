@@ -47,6 +47,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import javax.mail.Address;
@@ -540,11 +541,20 @@ public class IndexManager extends WorkerParent
             int idx = ct.indexOf("charset");
             if (idx >= 0)
             {
-                String cs = ct.substring(idx + 8);
+                idx += 8;
+                while (" =\t".indexOf( ct.charAt(idx)) >= 0)
+                    idx++;
+
+                String cs = ct.substring(idx);
+
                 String[] parts = cs.split("[; ,\t]");
                 if (parts.length > 0)
                 {
-                    return parts[0];
+                    String ret = parts[0];
+                    StringTokenizer st = new StringTokenizer( ret, "\"\'[](){}");
+                    if (st.hasMoreElements())
+                        return st.nextToken();
+                    else return ret;
                 }
             }
         }
@@ -762,7 +772,8 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception e)
             {
-                LogManager.log(Level.WARNING, "Cannot retrieve characterset" + " " + cs.toUpperCase() );
+                SortedMap<String,Charset>map = Charset.availableCharsets();
+                LogManager.log(Level.WARNING, "Cannot retrieve characterset" + " " + cs.toUpperCase() + ": " + e.getLocalizedMessage() );
             }
         }
 

@@ -8,6 +8,7 @@
  */
 package dimm.home.mailarchiv;
 
+import dimm.home.Updater.UpdateWorker;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.importmail.DBXImporter;
 import dimm.home.importmail.MBoxImporter;
@@ -125,6 +126,7 @@ public class LogicControl
     SQLWorker sql;
     IMAPBrowserServer ibs;
     TCPCallConnect tcc;
+    UpdateWorker upd;
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -247,6 +249,9 @@ public class LogicControl
 
             tcc = new TCPCallConnect(null);
             worker_list.add(tcc);
+
+            upd = new UpdateWorker();
+            worker_list.add(upd);
 
         }
         catch (Exception ex)
@@ -1225,7 +1230,8 @@ public class LogicControl
         int itype = CS_Constants.get_itype_from_em_name(path);
         switch (itype)
         {
-            case CS_Constants.ITYPE_TBIRD: 
+            case CS_Constants.ITYPE_TBIRD:
+            case CS_Constants.ITYPE_MBOX:
             {
                 try
                 {

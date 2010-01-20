@@ -51,33 +51,12 @@ public class GetLog extends AbstractCommand
         String opt = get_opts(data);
 
         ParseToken pt = new ParseToken(opt);
-        int ma_id = (int) pt.GetLongValue("MA:");
-        MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
+
+        dump = null;
 
         String command = pt.GetString("CMD:");
 
-        if (command.compareTo("dump") == 0)
-        {
-            boolean del_after_dump = pt.GetBoolean("DEL:");
-
-            dump = Main.build_log_dump(del_after_dump);
-
-            if (dump == null)
-            {
-                ok = false;
-            }
-            else if (!dump.exists())
-            {
-                ok = false;
-            }
-            else
-            {
-                String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(dump.getAbsolutePath(), null);
-                answer = ret;
-                return ok;
-            }
-        }
-        else if (command.compareTo("read") == 0)
+        if (command.compareTo("read") == 0)
         {
             // show_log CMD:read LG:L4 LI:" + LINES_PER_CALL + " OF:" + offset
             String log_type = pt.GetString("LG:");
@@ -113,6 +92,9 @@ public class GetLog extends AbstractCommand
 
             answer = "0: " + sb.toString();
         }
+        else
+            answer = "1: invalid command";
+
 
         return ok;
     }

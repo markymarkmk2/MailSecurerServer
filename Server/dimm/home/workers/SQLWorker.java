@@ -50,12 +50,12 @@ MySQL root /eKmIklz37T
 
  */
     //private static final String db_server="thales.ebiz-webhosting.de";
-    private static final String db_server="localhost";
-    private static String db_user="postgres";
-    private static final String db_pwd="12345";
-    private static final String postgres_connect = "jdbc:postgresql://localhost/datavault/";
+   //private static final String db_server="localhost";
+    private static String db_user="APP";
+    private static final String db_pwd="";
+    //private static final String postgres_connect = "jdbc:postgresql://localhost/datavault/";
     private static final String derby_connect = "jdbc:derby:MailArchiv";
-    private static final String local_connect = "jdbc:hsqldb:file:" + Main.DATABASEPATH;
+    //private static final String local_connect = "jdbc:hsqldb:file:" + Main.DATABASEPATH;
     private static final String SQL_UPD_PATH = "sql_update";
     
     ArrayList<String> stmt_list;
@@ -82,18 +82,18 @@ MySQL root /eKmIklz37T
     int conn_timeout_s = 10;
     private String PARAM_DB = "param_db";
 
-    private static String connect = postgres_connect;
+    private static String connect = derby_connect;
 
     public static void set_to_derby_db()
     {
         connect = derby_connect;
         db_user = "APP";
     }
-    public static void set_to_postgres_db()
+ /*   public static void set_to_postgres_db()
     {
         connect = postgres_connect;
         db_user="postgres";
-    }
+    }*/
     public static String get_db_connect_string()
     {
         return connect;
@@ -154,10 +154,10 @@ MySQL root /eKmIklz37T
         {
             if (!driver_loaded)
             {
-                Class.forName("com.mysql.jdbc.Driver").newInstance();
+                //Class.forName("com.mysql.jdbc.Driver").newInstance();
                 Class.forName("org.apache.derby.jdbc.EmbeddedDriver").newInstance();
-                String hsql_db_class_name = Main.get_prop(GeneralPreferences.DB_CLASSNAME, "org.hsqldb.jdbcDriver");
-                Class.forName(hsql_db_class_name).newInstance();
+                /*String hsql_db_class_name = Main.get_prop(GeneralPreferences.DB_CLASSNAME, "org.hsqldb.jdbcDriver");
+                Class.forName(hsql_db_class_name).newInstance();*/
 
                 driver_loaded = true;
             }

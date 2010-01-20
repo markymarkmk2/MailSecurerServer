@@ -70,7 +70,7 @@ class SmtpImporterServer extends SMTPServer
     @Override
     public String getName()
     {
-            return "SMTPServer for " + Main.APPNAME + " " + Main.VERSION;
+            return "SMTPServer for " + Main.APPNAME + " " + Main.get_version_str();
     }
 }
 

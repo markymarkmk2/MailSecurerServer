@@ -6,6 +6,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.AuthUser;
+import dimm.home.mailarchiv.Commands.DumpLog;
 import dimm.home.mailarchiv.Commands.FileSystemViewCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
@@ -148,6 +149,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new GetStatus() );
         cmd_list.add( new ShellCmd() );
         cmd_list.add( new GetLog() );
+        cmd_list.add( new DumpLog() );
         cmd_list.add( new SetStation() );
         cmd_list.add( new WriteFile() );
         cmd_list.add( new StartVPN() );

@@ -68,6 +68,7 @@ public class Communicator extends WorkerParent
         cmd_list.add( new GetStatus() );
         cmd_list.add( new ShellCmd() );
         cmd_list.add( new GetLog() );
+        cmd_list.add( new DumpLog() );
         cmd_list.add( new SetStation() );
         cmd_list.add( new WriteFile() );
         cmd_list.add( new StartVPN() );

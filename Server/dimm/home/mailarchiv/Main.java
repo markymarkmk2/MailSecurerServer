@@ -13,12 +13,15 @@ import com.moonrug.exchange.IMessage;
 import com.moonrug.exchange.IStore;
 import com.moonrug.exchange.Recipient;
 import com.moonrug.exchange.Session;
+import dimm.home.Updater.Updater;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
+import home.shared.CS_Constants;
 import home.shared.Utilities.ZipUtilities;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -41,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    public static final String VERSION = "1.0.3";
+    private static final String VERSION = "1.0.4";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -61,10 +64,13 @@ public class Main
     public static final String PROGNAME_LASTVALID = "MailArchiv.jar_last_valid";
     public static final String UPDATE_PATH = "update/";
     public static final String RFC_PATH = "rfc_temp/";
+    public static final String SERVER_UPDATEWORKER_PATH = "/mailsecurer/update/";
     
     public static String STARTED_OK = "started_ok";
     public static String APPNAME = "MailSecurer";
-    public static String DEFAULTSERVER = "www.gruppemedia.de";
+    public static String DEFAULTSERVER = "www.mailsecurer.de";
+    public static final String HTTPUSER = "mailsecurer";
+    public static final String HTTPPWD = "123456";
     
     
     public static GeneralPreferences prefs;
@@ -84,7 +90,6 @@ public class Main
     public static String ws_ip = "127.0.0.1";
     public static int ws_port = 8050;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
-  
     
     
     static void print_system_property( String key )
@@ -155,8 +160,6 @@ public class Main
         // SETTING JAVA MAIL PARAMS
         init_mail_settings();
       
-
-
         
         info_msg("Starting " + APPNAME + " V" + VERSION );
 
@@ -205,10 +208,17 @@ public class Main
             {
                 SQLWorker.set_to_derby_db();
             }
-            if (args[i].compareTo("-postgres") == 0)
+/*            if (args[i].compareTo("-postgres") == 0)
             {
                 SQLWorker.set_to_postgres_db();
+            }*/
+            // CREATE INSTALLER --sb lnx / mac / win
+            if (args[i].compareTo("--sb") == 0 && (i + 1) < args.length)
+            {
+                Updater.build_sb_installer( args[i + 1], "mailsecurerserver", "MSSI");
+                System.exit(0);
             }
+
         }            
         try
         {            
@@ -557,13 +567,14 @@ System.out.println("Core POI came from " + path);
     public static final String LOGDUMPFILE = "LogDump.zip";
 
     public static File build_log_dump( boolean delete_after_fetch)
-    {        
+    {
+        ZipOutputStream zos = null;
         try
         {
             ZipUtilities zip = new ZipUtilities();
 
             //create a ZipOutputStream to zip the data to
-            ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(LOGDUMPFILE));
+            zos = new ZipOutputStream(new BufferedOutputStream( new FileOutputStream(LOGDUMPFILE), CS_Constants.STREAM_BUFFER_LEN));
             File messages = new File("/var/log/messages");
             if (messages.exists())
             {
@@ -573,8 +584,7 @@ System.out.println("Core POI came from " + path);
             if (log.exists())
             {
                 zip.zipFile( log.getParent(), log.getAbsolutePath(), zos);
-            }
-            zos.close();
+            }            
 
             if (delete_after_fetch)
             {
@@ -593,6 +603,19 @@ System.out.println("Core POI came from " + path);
         catch ( Exception exc)
         {
             exc.printStackTrace();
+        }
+        finally
+        {
+            if (zos != null)
+            {
+                try
+                {
+                    zos.close();
+                }
+                catch (IOException iOException)
+                {
+                }
+            }
         }
         return null; 
     }
