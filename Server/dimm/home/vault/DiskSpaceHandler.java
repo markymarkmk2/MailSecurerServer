@@ -499,9 +499,25 @@ public class DiskSpaceHandler
         f.delete();
     }
 
-    public void delete_mail( RFCGenericMail mail )
+    public void delete_mail( long time, int enc_mode, RFCGenericMail.FILENAME_MODE fmode   ) throws VaultException
     {
-        throw new UnsupportedOperationException("Not yet implemented");
+        String parent_path = getMailPath();
+        String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode, fmode );
+
+
+        File mail_file = new File( absolutePath );
+        if (!mail_file.exists())
+        {
+           throw new VaultException( ds, "Cannot delete mail file for " + time + ": " + absolutePath );
+        }
+        try
+        {
+            mail_file.delete();
+        }
+        catch (Exception e)
+        {
+           throw new VaultException( ds, "Cannot delete mail file for " + time + ": " + e.getLocalizedMessage() );
+        }
     }
 
 
@@ -557,7 +573,7 @@ public class DiskSpaceHandler
         if (enc_mode != RFCGenericMail.ENC_NONE)
         {
             Vault vault = m_ctx.get_vault_for_ds_idx(ds.getId());
-            mail.set_encryption(vault.get_password(), m_ctx.getPrefs().get_KeyPBEIteration(), m_ctx.getPrefs().get_KeyPBESalt());
+            mail.set_encryption(vault.get_password(), Main.prefs.get_KeyPBEIteration(), Main.prefs.get_KeyPBESalt());
         }
         return mail;
     }
@@ -884,8 +900,8 @@ public class DiskSpaceHandler
             else
             {
                 bos = new CryptAESOutputStream(os,
-                        m_ctx.getPrefs().get_KeyPBEIteration(),
-                        m_ctx.getPrefs().get_KeyPBESalt(), password);
+                        Main.prefs.get_KeyPBEIteration(),
+                        Main.prefs.get_KeyPBESalt(), password);
             }
 
 
@@ -942,8 +958,8 @@ public class DiskSpaceHandler
                 return mis;
 
             mis = new CryptAESInputStream(mis,
-                        m_ctx.getPrefs().get_KeyPBEIteration(),
-                        m_ctx.getPrefs().get_KeyPBESalt(), password);
+                        Main.prefs.get_KeyPBEIteration(),
+                        Main.prefs.get_KeyPBESalt(), password);
 
             //InputStream is = CryptTools.create_crypt_AES_instream(m_ctx, mis, password, encrypt);
 

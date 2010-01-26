@@ -6,6 +6,7 @@
 package dimm.home.index;
 
 import dimm.home.mailarchiv.GeneralPreferences;
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -125,7 +126,7 @@ public class IndexJobEntry  implements Runnable
         ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
 
         // LOAD MAIL IN AN OWN THREAD, WE CAN CATCH OOMs BETTER
-        int max_load_tries = 5;
+        int max_load_tries = 3;
 
         while (max_load_tries > 0)
         {
@@ -133,6 +134,7 @@ public class IndexJobEntry  implements Runnable
                 break;
 
             max_load_tries--;
+            LogicControl.sleep(1000);
         }
         if (max_load_tries <= 0)
         {
@@ -142,7 +144,7 @@ public class IndexJobEntry  implements Runnable
 
         if (!parallel_index)
         {           
-             boolean ret = handle_pre_index(mime_msg);
+            boolean ret = handle_pre_index(mime_msg);
             if (ret)
             {
                 ret = handle_post_index();
@@ -173,7 +175,11 @@ public class IndexJobEntry  implements Runnable
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
-            ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, mime_mail, docw);
+            boolean ok = ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, mime_mail, docw);
+
+            // IF INDEX GIVES FALSE, WE DONT WANT THIS MAIL IN INDEX (EXCLUDE, WRONG DOMAIN ETC.)
+            if (!ok)
+                return false;
 
 
             writer = index_dsh.get_write_index();

@@ -5,7 +5,6 @@
 package dimm.home.vault;
 
 import dimm.home.index.IndexManager;
-import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
@@ -16,12 +15,10 @@ import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.CS_Constants;
 import home.shared.hibernate.DiskSpace;
 import home.shared.mail.RFCFileMail;
-import home.shared.mail.RFCGenericMail;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.logging.Level;
 
 class ReIndexDSHEntry
 {
@@ -256,8 +253,8 @@ public class ReIndexContext
             DiskSpaceHandler index_dsh = reIndexDSHEntry.getIndex_dsh();
 
             String password = context.get_vault_by_da_id(da_id).get_password();
-            int iteration = context.getPrefs().get_KeyPBEIteration();
-            byte[] salt = context.getPrefs().get_KeyPBESalt();
+            int iteration = Main.prefs.get_KeyPBEIteration();
+            byte[] salt = Main.prefs.get_KeyPBESalt();
 
 
             data_dsh.lock_for_rebuild();

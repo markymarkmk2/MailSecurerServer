@@ -44,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.0.4";
+    private static final String VERSION = "1.0.5";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";

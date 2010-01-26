@@ -31,7 +31,6 @@ import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -166,11 +165,11 @@ public class CryptTools
      * */
     // Iteration count
 
-    public static byte[] crypt( MandantContext context, byte[] data, String passPhrase, ENC_MODE encrypt )
+    public static byte[] crypt( byte[] data, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = context.getPrefs().get_KeyPBEIteration();
-        byte[] salt = context.getPrefs().get_KeyPBESalt();
-        String algorithm = context.getPrefs().get_KeyAlgorithm();
+        int iterationCount = Main.prefs.get_KeyPBEIteration();
+        byte[] salt = Main.prefs.get_KeyPBESalt();
+        String algorithm = Main.prefs.get_KeyAlgorithm();
 
         try
         {
@@ -221,7 +220,7 @@ public class CryptTools
         return null;
     }
 
-    public static String crypt( MandantContext ctx, String str, String passPhrase, ENC_MODE encrypt )
+    public static String crypt( String str, String passPhrase, ENC_MODE encrypt )
     {
         try
         {
@@ -229,7 +228,7 @@ public class CryptTools
             byte[] utf8 = str.getBytes("UTF8");
 
             // Encrypt
-            byte[] enc = crypt( ctx, utf8, passPhrase, encrypt );
+            byte[] enc = crypt( utf8, passPhrase, encrypt );
 
             // Encode bytes to base64 to get a string
             return new String( Base64.encodeBase64(enc) );
@@ -241,9 +240,9 @@ public class CryptTools
         }
         return null;
     }
-    public static String crypt_internal( MandantContext ctx, String str, ENC_MODE encrypt )
+    public static String crypt_internal( String str, ENC_MODE encrypt )
     {
-        String passPhrase = ctx.getPrefs().get_InternalPassPhrase();
+        String passPhrase = Main.prefs.get_InternalPassPhrase();
         try
         {
             byte[] src;
@@ -258,7 +257,7 @@ public class CryptTools
             }
 
             // Encrypt
-            byte[] trg = crypt( ctx, src, passPhrase, encrypt );
+            byte[] trg = crypt( src, passPhrase, encrypt );
             if (trg == null)
                 return null;
 
@@ -280,8 +279,8 @@ public class CryptTools
 
     private OutputStream create_crypt_AES_outstream( MandantContext context, OutputStream os, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = context.getPrefs().get_KeyPBEIteration();
-        byte[] salt = context.getPrefs().get_KeyPBESalt();
+        int iterationCount = Main.prefs.get_KeyPBEIteration();
+        byte[] salt = Main.prefs.get_KeyPBESalt();
 //        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
@@ -328,8 +327,8 @@ public class CryptTools
     
     private InputStream create_crypt_AES_instream( MandantContext context, InputStream is, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = context.getPrefs().get_KeyPBEIteration();
-        byte[] salt = context.getPrefs().get_KeyPBESalt();
+        int iterationCount = Main.prefs.get_KeyPBEIteration();
+        byte[] salt = Main.prefs.get_KeyPBESalt();
 //        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
@@ -396,7 +395,7 @@ public class CryptTools
             MandantContext ctx = instance.get_mandant_by_id(1);
 
             RFCFileMail rfc = new RFCFileMail(new File(name), true);
-            rfc.set_encryption( ctx.getPrefs().get_password(), ctx.getPrefs().get_KeyPBEIteration(), ctx.getPrefs().get_KeyPBESalt() );
+            rfc.set_encryption( ctx.getPrefs().get_password(), Main.prefs.get_KeyPBEIteration(), Main.prefs.get_KeyPBESalt() );
             OutputStream os = rfc.open_outputstream();
 
             os.write(TEST.getBytes());

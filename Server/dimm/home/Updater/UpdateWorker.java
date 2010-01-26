@@ -347,6 +347,25 @@ public class UpdateWorker extends WorkerParent
                 String[] update_cmd = {"bootstrap.bat"};
                 exec = new CmdExecutor(update_cmd);                
             }
+            else if (System.getProperty("os.name").startsWith("Mac"))
+            {
+                File bootstrap = new File("bootstrap.sh");
+                fw = new FileWriter(bootstrap);
+                BufferedWriter bw = new BufferedWriter(fw);
+                bw.write("#!/bin/sh");
+                bw.newLine();
+                bw.write("cp MailArchiv.jar update");  // COPY IF UPDATE FAILS
+                bw.newLine();
+
+                bw.write("/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Commands/java -cp MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "/MSS " + get_local_upd_path() + " &" );
+                bw.close();
+
+
+                String[] update_cmd = {"sh", "./bootstrap.sh"};
+                exec = new CmdExecutor(update_cmd);
+                exec.set_use_no_shell(true);
+
+            }
             else
             {
                 File bootstrap = new File("bootstrap.sh");
@@ -357,7 +376,7 @@ public class UpdateWorker extends WorkerParent
                 bw.write("cp MailArchiv.jar update");  // COPY IF UPDATE FAILS
                 bw.newLine();
                 
-                bw.write("java -cp dist/MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "/MSS " + get_local_upd_path() + " &" );
+                bw.write("java -cp MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "/MSS " + get_local_upd_path() + " &" );
                 bw.close();
                 
                 
@@ -410,7 +429,7 @@ public class UpdateWorker extends WorkerParent
                         Main.err_log(exc.getMessage());
                     }
                     
-                    LogicControl.sleep(10000);
+                    LogicControl.sleep(20000);
                     
                     // IWE GET HERE, WE ARE LOST, BECAUSE UPDATE SHOULD OF KICKES US AWAY
                     Main.err_log("Update failed, we did not restart");

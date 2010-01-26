@@ -42,10 +42,6 @@ public class MandantPreferences extends Preferences
     public static final String INDEX_THREADS = "IndexyThreads";
     public static final long DFTL_INDEX_THREADS = 8;
 
-/*    public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
-    public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";
-*/
-//    public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";
     
     String password;
     String dec_password;
@@ -103,7 +99,7 @@ public class MandantPreferences extends Preferences
             if (context == null)
                 LogManager.err_log_fatal("Missing context");
 
-            String str = CryptTools.crypt_internal(context, password, CryptTools.ENC_MODE.DECRYPT);
+            String str = CryptTools.crypt_internal(password, CryptTools.ENC_MODE.DECRYPT);
             if (str == null)
             {
                 LogManager.err_log_fatal("Cannot decrypt password from preferences");
@@ -124,7 +120,7 @@ public class MandantPreferences extends Preferences
         }
         else
         {
-            String pwd = CryptTools.crypt_internal(context, password, CryptTools.ENC_MODE.ENCRYPT);
+            String pwd = CryptTools.crypt_internal(password, CryptTools.ENC_MODE.ENCRYPT);
             set_prop(ENC_PASSWORD, pwd);
         }
         return super.store_props();
@@ -157,24 +153,8 @@ public class MandantPreferences extends Preferences
         }
     }
 
-    public String get_KeyAlgorithm()
-    {
-        return Main.prefs.get_KeyAlgorithm();
-    }
-    public byte[] get_KeyPBESalt()
-    {
-        return Main.prefs.get_KeyPBESalt();
-    }
-    public int get_KeyPBEIteration()
-    {
-        return Main.prefs.get_KeyPBEIteration();
-    }
+   
     
-    // USED FOR ENCRYPTION END DECRYPTION OF INTERNAL SECRETS
-    public String get_InternalPassPhrase()
-    {
-        return Main.prefs.get_InternalPassPhrase();
-    }
 
     
 }

@@ -16,6 +16,8 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Notification;
+import dimm.home.mailarchiv.TempFileHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
@@ -23,7 +25,14 @@ import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
+import home.shared.filter.FilterMatcher;
+import home.shared.filter.FilterValProvider;
+import home.shared.filter.GroupEntry;
+import home.shared.filter.LogicEntry;
+import home.shared.hibernate.AccountConnector;
+import home.shared.hibernate.MailAddress;
 import home.shared.hibernate.MailHeaderVariable;
+import home.shared.mail.RFCMailAddress;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -42,11 +51,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import home.shared.zip.LocZipInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
@@ -143,6 +152,7 @@ class MyMimetype
 }
 
 
+
 /**
  *
  * @author mw
@@ -162,6 +172,8 @@ public class IndexManager extends WorkerParent
     private SwingWorker idle_worker;
     ArrayList<String> email_headers;
     ArrayList<String> allowed_headers;
+    ArrayList <String> allowed_domains;
+    GroupEntry acct_exclude_list;
 
     ArrayList <IndexSearcher> hash_searcher_list;
     private boolean is_started;
@@ -202,10 +214,45 @@ public class IndexManager extends WorkerParent
         email_headers.add(CS_Constants.FLD_CC);
         email_headers.add(CS_Constants.FLD_BCC);
         email_headers.add(CS_Constants.FLD_DELIVEREDTO);
+
+        build_domain_and_excl_list();
+
         is_started = false;
-
-
     }
+
+    private void build_domain_and_excl_list()
+    {
+        acct_exclude_list = null;
+        allowed_domains = new ArrayList<String>();
+
+        // FILL LIST OF SUPPORTED DOMAINS AND EVAL EXISTING EXCLUDELISTS
+        ArrayList<LogicEntry> list = new ArrayList<LogicEntry>();
+        for (AccountConnector acct : m_ctx.getMandant().getAccountConnectors())
+        {
+            String[] domain_list = acct.getDomainlist().split(CS_Constants.TEXTLIST_DELIM);
+            for (int i = 0; i < domain_list.length; i++)
+            {
+                allowed_domains.add( domain_list[i].toLowerCase().trim() );
+            }
+
+            // EVAL EXCLUDE EXPRESSIONS AND ADD AS OR-ENTRY TO LIST
+            String excl_data = acct.getExcludefilter();
+            if (excl_data != null && excl_data.length() > 0)
+            {
+                list.add( new GroupEntry( FilterMatcher.get_filter_list(excl_data, /*compr*/ true), /*neg*/false, /*is_or*/true) );
+            }
+        }
+        if (list.size() > 0)
+        {
+            acct_exclude_list = new GroupEntry(list);
+        }
+    }
+
+    public ArrayList<String> getAllowed_domains()
+    {
+        return allowed_domains;
+    }
+
 
     // OPEN AND IF NOT EXISTS, CREATE, SO OPEN ALWAYS SUCCEEDS
     public IndexWriter open_index( String path, String language) throws IOException
@@ -354,9 +401,106 @@ public class IndexManager extends WorkerParent
     {
         RFCMimeMail mime_msg = new RFCMimeMail();
         mime_msg.parse(mail_file);
+
         return mime_msg;
     }
-    public void index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
+    public boolean matches_domain( AccountConnector acct, final RFCMimeMail mime_msg )
+    {
+        final ArrayList<RFCMailAddress> mail_list = mime_msg.getEmail_list();
+
+        // FIRST CHECK FOR CORRECT DOMAIN
+        boolean matches_domain = false;
+        for (Iterator<RFCMailAddress> it = mail_list.iterator(); it.hasNext();)
+        {
+            RFCMailAddress rFCMailAddress = it.next();
+            String domain = rFCMailAddress.get_domain();
+            if (allowed_domains.contains(domain))
+            {
+                matches_domain = true;
+                break;
+            }
+        }
+        if (!matches_domain)
+            return false;
+
+        // THEN TEST FOR EXCLUDES
+        if (acct_exclude_list == null)
+            return true;
+
+        // BUILD A VAL PROVIDER FOR THIS MESSAGE
+        FilterValProvider acct_excl_provider = new FilterValProvider()
+        {
+
+            @Override
+            public ArrayList<String> get_val_vor_name( String name )
+            {
+                ArrayList<String>list = new ArrayList<String>();
+                if (name.compareTo(CS_Constants.ACCT_FF_MAIL) == 0)
+                {
+                    // BUILD A LIST OF ALL MAIL-ADDRESSES
+                    for (int i = 0; i < mail_list.size(); i++)
+                    {
+                        RFCMailAddress mla = mail_list.get(i);
+                        list.add( mla.get_mail() );
+                    }
+                }
+                else if (name.compareTo(CS_Constants.ACCT_FF_MAILHEADER) == 0)
+                {
+                    // BUILD A LIST OF ALL MAILHEADERS EXCEPT SUBJECT AND MAIL
+                    try
+                    {
+                    Enumeration en = mime_msg.getMsg().getAllHeaders();
+                    while (en.hasMoreElements())
+                    {
+                        Object h = en.nextElement();
+                        if (h instanceof Header)
+                        {
+                            Header hdr = (Header)h;
+                            if (hdr.getName().compareToIgnoreCase("Subject") == 0)
+                                continue;
+                            if (hdr.getName().compareToIgnoreCase("To") == 0)
+                                continue;
+                            if (hdr.getName().compareToIgnoreCase("From") == 0)
+                                continue;
+                            if (hdr.getName().compareToIgnoreCase("CC") == 0)
+                                continue;
+
+                            list.add(hdr.getValue());
+                        }
+                    }
+                    }
+                    catch (Exception exc )
+                    {
+                        LogManager.err_log_warn("Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
+                    }
+
+                }
+                else if (name.compareTo(CS_Constants.ACCT_FF_SUBJECT) == 0)
+                {
+                    try
+                    {
+                        list.add(mime_msg.getMsg().getSubject());
+                    }
+                    catch (Exception exc)
+                    {
+                        LogManager.err_log_warn("Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
+                    }
+                }
+                return list;
+            }
+        };
+
+        // NOW FOR THE SIMPLE TASK: IS THIS MAIL ON THE EXCLUDELIST?
+        FilterMatcher fm = new FilterMatcher(acct_exclude_list.getChildren(), acct_excl_provider);
+        if (fm.eval())
+            return false;
+
+        return true;
+    }
+
+
+    // RETURN FALSE IF MAIL SHOULD BE DELETED
+    public boolean index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
     {
         String subject = mime_msg.getMsg().getSubject();
         if (mime_msg.getMsg().getFrom() == null &&
@@ -365,8 +509,40 @@ public class IndexManager extends WorkerParent
                 subject == null)
         {
             LogManager.err_log_fatal("Found bogus mail (no from / to / cc) " + unique_id + ": skipping");
-            return;
+            return false;
         }
+
+
+        // CHECK FOR ACCOUNTFILTER
+
+        AccountConnector acct_match = null;
+        for (AccountConnector acct : m_ctx.getMandant().getAccountConnectors())
+        {
+            if (matches_domain( acct, mime_msg ))
+            {
+                acct_match = acct;
+                break;
+            }
+        }
+        // IF WE DO NOT FIND A MATCHING ACCOUNT, WE DELETE MAIL
+        if (acct_match == null)
+        {
+            delete_mail_before_index( m_ctx, unique_id, da_id, ds_id );
+            return false;
+        }
+
+        ArrayList<String> domain_list = m_ctx.get_index_manager().getAllowed_domains();
+        boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded( domain_list, mime_msg.getEmail_list() );
+        if (exceeded)
+        {
+            Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded"));
+            delete_mail_before_index( m_ctx, unique_id, da_id, ds_id );
+            return false;
+        }
+
+
+
+
         Document doc = docw.doc;
 
         doc.add(new Field(CS_Constants.FLD_UID_NAME, unique_id, Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -530,6 +706,7 @@ public class IndexManager extends WorkerParent
         {
             LogManager.log(Level.SEVERE, unique_id, messagingException);
         }
+        return true;
     }
 
     private String get_charset_from_content_type( String ct )
@@ -1515,7 +1692,7 @@ public class IndexManager extends WorkerParent
 
     public void create_hash_searcher_list()
     {
-        boolean ret = false;
+        
         // GO THROUGH ALL DISKSPACES OF THIS VAULT
         ArrayList<DiskSpaceHandler> dsh_list = new ArrayList<DiskSpaceHandler>();
 
@@ -1565,5 +1742,23 @@ public class IndexManager extends WorkerParent
 
         hash_searcher_list = searcher_list;
     }
+
+
+
+    private void delete_mail_before_index( MandantContext m_ctx, String unique_id, int da_id, int ds_id )
+    {
+        DiskSpaceHandler dsh = m_ctx.get_dsh(ds_id);
+        try
+        {
+            long date = DiskSpaceHandler.get_time_from_uuid(unique_id);
+
+            dsh.delete_mail(date, dsh.get_enc_mode(), dsh.get_fmode());
+        }
+        catch (VaultException vaultException)
+        {
+            LogManager.err_log("Cannot delete mail " + unique_id + ": ", vaultException);
+        }
+    }
+
 }
 

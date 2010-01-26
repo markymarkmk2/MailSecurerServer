@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv;
 
+import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
@@ -32,19 +33,25 @@ import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
+import home.shared.hibernate.MailAddress;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
+import home.shared.mail.RFCMailAddress;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  *
@@ -893,8 +900,6 @@ public class MandantContext
             return;
         }
     }
-
-
 
 
 

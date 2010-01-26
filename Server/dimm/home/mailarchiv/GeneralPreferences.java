@@ -66,6 +66,7 @@ public class GeneralPreferences extends Preferences
     public static final String UPDATESERVER = "UpdateServer";
     public static final String HTTPUSER = "HttpUser";
     public static final String HTTPPWD = "HttpPwd";
+    public static final String MAX_STAY_VALID_DAYS = "MaxUserValidDays";
 
     
     /** Creates a new instance of Preferences */
@@ -117,6 +118,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( UPDATESERVER );
         prop_names.add( HTTPUSER );
         prop_names.add( HTTPPWD );
+        prop_names.add( MAX_STAY_VALID_DAYS );
         
                 
         read_props();

@@ -1081,6 +1081,10 @@ public class LogicControl
     {
         return sql;
     }
+    public LicenseChecker get_license_checker()
+    {
+        return lic_checker;
+    }
 
     WorkerParent get_worker( String name )
     {
