@@ -150,16 +150,18 @@ public abstract class SwingWorker
      * Start a thread that will call the <code>construct</code> method
      * and then exit.
      */
-    public SwingWorker()
+    public SwingWorker(String name)
     {
         final Runnable doFinished = new Runnable()
         {
+            @Override
             public void run()
             { finished(); }
         };
         
         Runnable doConstruct = new Runnable()
         {
+            @Override
             public void run()
             {
                 try
@@ -175,7 +177,7 @@ public abstract class SwingWorker
             }
         };
         
-        Thread t = new Thread(doConstruct);
+        Thread t = new Thread(doConstruct, name);
         threadVar = new ThreadVar(t);
     }
     

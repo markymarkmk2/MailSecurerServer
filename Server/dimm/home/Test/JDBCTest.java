@@ -124,7 +124,7 @@ public class JDBCTest extends javax.swing.JFrame
 
     void run_insert() throws SQLException
     {
-        SwingWorker sw = new SwingWorker() {
+        SwingWorker sw = new SwingWorker("JDBCTest") {
 
             @Override
             public Object construct()

@@ -18,6 +18,7 @@ import dimm.home.importmail.ProxyEntry;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import home.shared.license.LicenseTicket;
 import home.shared.mail.EncodedMailOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -288,7 +289,7 @@ public class MailProxyServer extends ListWorkerParent
     {
         Main.debug_msg(1, NAME + " is starting " + child_list.size() + " tasks" );
         
-        if (!Main.get_control().is_licensed())
+        if (!Main.get_control().is_licensed(LicenseTicket.PRODUCT_BASE))
         {
             this.setStatusTxt("Not licensed");
             this.setGoodState(false);
@@ -301,7 +302,7 @@ public class MailProxyServer extends ListWorkerParent
             if (pe.is_started())
                 continue;
             
-            SwingWorker worker = new SwingWorker()
+            SwingWorker worker = new SwingWorker(NAME)
             {
                 @Override
                 public Object construct()
@@ -322,7 +323,7 @@ public class MailProxyServer extends ListWorkerParent
 
         if (!is_started)
         {
-            idle_worker = new SwingWorker()
+            idle_worker = new SwingWorker(NAME + ".Idle")
             {
                 @Override
                 public Object construct()

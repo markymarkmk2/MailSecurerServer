@@ -295,7 +295,7 @@ public class DiskSpaceHandler
         dsi.setLanguage( m_ctx.getPrefs().get_language());
         dsi.setEncMode( RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE);
         dsi.setFmode( m_ctx.getPrefs().get_boolean_prop(MandantPreferences.DSH_HOUR_DIRS, true) ?
-            RFCGenericMail.FILENAME_MODE.H_DIR_MS_FILE : RFCGenericMail.FILENAME_MODE.HMS_FILE);
+            RFCGenericMail.FILENAME_MODE.H_OK_DIR_MS_FILE : RFCGenericMail.FILENAME_MODE.HMS_FILE);
 
         try
         {
@@ -478,7 +478,7 @@ public class DiskSpaceHandler
 
     public void add_message_info( RFCGenericMail msg ) throws VaultException
     {
-        dsi.setCapacity( dsi.getCapacity() + msg.get_length());
+        dsi.incCapacity( msg.get_length() );
         dsi.setLastEntryTS(msg.getDate().getTime());
         if (dsi.getFirstEntryTS() == 0)
             dsi.setFirstEntryTS(dsi.getLastEntryTS());
@@ -497,6 +497,7 @@ public class DiskSpaceHandler
             }
         }
         f.delete();
+        dsi.decCapacity(f.length());
     }
 
     public void delete_mail( long time, int enc_mode, RFCGenericMail.FILENAME_MODE fmode   ) throws VaultException
@@ -513,6 +514,7 @@ public class DiskSpaceHandler
         try
         {
             mail_file.delete();
+            dsi.decCapacity(mail_file.length());
         }
         catch (Exception e)
         {
@@ -914,9 +916,9 @@ public class DiskSpaceHandler
                 }
                 bos.write(buff, 0, rlen);
             }
-
-            dsi.setCapacity( dsi.getCapacity() + msg.get_length());
-            
+            bos.close();
+            bos = null;
+                       
         }
         catch (Exception e)
         {

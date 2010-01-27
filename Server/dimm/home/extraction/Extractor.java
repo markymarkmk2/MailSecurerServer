@@ -87,7 +87,7 @@ public class Extractor implements Serializable
             {
                 LogManager.debug_msg(7, "Extracting with extractor " + extractor.getClass().getName());
                 Reader rdr = null;
-                SwingWorker sw = new SwingWorker()
+                SwingWorker sw = new SwingWorker("Extractor")
                 {
 
                     @Override

@@ -89,7 +89,7 @@ public class UserTaskServer extends WorkerParent
     {
         if (!is_started)
         {
-            idle_worker = new SwingWorker()
+            idle_worker = new SwingWorker(NAME)
             {
                 @Override
                 public Object construct()

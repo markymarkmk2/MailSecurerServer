@@ -125,7 +125,7 @@ public class Updater
             
             
         }               
-        SwingWorker sw = new SwingWorker()
+        SwingWorker sw = new SwingWorker("Updater")
         {
             @Override
             public Object construct()
@@ -821,7 +821,7 @@ public class Updater
         }
         
         final Updater upd = new Updater(args);
-        SwingWorker sw = new SwingWorker()
+        SwingWorker sw = new SwingWorker("Updater")
         {
 
             @Override

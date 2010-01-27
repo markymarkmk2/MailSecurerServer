@@ -388,5 +388,11 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         return EqualsBuilder.reflectionEquals( hfolder, db_object);
     }
 
+    @Override
+    public String get_name()
+    {
+        return "HotFolderImport";
+    }
+
 
 }

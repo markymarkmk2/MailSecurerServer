@@ -157,7 +157,7 @@ public class Communicator extends WorkerParent
         start_broadcast_task();
         start_tcpip_task();
          
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(NAME)
         {
             @Override
             public Object construct()
@@ -179,7 +179,7 @@ public class Communicator extends WorkerParent
 
     boolean start_broadcast_task()
     {
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(NAME + ".BroadcastTask")
         {
             @Override
             public Object construct()
@@ -204,7 +204,7 @@ public class Communicator extends WorkerParent
     }
     boolean start_tcpip_task()
     {
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(NAME + ".TcpIpTask")
         {
             @Override
             public Object construct()
@@ -269,7 +269,7 @@ public class Communicator extends WorkerParent
                          
                          //System.out.println( "Packet gefunden" );
 
-                         SwingWorker work = new SwingWorker()
+                         SwingWorker work = new SwingWorker(NAME + ".UdpDispatch")
                          {
                           
                               @Override
@@ -350,7 +350,7 @@ public class Communicator extends WorkerParent
                  final Socket s = tcp_s.accept();
                  s.setTcpNoDelay( true );
                                   
-                 SwingWorker work = new SwingWorker()
+                 SwingWorker work = new SwingWorker(NAME + ".TcpIpDispatch")
                  {
 
                      @Override

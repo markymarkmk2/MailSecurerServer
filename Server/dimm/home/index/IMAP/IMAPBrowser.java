@@ -306,6 +306,12 @@ public class IMAPBrowser implements WorkerParentChild
          return EqualsBuilder.reflectionEquals( get_db_object(), db_object);
     }
 
+    @Override
+    public String get_name()
+    {
+        return "IMAPBrowser";
+    }
+
     
 
 }

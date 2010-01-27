@@ -763,7 +763,7 @@ public class TCPCallConnect extends WorkerParent
 
         start_tcpip_task();
 
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(getName())
         {
 
             @Override
@@ -809,7 +809,7 @@ public class TCPCallConnect extends WorkerParent
 
     boolean start_tcpip_task()
     {
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(getName() + ".TcpIpTask")
         {
 
             @Override
@@ -882,7 +882,7 @@ public class TCPCallConnect extends WorkerParent
                 final Socket s = tcp_s.accept();
                 s.setTcpNoDelay(true);
 
-                SwingWorker work = new SwingWorker()
+                SwingWorker work = new SwingWorker(getName() + ".TcpIpDispatcher")
                 {
 
                     @Override

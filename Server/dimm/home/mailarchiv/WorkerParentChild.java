@@ -18,6 +18,7 @@ public interface WorkerParentChild
     public boolean is_finished();
     public Object get_db_object();
     public String get_task_status_txt();
+    public String get_name();
 
     public boolean is_same_db_object( Object db_object );
 

@@ -24,4 +24,5 @@ public interface Vault
     void close() throws VaultException;
 
     public String get_password();
+    public String get_name();
 }

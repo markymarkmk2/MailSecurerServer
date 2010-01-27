@@ -69,6 +69,12 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     private boolean finished;
     private boolean started;
 
+    @Override
+    public String get_name()
+    {
+        return "MailBoxFetcher";
+    }
+
     public ImapFetcher get_imap_fetcher()
     {
         return imfetcher;

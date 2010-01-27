@@ -23,12 +23,10 @@ import java.util.ArrayList;
 
 public class AuthUser extends AbstractCommand
 {
-    
-   
+       
     public AuthUser()
     {
-        super("auth_user");
-        
+        super("auth_user");        
     }
 
     @Override
@@ -79,7 +77,6 @@ public class AuthUser extends AbstractCommand
         {
             answer = "2: " + authException.getMessage();
         }
-
 
         return true;
     }        

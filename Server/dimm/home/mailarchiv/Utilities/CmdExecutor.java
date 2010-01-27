@@ -157,7 +157,7 @@ public class CmdExecutor
         out_line = "";
         err_line = "";
         
-        worker = new SwingWorker()
+        worker = new SwingWorker("CmdExecutor")
         {
             public Object construct()
             {

@@ -548,7 +548,7 @@ MySQL root /eKmIklz37T
     {
         if (!is_started)
         {
-            SwingWorker worker = new SwingWorker()
+            SwingWorker worker = new SwingWorker(NAME)
             {
                 @Override
                 public Object construct()

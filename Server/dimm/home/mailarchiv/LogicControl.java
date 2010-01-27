@@ -39,6 +39,7 @@ import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
+import home.shared.license.LicenseTicket;
 import home.shared.mail.RFCGenericMail;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
@@ -212,7 +213,7 @@ public class LogicControl
     public LogicControl()
     {
         Main.control = this;
-        lic_checker = new LicenseChecker( Main.APPNAME + ".license",  Main.license_interface, Main.create_licensefile );
+        lic_checker = new LicenseChecker(  Main.create_licensefile );
 
         mandanten_list = new ArrayList<MandantContext>();
         worker_list = new ArrayList<WorkerParent>();
@@ -324,13 +325,22 @@ public class LogicControl
         return null;
     }
 
-    public boolean is_licensed()
+    public boolean is_licensed( String product)
     {
-        return lic_checker.is_licensed();
+        return lic_checker.is_licensed(LicenseTicket.PRODUCT_BASE);
     }
-    public boolean check_licensed()
+
+   
+    public boolean check_license()
     {
-        return lic_checker.check_licensed();
+        lic_checker.read_licenses();
+
+        boolean licensed = lic_checker.is_licensed(LicenseTicket.PRODUCT_BASE);
+        if (!licensed)
+        {
+             LogManager.err_log(Main.Txt("No_valid_license_found!!!"));
+        }
+        return licensed;
     }
 
     public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background, boolean delete_afterwards, boolean encoded ) throws ArchiveMsgException, VaultException, IndexException
@@ -689,6 +699,8 @@ public class LogicControl
 
     public void initialize()
     {
+        check_license();
+
        // READ PARAM DB
         read_param_db();
 
@@ -731,7 +743,6 @@ public class LogicControl
             }
         }
 
-        lic_checker.check_licensed();
 
         for (int i = 0; i < worker_list.size(); i++)
         {
@@ -905,12 +916,15 @@ public class LogicControl
     }
 
     // MAIN WORK LOOP
+    private static final int LIC_UMAP_UPDATE_CYCLE = 5*60*1000;
     void run()
     {
         long last_date_set = 0;
         long last_ping = 0;
         boolean last_start_written = false;
         long started = System.currentTimeMillis();
+        long last_lic_update = 0;
+
 
         final int MIN_VALID_RUN_TIME = 10000;  // AFTER THIS TIME WE WRITE OUR VALID TIMESTAMP
 
@@ -943,7 +957,7 @@ public class LogicControl
                               
             }
 
-
+            // 1 SECOND HARTBEAT LOOP, NOT ACCURATE!!!
             while (!shutdown)
             {
                 sleep(1000);
@@ -981,6 +995,13 @@ public class LogicControl
                     last_ping = now;
                 }
 
+                // ALLE 5 MINUTEN LICENSE USERMAP UPDATEN
+                if ((now - last_lic_update) > LIC_UMAP_UPDATE_CYCLE)
+                {
+                    lic_checker.do_idle();
+                    last_lic_update = now;
+                }
+
                 if (!last_start_written)
                 {
                     if ((now - started) > MIN_VALID_RUN_TIME)
@@ -1014,6 +1035,10 @@ public class LogicControl
         {
             ex.printStackTrace();
         }
+        
+        // WRITE USERMAP
+        lic_checker.do_idle();
+
         LogManager.info_msg("Waiting for workers...");
 
         wait_for_shutdown(10);
@@ -1473,4 +1498,5 @@ public class LogicControl
     {
         return shutdown;
     }
+
 }

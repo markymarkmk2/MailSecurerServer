@@ -789,4 +789,10 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public String get_name()
+    {
+        return "DBXImporter";
+    }
+
 }

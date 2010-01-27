@@ -281,4 +281,10 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
         return EqualsBuilder.reflectionEquals( smtp_db_entry, db_object);
     }
 
+    @Override
+    public String get_name()
+    {
+        return "SMTPImporter";
+    }
+
 }

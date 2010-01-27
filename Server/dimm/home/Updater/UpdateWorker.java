@@ -271,7 +271,7 @@ public class UpdateWorker extends WorkerParent
             return;
         
         
-        update_worker = new SwingWorker()
+        update_worker = new SwingWorker(NAME + ".CheckUpdates")
         {
 
 
@@ -449,7 +449,7 @@ public class UpdateWorker extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        SwingWorker worker = new SwingWorker()
+        SwingWorker worker = new SwingWorker(NAME)
         {
             @Override
             public Object construct()

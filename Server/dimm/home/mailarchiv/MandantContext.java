@@ -209,6 +209,19 @@ public class MandantContext
     }
     private void delete_vault_list()
     {
+        for (Iterator<Vault> it = vaultArray.iterator(); it.hasNext();)
+        {
+            Vault vault = it.next();
+            try
+            {
+                vault.flush();
+                vault.close();
+            }
+            catch (Exception indexException)
+            {
+                LogManager.err_log(Main.Txt("Error while closing vault " + vault.get_name()), indexException);
+            }
+        }
         getVaultArray().clear();
     }
 

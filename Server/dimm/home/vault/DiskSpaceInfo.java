@@ -49,6 +49,14 @@ public class DiskSpaceInfo
     {
         this.capacity = capacity;
     }
+    public void incCapacity( long capacity )
+    {
+        this.capacity += capacity;
+    }
+    public void decCapacity( long capacity )
+    {
+        this.capacity -= capacity;
+    }
 
     /**
      * @return the firstEntryTS

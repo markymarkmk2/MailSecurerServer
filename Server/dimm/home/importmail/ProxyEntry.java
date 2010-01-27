@@ -133,6 +133,12 @@ public class ProxyEntry implements WorkerParentChild
         ss = _ss;
     }
 
+    @Override
+    public String get_name()
+    {
+        return "ProxyEntry";
+    }
+
 
 
 }

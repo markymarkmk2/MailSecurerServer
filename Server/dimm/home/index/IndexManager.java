@@ -151,8 +151,6 @@ class MyMimetype
     }
 }
 
-
-
 /**
  *
  * @author mw
@@ -172,13 +170,10 @@ public class IndexManager extends WorkerParent
     private SwingWorker idle_worker;
     ArrayList<String> email_headers;
     ArrayList<String> allowed_headers;
-    ArrayList <String> allowed_domains;
+    ArrayList<String> allowed_domains;
     GroupEntry acct_exclude_list;
-
-    ArrayList <IndexSearcher> hash_searcher_list;
+    ArrayList<IndexSearcher> hash_searcher_list;
     private boolean is_started;
-
-
 
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -232,14 +227,14 @@ public class IndexManager extends WorkerParent
             String[] domain_list = acct.getDomainlist().split(CS_Constants.TEXTLIST_DELIM);
             for (int i = 0; i < domain_list.length; i++)
             {
-                allowed_domains.add( domain_list[i].toLowerCase().trim() );
+                allowed_domains.add(domain_list[i].toLowerCase().trim());
             }
 
             // EVAL EXCLUDE EXPRESSIONS AND ADD AS OR-ENTRY TO LIST
             String excl_data = acct.getExcludefilter();
             if (excl_data != null && excl_data.length() > 0)
             {
-                list.add( new GroupEntry( FilterMatcher.get_filter_list(excl_data, /*compr*/ true), /*neg*/false, /*is_or*/true) );
+                list.add(new GroupEntry(FilterMatcher.get_filter_list(excl_data, /*compr*/ true), /*neg*/ false, /*is_or*/ true));
             }
         }
         if (list.size() > 0)
@@ -253,9 +248,8 @@ public class IndexManager extends WorkerParent
         return allowed_domains;
     }
 
-
     // OPEN AND IF NOT EXISTS, CREATE, SO OPEN ALWAYS SUCCEEDS
-    public IndexWriter open_index( String path, String language) throws IOException
+    public IndexWriter open_index( String path, String language ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
@@ -295,7 +289,7 @@ public class IndexManager extends WorkerParent
         FSDirectory dir = FSDirectory.getDirectory(path);
 
         Analyzer analyzer = create_analyzer(language, true);
-       
+
 
         if (IndexWriter.isLocked(dir))
         {
@@ -404,6 +398,7 @@ public class IndexManager extends WorkerParent
 
         return mime_msg;
     }
+
     public boolean matches_domain( AccountConnector acct, final RFCMimeMail mime_msg )
     {
         final ArrayList<RFCMailAddress> mail_list = mime_msg.getEmail_list();
@@ -421,11 +416,15 @@ public class IndexManager extends WorkerParent
             }
         }
         if (!matches_domain)
+        {
             return false;
+        }
 
         // THEN TEST FOR EXCLUDES
         if (acct_exclude_list == null)
+        {
             return true;
+        }
 
         // BUILD A VAL PROVIDER FOR THIS MESSAGE
         FilterValProvider acct_excl_provider = new FilterValProvider()
@@ -434,14 +433,14 @@ public class IndexManager extends WorkerParent
             @Override
             public ArrayList<String> get_val_vor_name( String name )
             {
-                ArrayList<String>list = new ArrayList<String>();
+                ArrayList<String> list = new ArrayList<String>();
                 if (name.compareTo(CS_Constants.ACCT_FF_MAIL) == 0)
                 {
                     // BUILD A LIST OF ALL MAIL-ADDRESSES
                     for (int i = 0; i < mail_list.size(); i++)
                     {
                         RFCMailAddress mla = mail_list.get(i);
-                        list.add( mla.get_mail() );
+                        list.add(mla.get_mail());
                     }
                 }
                 else if (name.compareTo(CS_Constants.ACCT_FF_MAILHEADER) == 0)
@@ -449,27 +448,35 @@ public class IndexManager extends WorkerParent
                     // BUILD A LIST OF ALL MAILHEADERS EXCEPT SUBJECT AND MAIL
                     try
                     {
-                    Enumeration en = mime_msg.getMsg().getAllHeaders();
-                    while (en.hasMoreElements())
-                    {
-                        Object h = en.nextElement();
-                        if (h instanceof Header)
+                        Enumeration en = mime_msg.getMsg().getAllHeaders();
+                        while (en.hasMoreElements())
                         {
-                            Header hdr = (Header)h;
-                            if (hdr.getName().compareToIgnoreCase("Subject") == 0)
-                                continue;
-                            if (hdr.getName().compareToIgnoreCase("To") == 0)
-                                continue;
-                            if (hdr.getName().compareToIgnoreCase("From") == 0)
-                                continue;
-                            if (hdr.getName().compareToIgnoreCase("CC") == 0)
-                                continue;
+                            Object h = en.nextElement();
+                            if (h instanceof Header)
+                            {
+                                Header hdr = (Header) h;
+                                if (hdr.getName().compareToIgnoreCase("Subject") == 0)
+                                {
+                                    continue;
+                                }
+                                if (hdr.getName().compareToIgnoreCase("To") == 0)
+                                {
+                                    continue;
+                                }
+                                if (hdr.getName().compareToIgnoreCase("From") == 0)
+                                {
+                                    continue;
+                                }
+                                if (hdr.getName().compareToIgnoreCase("CC") == 0)
+                                {
+                                    continue;
+                                }
 
-                            list.add(hdr.getValue());
+                                list.add(hdr.getValue());
+                            }
                         }
                     }
-                    }
-                    catch (Exception exc )
+                    catch (Exception exc)
                     {
                         LogManager.err_log_warn("Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
                     }
@@ -493,20 +500,18 @@ public class IndexManager extends WorkerParent
         // NOW FOR THE SIMPLE TASK: IS THIS MAIL ON THE EXCLUDELIST?
         FilterMatcher fm = new FilterMatcher(acct_exclude_list.getChildren(), acct_excl_provider);
         if (fm.eval())
+        {
             return false;
+        }
 
         return true;
     }
-
 
     // RETURN FALSE IF MAIL SHOULD BE DELETED
     public boolean index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
     {
         String subject = mime_msg.getMsg().getSubject();
-        if (mime_msg.getMsg().getFrom() == null &&
-                mime_msg.getMsg().getHeader("To") == null &&
-                mime_msg.getMsg().getHeader("CC") == null &&
-                subject == null)
+        if (mime_msg.getEmail_list().size() == 0)
         {
             LogManager.err_log_fatal("Found bogus mail (no from / to / cc) " + unique_id + ": skipping");
             return false;
@@ -518,7 +523,7 @@ public class IndexManager extends WorkerParent
         AccountConnector acct_match = null;
         for (AccountConnector acct : m_ctx.getMandant().getAccountConnectors())
         {
-            if (matches_domain( acct, mime_msg ))
+            if (matches_domain(acct, mime_msg))
             {
                 acct_match = acct;
                 break;
@@ -527,16 +532,16 @@ public class IndexManager extends WorkerParent
         // IF WE DO NOT FIND A MATCHING ACCOUNT, WE DELETE MAIL
         if (acct_match == null)
         {
-            delete_mail_before_index( m_ctx, unique_id, da_id, ds_id );
+            delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
             return false;
         }
 
         ArrayList<String> domain_list = m_ctx.get_index_manager().getAllowed_domains();
-        boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded( domain_list, mime_msg.getEmail_list() );
+        boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded(domain_list, mime_msg.getEmail_list());
         if (exceeded)
         {
             Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded"));
-            delete_mail_before_index( m_ctx, unique_id, da_id, ds_id );
+            delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
             return false;
         }
 
@@ -552,7 +557,7 @@ public class IndexManager extends WorkerParent
         doc.add(new Field(CS_Constants.FLD_SIZE, to_hex_field(mail_file.get_length()), Field.Store.YES, Field.Index.NOT_ANALYZED));
 
         // SUBJECT IS STORED AND ANALYZED
-       
+
         if (subject == null)
         {
             subject = "";
@@ -568,7 +573,7 @@ public class IndexManager extends WorkerParent
         if (d == null)
         {
             d = mail_file.getDate();
-            LogManager.log(Level.WARNING, "Mail " + unique_id + " has no Sent- or ReceivedDate" );
+            LogManager.log(Level.WARNING, "Mail " + unique_id + " has no Sent- or ReceivedDate");
         }
 
         doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -629,7 +634,9 @@ public class IndexManager extends WorkerParent
                             }
                         }
                         if (!Charset.isSupported(cs))
+                        {
                             cs = "ISO-8859-1";
+                        }
                         content = baos.toString(cs);
                     }
                     catch (Exception iOException)
@@ -652,12 +659,12 @@ public class IndexManager extends WorkerParent
             }
             else if (content instanceof String)
             {
-                StringReader reader =  new StringReader(content.toString());
+                StringReader reader = new StringReader(content.toString());
                 doc.add(new Field(CS_Constants.FLD_BODY, reader));
             }
-            else if (content instanceof InputStream )
+            else if (content instanceof InputStream)
             {
-                Reader reader =  new InputStreamReader((InputStream)content);
+                Reader reader = new InputStreamReader((InputStream) content);
                 doc.add(new Field(CS_Constants.FLD_BODY, reader));
             }
             else
@@ -719,8 +726,10 @@ public class IndexManager extends WorkerParent
             if (idx >= 0)
             {
                 idx += 8;
-                while (" =\t".indexOf( ct.charAt(idx)) >= 0)
+                while (" =\t".indexOf(ct.charAt(idx)) >= 0)
+                {
                     idx++;
+                }
 
                 String cs = ct.substring(idx);
 
@@ -728,15 +737,21 @@ public class IndexManager extends WorkerParent
                 if (parts.length > 0)
                 {
                     String ret = parts[0];
-                    StringTokenizer st = new StringTokenizer( ret, "\"\'[](){}");
+                    StringTokenizer st = new StringTokenizer(ret, "\"\'[](){}");
                     if (st.hasMoreElements())
+                    {
                         return st.nextToken();
-                    else return ret;
+                    }
+                    else
+                    {
+                        return ret;
+                    }
                 }
             }
         }
         return null;
     }
+
     private String get_charset( Part p )
     {
         try
@@ -766,17 +781,17 @@ public class IndexManager extends WorkerParent
 
     void add_email_field( Document doc, String name, String val )
     {
-        StringTokenizer st = new StringTokenizer( val, ", <>\"\t\r\n;" );
+        StringTokenizer st = new StringTokenizer(val, ", <>\"\t\r\n;");
         while (st.hasMoreTokens())
         {
             String tok = st.nextToken();
             if (tok.indexOf('@') > 0)
             {
-                doc.add( new Field( name,tok, Field.Store.YES, Field.Index.NOT_ANALYZED ) );
+                doc.add(new Field(name, tok, Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
         }
     }
-    
+
     protected void index_headers( Document doc, String uid, Enumeration mail_header_list )
     {
         while (mail_header_list.hasMoreElements())
@@ -786,45 +801,65 @@ public class IndexManager extends WorkerParent
             {
                 Header ih = (Header) h;
                 String name = ih.getName();
+                String value = ih.getValue();
 
 
                 boolean found_eh = false;
                 boolean found_ah = false;
 
-                // USER FIELDNAME OF ALLOWED HGEADERLIST, THEY ARE CASE SENSITIVE
+                // LOOK FOR EMAILHEADERS IN OUR LIST (From To CC BCC)
                 String header_field_name = null;
                 for (int i = 0; i < email_headers.size(); i++)
                 {
                     String eh = email_headers.get(i);
                     if (eh.compareToIgnoreCase(name) == 0)
                     {
+                        // SKIP EMPTY "TO"
+                        if (eh.equals(CS_Constants.FLD_TO) && value.indexOf("undisclosed") > -1 && value.indexOf("recepients") > -1)
+                        {
+                            continue;
+                        }
+
                         header_field_name = eh;
                         found_eh = true;
                         break;
                     }
                 }
-                for (int i = 0; i < allowed_headers.size(); i++)
+
+                // LOOK FOR USER FIELDNAME, THEY ARE CASE INSENSITIVE
+                if (!found_eh)
                 {
-                    String ah = allowed_headers.get(i);
-                    if (ah.compareToIgnoreCase(name) == 0)
+                    for (int i = 0; i < allowed_headers.size(); i++)
                     {
-                        header_field_name = ah;
-                        found_ah = true;
-                        break;
+                        String ah = allowed_headers.get(i);
+                        if (ah.compareToIgnoreCase(name) == 0)
+                        {
+                            header_field_name = ah;
+                            found_ah = true;
+                            break;
+                        }
                     }
                 }
 
-                // TODO WE HAVE TO SET FOR EACH HEADER, IF WE WANT TO ANALYZE , STORE OR BOTH
-                // WE MAX NEED 2 FIELDS FOR ONE HEADER
-
-                // WE ADD CHARSET
-                if (name.compareToIgnoreCase(CS_Constants.FLD_CONTENT_TYPE) == 0)
+                // SPECIAL: STORE ENVELOPE-TO AS TO
+                if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0)
                 {
-                    String cs = get_charset_from_content_type( ih.getValue() );
+                    doc.add(new Field(CS_Constants.FLD_TO, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
+                    LogManager.log(Level.FINEST, "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
+
+                    // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
+                    doc.add(new Field(CS_Constants.FLD_TO + "REG", ih.getValue(), Field.Store.NO, Field.Index.ANALYZED));
+                }
+                // WE WANT TO ANALYZE , STORE OR BOTH
+                // WE NEED 2 FIELDS FOR ONE HEADER, ONE WITH EMAIL ANALYZER, ONE WITH REGULAR ANALYZER
+                // WE ADD CHARSET
+                else if (name.compareToIgnoreCase(CS_Constants.FLD_CONTENT_TYPE) == 0)
+                {
+                    String cs = get_charset_from_content_type(ih.getValue());
                     if (cs != null)
                     {
                         LogManager.log(Level.FINEST, "Mail " + uid + " detected charset " + cs);
-                        doc.add( new Field( CS_Constants.FLD_CHARSET,cs, Field.Store.YES, Field.Index.NOT_ANALYZED ) );                        
+                        doc.add(new Field(CS_Constants.FLD_CHARSET, cs, Field.Store.YES, Field.Index.NOT_ANALYZED));
                     }
                 }
                 else if (found_ah || found_eh)
@@ -867,7 +902,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception messagingException)
         {
-            LogManager.log(Level.WARNING, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage() );
+            LogManager.log(Level.WARNING, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
         }
 
     }
@@ -915,7 +950,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception messagingException)
         {
-            LogManager.log(Level.WARNING, "Error in index_part_content for " + uid + ": " + messagingException.getMessage() );
+            LogManager.log(Level.WARNING, "Error in index_part_content for " + uid + ": " + messagingException.getMessage());
         }
 
     }
@@ -929,16 +964,18 @@ public class IndexManager extends WorkerParent
         Charset charset = null;
 
         // GET CHARSET FROM PART OR DOC OR DEFAULT
-        String cs = cs = get_charset( p );
+        String cs = cs = get_charset(p);
         String doc_cs = doc.get(CS_Constants.FLD_CHARSET);
         if (cs == null)
+        {
             cs = doc_cs;
+        }
         else
         {
             if (doc_cs == null)
             {
                 // WE DETECTED CS BUT DOC HAS NOT ALREADY, WAS MISSING IN HEADER
-                doc.doc.add( new Field( CS_Constants.FLD_CHARSET, cs, Field.Store.YES, Field.Index.NOT_ANALYZED ));
+                doc.doc.add(new Field(CS_Constants.FLD_CHARSET, cs, Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
         }
         if (cs != null)
@@ -949,13 +986,15 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception e)
             {
-                SortedMap<String,Charset>map = Charset.availableCharsets();
-                LogManager.log(Level.WARNING, "Cannot retrieve characterset" + " " + cs.toUpperCase() + ": " + e.getLocalizedMessage() );
+                SortedMap<String, Charset> map = Charset.availableCharsets();
+                LogManager.log(Level.WARNING, "Cannot retrieve characterset" + " " + cs.toUpperCase() + ": " + e.getLocalizedMessage());
             }
         }
 
         if (charset == null)
+        {
             charset = utf8_charset;
+        }
 
         MyMimetype mt = new MyMimetype(mimetype);
 
@@ -1027,7 +1066,9 @@ public class IndexManager extends WorkerParent
                         Reader detectReader = extractor.getText(p.getInputStream(), doc, mimetype, charset);
                         String[] languages = ((MimePart) p).getContentLanguage();
                         if (languages != null && languages.length > 0)
+                        {
                             add_lang_field(languages, doc.doc, detectReader);
+                        }
                     }
                 }
             }
@@ -1312,7 +1353,7 @@ public class IndexManager extends WorkerParent
         if (!is_started)
         {
 
-            idle_worker = new SwingWorker()
+            idle_worker = new SwingWorker(getName() + ".Idle")
             {
 
                 @Override
@@ -1553,7 +1594,7 @@ public class IndexManager extends WorkerParent
 
         // return false;
         boolean ret = false;
-        String hash = new String(Base64.encodeBase64( msg.get_hash() ));
+        String hash = new String(Base64.encodeBase64(msg.get_hash()));
 
 
         // BUILD SEARCHABLE ARRAY
@@ -1564,7 +1605,7 @@ public class IndexManager extends WorkerParent
         }
 
         // SORT BY DATE REVERSE
-       // Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
+        // Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
 
         try
         {
@@ -1583,10 +1624,10 @@ public class IndexManager extends WorkerParent
             {
                 // FOUND SAME MAIL
                 Document doc = pms.doc(tdocs.scoreDocs[0].doc);
-                int doc_ds_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DS);
-                int doc_da_id = IndexManager.doc_get_int( doc, CS_Constants.FLD_DA);
+                int doc_ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
+                int doc_da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
                 String doc_hash = doc.get(CS_Constants.FLD_HASH);
-                
+
                 DiskSpaceHandler dsh = dv.get_dsh(doc_ds_id);
 
                 if (dsh.getDs().getId() == doc_ds_id)
@@ -1673,6 +1714,7 @@ public class IndexManager extends WorkerParent
         }
         return false;
     }
+
     public void close_hash_searcher_list()
     {
         for (int i = 0; i < hash_searcher_list.size(); i++)
@@ -1692,7 +1734,7 @@ public class IndexManager extends WorkerParent
 
     public void create_hash_searcher_list()
     {
-        
+
         // GO THROUGH ALL DISKSPACES OF THIS VAULT
         ArrayList<DiskSpaceHandler> dsh_list = new ArrayList<DiskSpaceHandler>();
 
@@ -1704,7 +1746,7 @@ public class IndexManager extends WorkerParent
             Vault vault = vault_array.get(i);
             if (vault instanceof DiskVault)
             {
-                DiskVault dv = (DiskVault)vault;
+                DiskVault dv = (DiskVault) vault;
                 for (int j = 0; j < dv.get_dsh_list().size(); j++)
                 {
                     DiskSpaceHandler dsh = dv.get_dsh_list().get(j);
@@ -1743,8 +1785,6 @@ public class IndexManager extends WorkerParent
         hash_searcher_list = searcher_list;
     }
 
-
-
     private void delete_mail_before_index( MandantContext m_ctx, String unique_id, int da_id, int ds_id )
     {
         DiskSpaceHandler dsh = m_ctx.get_dsh(ds_id);
@@ -1759,6 +1799,5 @@ public class IndexManager extends WorkerParent
             LogManager.err_log("Cannot delete mail " + unique_id + ": ", vaultException);
         }
     }
-
 }
 

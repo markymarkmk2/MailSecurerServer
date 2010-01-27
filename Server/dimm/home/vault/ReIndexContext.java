@@ -178,7 +178,7 @@ public class ReIndexContext
         }
 
         busy = true;
-        sw = new SwingWorker()
+        sw = new SwingWorker("ReIndex")
         {
 
             @Override

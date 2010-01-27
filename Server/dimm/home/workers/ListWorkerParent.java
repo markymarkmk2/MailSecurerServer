@@ -10,6 +10,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.license.LicenseTicket;
 import java.util.ArrayList;
 
 /**
@@ -89,7 +90,7 @@ public class ListWorkerParent extends WorkerParent
     public boolean start_run_loop()
     {
         Main.debug_msg(1, getName() + " has " + child_list.size() + " task(s)");
-        if (!Main.get_control().is_licensed())
+        if (!Main.get_control().is_licensed(LicenseTicket.PRODUCT_BASE))
         {
             this.setStatusTxt("Not licensed");
             this.setGoodState(false);
@@ -105,7 +106,7 @@ public class ListWorkerParent extends WorkerParent
                     continue;
                 }
                 final WorkerParentChild child = child_list.get(i);
-                SwingWorker worker = new SwingWorker()
+                SwingWorker worker = new SwingWorker(child.get_name())
                 {
 
                     @Override
@@ -120,7 +121,7 @@ public class ListWorkerParent extends WorkerParent
         }
         if (!is_started)
         {
-            idle_worker = new SwingWorker()
+            idle_worker = new SwingWorker(getName())
             {
 
                 @Override

@@ -529,5 +529,11 @@ public class MilterImporter implements WorkerParentChild
 
     }
 
+    @Override
+    public String get_name()
+    {
+        return "MilterImporter";
+    }
+
 }
 

@@ -89,7 +89,7 @@ public class MBoxImportServer extends WorkerParent
         if (is_started)
             return true;
 
-        idle_worker = new SwingWorker()
+        idle_worker = new SwingWorker(NAME)
         {
 
             @Override

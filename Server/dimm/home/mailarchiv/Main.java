@@ -63,6 +63,7 @@ public class Main
     public static final String PROGNAME = "MailArchiv.jar";
     public static final String PROGNAME_LASTVALID = "MailArchiv.jar_last_valid";
     public static final String UPDATE_PATH = "update/";
+    public static final String LICENSE_PATH = "license/";
     public static final String RFC_PATH = "rfc_temp/";
     public static final String SERVER_UPDATEWORKER_PATH = "/mailsecurer/update/";
     
@@ -86,7 +87,6 @@ public class Main
     static LogicControl control;
     
     public static boolean create_licensefile = false;
-    public static String license_interface = null;
     public static String ws_ip = "127.0.0.1";
     public static int ws_port = 8050;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
@@ -127,7 +127,11 @@ public class Main
             f = new File( RFC_PATH );
             if (!f.exists())
                 f.mkdirs();
-            
+
+            f = new File( LICENSE_PATH );
+            if (!f.exists())
+                f.mkdirs();
+
             f = new File( DATABASEPATH );
             if (!f.exists())
                 f.mkdirs();
@@ -179,11 +183,7 @@ public class Main
             if (args[i].compareTo("-L") == 0)
                 create_licensefile = true;            
             
-            if (args[i].compareTo("-e") == 0 && args[i + 1] != null)
-            {
-                license_interface = args[i + 1];
-                info_msg("Using interface license_interface for licensing");
-            }
+           
             if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
             {
                 ws_ip = args[i + 1];

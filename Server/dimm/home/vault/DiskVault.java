@@ -388,6 +388,12 @@ public class DiskVault implements Vault, StatusHandler
         return password;
     }
 
+    @Override
+    public String get_name()
+    {
+        return disk_archive.getName();
+    }
+
 
 
 }
