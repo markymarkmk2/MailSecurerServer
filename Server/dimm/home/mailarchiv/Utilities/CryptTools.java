@@ -4,7 +4,6 @@
  */
 package dimm.home.mailarchiv.Utilities;
 
-import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -167,9 +166,9 @@ public class CryptTools
 
     public static byte[] crypt( byte[] data, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = Main.prefs.get_KeyPBEIteration();
-        byte[] salt = Main.prefs.get_KeyPBESalt();
-        String algorithm = Main.prefs.get_KeyAlgorithm();
+        int iterationCount = Main.get_prefs().get_KeyPBEIteration();
+        byte[] salt = Main.get_prefs().get_KeyPBESalt();
+        String algorithm = Main.get_prefs().get_KeyAlgorithm();
 
         try
         {
@@ -242,7 +241,7 @@ public class CryptTools
     }
     public static String crypt_internal( String str, ENC_MODE encrypt )
     {
-        String passPhrase = Main.prefs.get_InternalPassPhrase();
+        String passPhrase = Main.get_prefs().get_InternalPassPhrase();
         try
         {
             byte[] src;
@@ -279,8 +278,8 @@ public class CryptTools
 
     private OutputStream create_crypt_AES_outstream( MandantContext context, OutputStream os, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = Main.prefs.get_KeyPBEIteration();
-        byte[] salt = Main.prefs.get_KeyPBESalt();
+        int iterationCount = Main.get_prefs().get_KeyPBEIteration();
+        byte[] salt = Main.get_prefs().get_KeyPBESalt();
 //        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
@@ -327,8 +326,8 @@ public class CryptTools
     
     private InputStream create_crypt_AES_instream( MandantContext context, InputStream is, String passPhrase, ENC_MODE encrypt )
     {
-        int iterationCount = Main.prefs.get_KeyPBEIteration();
-        byte[] salt = Main.prefs.get_KeyPBESalt();
+        int iterationCount = Main.get_prefs().get_KeyPBEIteration();
+        byte[] salt = Main.get_prefs().get_KeyPBESalt();
 //        String algorithm = context.getPrefs().get_KeyAlgorithm();
 
         try
@@ -389,13 +388,13 @@ public class CryptTools
             String TEST = "1234567890";
 
             // PREFS FOR ARGS, ARGS HABEN PRIO
-            Main.prefs = new GeneralPreferences();
+            Main.create_prefs();
             Security.addProvider(new BouncyCastleProvider() );
 
             MandantContext ctx = instance.get_mandant_by_id(1);
 
             RFCFileMail rfc = new RFCFileMail(new File(name), true);
-            rfc.set_encryption( ctx.getPrefs().get_password(), Main.prefs.get_KeyPBEIteration(), Main.prefs.get_KeyPBESalt() );
+            rfc.set_encryption( ctx.getPrefs().get_password(), Main.get_prefs().get_KeyPBEIteration(), Main.get_prefs().get_KeyPBESalt() );
             OutputStream os = rfc.open_outputstream();
 
             os.write(TEST.getBytes());

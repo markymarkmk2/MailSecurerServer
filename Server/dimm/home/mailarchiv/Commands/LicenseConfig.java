@@ -12,7 +12,10 @@ package dimm.home.mailarchiv.Commands;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ZipUtilities;
+import home.shared.license.HWIDLicenseTicket;
 import home.shared.license.LicenseTicket;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -59,8 +62,34 @@ public class LicenseConfig extends AbstractCommand
             ArrayList list = Main.get_control().get_license_checker().get_ticket_list();
             XStream xs = new XStream();
             String ticket_str = xs.toXML(list);
-            answer = "0: TK:" + ticket_str ;
+            ticket_str = ZipUtilities.compress(ticket_str);
+
+            answer = "0: TK:\"" + ticket_str + "\"";
             return true;
+        }
+        // GET ALL LICENSES
+        if ( command.compareTo("DEL") == 0)
+        {
+            String product = pt.GetString("PRD:");
+            Main.get_control().get_license_checker().delete_license( product );
+            Main.get_control().get_license_checker().read_licenses();
+            answer = "0: ";
+            return true;
+        }
+        // GET HWID
+        if ( command.compareTo("HWID") == 0)
+        {
+            try
+            {
+                String hwid = HWIDLicenseTicket.generate_hwid();
+                answer = "0: HWID:\"" + hwid + "\"";
+                return true;
+            }
+            catch (IOException iOException)
+            {
+                answer = "1: " + iOException.getLocalizedMessage();
+                return true;
+            }
         }
 
         // SET A SPECIFIC LICENSE
@@ -68,6 +97,8 @@ public class LicenseConfig extends AbstractCommand
         {
             String product = pt.GetString("PRD:");
             String ticket_str = pt.GetString( "TK:" );
+            ticket_str = ZipUtilities.uncompress(ticket_str);
+
             XStream xs = new XStream();
             Object o = xs.fromXML( ticket_str);
             if (o instanceof LicenseTicket)

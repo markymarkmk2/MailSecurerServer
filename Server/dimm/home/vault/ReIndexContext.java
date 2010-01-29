@@ -253,8 +253,8 @@ public class ReIndexContext
             DiskSpaceHandler index_dsh = reIndexDSHEntry.getIndex_dsh();
 
             String password = context.get_vault_by_da_id(da_id).get_password();
-            int iteration = Main.prefs.get_KeyPBEIteration();
-            byte[] salt = Main.prefs.get_KeyPBESalt();
+            int iteration = Main.get_prefs().get_KeyPBEIteration();
+            byte[] salt = Main.get_prefs().get_KeyPBESalt();
 
 
             data_dsh.lock_for_rebuild();

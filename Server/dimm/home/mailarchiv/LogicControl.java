@@ -213,7 +213,7 @@ public class LogicControl
     public LogicControl()
     {
         Main.control = this;
-        lic_checker = new LicenseChecker(  Main.create_licensefile );
+        lic_checker = new LicenseChecker( );
 
         mandanten_list = new ArrayList<MandantContext>();
         worker_list = new ArrayList<WorkerParent>();
@@ -786,7 +786,7 @@ public class LogicControl
 
             for (int idx = 0; idx < ntp_server_list.length; idx++)
             {
-                String rdate_cmd = Main.prefs.get_prop(GeneralPreferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
+                String rdate_cmd = Main.get_prop(GeneralPreferences.RDATE_COMMAND, "ntpdate " + ntp_server_list[idx] + " && hwclock --directisa -w");
                 String[] cmd =
                 {
                     rdate_cmd

@@ -137,15 +137,8 @@ public class ListUsers extends AbstractCommand
                 XStream xs = new XStream();
                 String xml = xs.toXML(result_list);
                 String cxml = null;
-                try
-                {
-                    cxml = ZipUtilities.compress(xml);
-                }
-                catch (IOException iOException)
-                {
-                    answer = "3: error while compressing "+ iOException.getMessage();
-                    return true;
-                }
+                cxml = ZipUtilities.compress(xml);
+                
                 answer = "0: " + cxml;
                 return true;
             }

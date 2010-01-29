@@ -78,6 +78,8 @@ public class LicenseChecker
     private long MAX_STAY_VALID_MS;
     private long DFLT_MAX_STAY_VALID_DAYS = 42;  // 6 WEEKS
 
+    private static long DEMO_TICKET_DAYS = 30;  // 30 DAYS DEMO AT STARTUP
+
     ArrayList<ValidTicketContainer> ticket_list;
     public static final String USERMAP_NAME = "umap.xml";
     public static final String LICFILE_NAME = "license.xml";
@@ -86,19 +88,40 @@ public class LicenseChecker
     final String umap_mtx = new String("umap_lock");
     final String lic_mtx = new String("lic_lock");
 
-    public LicenseChecker(boolean create_lic )
-    {
-       // lic_file_name = file_name;
-
-
+    public LicenseChecker()
+    {       
         ticket_list = new ArrayList<ValidTicketContainer>();
+        
         MAX_STAY_VALID_MS = Main.get_long_prop(GeneralPreferences.MAX_STAY_VALID_DAYS, DFLT_MAX_STAY_VALID_DAYS) * 24 * 3600 * 1000;
-       
+
+        check_create_demo_ticket();
+
+        read_user_license_map();
+    }
+
+    private void check_create_demo_ticket()
+    {
+       // TRICK:
+        // INSTALLER CREATES Demo_license.xml, WE DETECT THIS FILE, DELETE IT AND CREATE A REAL DEMO LICENSE
+        //IN MailSecurer_license.xml
+        // SO THIS WILL HAPPEN ONLY ONCE AFTER INSTALLATION!
+        boolean create_lic = false;
+
+        if (!exists_ticket(LicenseTicket.PRODUCT_BASE) && exists_ticket("Demo"))
+        {
+            File trick_demo_file = get_lic_file("Demo");
+            // MAKE THIS ONE-SHOT, HEHE
+            trick_demo_file.delete();
+
+            create_lic = true;
+        }
+
         if (create_lic)
         {
             if (!exists_ticket(LicenseTicket.PRODUCT_BASE))
             {
-                Date exp = new Date(System.currentTimeMillis() + (long) 6 * 7 * 86400 * 1000);
+                // CREATE
+                Date exp = new Date(System.currentTimeMillis() + (long) DEMO_TICKET_DAYS * 86400 * 1000);
                 GregorianCalendar cal = new GregorianCalendar();
                 cal.setTime(exp);
                 DemoLicenseTicket ticket = new DemoLicenseTicket();
@@ -112,11 +135,10 @@ public class LicenseChecker
                 }
                 catch (Exception iOException)
                 {
-                    LogManager.err_log("Cannot create demo ticket:", iOException);                    
+                    LogManager.err_log("Cannot create demo ticket:", iOException);
                 }
             }
         }
-        read_user_license_map();
     }
     
     public String get_first_hwid()
@@ -132,12 +154,7 @@ public class LicenseChecker
             return null;
         }
     }
-/*
-    public boolean is_licensed()
-    {
-        return _is_licensed;
-    }
-*/
+
 
     ValidTicketContainer get_ticket( String product )
     {
@@ -482,18 +499,26 @@ public class LicenseChecker
         return get_lic_file(ticket.getProduct());
     }
 
-    private void delete_license(String product)
+    public boolean delete_license(String product)
     {
-        synchronized(lic_mtx)
+        try
         {
-        File lic_path = get_lic_file(product);
-        lic_path.delete();
-        ValidTicketContainer vtck = get_ticket(product);
-        if (vtck != null)
+            synchronized (lic_mtx)
+            {
+                File lic_path = get_lic_file(product);
+                lic_path.delete();
+                ValidTicketContainer vtck = get_ticket(product);
+                if (vtck != null)
+                {
+                    ticket_list.remove(vtck);
+                    return true;
+                }
+            }
+        }
+        catch (Exception e)
         {
-            ticket_list.remove(vtck);
         }
-        }
+        return false;
     }
 
     private ValidTicketContainer read_license(String product)

@@ -575,7 +575,7 @@ public class DiskSpaceHandler
         if (enc_mode != RFCGenericMail.ENC_NONE)
         {
             Vault vault = m_ctx.get_vault_for_ds_idx(ds.getId());
-            mail.set_encryption(vault.get_password(), Main.prefs.get_KeyPBEIteration(), Main.prefs.get_KeyPBESalt());
+            mail.set_encryption(vault.get_password(), Main.get_prefs().get_KeyPBEIteration(), Main.get_prefs().get_KeyPBESalt());
         }
         return mail;
     }
@@ -902,8 +902,8 @@ public class DiskSpaceHandler
             else
             {
                 bos = new CryptAESOutputStream(os,
-                        Main.prefs.get_KeyPBEIteration(),
-                        Main.prefs.get_KeyPBESalt(), password);
+                        Main.get_prefs().get_KeyPBEIteration(),
+                        Main.get_prefs().get_KeyPBESalt(), password);
             }
 
 
@@ -960,8 +960,8 @@ public class DiskSpaceHandler
                 return mis;
 
             mis = new CryptAESInputStream(mis,
-                        Main.prefs.get_KeyPBEIteration(),
-                        Main.prefs.get_KeyPBESalt(), password);
+                        Main.get_prefs().get_KeyPBEIteration(),
+                        Main.get_prefs().get_KeyPBESalt(), password);
 
             //InputStream is = CryptTools.create_crypt_AES_instream(m_ctx, mis, password, encrypt);
 

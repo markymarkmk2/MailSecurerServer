@@ -34,6 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import dimm.home.mailarchiv.Utilities.Preferences;
 import java.util.zip.ZipOutputStream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -74,7 +75,7 @@ public class Main
     public static final String HTTPPWD = "123456";
     
     
-    public static GeneralPreferences prefs;
+    private static GeneralPreferences general_prefs;
     
     public static Main me;
 
@@ -95,6 +96,15 @@ public class Main
     static void print_system_property( String key )
     {
         LogManager.info_msg("Property " + key + ": " + System.getProperty(key) );
+    }
+
+    public static GeneralPreferences get_prefs()
+    {
+        return general_prefs;
+    }
+    public static void create_prefs()
+    {
+        general_prefs = new GeneralPreferences();
     }
 
     
@@ -171,7 +181,7 @@ public class Main
         SQLWorker.set_to_derby_db();
 
         // PREFS FOR ARGS, ARGS HABEN PRIO
-        prefs = new GeneralPreferences();
+        create_prefs();
         
         read_args( args );
         
@@ -414,7 +424,7 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            return Main.prefs.get_prop(pref_name);
+            return Main.general_prefs.get_prop(pref_name);
         }
         return null;
     }
@@ -422,7 +432,7 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            return Main.prefs.get_prop(pref_name + "_" + channel);
+            return Main.general_prefs.get_prop(pref_name + "_" + channel);
         }
         return null;
     }
@@ -431,7 +441,7 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            String ret = Main.prefs.get_prop(pref_name);
+            String ret = Main.general_prefs.get_prop(pref_name);
             if (ret != null)
             {
                 try
@@ -464,21 +474,21 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            Main.prefs.set_prop(pref_name, v);
+            Main.general_prefs.set_prop(pref_name, v);
         }
     }
     static public void set_prop( String pref_name, String v, int channel )
     {
         if (me != null)
         {
-            Main.prefs.set_prop(pref_name + "_" + channel, v);
+            Main.general_prefs.set_prop(pref_name + "_" + channel, v);
         }
     }
     static public void set_long_prop( String pref_name, long v )
     {
         if (me != null)
         {
-            Main.prefs.set_prop(pref_name, Long.toString(v));
+            Main.general_prefs.set_prop(pref_name, Long.toString(v));
         }
     }
     static public boolean get_bool_prop( String pref_name, boolean def )
@@ -488,7 +498,7 @@ System.out.println("Core POI came from " + path);
         
         if (me != null)
         {
-            String ret = Main.prefs.get_prop(pref_name);
+            String ret = Main.general_prefs.get_prop(pref_name);
             if (ret != null)
             {
                 if (bool_true.indexOf(ret.charAt(0)) >= 0)
@@ -510,7 +520,7 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            Main.prefs.set_prop(pref_name, v ? "1" : "0");
+            Main.general_prefs.set_prop(pref_name, v ? "1" : "0");
         }
     }
     
@@ -529,7 +539,7 @@ System.out.println("Core POI came from " + path);
 
     static public boolean write_prefs()
     {
-        return prefs.store_props();
+        return general_prefs.store_props();
     }
 
     public static boolean read_log(String file, long lines, StringBuffer sb)
@@ -624,7 +634,7 @@ System.out.println("Core POI came from " + path);
     {
         if (me != null)
         {
-            return Main.prefs.get_prop_list();
+            return Main.general_prefs.get_prop_list();
         }
         return null;
     }

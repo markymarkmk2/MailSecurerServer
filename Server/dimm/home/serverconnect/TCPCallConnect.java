@@ -30,6 +30,7 @@ import dimm.home.mailarchiv.Commands.TestLogin;
 import dimm.home.mailarchiv.Commands.UploadCertificate;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
+import dimm.home.mailarchiv.Commands.LicenseConfig;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
@@ -163,6 +164,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new ListUsers() );
         cmd_list.add( new ReIndex() );
         cmd_list.add( new FileSystemViewCommand() );
+        cmd_list.add( new LicenseConfig() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

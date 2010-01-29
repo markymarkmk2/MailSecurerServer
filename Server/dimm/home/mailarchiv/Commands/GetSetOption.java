@@ -81,6 +81,7 @@ public class GetSetOption extends AbstractCommand
         
         return ok;
     }
+
     
     boolean handle_option( String command, String name, String new_val)
     {
