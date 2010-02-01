@@ -9,6 +9,8 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.UserSSOEntry;
 import java.io.InputStream;
 import java.net.Socket;
 
@@ -21,10 +23,11 @@ public abstract class AbstractCommand
     String token;
     protected String answer;
     protected Socket sock;
+    protected UserSSOEntry sso_entry;
     
     
-    public static final String MISS_ARGS = "missing args";
-    public static final String WRONG_ARGS = "wrong args";
+    public static final String MISS_ARGS = "2: missing args";
+    public static final String WRONG_ARGS = "3: wrong args";
     
     /** Creates a new instance of AbstractCommand */
     public AbstractCommand(String _token)
@@ -44,6 +47,18 @@ public abstract class AbstractCommand
     {
         sock = s;
     }
+
+    public UserSSOEntry getSsoEntry()
+    {
+        return sso_entry;
+    }
+
+    public void setSsoEntry( UserSSOEntry ssoc )
+    {
+        this.sso_entry = ssoc;
+    }
+
+  
     
     public boolean is_cmd( String data )
     {

@@ -62,7 +62,7 @@ public class DumpLog extends AbstractCommand
         }
         else
         {
-            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(dump.getAbsolutePath(), null);
+            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream( getSsoEntry(), dump.getAbsolutePath(), null);
             answer = ret;
             return ok;
         }

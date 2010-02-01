@@ -9,10 +9,7 @@
 
 package dimm.home.mailarchiv;
 
-import dimm.home.mailarchiv.Utilities.CryptTools;
-import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.Preferences;
-import org.apache.commons.codec.binary.Base64;
 
 
 /****
@@ -43,16 +40,20 @@ public class MandantPreferences extends Preferences
     public static final long DFTL_INDEX_THREADS = 8;
 
     
-    String password;
-    String dec_password;
-    public static final String ENC_PASSWORD = "EncryptionPassword";
-    public static final String DFLT_PASSWORD = "12345";
     public static final String SSO_TIMEOUT_S = "SSOTimeout_s";
-    public static final long   DFTL_SSO_TIMEOUT_S = 120;
+    public static final long   DFTL_SSO_TIMEOUT_S = 1200;  // 20 MINUTES
 
     public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
     
     MandantContext context;
+
+    boolean noPwd;
+
+    public boolean hasNoPwd()
+    {
+        return noPwd;
+    }
+
     
     /** Creates a new instance of Preferences */
     public MandantPreferences(MandantContext _context)
@@ -69,7 +70,6 @@ public class MandantPreferences extends Preferences
         
         prop_names.add( DEBUG );
         prop_names.add( TEMPFILEDIR );
-        prop_names.add( ENC_PASSWORD );
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
         prop_names.add( INDEX_TASK );
@@ -79,60 +79,14 @@ public class MandantPreferences extends Preferences
         prop_names.add( INDEX_THREADS );
         prop_names.add( DSH_HOUR_DIRS );
     }
+    
     public void setContext( MandantContext _context )
     {
         context = _context;
-
     }
 
-    @Override
-    public void read_props()
-    {
-        super.read_props();
-        password = get_prop(ENC_PASSWORD);
-
-        if (password == null)
-            password = "12345";
-        else
-        {
-
-            if (context == null)
-                LogManager.err_log_fatal("Missing context");
-
-            String str = CryptTools.crypt_internal(password, CryptTools.ENC_MODE.DECRYPT);
-            if (str == null)
-            {
-                LogManager.err_log_fatal("Cannot decrypt password from preferences");
-            }
-            else
-            {
-                password = str;
-            }
-        }
-    }
-
-    @Override
-    public boolean store_props()
-    {
-        if (password == null)
-        {
-            LogManager.err_log_fatal("There is no password set");
-        }
-        else
-        {
-            String pwd = CryptTools.crypt_internal(password, CryptTools.ENC_MODE.ENCRYPT);
-            set_prop(ENC_PASSWORD, pwd);
-        }
-        return super.store_props();
-    }
+ 
     
-    public String get_password()
-    {
-        if (password == null)
-            return DFLT_PASSWORD;
-
-        return password;
-    }
     public String get_language()
     {
         String lang =  get_prop( LANG);
@@ -142,16 +96,6 @@ public class MandantPreferences extends Preferences
         return lang;
     }
 
-
-
-    public void set_password( String pwd )
-    {
-        if (pwd != null && pwd.length() > 0)
-        {
-            password = CryptTools.get_sha256( pwd.getBytes() );
-            password = new String ( Base64.encodeBase64(password.getBytes()) );
-        }
-    }
 
    
     

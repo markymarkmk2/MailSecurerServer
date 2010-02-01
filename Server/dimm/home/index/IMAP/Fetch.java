@@ -13,19 +13,100 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
 
+
+class LengthOutputStream extends OutputStream
+{
+    long length;
+    long act_length;
+    OutputStream os;
+    boolean was_flushed = false;
+    boolean was_toolong = false;
+    boolean was_flushed()
+    {
+        return was_flushed;
+    }
+    boolean was_toolong()
+    {
+        return was_toolong;
+    }
+
+    public LengthOutputStream( long length, OutputStream os )
+    {
+        this.length = length;
+        this.os = os;
+        act_length = 0;
+    }
+
+    @Override
+    public void write( int b ) throws IOException
+    {
+        if (act_length < length)
+        {
+            os.write(b);
+            act_length++;
+        }
+        else
+            was_toolong = true;
+    }
+
+    @Override
+    public void write( byte[] b, int off, int len ) throws IOException
+    {
+        if (act_length + len <= length)
+        {
+            try
+            {
+                os.write(b, off, len);
+            }
+            catch (IOException iOException)
+            {
+                throw new IOException( iOException.getMessage() );
+            }
+            act_length += len;
+            return;
+        }
+        was_toolong = true;
+
+        if (act_length >= length)
+            return;
+
+        int rest = (int)(length - act_length);
+        os.write(b, off, rest);
+        act_length += rest;
+    }
+
+    @Override
+    public void write( byte[] b ) throws IOException
+    {
+        write(b, 0, b.length);
+    }
+
+    @Override
+    public void flush() throws IOException
+    {
+        int rest = (int)(length - act_length);
+        for (int i = 0; i < rest; i++)
+        {
+            was_flushed = true;
+            os.write((byte)' ');
+        }
+        os.flush();
+    }
+}
 /**
  *
  * @author mw
  */
 class Range
 {
+
     int start;
     int len;
 
-    static Range range_factory(String s )
+    static Range range_factory( String s )
     {
-        int sk_start  = s.indexOf('<');
-        int sk_end =  s.indexOf('>');
+        int sk_start = s.indexOf('<');
+        int sk_end = s.indexOf('>');
         try
         {
             if (sk_start >= 0 && sk_end > sk_start)
@@ -54,19 +135,22 @@ class Range
         LogManager.err_log("Invalid IMAP range str: " + s);
         throw new IllegalArgumentException("Invalid Range");
     }
-
 }
+
 public class Fetch extends ImapCmd
 {
 
-    private static void write_header_fields( MWImapServer is, MWMailMessage msg, String orig_tag, String tag )
+    private static void write_header_fields( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException
     {
 
-                            //message
-                            String header = msg.get_header_fields(tag);
+        //message
+        String header = msg.get_header_fields(tag);
+        byte[] hdata = header.getBytes();
+        String return_tag = orig_tag.replace(".PEEK[", "[");
 
-                            is.rawwrite(orig_tag + " {" + header.length() + "}\r\n");
-                            is.rawwrite(header);
+        is.rawwrite(return_tag + " {" + hdata.length + "}\r\n");
+        is.s.getOutputStream().write(hdata);
+        //is.rawwrite(header);
 
 
     }
@@ -82,7 +166,8 @@ public class Fetch extends ImapCmd
         stream.close();
 
         String return_tag = orig_tag;
-        
+        return_tag = return_tag.replace(".PEEK[", "[");
+
         if (rlen < range.len)
         {
             int idx_range = return_tag.indexOf('<');
@@ -92,16 +177,14 @@ public class Fetch extends ImapCmd
             }
         }
 
-
         OutputStream os = is.s.getOutputStream();
 
-        os.write( new String(return_tag + " {" + rlen + "}\r\n").getBytes());
+        is.rawwrite( return_tag + " {" + rlen + "}\r\n");
         os.write(data, 0, rlen);
 //        is.rawwrite(return_tag + " {" + rlen + "}\r\n");
 //        is.rawwrite( text );
         //is.rawwrite(data, 0, rlen);
     }
-
 
     public Fetch()
     {
@@ -119,6 +202,9 @@ public class Fetch extends ImapCmd
         String part[] = imapsplit(par);
         String range = part[0];
         boolean success = true;
+
+        resetCounter();
+        
         while (!range.equals(""))
         {
             /* range could be 34:38,42:43,45 */
@@ -151,8 +237,8 @@ public class Fetch extends ImapCmd
             {
                 try
                 {
-                    long l = Long.parseLong(bereich.substring(0, i) );
-                    min = (int)l;
+                    long l = Long.parseLong(bereich.substring(0, i));
+                    min = (int) l;
                 }
                 catch (Exception e)
                 {
@@ -160,8 +246,8 @@ public class Fetch extends ImapCmd
 
                 try
                 {
-                    long l = Long.parseLong(bereich.substring(i + 1) );
-                    max = (int)l;
+                    long l = Long.parseLong(bereich.substring(i + 1));
+                    max = (int) l;
                 }
                 catch (Exception e)
                 {
@@ -180,7 +266,7 @@ public class Fetch extends ImapCmd
             {
                 //debug
                 //System.out.println("call "+command+" from:"+min+" to:"+max);
-                success &= fetch(is, min, max, 1, false, part);
+                success &= fetch(this, is, min, max, 1, false, part);
                 is.response(sid, success, "FETCH " + (success ? "completed" : "failed"));
                 return success ? 0 : 1;
             }
@@ -198,9 +284,10 @@ public class Fetch extends ImapCmd
         return 1;
     }
 
-    static boolean fetch( MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
+
+    static boolean fetch( ImapCmd cmd, MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
-        int zaehler = 1;
+        
         MailFolder mailfolder = is.mailfolder;
 
         for (int i = 0; i < mailfolder.anzMessages(); i++)
@@ -235,9 +322,9 @@ public class Fetch extends ImapCmd
                 }
             }
 
-            is.rawwrite(RESTAG + (zaehler++) + " FETCH (");
+            is.rawwrite(RESTAG + cmd.getNextCounter() + " FETCH (");
 
-            int size = msginfo.getRFC822size();
+            long size = msginfo.getRFC822size();
             String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
 
             boolean had_uid = false;
@@ -249,8 +336,11 @@ public class Fetch extends ImapCmd
                 for (int x = 0; x < tags.length; x++)
                 {
 
+
                     String orig_tag = tags[x].trim();
                     String tag = orig_tag.toLowerCase();
+
+                    System.out.print("<<got tag " + tag + ">>");
 
 
                     if (tag.equals("envelope"))
@@ -283,15 +373,17 @@ public class Fetch extends ImapCmd
                             is.rawwrite(" ");
                         }
                         needs_space = true;
-                        is.rawwrite("RFC822.HEADER {" + theader.length() + "}\r\n");
-                        System.out.println("Writing Message header...");
+                        byte[] hdata = theader.getBytes();
+                        is.rawwrite("RFC822.HEADER {" + hdata.length + "}\r\n");
+                        //System.out.println("Writing Message header...");
                         try
                         {
-                            is.s.getOutputStream().write(theader.getBytes());
-                            System.out.print(theader);
+                            is.s.getOutputStream().write( hdata );
+                          //  System.out.print(theader);
                         }
                         catch (IOException iOException)
                         {
+                            System.out.print(iOException.getLocalizedMessage());
                         }
                     }
                     else if (tag.equals("rfc822.size"))
@@ -324,25 +416,25 @@ public class Fetch extends ImapCmd
                                 is.rawwrite(" ");
                             }
                             needs_space = true;
-                            write_header_fields( is, msg, orig_tag, tag );
+                            write_header_fields(is, msg, orig_tag, tag);
                         }
                         if (peek_content.startsWith("text"))
                         {
-                            
+
                             if (needs_space)
                             {
                                 is.rawwrite(" ");
                             }
                             needs_space = true;
 
-                            write_text( is, msg, orig_tag, tag );
+                            write_text(is, msg, orig_tag, tag);
                         }
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
                     {
-                        
+
                         //message
-                        int tsize = msg.getRFC822size();
+                        long tsize = msg.getRFC822size();
                         if (needs_space)
                         {
                             is.rawwrite(" ");
@@ -350,23 +442,27 @@ public class Fetch extends ImapCmd
                         needs_space = true;
 
 
-                        ByteArrayOutputStream byas = new ByteArrayOutputStream();
+                      /*  ByteArrayOutputStream byas = new ByteArrayOutputStream();
 
 //                            System.out.println("Writing Message body...");
                         //msg.getRFC822body(s.getOutputStream());
                         msg.getRFC822body(byas);
                         byte[] mdata = byas.toByteArray();
-                        tsize = mdata.length;
+                        tsize = mdata.length;*/
                         is.rawwrite("" + tag.toUpperCase() + " {" + tsize + "}\r\n");
-                        is.s.getOutputStream().write(mdata);
-                        is.s.getOutputStream().flush();
 
-                        System.out.print(byas.toString());
+                        LengthOutputStream los = new LengthOutputStream(tsize, is.s.getOutputStream());
+                        msg.getRFC822body( los );
+                        los.flush();
+/*                        is.s.getOutputStream().write(mdata);*/
+                        //is.s.getOutputStream().flush();
+
+                        //System.out.print(byas.toString());
 
                     }
                     else if (tag.equals("internaldate"))
                     {
-                       
+
                         if (needs_space)
                         {
                             is.rawwrite(" ");
@@ -381,6 +477,9 @@ public class Fetch extends ImapCmd
                 is.rawwrite(" UID " + uid);
                 had_uid = true;
             }
+            
+            // KEEP MEM FOOTPRINT LOW
+            msg.unload_rfc_mail();
 
             is.rawwrite(")\r\n");
         }

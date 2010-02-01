@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv.Utilities;
 
+import home.shared.Utilities.LogListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -20,7 +21,7 @@ import org.apache.log4j.SimpleLayout;
  *
  * @author mw
  */
-public class LogManager
+public class LogManager implements  LogListener
 {
 
     public static final String LOG_ERR = "error.log";
@@ -33,6 +34,10 @@ public class LogManager
 
     static long dbg_level = 1;
     private static String LOG_L4J = "logfj.log";
+
+    private LogManager()
+    {
+    }
 
     public static void debug( String string )
     {
@@ -49,6 +54,12 @@ public class LogManager
         debug_msg( s + ": " + e.getMessage() );
     }
 
+    @Override
+    public void error_log( String s, Exception e )
+    {
+        e.printStackTrace();
+        error_log( s + ": " + e.getMessage() );
+    }
     public static void err_log( String s, Exception e )
     {
         e.printStackTrace();
@@ -133,8 +144,17 @@ public class LogManager
           //debug_msg( 0, string );
     }
 
-
     public static void err_log(String string)
+    {
+        if (string == null || string.length() == 0)
+            return;
+
+          main_logger.error(string);
+
+    }
+
+    @Override
+    public void error_log(String string)
     {
         if (string == null || string.length() == 0)
             return;
@@ -205,10 +225,17 @@ public class LogManager
         }
     }
 
+    public static LogManager get_instance()
+    {
+        return manager;
+    }
+
     static Logger main_logger;
+    static LogManager manager;
     static
     {
         main_logger = Logger.getLogger("dimm.MailSecurerServer");
+        manager = new LogManager();
         
 
         try
@@ -253,6 +280,30 @@ public class LogManager
             return new File(LOG_PATH + LOG_DEBUG);
 
         return null;
+    }
+
+    @Override
+    public void warn_log( String txt )
+    {
+        err_log_warn(txt);
+    }
+
+    @Override
+    public void info_log( String txt )
+    {
+        info_msg(txt);
+    }
+
+    @Override
+    public void debug_log( String txt )
+    {
+        debug(txt);
+    }
+
+    @Override
+    public boolean is_debug()
+    {
+        return (get_debug_lvl() > 0);
     }
 
 

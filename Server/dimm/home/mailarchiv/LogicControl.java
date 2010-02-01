@@ -1498,5 +1498,37 @@ public class LogicControl
     {
         return shutdown;
     }
+    public boolean is_valid_sso( String sso_token )
+    {
+        try
+        {
+            String[] str = sso_token.split("\\.");
+            long ma_id = Long.parseLong(str[0]);
+            int sso_id = Integer.parseInt(str[1]);
+            MandantContext m_ctx = get_mandant_by_id(ma_id);
+            return m_ctx.is_sso_valid(sso_id);
+        }
+        catch (Exception e)
+        {
+            LogManager.err_log_fatal("Invalid SSO token " + sso_token , e);
+        }
+        return false;
+    }
+    public UserSSOEntry get_sso( String sso_token )
+    {
+        try
+        {
+            String[] str = sso_token.split("\\.");
+            long ma_id = Long.parseLong(str[0]);
+            int sso_id = Integer.parseInt(str[1]);
+            MandantContext m_ctx = get_mandant_by_id(ma_id);
+            return m_ctx.get_sso(sso_id);
+        }
+        catch (Exception e)
+        {
+            LogManager.err_log_fatal("Invalid SSO token " + sso_token , e);
+        }
+        return null;
+    }
 
 }

@@ -15,6 +15,18 @@ public abstract class ImapCmd
 {
     String cmd;
     protected final static String RESTAG = "* ";
+    protected int counter;
+
+    public int getNextCounter()
+    {
+        return ++counter;
+    }
+    public void resetCounter()
+    {
+        counter = 0;
+    }
+
+
 
     public String getCmd()
     {

@@ -70,7 +70,7 @@ public class ImportMailFile extends AbstractCommand
             }
 
             // NOW CLOSE THE STREAM
-            conn.RMX_CloseOutStream(oid);
+            conn.RMX_CloseOutStream( getSsoEntry(), oid);
 
             File nf = m_ctx.getTempFileHandler().create_new_import_file(ose.file.getName(), da_id);
 

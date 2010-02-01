@@ -2,10 +2,8 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package dimm.home.mailarchiv;
 
-import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
@@ -33,25 +31,17 @@ import home.shared.CS_Constants;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
-import home.shared.hibernate.MailAddress;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
-import home.shared.mail.RFCMailAddress;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
-
 
 /**
  *
@@ -59,6 +49,7 @@ import java.util.Set;
  */
 public class MandantContext
 {
+
     private MandantPreferences prefs;
     private Mandant mandant;
     private ArrayList<Vault> vaultArray;
@@ -66,57 +57,53 @@ public class MandantContext
     private TCPCallConnect tcp_conn;
     private IndexManager index_manager;
     private IMAPBrowser imap_browser;
-    
-    
     ArrayList<WorkerParent> worker_list;
-
     private ReIndexContext rctx;
-
     long next_reinit_importbuffer;
     private boolean shutdown;
 
-    public MandantContext(  MandantPreferences _prefs, Mandant _m )
+    public MandantContext( MandantPreferences _prefs, Mandant _m )
     {
         prefs = _prefs;
         mandant = _m;
         vaultArray = new ArrayList<Vault>();
-        tempFileHandler = new TempFileHandler( this );
+        tempFileHandler = new TempFileHandler(this);
         worker_list = new ArrayList<WorkerParent>();
 
-        next_reinit_importbuffer = System.currentTimeMillis() + 5*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
+        next_reinit_importbuffer = System.currentTimeMillis() + 5 * 60 * 1000; // CLEAN IMPORTBUFFER EVERY 1h
     }
 
-   
     public Mandant getMandant()
     {
         return mandant;
     }
 
-    void reload_mandant(Mandant m)
+    void reload_mandant( Mandant m )
     {
         prefs.read_props();
         mandant = m;
     }
 
-
     public TempFileHandler getTempFileHandler()
     {
         return tempFileHandler;
     }
-    
 
     public DiskArchive get_da_by_id( long id )
     {
-        Iterator <DiskArchive> it = getMandant().getDiskArchives().iterator();
+        Iterator<DiskArchive> it = getMandant().getDiskArchives().iterator();
 
-        while( it.hasNext() )
+        while (it.hasNext())
         {
-            DiskArchive da =  it.next();
+            DiskArchive da = it.next();
             if (da.getId() == id)
+            {
                 return da;
+            }
         }
         return null;
     }
+
     public DiskVault get_vault_by_da_id( long id )
     {
         getVaultArray().iterator();
@@ -126,15 +113,17 @@ public class MandantContext
             Vault vault = vaultArray.get(i);
             if (vault instanceof DiskVault)
             {
-                DiskVault dv = (DiskVault)vault;
+                DiskVault dv = (DiskVault) vault;
                 if (dv.get_da().getId() == id)
+                {
                     return dv;
+                }
             }
         }
         return null;
     }
-
     DiskSpaceHandler last_dsh = null;
+
     public DiskSpaceHandler get_dsh( int ds_idx )
     {
         if (last_dsh != null && last_dsh.getDs().getId() == ds_idx)
@@ -184,14 +173,14 @@ public class MandantContext
         }
         return null;
     }
-    
+
     public void build_vault_list()
     {
-        Iterator <DiskArchive> it = getMandant().getDiskArchives().iterator();
+        Iterator<DiskArchive> it = getMandant().getDiskArchives().iterator();
 
-        while( it.hasNext() )
+        while (it.hasNext())
         {
-            DiskArchive da =  it.next();
+            DiskArchive da = it.next();
             try
             {
                 int flags = Integer.parseInt(da.getFlags());
@@ -204,9 +193,10 @@ public class MandantContext
             {
             }
 
-            getVaultArray().add( new DiskVault( this, da ));
+            getVaultArray().add(new DiskVault(this, da));
         }
     }
+
     private void delete_vault_list()
     {
         for (Iterator<Vault> it = vaultArray.iterator(); it.hasNext();)
@@ -225,8 +215,6 @@ public class MandantContext
         getVaultArray().clear();
     }
 
-
-    
     public ArrayList<Vault> getVaultArray()
     {
         return vaultArray;
@@ -237,28 +225,36 @@ public class MandantContext
         return prefs;
     }
 
-    public static boolean has_trail_slash( String path)
+    public static boolean has_trail_slash( String path )
     {
         int len = path.length();
         if (len > 0)
         {
             char lc = path.charAt(len - 1);
             if (lc == '/' || lc == '\\')
+            {
                 return true;
+            }
         }
         return false;
     }
-    public static String add_trail_slash( String path)
+
+    public static String add_trail_slash( String path )
     {
         if (has_trail_slash(path))
+        {
             return path;
+        }
 
         return path + "/";
     }
-    public static String del_trail_slash( String path)
+
+    public static String del_trail_slash( String path )
     {
         if (!has_trail_slash(path))
+        {
             return path;
+        }
 
         return path.substring(0, path.length() - 1);
     }
@@ -269,10 +265,12 @@ public class MandantContext
 
         path = add_trail_slash(path);
 
-        File tmp_path = new File( path + mandant.getId() );
+        File tmp_path = new File(path + mandant.getId());
 
         if (tmp_path.exists() == false)
+        {
             tmp_path.mkdirs();
+        }
 
         return tmp_path;
     }
@@ -290,9 +288,10 @@ public class MandantContext
     void set_index_manager( IndexManager idx_util )
     {
         index_manager = idx_util;
-        
-    
+
+
     }
+
     public IndexManager get_index_manager()
     {
         return index_manager;
@@ -309,17 +308,17 @@ public class MandantContext
             }
             catch (IndexException ex)
             {
-                LogManager.err_log_fatal( Main.Txt("Index_error_while_flushing_index"), ex);
+                LogManager.err_log_fatal(Main.Txt("Index_error_while_flushing_index"), ex);
             }
             catch (VaultException ex)
             {
-                LogManager.err_log_fatal( Main.Txt("Vault_error_while_flushing_index"), ex);
+                LogManager.err_log_fatal(Main.Txt("Vault_error_while_flushing_index"), ex);
             }
             catch (Exception ex)
             {
-                LogManager.err_log_fatal( Main.Txt("Unknown_error_while_flushing_index"), ex);
+                LogManager.err_log_fatal(Main.Txt("Unknown_error_while_flushing_index"), ex);
             }
-        }        
+        }
     }
 
     public void start_run_loop()
@@ -333,10 +332,8 @@ public class MandantContext
         }
     }
 
-
-
     void initialize_mandant( LogicControl control )
-    {        
+    {
         // ATTACH COMM IF NOT ALREADY DONE
         if (tcp_conn == null)
         {
@@ -346,8 +343,8 @@ public class MandantContext
         //set_tcp_call_connect( tcp_conn );
 
         // ATTACH INDEXMANAGER
-        IndexManager idx_util = new IndexManager(this, /*MailHeadervariable*/null, /*index_attachments*/ true);
-        set_index_manager( idx_util );
+        IndexManager idx_util = new IndexManager(this, /*MailHeadervariable*/ null, /*index_attachments*/ true);
+        set_index_manager(idx_util);
 
         idx_util.initialize();
         worker_list.add(idx_util);
@@ -368,7 +365,7 @@ public class MandantContext
         {
             try
             {
-                ms.add_child( new MilterImporter(milter_it.next()));
+                ms.add_child(new MilterImporter(milter_it.next()));
             }
             catch (IOException ex)
             {
@@ -384,7 +381,7 @@ public class MandantContext
         MailProxyServer ps = control.get_mail_proxy_server();
         while (proxy_it.hasNext())
         {
-             ps.add_child( new ProxyEntry( proxy_it.next() ));
+            ps.add_child(new ProxyEntry(proxy_it.next()));
         }
 
         Set<Hotfolder> hfs = getMandant().getHotfolders();
@@ -393,7 +390,7 @@ public class MandantContext
         HotfolderServer hf_server = control.get_hf_server();
         while (hf_it.hasNext())
         {
-             hf_server.add_child( new HotFolderImport( hf_it.next() ));
+            hf_server.add_child(new HotFolderImport(hf_it.next()));
         }
 
         Set<ImapFetcher> ifs = getMandant().getImapFetchers();
@@ -405,21 +402,23 @@ public class MandantContext
             ImapFetcher imf = if_it.next();
             int fl = Integer.parseInt(imf.getFlags());
             if ((fl & CS_Constants.IMF_DISABLED) == CS_Constants.IMF_DISABLED)
+            {
                 continue;
+            }
 
-            MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory( imf );
-             mb_fetcher_server.add_child(  child );
+            MailBoxFetcher child = MailBoxFetcher.mailbox_fetcher_factory(imf);
+            mb_fetcher_server.add_child(child);
         }
 
-        if ( getMandant().getImap_port() > 0)
+        if (getMandant().getImap_port() > 0)
         {
             IMAPBrowserServer ibs = control.get_imap_browser_server();
             try
             {
-                LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port() );
+                LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
 
                 imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port());
-                ibs.add_child( imap_browser );
+                ibs.add_child(imap_browser);
             }
             catch (IOException ex)
             {
@@ -428,6 +427,7 @@ public class MandantContext
         }
 
     }
+
     void setShutdown( boolean b )
     {
         shutdown = b;
@@ -437,8 +437,7 @@ public class MandantContext
         }
     }
 
-
-    public boolean wait_for_shutdown( int secs)
+    public boolean wait_for_shutdown( int secs )
     {
 
         while (secs-- > 0)
@@ -450,18 +449,22 @@ public class MandantContext
                 if (!(wp instanceof TCPCallConnect))
                 {
                     if (!wp.isFinished())
+                    {
                         ok = false;
+                    }
                 }
             }
             if (ok)
+            {
                 return true;
+            }
 
             LogicControl.sleep(1000);
         }
         return false;
     }
 
-    void teardown_mandant( )
+    void teardown_mandant()
     {
         for (int i = 0; i < worker_list.size(); i++)
         {
@@ -478,7 +481,7 @@ public class MandantContext
 
         // REMOVE INDEXMANAGER
         index_manager.setShutdown(true);
-        
+
         wait_for_shutdown(5);
 
         worker_list.remove(index_manager);
@@ -497,19 +500,19 @@ public class MandantContext
         MilterServer ms = Main.get_control().get_milter_server();
         while (milter_it.hasNext())
         {
-             ms.remove_child(milter_it.next());
+            ms.remove_child(milter_it.next());
         }
 
 
 
-        
+
         Set<Proxy> proxies = getMandant().getProxies();
         Iterator<Proxy> proxy_it = proxies.iterator();
 
         MailProxyServer ps = Main.get_control().get_mail_proxy_server();
         while (proxy_it.hasNext())
         {
-             ps.remove_child(proxy_it.next());
+            ps.remove_child(proxy_it.next());
         }
 
         Set<Hotfolder> hfs = getMandant().getHotfolders();
@@ -518,7 +521,7 @@ public class MandantContext
         HotfolderServer hf_server = Main.get_control().get_hf_server();
         while (hf_it.hasNext())
         {
-             hf_server.remove_child( hf_it.next());
+            hf_server.remove_child(hf_it.next());
         }
 
         Set<ImapFetcher> ifs = getMandant().getImapFetchers();
@@ -527,13 +530,13 @@ public class MandantContext
         MailBoxFetcherServer mb_fetcher_server = Main.get_control().get_mb_fetcher_server();
         while (if_it.hasNext())
         {
-              mb_fetcher_server.remove_child(if_it.next());
+            mb_fetcher_server.remove_child(if_it.next());
         }
 
-        if ( getMandant().getImap_port() > 0)
+        if (getMandant().getImap_port() > 0)
         {
             IMAPBrowserServer ibs = Main.get_control().get_imap_browser_server();
-            ibs.remove_child( getMandant() );
+            ibs.remove_child(getMandant());
         }
         // REMOVE VAULT LIST FROM DISKARRAYS
         delete_vault_list();
@@ -545,8 +548,8 @@ public class MandantContext
     }
 
     public ArrayList<String> get_mailaliases( String user, String pwd )
-    {        
-        UserSSOcache ussc = get_from_sso_cache( user,  pwd );
+    {
+        UserSSOEntry ussc = get_from_sso_cache(user, pwd);
         if (ussc != null)
         {
             return ussc.mail_list;
@@ -587,8 +590,8 @@ public class MandantContext
 
         if (now > next_reinit_importbuffer)
         {
-            next_reinit_importbuffer = System.currentTimeMillis() + 60*60*1000; // CLEAN IMPORTBUFFER EVERY 1h
-            
+            next_reinit_importbuffer = System.currentTimeMillis() + 60 * 60 * 1000; // CLEAN IMPORTBUFFER EVERY 1h
+
             try
             {
                 resolve_hold_buffer();
@@ -603,55 +606,114 @@ public class MandantContext
             }
         }
     }
+    static int user_sso_id;
+    final ArrayList<UserSSOEntry> user_sso_list = new ArrayList<UserSSOEntry>();
 
-    class UserSSOcache
-    {
-        String user;
-        String pwd;
-        Role role;
-        AccountConnector acct;
-        long checked;
-        long last_auth;
-        ArrayList<String> mail_list;
-
-
-        public UserSSOcache( String user, String pwd, Role role, AccountConnector acct, long checked, long last_auth )
-        {
-            this.user = user;
-            this.pwd = pwd;
-            this.role = role;
-            this.acct = acct;
-            this.checked = checked;
-            this.last_auth = last_auth;
-        }
-    }
-
-    ArrayList< UserSSOcache> user_sso_list = new ArrayList<UserSSOcache>();
     void remove_from_sso_cache( String user )
     {
-        // REMOVE
-        for (int i = 0; i < user_sso_list.size(); i++)
+        synchronized (user_sso_list)
         {
-            UserSSOcache entry = user_sso_list.get(i);
-            if (entry.user.compareTo(user) == 0)
+            // REMOVE
+            for (int i = 0; i < user_sso_list.size(); i++)
             {
-                user_sso_list.remove(i);
-                i--;
+                UserSSOEntry entry = user_sso_list.get(i);
+                if (entry.user.compareTo(user) == 0)
+                {
+                    user_sso_list.remove(i);
+                    i--;
+                }
             }
         }
     }
 
-    UserSSOcache get_from_sso_cache( String user, String pwd )
+    public UserSSOEntry get_sso( int id )
     {
-        for (int i = 0; i < user_sso_list.size(); i++)
+        synchronized (user_sso_list)
         {
-            UserSSOcache entry = user_sso_list.get(i);
-            if (entry.user.compareTo(user) == 0 && entry.pwd.compareTo(pwd) == 0 )
+            for (int i = 0; i < user_sso_list.size(); i++)
             {
-                return entry;
+                UserSSOEntry entry = user_sso_list.get(i);
+                if (entry.user_sso_id == id)
+                {
+                    return entry;
+                }
             }
         }
         return null;
+    }
+
+    public int get_sso_id( String user, String pwd )
+    {
+        UserSSOEntry ssoc = get_from_sso_cache(user, pwd);
+        if (ssoc == null)
+        {
+            return -1;
+        }
+
+        return ssoc.user_sso_id;
+    }
+
+    public UserSSOEntry get_from_sso_cache( String user, String pwd )
+    {
+        synchronized (user_sso_list)
+        {
+            for (int i = 0; i < user_sso_list.size(); i++)
+            {
+                UserSSOEntry entry = user_sso_list.get(i);
+                if (entry.user.compareTo(user) == 0 && entry.pwd.compareTo(pwd) == 0)
+                {
+                    return entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean is_sso_valid( int sso_id )
+    {
+        synchronized (user_sso_list)
+        {
+            UserSSOEntry sso = get_sso(sso_id);
+            if (sso == null)
+            {
+                return false;
+            }
+            long now = System.currentTimeMillis();
+
+            // TOO OLD
+            if (now - sso.last_auth < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S) * 1000)
+            {
+                // REWIND CLOCK
+                sso.last_auth = System.currentTimeMillis();
+                return true;
+            }
+            remove_from_sso_cache(sso.user);
+        }
+        return false;
+    }
+
+    public int create_admin_sso_id( String name, String pwd )
+    {
+        synchronized (user_sso_list)
+        {
+            long now = System.currentTimeMillis();
+
+            // NEUER CACHE ENTRY
+            user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
+            UserSSOEntry usc = new UserSSOEntry(name, pwd, null, null, now, now, user_sso_id);
+
+            // ALTE USERANGABEN RAUS
+            remove_from_sso_cache(name);
+
+            // NEUE DAZU
+            user_sso_list.add(usc);
+
+            // STORE ACT RESULTS
+            usc.last_auth = now;
+            usc.mail_list = null;
+
+            return user_sso_id;
+        }
     }
 
     public boolean authenticate_user( String user, String pwd ) throws AuthException
@@ -659,19 +721,21 @@ public class MandantContext
         boolean auth_ok = false;
         long now = System.currentTimeMillis();
 
-        UserSSOcache usc = get_from_sso_cache( user, pwd);
-        if (usc != null)
+        synchronized (user_sso_list)
         {
-            // USER STILL VALID
-            if (now - usc.last_auth < prefs.get_long_prop( MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S ))
+            UserSSOEntry usc = get_from_sso_cache(user, pwd);
+            if (usc != null)
             {
-                // REWIND CLOCK
-                usc.last_auth = System.currentTimeMillis();
-                return true;
+                // USER STILL VALID
+                if (now - usc.last_auth < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
+                {
+                    // REWIND CLOCK
+                    usc.last_auth = System.currentTimeMillis();
+                    return true;
+                }
+                remove_from_sso_cache(user);
             }
-            remove_from_sso_cache( user );
         }
-
         boolean role_found = false;
         boolean acct_connected = false;
 
@@ -694,13 +758,13 @@ public class MandantContext
             {
             }
 
-            
-            GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( acct );
+
+            GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm(acct);
 
 
             if (!auth_realm.connect())
             {
-                LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" +  acct.getIp() + ":" + acct.getPort());
+                LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" + acct.getIp() + ":" + acct.getPort());
                 continue;
 
             }
@@ -718,7 +782,7 @@ public class MandantContext
             }
             acct_connected = true;
 
-            if (!auth_realm.user_is_member_of( role, user, mail_list ))
+            if (!auth_realm.user_is_member_of(role, user, mail_list))
             {
                 auth_realm.disconnect();
                 continue;
@@ -738,41 +802,48 @@ public class MandantContext
             // WENN OK, DANN RAUS HIER, ABER SCHNELL!!!
             if (auth_ok)
             {
-                // NEUER CACHE ENTRY 
-                usc = new UserSSOcache(user, pwd, role, acct, now, now);
+                synchronized (user_sso_list)
+                {
+                    // NEUER CACHE ENTRY
+                    user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
+                    UserSSOEntry usc = new UserSSOEntry(user, pwd, role, acct, now, now, user_sso_id);
 
-                // ALTE USERANGABEN RAUS
-                remove_from_sso_cache( user );
+                    // ALTE USERANGABEN RAUS
+                    remove_from_sso_cache(user);
 
-                // NEUE DAZU
-                user_sso_list.add(usc);
+                    // NEUE DAZU
+                    user_sso_list.add(usc);
 
-                // STORE ACT RESULTS
-                usc.last_auth = now;
-                usc.mail_list = mail_list;
-
+                    // STORE ACT RESULTS
+                    usc.last_auth = now;
+                    usc.mail_list = mail_list;
+                }
                 break;
             }
         }
         if (!acct_connected)
+        {
             throw new AuthException(Main.Txt("No_Realm_could_be_connected"));
-        
+        }
+
         if (!role_found)
+        {
             throw new AuthException(Main.Txt("No_Role_matches_this_user"));
+        }
 
 
         // BENUTZER WAR OK / NICHT OK, BYE BYE
         return auth_ok;
     }
 
-    void resolve_hold_buffer( )
+    void resolve_hold_buffer()
     {
         try
         {
             File hold_buffer_dir = getTempFileHandler().get_hold_mail_path();
             if (hold_buffer_dir.exists() && hold_buffer_dir.listFiles().length > 0)
             {
-                LogManager.debug_msg(Main.Txt("Trying_to_resolve_hold_buffer") );
+                LogManager.debug_msg(Main.Txt("Trying_to_resolve_hold_buffer"));
 
                 File[] flist = hold_buffer_dir.listFiles();
 
@@ -789,15 +860,15 @@ public class MandantContext
                         LogManager.err_log(Main.Txt("Cannot_clean_up_hold_buffer,_missing_diskvault_ID") + " " + da_id);
                         continue;
                     }
-                    boolean encoded = hold_uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
+                    boolean encoded = hold_uuid.endsWith(RFCGenericMail.get_suffix_for_encoded());
 
-                    RFCFileMail mf = new RFCFileMail( file, new Date(time), encoded );
+                    RFCFileMail mf = new RFCFileMail(file, new Date(time), encoded);
 
                     // HANDLE A NOT IN BG
                     // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
                     Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
                 }
-                LogManager.debug_msg( Main.Txt("Finishing_resolving_hold_buffer") );
+                LogManager.debug_msg(Main.Txt("Finishing_resolving_hold_buffer"));
             }
         }
         catch (Exception e) // CATCH ANY ERROR HERE
@@ -809,52 +880,57 @@ public class MandantContext
 
     File[] get_mailimport_buffer_list()
     {
-            File import_buffer_dir = getTempFileHandler().get_import_mail_path();
-            if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
-            {
-                LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer") );
+        File import_buffer_dir = getTempFileHandler().get_import_mail_path();
+        if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
+        {
+            LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer"));
 
-                File[] flist = import_buffer_dir.listFiles();
-                return flist;
-            }
-            return null;
+            File[] flist = import_buffer_dir.listFiles();
+            return flist;
+        }
+        return null;
     }
-    void resolve_mailimport_buffer(File[] flist)
+
+    void resolve_mailimport_buffer( File[] flist )
     {
         if (flist == null || flist.length == 0)
+        {
             return;
+        }
 
-        LogManager.debug_msg(Main.Txt("Trying_to_resolve_mailimport_buffer") );
+        LogManager.debug_msg(Main.Txt("Trying_to_resolve_mailimport_buffer"));
         try
         {
 
-                for (int i = 0; i < flist.length; i++)
+            for (int i = 0; i < flist.length; i++)
+            {
+                File file = flist[i];
+                String uuid = file.getName();
+
+                int da_id = Main.get_control().get_da_id_from_import_filemail(uuid);
+                boolean encoded = uuid.endsWith(RFCGenericMail.get_suffix_for_encoded());
+
+                // SKIP INVALID ENTRIES
+                if (da_id == -1)
                 {
-                    File file = flist[i];
-                    String uuid = file.getName();
-
-                    int da_id = Main.get_control().get_da_id_from_import_filemail(uuid);
-                    boolean encoded = uuid.endsWith( RFCGenericMail.get_suffix_for_encoded() );
-
-                    // SKIP INVALID ENTRIES
-                    if (da_id == -1)
-                        continue;
-
-                    DiskVault dv = get_vault_by_da_id(da_id);
-                    if (dv == null)
-                    {
-                        LogManager.err_log(Main.Txt("Cannot_clean_up_import_buffer,_missing_diskvault_ID") + " " + da_id);
-                        continue;
-                    }
-                    RFCFileMail mf = new RFCFileMail( file, new Date(), encoded );
-
-                    // HANDLE ADD NOT IN BG
-                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
-                    Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
-
+                    continue;
                 }
-                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
-            
+
+                DiskVault dv = get_vault_by_da_id(da_id);
+                if (dv == null)
+                {
+                    LogManager.err_log(Main.Txt("Cannot_clean_up_import_buffer,_missing_diskvault_ID") + " " + da_id);
+                    continue;
+                }
+                RFCFileMail mf = new RFCFileMail(file, new Date(), encoded);
+
+                // HANDLE ADD NOT IN BG
+                // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
+
+            }
+            LogManager.debug_msg(Main.Txt("Finishing_resolving_import_buffer"));
+
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
@@ -865,47 +941,49 @@ public class MandantContext
 
     File[] get_clientimport_buffer_list()
     {
-            File import_buffer_dir = getTempFileHandler().get_clientimport_path();
-            if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
-            {
-                LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer") );
+        File import_buffer_dir = getTempFileHandler().get_clientimport_path();
+        if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
+        {
+            LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer"));
 
-                File[] flist = import_buffer_dir.listFiles();
-                return flist;
-            }
-            return null;
+            File[] flist = import_buffer_dir.listFiles();
+            return flist;
+        }
+        return null;
     }
 
-    void resolve_clientimport_buffer(File[] flist )
+    void resolve_clientimport_buffer( File[] flist )
     {
         try
         {
-           
-                for (int i = 0; i < flist.length; i++)
+
+            for (int i = 0; i < flist.length; i++)
+            {
+                File file = flist[i];
+                String uuid = file.getName();
+
+                int da_id = getTempFileHandler().get_da_id_from_import_file(uuid);
+
+
+                // SKIP INVALID ENTRIES
+                if (da_id == -1)
                 {
-                    File file = flist[i];
-                    String uuid = file.getName();
-
-                    int da_id = getTempFileHandler().get_da_id_from_import_file(uuid);
-
-
-                    // SKIP INVALID ENTRIES
-                    if (da_id == -1)
-                        continue;
-
-                    DiskVault dv = get_vault_by_da_id(da_id);
-                    if (dv == null)
-                    {
-                        LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
-                        continue;
-                    }
-
-                    // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
-                    Main.get_control().register_new_import( this,  dv.get_da(), file.getAbsolutePath() );
-
+                    continue;
                 }
-                LogManager.debug_msg( Main.Txt("Finishing_resolving_import_buffer") );
-           
+
+                DiskVault dv = get_vault_by_da_id(da_id);
+                if (dv == null)
+                {
+                    LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
+                    continue;
+                }
+
+                // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
+                Main.get_control().register_new_import(this, dv.get_da(), file.getAbsolutePath());
+
+            }
+            LogManager.debug_msg(Main.Txt("Finishing_resolving_import_buffer"));
+
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
@@ -913,7 +991,4 @@ public class MandantContext
             return;
         }
     }
-
-
-
 }

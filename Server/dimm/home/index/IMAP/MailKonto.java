@@ -19,6 +19,8 @@ package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.MandantContext;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 public class MailKonto
 {
@@ -30,7 +32,8 @@ public class MailKonto
     ArrayList<String> mail_alias_list;
     ArrayList<MailFolder> mail_folders;
     MandantContext m_ctx;
-    public static final boolean qry_folder = false;
+    public static final boolean qry_folder = true;
+    public static final boolean browse_folder = true;
 
 
     public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list)
@@ -43,9 +46,11 @@ public class MailKonto
 
         mail_folders = new ArrayList<MailFolder>();
 
-        mail_folders.add( new MailFolder(this, "INBOX", "INBOX"));
+        mail_folders.add( new MailFolder(this, "INBOX"));
         if (qry_folder)
-            mail_folders.add( new MailFolder(this, "Query", MailFolder.QRYTOKEN));
+            mail_folders.add( new MailFolder(this,  MailFolder.QRYTOKEN));
+        if (browse_folder)
+            mail_folders.add( new MailFolder(this,  MailFolder.BROWSETOKEN));
         
         try
         {
@@ -174,6 +179,20 @@ public class MailKonto
                 return mf;
             }
         }
+        if (key.startsWith(MailFolder.BROWSETOKEN))
+        {
+            String[] arr = key.split("/");
+            if (arr.length == 3)
+            {
+                int year = Integer.parseInt(arr[1]);
+                int month = Integer.parseInt(arr[2]);
+
+                MailFolder folder = new MailFolder(this, year, month, key);
+                folder.fill();
+                mail_folders.add(folder);
+                return folder;
+            }
+        }
         return null;
     }
 
@@ -181,8 +200,12 @@ public class MailKonto
     String[] getDirlist( String string )
     {
         int level = cnt_level( string );
+        GregorianCalendar cal = new GregorianCalendar();
+        Date now = new Date();
+        cal.setTime(now);
+        int month = cal.get(GregorianCalendar.MONTH) + 1;  // 1...12
 
-        String[] m_txt = {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
+       // String[] m_txt = {"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember" };
         
         switch( level )
         {
@@ -194,31 +217,29 @@ public class MailKonto
                 if (qry_folder)
                     fs.add(MailFolder.QRYTOKEN);
 
-/*                for (int i = 0; i < 1; i++)
+                if (browse_folder)
                 {
-                    String year = "INBOX" + "/" + Integer.toString(2008 + i );
-                    fs.add( year );
-                    for ( int m = 0; m < m_txt.length; m++)
+                    fs.add(MailFolder.BROWSETOKEN);
+                    int last_year = -1;
+                    for (int i = 1; i <= 12; i++)
                     {
-                        String month = Integer.toString( m + 1 );
-                        if (m < 9)
-                            month = "0" + month;
-
-                     //   month += " " + m_txt[m] + "";
-
-                        fs.add( year + "/" + month);
-//                        for ( int d = 1; d< 31; d++)
-                        for ( int d = 1; d< 2; d++)
+                        int act_month = month -12 + i;
+                        int act_year = cal.get(GregorianCalendar.YEAR);
+                        if (act_month <= 0)
                         {
-                            String day = Integer.toString( d );
-                            if (d < 10)
-                                day = "0" + day;
-
-                            fs.add( year + "/" + month + "/" + day);
+                            act_month += 12;
+                            act_year--;
                         }
+                        String year_str = MailFolder.BROWSETOKEN + "/" + Integer.toString(act_year);
+                        if (act_year != last_year)
+                        {
+                            fs.add( year_str );
+                            last_year = act_year;
+                        }
+                        fs.add( year_str + "/" + (act_month < 10 ? "0"+act_month : act_month));
                     }
                 }
- * */
+
                 String[] arr = fs.toArray(new String[0]);
                 return arr;
             }

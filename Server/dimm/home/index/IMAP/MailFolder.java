@@ -3,7 +3,6 @@ package dimm.home.index.IMAP;
 import dimm.home.index.SearchCall;
 import dimm.home.index.SearchResult;
 import dimm.home.mailarchiv.Exceptions.VaultException;
-import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
@@ -14,22 +13,22 @@ import home.shared.filter.GroupEntry;
 import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.mail.MessagingException;
 
 public class MailFolder
 {
-    String file;
+    //String file;
     MailKonto konto;
     String key = null;
     ArrayList<MWMailMessage> uid_map_list;
     ArrayList<MWMailMessage> last_uid_map;
     String uid_validity;
+    int year;
+    int month;
 
     int cnt_level( String path )
     {
@@ -48,12 +47,13 @@ public class MailFolder
     }
 
     public static final String QRYTOKEN = "Suchen";
+    public static final String BROWSETOKEN = "Browsen";
 
     public static int uid = 42;
-    public MailFolder(MailKonto konto, String file,String key)
+    public MailFolder(MailKonto konto, /*String file,*/String key)
     {
         this.konto = konto;        
-        this.file = file;
+       // this.file = file;
         this.key = key;
         uid_map_list = new ArrayList<MWMailMessage>();
 
@@ -62,7 +62,7 @@ public class MailFolder
 
         if (key.startsWith(QRYTOKEN))
         {
-            RFCMimeMail mm = new RFCMimeMail();
+  /*          RFCMimeMail mm = new RFCMimeMail();
             try
             {
                 mm.create("status@MailSecurer.de", "status@MailSecurer.de", Main.Txt("Anzahl_Treffer:") + " " + 0, "", null);
@@ -72,63 +72,73 @@ public class MailFolder
                 Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-                uid_map_list.add( new MWMailMessage( this, konto, mm, /*uid++*/42, "0000" ) );
-            //uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", uid++  ));
-            
-            //uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
+                uid_map_list.add( new MWMailMessage( this, konto, mm, 42, "0000" ) );*/
         }
-        int level = cnt_level(file);
+      //  int level = cnt_level(file);
 
         if (key.startsWith("INBOX"))
         {
-         /*   RFCMimeMail mm = new RFCMimeMail();
-            try
-            {
-                mm.create("status@MailSecurer.de", "status@MailSecurer.de", Main.Txt("Anzahl_Treffer:") + " " + 0, "", null);
-            }
-            catch (MessagingException ex)
-            {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
-            }
-*/
-  //              uid_map_list.add( new MWMailMessage( this, konto, mm, /*uid++*/42, "0000" ) );
+        }
+        if (key.startsWith(BROWSETOKEN))
+        {
 
         }
     }
-/*    public void create_new_mail()
-    {
-        last_uid_map = uid_map_list;
 
-        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+
+
+    // CREATE DATAFOLDER
+    public MailFolder(MailKonto konto, int year, int month, String key)
+    {
+        this.konto = konto;
+       // this.file = file;
+        this.key = key;
+        this.year = year;
+        this.month = month;
+
         uid_map_list = new ArrayList<MWMailMessage>();
-        uid++;
-        uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid++ ) );
-        //uid_map_list.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test" + uid % 3  + ".eml", uid ) );
-    }*/
-  /*  private MailFolder(String file) //temporraer, darf nichgt nach aussen gegeben werden
-    {
-        this.konto = null;
-        this.file = file;
-        this.key = null;
-        uid_map = new ArrayList<MWMailMessage>();
+
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+    }
+    void fill()
+    {
+        GroupEntry ge = new GroupEntry();
+
+        GregorianCalendar cal1 = new GregorianCalendar(year, month - 1, 1);
+        Date d1 = cal1.getTime();
+        cal1.add(GregorianCalendar.MONTH, 1);
+        Date d2 = cal1.getTime();
+
+       
+
+        String t1 = Long.toString(d1.getTime(), 16);
+        String t2 = Long.toString(d2.getTime(), 16);
+
+        String qry_str = CS_Constants.FLD_DATE +":[" + t1 + " TO " + t2 + "]";
+        
+        SearchCall sc = new SearchCall(konto.m_ctx);
+        try
+        {
+            MandantContext m_ctx = konto.m_ctx;
+            sc.search_lucene_qry_str(konto.user, konto.pwd, qry_str, 100000, CS_Constants.USERMODE.UL_USER);
+
+            add_new_mail_resultlist( m_ctx, sc );
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        catch (org.apache.lucene.queryParser.ParseException ex)
+        {
+            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
 
-        if (file.equals("INBOX"))
-        {
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", 1  ));
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test0.eml", 2 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test1.eml", 3 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test2.eml", 4 ) );
-        }
-        if (file.startsWith("Query/200"))
-        {
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test.eml", 1  ));
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test0.eml", 2 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test1.eml", 3 ) );
-            uid_map.add( new  MWMailMessage( this, konto, "Z:\\Mailtest\\test2.eml", 4 ) );
-        }
-    }*/
+    }
 
     public String getKey()
     {
@@ -461,7 +471,7 @@ public class MailFolder
             sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
 
             add_new_mail_resultlist( m_ctx, sc );
-        }        
+        }
         catch (IOException ex)
         {
             Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
@@ -478,6 +488,7 @@ public class MailFolder
 
         return true;                
     }
+
     public void add_new_mail_resultlist( MandantContext m_ctx, SearchCall sc ) throws IOException
     {
         last_uid_map = uid_map_list;
@@ -529,7 +540,7 @@ public class MailFolder
 
                // InputStream stream =  rfc.open_inputstream();
 
-                MWMailMessage mail = new MWMailMessage( this, konto, rfc, uid++, result.getUuid() );
+                MWMailMessage mail = new MWMailMessage( this, konto, rfc, uid++, result );
 
               //  stream.close();
 

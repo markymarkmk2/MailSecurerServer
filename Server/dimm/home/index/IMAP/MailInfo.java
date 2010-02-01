@@ -17,13 +17,15 @@
 */
 package dimm.home.index.IMAP;
 
+import java.io.IOException;
+
 public interface MailInfo
 {
     public int getUID();
-    public String getMID();
+    public String getMID() throws IOException;
     public String getFlags();
-    public int getRFC822size();
-    public String getRFC822header();
+    public long getRFC822size();
+    public String getRFC822header() throws IOException;
 
-    public String getEnvelope();
+    public String getEnvelope() throws IOException;
 }

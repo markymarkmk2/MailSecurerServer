@@ -37,6 +37,7 @@ import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
+import dimm.home.mailarchiv.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
@@ -346,14 +347,14 @@ public class TCPCallConnect extends WorkerParent
     /* WE HAVE THE FOLLOWING RESTRIUCTIONS FOR REMOTE CALLABLE FUNCTIONS:
      *
      *  - NAME STARTS WITH RMX_
-     *  - TWO TYPES OF PARAMETERS:
-     *      1. 0 - 5 STRING PARAMETERS
-     *      2. FIRST PARAM IS SOCKET, SECOND IS LONG, REST 0 - 3 STRING PARAMETERS
+     *  - THREE TYPES OF PARAMETERS:
+     *      1. 0 IS SSO, 1 - 6 STRING PARAMETERS
+     *      2. 0 IS SSO, SECOND PARAM IS SOCKET, THIRD IS LONG, REST 0 - 3 STRING PARAMETERS
      *
      *  RETURN SHOULD BE "0: [optional text] OR <ERROR>: [optional text]
      *
      * */
-    Object call_method( Socket s, long stream_len, String cmf, ArrayList<String> params ) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+    Object call_method( Socket s, long stream_len, String cmf, ArrayList<String> params, UserSSOEntry ssoc ) throws ClassNotFoundException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     {
         Method[] list = this.getClass().getDeclaredMethods();
         String str = "";
@@ -378,9 +379,14 @@ public class TCPCallConnect extends WorkerParent
                 {
                     Class[] paramc = method.getParameterTypes();
 
-                    // WE HAVE SOCKET AS FIRST PARAM ?, THEN WE HAVE LEN AS SECOND (WLEN OR RLEN)
+                    if (paramc[0] != UserSSOEntry.class)
+                    {
+                        return "7: Missing sso as first parameter";
+                    }
+
+                    // WE HAVE SOCKET AS SECOND PARAM ?, THEN WE HAVE LEN AS THIRD (WLEN OR RLEN)
                     boolean with_socket = false;
-                    if (paramc.length >= 2 && paramc[0] == s.getClass() && paramc[1] == s_len.getClass())
+                    if (paramc.length >= 3 && paramc[1] == s.getClass() && paramc[2] == s_len.getClass())
                     {
                         with_socket = true;
                     }
@@ -389,10 +395,10 @@ public class TCPCallConnect extends WorkerParent
                     int k = 0;
 
                     // CHECK CORRECT ARGS AND STORE ARS IN LIST
-                    for (j = 0; j < paramc.length; j++)
+                    for (j = 1; j < paramc.length; j++)
                     {
                         // SKIP SOCK PARAMS (2)
-                        if (with_socket && j < 2)
+                        if (with_socket && j < 3)
                         {
                             continue;
                         }
@@ -448,23 +454,23 @@ public class TCPCallConnect extends WorkerParent
 
                         switch (paramc.length)
                         {
-                            case 2:
-                                ret = method.invoke(this, s, s_len);
-                                break;
                             case 3:
-                                ret = method.invoke(this, s, s_len, args.get(0));
+                                ret = method.invoke(this, ssoc, s, s_len);
                                 break;
                             case 4:
-                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1));
+                                ret = method.invoke(this, ssoc, s, s_len, args.get(0));
                                 break;
                             case 5:
-                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2));
+                                ret = method.invoke(this, ssoc, s, s_len, args.get(0), args.get(1));
                                 break;
                             case 6:
-                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3));
+                                ret = method.invoke(this, ssoc, s, s_len, args.get(0), args.get(1), args.get(2));
                                 break;
                             case 7:
-                                ret = method.invoke(this, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
+                                ret = method.invoke(this, ssoc, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3));
+                                break;
+                            case 8:
+                                ret = method.invoke(this, ssoc, s, s_len, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
                                 break;
                             default:
                                 ret = null;
@@ -474,23 +480,23 @@ public class TCPCallConnect extends WorkerParent
                     {
                         switch (paramc.length)
                         {
-                            case 0:
-                                ret = method.invoke(this);
-                                break;
                             case 1:
-                                ret = method.invoke(this, args.get(0));
+                                ret = method.invoke(this, ssoc);
                                 break;
                             case 2:
-                                ret = method.invoke(this, args.get(0), args.get(1));
+                                ret = method.invoke(this, ssoc, args.get(0));
                                 break;
                             case 3:
-                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2));
+                                ret = method.invoke(this, ssoc, args.get(0), args.get(1));
                                 break;
                             case 4:
-                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2), args.get(3));
+                                ret = method.invoke(this, ssoc, args.get(0), args.get(1), args.get(2));
                                 break;
                             case 5:
-                                ret = method.invoke(this, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
+                                ret = method.invoke(this, ssoc, args.get(0), args.get(1), args.get(2), args.get(3));
+                                break;
+                            case 6:
+                                ret = method.invoke(this, ssoc, args.get(0), args.get(1), args.get(2), args.get(3), args.get(4));
                                 break;
                             default:
                                 ret = null;
@@ -672,6 +678,16 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
+    public boolean is_valid_sso( String sso_token )
+    {
+        boolean ret = Main.get_control().is_valid_sso(sso_token);
+
+        return ret;
+    }
+    public UserSSOEntry get_sso( String sso_token )
+    {
+        return Main.get_control().get_sso(sso_token);
+    }
 
     void dispatch_tcp_command( Socket s, String cmd, long stream_len, byte[] add_data, OutputStream out ) throws IOException
     {
@@ -686,6 +702,7 @@ public class TCPCallConnect extends WorkerParent
         else
         {
             // BUILD ARGLIST (...)
+            UserSSOEntry sso_entry = null;
             ArrayList<String> params = new ArrayList<String>();
             if (add_data != null)
             {
@@ -695,7 +712,22 @@ public class TCPCallConnect extends WorkerParent
                 {
                     String arg = str.nextToken();
                     arg = decode_pipe(arg);
-                    params.add(arg);
+                    
+                    // CHECK FOR SSO:1.42
+                    if (arg.startsWith("SSO:") && arg.indexOf('.') >= 5 && Character.isDigit( arg.charAt(4)) )
+                    {
+                        String sso_token = arg.substring(4);
+                        if (!is_valid_sso(sso_token))
+                        {
+                            write_tcp_answer(true, "8: unauthorized", out);
+                            return;
+                        }
+                        sso_entry = get_sso(sso_token);
+                    }
+                    else
+                    {
+                        params.add(arg);
+                    }
                 }
             }
             StringBuffer args = new StringBuffer();
@@ -719,6 +751,9 @@ public class TCPCallConnect extends WorkerParent
                         AbstractCommand cmd_func = cmd_list.get(i);
                         if (cmd_func.is_cmd(cmd_name))
                         {
+                            // SET SSO ENTRY
+                            cmd_func.setSsoEntry(sso_entry);
+
                             cmd_func.set_socket(s);
                             boolean ok = cmd_func.do_command(add_data);
 
@@ -740,7 +775,7 @@ public class TCPCallConnect extends WorkerParent
             {
                 try
                 {
-                    Object ret = call_method(s, stream_len, cmd, params);
+                    Object ret = call_method(s, stream_len, cmd, params, sso_entry);
                     
                     if (ret != null)
                     {
@@ -977,7 +1012,7 @@ public class TCPCallConnect extends WorkerParent
         super.setShutdown(shutdown);
     }
 
-    public String RMX_open( String db_name )
+    public String RMX_open( UserSSOEntry ssoc, String db_name )
     {
         try
         {
@@ -1011,7 +1046,7 @@ public class TCPCallConnect extends WorkerParent
         return s.charAt(0);
     }
 
-    public String RMX_createStatement( String conn_id )
+    public String RMX_createStatement( UserSSOEntry ssoc, String conn_id )
     {
         try
         {
@@ -1028,7 +1063,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_close( String conn_txt )
+    public String RMX_close( UserSSOEntry ssoc, String conn_txt )
     {
         try
         {
@@ -1099,7 +1134,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_execute( String stmt_txt, String cmd )
+    public String RMX_execute( UserSSOEntry ssoc, String stmt_txt, String cmd )
     {
         try
         {
@@ -1117,7 +1152,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_executeUpdate( String stmt_txt, String cmd )
+    public String RMX_executeUpdate( UserSSOEntry ssoc, String stmt_txt, String cmd )
     {
         try
         {
@@ -1134,7 +1169,7 @@ public class TCPCallConnect extends WorkerParent
             return "1: " + exc.getMessage();
         }
     }
-    public String RMX_DeleteObject(  String cmd )
+    public String RMX_DeleteObject( UserSSOEntry ssoc,  String cmd )
     {
         org.hibernate.Transaction tx = null;
         try
@@ -1162,7 +1197,7 @@ public class TCPCallConnect extends WorkerParent
     }
 
 
-    public String RMX_executeQuery( String stmt_txt, String cmd )
+    public String RMX_executeQuery( UserSSOEntry ssoc, String stmt_txt, String cmd )
     {
         try
         {
@@ -1181,7 +1216,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_getMetaData( String resultset )
+    public String RMX_getMetaData( UserSSOEntry ssoc, String resultset )
     {
         try
         {
@@ -1199,7 +1234,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_getSQLArrayResult( String resultset )
+    public String RMX_getSQLArrayResult( UserSSOEntry ssoc, String resultset )
     {
         SQLArrayResult result = new SQLArrayResult("");
         ArrayList<ArrayList> list = new ArrayList<ArrayList>();
@@ -1253,7 +1288,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_getSQLFirstRowField( String conn_text, String qry, int field )
+    public String RMX_getSQLFirstRowField( UserSSOEntry ssoc, String conn_text, String qry, int field )
     {
         Statement sta = null;
         ResultSet rs = null;
@@ -1324,7 +1359,7 @@ public class TCPCallConnect extends WorkerParent
 */
 
 
-    public String RMX_OpenOutStream( String stream_name, String args )
+    public String RMX_OpenOutStream( UserSSOEntry ssoc, String stream_name, String args )
     {
         try
         {
@@ -1359,7 +1394,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_CloseOutStream( String stream_id )
+    public String RMX_CloseOutStream( UserSSOEntry ssoc, String stream_id )
     {
         try
         {
@@ -1378,7 +1413,7 @@ public class TCPCallConnect extends WorkerParent
             drop_ostream(get_id(stream_id));
         }
     }
-    public String RMX_CloseDeleteOutStream( String stream_id )
+    public String RMX_CloseDeleteOutStream( UserSSOEntry ssoc, String stream_id )
     {
         try
         {
@@ -1400,7 +1435,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_WriteOutStream( Socket s, Long slen, String stream_id )
+    public String RMX_WriteOutStream( UserSSOEntry ssoc, Socket s, Long slen, String stream_id )
     {
         int buff_len = CS_Constants.STREAM_BUFFER_LEN;
         try
@@ -1440,7 +1475,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_WriteOut( Socket s, Long slen, String stream_id, String sdata )
+    public String RMX_WriteOut( UserSSOEntry ssoc, Socket s, Long slen, String stream_id, String sdata )
     {
         try
         {
@@ -1458,7 +1493,7 @@ public class TCPCallConnect extends WorkerParent
             return "1: Exception: " + iOException.getMessage();
         }
     }
-    public String RMX_OpenInStream( String stream_name, String args )
+    public String RMX_OpenInStream( UserSSOEntry ssoc, String stream_name, String args )
     {
         try
         {
@@ -1492,13 +1527,13 @@ public class TCPCallConnect extends WorkerParent
         }
     }
     
-    public String RMX_OpenInStream( InputStream is, long len )
+    public String RMX_OpenInStream( UserSSOEntry ssoc, InputStream is, long len )
     {
         String id = new_instream_entry( is, null );
         return "0: " + id + " LEN:" + len;
     }
 
-    public String RMX_CloseInStream( String stream_id )
+    public String RMX_CloseInStream( UserSSOEntry ssoc, String stream_id )
     {
         try
         {
@@ -1522,7 +1557,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_ReadInStream( Socket s, Long slen, String stream_id )
+    public String RMX_ReadInStream( UserSSOEntry ssoc, Socket s, Long slen, String stream_id )
     {
         try
         {
@@ -1539,7 +1574,7 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
-    public String RMX_ReadIn( String stream_id, String slen )
+    public String RMX_ReadIn( UserSSOEntry ssoc, String stream_id, String slen )
     {
         try
         {

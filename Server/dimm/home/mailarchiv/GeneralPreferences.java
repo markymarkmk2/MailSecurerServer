@@ -67,6 +67,7 @@ public class GeneralPreferences extends Preferences
     public static final String HTTPUSER = "HttpUser";
     public static final String HTTPPWD = "HttpPwd";
     public static final String MAX_STAY_VALID_DAYS = "MaxUserValidDays";
+    public static final String SYSADMIN_NAME = "SysAdminName";
 
     
     /** Creates a new instance of Preferences */
@@ -119,6 +120,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( HTTPUSER );
         prop_names.add( HTTPPWD );
         prop_names.add( MAX_STAY_VALID_DAYS );
+        prop_names.add( SYSADMIN_NAME );
         
                 
         read_props();
@@ -127,33 +129,6 @@ public class GeneralPreferences extends Preferences
 
 
 
-    public String get_KeyAlgorithm()
-    {
-        return "PBEWithMD5AndDES";
-    }
-
-    // 8-byte Salt
-    static byte[] salt =
-    {
-        (byte) 0x19, (byte) 0x09, (byte) 0x58, (byte) 0x0f,
-        (byte) 'h', (byte) 'e', (byte) 'l', (byte) 'i'
-    };
-
-    // THIS IS FIXED, IF USER LOOSES THIS, DATA IS LOST FOR EVER
-    public byte[] get_KeyPBESalt()
-    {
-        return salt;
-    }
-    public int get_KeyPBEIteration()
-    {
-        return 13;
-    }
-    
-    // USED FOR ENCRYPTION END DECRYPTION OF INTERNAL SECRETS
-    public String get_InternalPassPhrase()
-    {
-        return "hrXblks4G_oip9!zf";
-    }
 
     
 }

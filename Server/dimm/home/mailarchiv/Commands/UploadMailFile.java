@@ -86,7 +86,7 @@ public class UploadMailFile extends AbstractCommand
             return true;
         }
 
-        String ret = m_ctx.get_tcp_call_connect().RMX_OpenOutStream(mbox_file.getAbsolutePath(), "");
+        String ret = m_ctx.get_tcp_call_connect().RMX_OpenOutStream( getSsoEntry(), mbox_file.getAbsolutePath(), "");
 
         answer = ret;
 

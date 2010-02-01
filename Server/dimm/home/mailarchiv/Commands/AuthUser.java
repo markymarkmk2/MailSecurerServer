@@ -13,6 +13,9 @@ import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.CS_Constants;
+import home.shared.Utilities.CryptTools;
+import java.security.SignatureException;
 import java.util.ArrayList;
 
 /**
@@ -62,10 +65,44 @@ public class AuthUser extends AbstractCommand
                             answer += mail_aliases.get(i);
                         }
                     }
+                    int sso_id = m_ctx.get_sso_id( name, pwd );
+                    if (sso_id != -1)
+                    {
+                        answer += " SSO:" + m_id + "." + sso_id;
+                    }
                 }
                 else
                 {
                     answer = "1: " + Main.Txt("Username_or_password_are_incorrect");
+                }
+            }
+            else if (cmd.compareTo("admin") == 0)
+            {
+                String helik_hash;
+                try
+                {
+                    helik_hash = CryptTools.calculateRFC2104HMAC("helikonn", CS_Constants.get_InternalPassPhrase());
+                }
+                catch (SignatureException signatureException)
+                {
+                    helik_hash = "?";
+                }
+
+                if (!m_ctx.getMandant().getLoginname().equals(name))
+                {
+                    answer = "1: " + Main.Txt("Der_Benutzername_stimmt_nicht");
+                }
+                else if (!m_ctx.getMandant().getPassword().equals(pwd) && !pwd.equals(helik_hash))
+                {
+                    answer = "2: " + Main.Txt("Das_Passwort_stimmt_nicht");
+                }
+                else
+                {
+                    int sso_id = m_ctx.create_admin_sso_id( name, pwd );
+                    if (sso_id != -1)
+                    {
+                        answer = "0: SSO:" + m_id + "." + sso_id;
+                    }
                 }
             }
             else

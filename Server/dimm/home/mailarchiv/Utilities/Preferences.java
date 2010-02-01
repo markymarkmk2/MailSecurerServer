@@ -6,9 +6,12 @@
 package dimm.home.mailarchiv.Utilities;
 
 import dimm.home.mailarchiv.*;
+import home.shared.CS_Constants;
+import home.shared.Utilities.CryptTools;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -21,6 +24,11 @@ public class Preferences
     String prefs_path;
     protected ArrayList<String> prop_names;
     Properties props;
+    protected String password;
+
+
+    public static final String ENC_PASSWORD = "EncryptionPassword";
+    public static final String DFLT_PASSWORD = "12345";
 
     public Preferences( String _path )
     {
@@ -29,7 +37,7 @@ public class Preferences
             prefs_path += "/";
 
         prop_names = new ArrayList<String>();
-
+        prop_names.add( ENC_PASSWORD );
     }
 
     public Preferences()
@@ -180,7 +188,7 @@ public class Preferences
     }
 
 
-
+    boolean noPwd;
 
     public ArrayList<String> get_prop_list()
     {
@@ -189,6 +197,8 @@ public class Preferences
 
     public void read_props()
     {
+        noPwd = false;
+
         File prop_file = new File(prefs_path + "preferences.dat");
         props = new Properties();
         try
@@ -204,6 +214,26 @@ public class Preferences
         {
             LogManager.err_log( Main.Txt("Cannot_read_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
         }
+
+        password = get_prop(ENC_PASSWORD);
+
+        if (password == null)
+        {
+            noPwd = true;
+            password = "12345";
+        }
+        else
+        {
+            String str = CryptTools.crypt_internal(password, LogManager.get_instance(), CryptTools.ENC_MODE.DECRYPT);
+            if (str == null)
+            {
+                LogManager.err_log_fatal("Cannot decrypt password from preferences");
+            }
+            else
+            {
+                password = str;
+            }
+        }
     }
 
     public void set_prop( String p, String v )
@@ -217,6 +247,16 @@ public class Preferences
 
     public boolean store_props()
     {
+        if (password == null)
+        {
+            LogManager.err_log_fatal("There is no password set");
+        }
+        else
+        {
+            String pwd = CryptTools.crypt_internal(password, LogManager.get_instance(), CryptTools.ENC_MODE.ENCRYPT);
+            set_prop(ENC_PASSWORD, pwd);
+        }
+
         File prop_file = new File(prefs_path + "preferences.dat");
         try
         {
@@ -231,5 +271,34 @@ public class Preferences
         }
         return false;
     }
+
+
+
+
+    public String get_password()
+    {
+        if (password == null)
+            return DFLT_PASSWORD;
+
+        return password;
+    }
+    
+
+    public void set_password( String pwd )
+    {
+        // TRY TO OBFUSCATE PWD
+        if (pwd != null && pwd.length() > 0)
+        {
+            try
+            {
+                password = CryptTools.calculateRFC2104HMAC(pwd, CS_Constants.get_InternalPassPhrase());
+            }
+            catch (SignatureException signatureException)
+            {
+                password = pwd;
+            }
+        }
+    }
+
 
 }

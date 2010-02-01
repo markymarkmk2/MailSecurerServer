@@ -26,6 +26,8 @@ public class Uid extends ImapCmd
 
      private int uid( MWImapServer is, String sid, String par )
     {
+
+         resetCounter();
         if (is.konto == null || is.mailfolder == null)
         {
             is.response(sid, false, "UID failed");
@@ -106,7 +108,7 @@ public class Uid extends ImapCmd
                 }
                 else if (command.toLowerCase().equals("fetch"))
                 {
-                    success &= Fetch.fetch(is, min, max, 2, /*is_uid*/ true, part);
+                    success &= Fetch.fetch(this, is, min, max, 2, /*is_uid*/ true, part);
                 }
                 else
                 {

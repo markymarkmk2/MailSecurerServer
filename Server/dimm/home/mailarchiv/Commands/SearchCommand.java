@@ -29,7 +29,7 @@ public class SearchCommand extends AbstractCommand
         ParseToken pt = new ParseToken(opt);
 
         String command = pt.GetString("CMD:");
-        if (command.compareTo("open") == 0)
+/*        if (command.compareTo("open") == 0)
         {
             int ma_id = (int)pt.GetLongValue("MA:");
             String mail = pt.GetString("EM:");
@@ -41,8 +41,8 @@ public class SearchCommand extends AbstractCommand
             answer = SearchCall.open_search_call( ma_id, mail, field, val, n);
 
             return true;
-        }
-        else if (command.compareTo("get") == 0)
+        }*/
+        if (command.compareTo("get") == 0)
         {
             String id = pt.GetString("ID:");
             int row = (int)pt.GetLongValue("ROW:");

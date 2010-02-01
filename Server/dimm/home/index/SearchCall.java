@@ -8,10 +8,12 @@ import com.sun.mail.smtp.SMTPTransport;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.SMTPAuth;
 import dimm.home.auth.SMTPUserContext;
+import dimm.home.mailarchiv.Exceptions.AuthException;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
@@ -155,7 +157,7 @@ public class SearchCall
         }
         return null;
     }
-
+/*
     public static String open_search_call( int ma_id, String mail, String field, String val, int n )
     {
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
@@ -176,14 +178,33 @@ public class SearchCall
 
         return "0: sc" + id + " N:" + sc.result.size();
     }
-
+*/
     public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level, boolean with_imap )
     {
+
+
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
         if (m_ctx == null)
         {
             return "1: invalid mandant";
         }
+        try
+        {
+            if (!m_ctx.authenticate_user(user, pwd))
+            {
+                return "2: login failed";
+            }
+        }
+        catch (AuthException authException)
+        {
+            return "3: login failed: " + authException.getLocalizedMessage();
+        }
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
+        if (ssoc == null)
+        {
+            return "4: unauthorized";
+        }
+
         SearchCall sc = new SearchCall(m_ctx);
         try
         {
@@ -198,7 +219,7 @@ public class SearchCall
         synchronized (call_list)
         {
             id = call_list.size();
-            SearchCallEntry sce = new SearchCallEntry(sc, id);
+            SearchCallEntry sce = new SearchCallEntry(ssoc, sc, id);
             call_list.add(sce);
         }
         if (m_ctx.get_imap_server() != null)
@@ -284,7 +305,7 @@ public class SearchCall
         return "0: " + res;
     }
 
-    public static String retrieve_mail( String id, int row )
+    public static String retrieve_mail(  String id, int row )
     {
         String ret = null;
 
@@ -299,7 +320,7 @@ public class SearchCall
             return "2: invalid result";
         }
 
-        ret = sce.call.open_RMX_mail_stream(result);
+        ret = sce.call.open_RMX_mail_stream(sce.getSsoc(), result);
 
         if (ret == null)
         {
@@ -443,6 +464,36 @@ public class SearchCall
 
         Query qry = build_lucene_qry(logic_list, ana);
         LogManager.debug_msg(2, "Qry is: " + qry.toString());
+
+        run_lucene_searcher(dsh_list, qry, filter, n);
+    }
+    public void search_lucene_qry_str( String user, String pwd, String lucene_qry, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    {
+
+        ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
+        if (dsh_list.size() == 0)
+        {
+            throw new IllegalArgumentException(Main.Txt("No_disk_spaces_for_search_found"));
+        }
+        Analyzer ana = dsh_list.get(0).create_read_analyzer();
+
+
+        // BUILD USER FILTER
+        TermsFilter filter = null;
+        if (level != USERMODE.UL_ADMIN && level != USERMODE.UL_SYSADMIN)
+        {
+            ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
+            if (mail_aliases == null || mail_aliases.size() == 0)
+            {
+                throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
+            }
+            //           filter = null;
+
+            filter = build_lucene_filter(mail_aliases);
+        }
+
+        Query qry = build_lucene_qry(lucene_qry, ana);
+        LogManager.debug_msg(2, "Qry is: " + lucene_qry);
 
         run_lucene_searcher(dsh_list, qry, filter, n);
     }
@@ -637,6 +688,21 @@ public class SearchCall
 
         return qry;
     }
+    Query build_lucene_qry( String qry_str, Analyzer ana ) throws ParseException
+    {
+        QueryParser parser = new QueryParser("FLDN_BODY", ana);
+        parser.setAllowLeadingWildcard(true);
+
+        if (qry_str.length() == 0)
+        {
+            return new MatchAllDocsQuery();
+        }
+
+        Query qry = parser.parse(qry_str);
+
+        return qry;
+    }
+
 
     void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n ) throws IOException
     {
@@ -865,7 +931,7 @@ public class SearchCall
 
     }
 
-    private String open_RMX_mail_stream( SearchResult result )
+    private String open_RMX_mail_stream( UserSSOEntry ssoc, SearchResult result )
     {
 
 
@@ -884,7 +950,7 @@ public class SearchCall
             }
             RFCGenericMail mail = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
             InputStream is = mail.open_inputstream();
-            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream(is, result.getSize());
+            String ret = m_ctx.get_tcp_call_connect().RMX_OpenInStream( ssoc, is, result.getSize());
             return ret;
         }
         catch (IOException ex)
