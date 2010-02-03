@@ -137,6 +137,7 @@ public class SMTPConnection extends ProxyConnection
                     m_Command = SMTP_SINGLELINE;
                     continue;
                 }
+                reset_timeout();
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())
@@ -234,10 +235,12 @@ public class SMTPConnection extends ProxyConnection
         while ( buffer[ rlen - 1 ] != '\n' && buffer[ rlen - 1] != '\r')
         {
             int local_rlen = clientReader.read(buffer, rlen, buffer.length );
+
             if (local_rlen <= 0)
                 return -1;
-            
-                rlen += local_rlen;
+
+            reset_timeout();
+            rlen += local_rlen;
         }
         return rlen;        
     }

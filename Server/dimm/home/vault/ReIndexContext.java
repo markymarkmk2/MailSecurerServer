@@ -166,7 +166,7 @@ public class ReIndexContext
 
     public ReIndexContext( MandantContext context, int da_id )
     {
-        this( context, da_id, -1);
+        this(context, da_id, -1);
     }
 
     public void start()
@@ -210,7 +210,7 @@ public class ReIndexContext
 
     void prepare( DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh ) throws VaultException
     {
-        set_status(Main.Txt("Preparing_index_data"));
+        set_status(Main.Txt("Scanning_file_system_for_data"));
 
         String path = data_dsh.getMailPath();
         DirectoryEntry data_dir = new DirectoryEntry(new File(path));
@@ -233,183 +233,188 @@ public class ReIndexContext
         reindex_list.add(re);
     }
 
-
     void reindex() throws VaultException
     {
         for (int i = 0; i < reindex_list.size() && !abort; i++)
         {
             ReIndexDSHEntry reIndexDSHEntry = reindex_list.get(i);
-            synchronized(stat_sb)
+            synchronized (stat_sb)
             {
                 act_re_idx = i;
             }
-            reindex( reIndexDSHEntry );
+            reindex(reIndexDSHEntry);
         }
     }
 
-    void reindex(ReIndexDSHEntry reIndexDSHEntry) throws VaultException
+    void reindex( ReIndexDSHEntry reIndexDSHEntry ) throws VaultException
     {
-            DiskSpaceHandler data_dsh = reIndexDSHEntry.getData_dsh();
-            DiskSpaceHandler index_dsh = reIndexDSHEntry.getIndex_dsh();
+        DiskSpaceHandler data_dsh = reIndexDSHEntry.getData_dsh();
+        DiskSpaceHandler index_dsh = reIndexDSHEntry.getIndex_dsh();
 
-            String password = context.get_vault_by_da_id(da_id).get_password();
-            int iteration = CS_Constants.get_KeyPBEIteration();
-            byte[] salt = CS_Constants.get_KeyPBESalt();
-
-
+        data_dsh.lock_for_rebuild();
+        if (index_dsh != data_dsh)
+        {
             data_dsh.lock_for_rebuild();
-            if (index_dsh != data_dsh)
+        }
+        try
+        {
+            // CLOSE ANY OPEN DSH
+            if (data_dsh.is_open())
             {
-                data_dsh.lock_for_rebuild();
+                data_dsh.close();
+
             }
-            try
+            if (index_dsh.is_open())
             {
-                // CLOSE ANY OPEN DSH
-                if (data_dsh.is_open())
-                {
-                    data_dsh.close();
+                index_dsh.close();
+            }
 
-                }
-                if (index_dsh.is_open())
-                {
-                    index_dsh.close();
-                }
+            set_status(Main.Txt("Deleting_index_data"));
 
-                set_status(Main.Txt("Deleting_index_data"));
-
-                // DELETE INDEX
+            // DELETE INDEX
                /* String path = index_dsh.getIndexPath();
-                DirectoryEntry index_dir = new DirectoryEntry(new File(path));
-                index_dir.delete_recursive();
-                */
-                // AND CREATE NEW FROM SCRATCH
-                index_dsh.create_write_index();
+            DirectoryEntry index_dir = new DirectoryEntry(new File(path));
+            index_dir.delete_recursive();
+             */
+
+            // AND CREATE NEW FROM SCRATCH
+            index_dsh.create_write_index();
 
 
-                // BUILD RECUSIVE ENTRYLIST
-                String path = data_dsh.getMailPath();
-                DirectoryEntry data_dir = new DirectoryEntry(new File(path));
+            set_status(Main.Txt("Scanning_file_system_for_data"));
+
+            // BUILD RECUSIVE ENTRYLIST
+            String path = data_dsh.getMailPath();
+            DirectoryEntry data_dir = reIndexDSHEntry.getData_dir(); //new DirectoryEntry(new File(path));
 
 
-                // START CALC STATS
-                Iterator<File> it = data_dir.get_file_iterator();
+            // START CALC STATS
+            Iterator<File> it = data_dir.get_file_iterator();
 
-                set_status(Main.Txt("Starting_reindex"));
-                LogManager.debug(getLast_msg());
+            set_status(Main.Txt("Starting_reindex"));
+            LogManager.debug(getLast_msg());
 
 
-                IndexManager idx = context.get_index_manager();
-                int errs_in_row = 0;
+            IndexManager idx = context.get_index_manager();
+            int errs_in_row = 0;
 
-                while (it.hasNext())
-                {
-                    // CHECK PAUSE MODE
-                    if (pause)
-                    {
-                        data_dsh.unlock_for_rebuild();
-                        if (index_dsh != data_dsh)
-                        {
-                            data_dsh.unlock_for_rebuild();
-                        }
-                        while (pause && !abort)
-                        {
-                            LogicControl.sleep(500);
-                        }
-                        data_dsh.lock_for_rebuild();
-                        if (index_dsh != data_dsh)
-                        {
-                            data_dsh.lock_for_rebuild();
-                        }
-                    }
-
-                    // CHECK ABORT
-                    if (abort)
-                    {
-                        set_status(Main.Txt("Aborting_reindex"));
-                        break;
-                    }
-
-                    File mailfile = it.next();
-
-                    try
-                    {
-                        // RETRIEVE MAILFILE
-                        String norm_path = mailfile.getAbsolutePath().replace('\\', '/');
-                        long time = data_dsh.build_time_from_path(norm_path, data_dsh.get_enc_mode(), data_dsh.get_fmode());
-                        RFCFileMail rfc = (RFCFileMail)data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode(), data_dsh.get_fmode());
-                        
-
-                        String uuid = data_dsh.get_message_uuid(rfc);
-
-                        // AND INDEX IT
-                        System.out.println(mailfile.getAbsolutePath() + " " + mailfile.length());
-                        boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc, /*delete_after_index*/ false, /*parakek*/ true);
-                        //index_dsh.flush();
-                        
-                        if (!ok)
-                        {
-                            LogManager.err_log("Indexing " + mailfile.getAbsolutePath() + " failed");
-                            errs_in_row++;
-                        }
-                        else
-                            errs_in_row = 0;
-                        
-                        // STATS
-                        synchronized(stat_sb)
-                        {
-                            reIndexDSHEntry.addAct_size(mailfile.length());
-                            reIndexDSHEntry.incrAct_cnt();
-                        }
-                    }
-                    catch (VaultException vaultException)
-                    {
-                        set_status(Main.Txt("Invalid_mailfile"));
-                        LogManager.err_log(last_msg, vaultException);
-                    }
-                    if (errs_in_row> 50)
-                    {
-                        throw new VaultException("Cannot_index_files,_too_many_errors_in_a_row");
-                    }
-                }
-
-                while (data_dsh.get_async_index_writer().get_queue_entries() > 0)
-                {
-                    set_status(Main.Txt("Waiting_for_queues_to_finish: ") + data_dsh.get_async_index_writer().get_queue_entries());
-                    LogicControl.sleep(500);
-                }
-
-                set_status(Main.Txt("Optimizing_index"));
-                try
-                {
-                    data_dsh.get_write_index().optimize();
-                }
-                catch (IOException iOException)
-                {
-                    set_status(Main.Txt("Index_is_corrupted") + " " + iOException.getMessage());
-                }
-                
-                set_status(Main.Txt("Finished_reindex"));
-                this.context.reinit_importbuffer();
-            }
-            /*catch (IndexException indexException)
+            while (it.hasNext())
             {
-                set_status(Main.Txt("Aborting_reindex"));
-                LogManager.err_log(last_msg, indexException);
-            }*/
-            catch (VaultException vaultException)
-            {
-                set_status(Main.Txt("Aborting_reindex"));
-                LogManager.err_log(last_msg, vaultException);
-            }
-            finally
-            {
-                data_dsh.unlock_for_rebuild();
-                if (index_dsh != data_dsh)
+                // CHECK PAUSE MODE
+                if (pause)
                 {
                     data_dsh.unlock_for_rebuild();
+                    if (index_dsh != data_dsh)
+                    {
+                        data_dsh.unlock_for_rebuild();
+                    }
+                    while (pause && !abort)
+                    {
+                        LogicControl.sleep(500);
+                    }
+                    data_dsh.lock_for_rebuild();
+                    if (index_dsh != data_dsh)
+                    {
+                        data_dsh.lock_for_rebuild();
+                    }
+                }
+
+                // CHECK ABORT
+                if (abort)
+                {
+                    set_status(Main.Txt("Aborting_reindex"));
+                    break;
+                }
+
+                File mailfile = it.next();
+
+                try
+                {
+                    // RETRIEVE MAILFILE
+                    String norm_path = mailfile.getAbsolutePath().replace('\\', '/');
+                    long time = data_dsh.build_time_from_path(norm_path, data_dsh.get_enc_mode(), data_dsh.get_fmode());
+                    RFCFileMail rfc = (RFCFileMail) data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode(), data_dsh.get_fmode());
+
+
+                    String uuid = data_dsh.get_message_uuid(rfc);
+
+                    // AND INDEX IT
+                    System.out.println(mailfile.getAbsolutePath() + " " + mailfile.length());
+                    boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc,
+                            /*delete_after_index*/ false, /*parallel*/ true,/*skip_account_match*/ true);
+
+
+                    if (!ok)
+                    {
+                        LogManager.err_log("Indexing " + mailfile.getAbsolutePath() + " failed");
+                        errs_in_row++;
+                    }
+                    else
+                    {
+                        errs_in_row = 0;
+                    }
+
+                    // STATS
+                    synchronized (stat_sb)
+                    {
+                        reIndexDSHEntry.addAct_size(mailfile.length());
+                        reIndexDSHEntry.incrAct_cnt();
+                    }
+                }
+                catch (VaultException vaultException)
+                {
+                    set_status(Main.Txt("Invalid_mailfile"));
+                    LogManager.err_log(last_msg, vaultException);
+                }
+                if (errs_in_row > 50)
+                {
+                    throw new VaultException("Cannot_index_files,_too_many_errors_in_a_row");
                 }
             }
-        
+
+            while (data_dsh.get_async_index_writer().get_queue_entries() > 0)
+            {
+                set_status(Main.Txt("Waiting_for_queues_to_finish: ") + data_dsh.get_async_index_writer().get_queue_entries());
+                LogicControl.sleep(500);
+            }
+
+            set_status(Main.Txt("Optimizing_index"));
+            try
+            {
+                data_dsh.get_write_index().optimize();
+                // 100 %
+                synchronized (stat_sb)
+                {
+                    reIndexDSHEntry.setAct_size(reIndexDSHEntry.getTotal_size());
+                }
+            }
+            catch (IOException iOException)
+            {
+                set_status(Main.Txt("Index_is_corrupted") + " " + iOException.getMessage());
+            }
+
+            set_status(Main.Txt("Finished_reindex"));
+            this.context.reinit_importbuffer();
+        }
+        /*catch (IndexException indexException)
+        {
+        set_status(Main.Txt("Aborting_reindex"));
+        LogManager.err_log(last_msg, indexException);
+        }*/
+        catch (VaultException vaultException)
+        {
+            set_status(Main.Txt("Aborting_reindex"));
+            LogManager.err_log(last_msg, vaultException);
+        }
+        finally
+        {
+            data_dsh.unlock_for_rebuild();
+            if (index_dsh != data_dsh)
+            {
+                data_dsh.unlock_for_rebuild();
+            }
+        }
+
     }
 
     public void prepare_reindex()
@@ -503,7 +508,7 @@ public class ReIndexContext
             }
             try
             {
-                prepare(dsh, use_dsh_idx);                
+                prepare(dsh, use_dsh_idx);
             }
             catch (VaultException vaultException)
             {
@@ -513,9 +518,9 @@ public class ReIndexContext
         }
     }
 
-
     private void set_status( String Txt )
     {
+        LogManager.debug_msg(Txt);
         last_msg = Txt;
     }
 
@@ -541,7 +546,9 @@ public class ReIndexContext
     public double getPercent_done()
     {
         if (getTotal_size() == 0)
+        {
             return 0;
+        }
 
         double percent = 100.0 / getTotal_size();
         percent *= getAct_size();
@@ -603,13 +610,16 @@ public class ReIndexContext
         }
         return act_cnt;
     }
+
     public int getTotal_percent()
     {
         long ts = getTotal_size();
         if (ts == 0)
+        {
             return 0;
+        }
 
-        return (int)((getAct_size() * 100) / ts);
+        return (int) ((getAct_size() * 100) / ts);
 
     }
 
@@ -623,50 +633,52 @@ public class ReIndexContext
         this.abort = b;
     }
     final StringBuffer stat_sb = new StringBuffer();
+
     public String get_statistics_string()
     {
-        stat_sb.setLength(0);
 
-        synchronized(stat_sb)
-        {            
-            stat_sb.append( "BS:");
-            stat_sb.append( isBusy() ? "1":"0");
-            stat_sb.append( " PA:");
-            stat_sb.append( pause ? "1":"0");
-            stat_sb.append( " AB:");
-            stat_sb.append( abort ? "1":"0");
-            stat_sb.append( " PC:" );
-            stat_sb.append( getTotal_percent() );
-            stat_sb.append( " TCNT:" );
-            stat_sb.append( getTotal_cnt() );
-            stat_sb.append( " TSIZ:" );
-            stat_sb.append( getTotal_size() );
-            stat_sb.append( " ACNT:" );
-            stat_sb.append( getAct_cnt() );
-            stat_sb.append( " ASIZ:" );
-            stat_sb.append( getAct_size() );
+        synchronized (stat_sb)
+        {
+            stat_sb.setLength(0);
+            
+            stat_sb.append("BS:");
+            stat_sb.append(isBusy() ? "1" : "0");
+            stat_sb.append(" PA:");
+            stat_sb.append(pause ? "1" : "0");
+            stat_sb.append(" AB:");
+            stat_sb.append(abort ? "1" : "0");
+            stat_sb.append(" PC:");
+            stat_sb.append(getTotal_percent());
+            stat_sb.append(" TCNT:");
+            stat_sb.append(getTotal_cnt());
+            stat_sb.append(" TSIZ:");
+            stat_sb.append(getTotal_size());
+            stat_sb.append(" ACNT:");
+            stat_sb.append(getAct_cnt());
+            stat_sb.append(" ASIZ:");
+            stat_sb.append(getAct_size());
             if (act_re_idx >= 0)
             {
                 ReIndexDSHEntry reIndexDSHEntry = reindex_list.get(act_re_idx);
-                stat_sb.append( " RPA:\"" );
-                stat_sb.append( reIndexDSHEntry.getData_dsh().getDs().getPath() );
-                stat_sb.append( "\"");
-                stat_sb.append( " RDS:" );
-                stat_sb.append( reIndexDSHEntry.getData_dsh().getDs().getId() );
-                stat_sb.append( " RDA:" );
-                stat_sb.append( reIndexDSHEntry.getData_dsh().getDs().getDiskArchive().getId() );
-                stat_sb.append( " TRCNT:" );
-                stat_sb.append( getTotal_cnt() );
-                stat_sb.append( " TRSIZ:" );
-                stat_sb.append( getTotal_size() );
-                stat_sb.append( " ARCNT:" );
-                stat_sb.append( getAct_cnt() );
-                stat_sb.append( " ARSIZ:" );
-                stat_sb.append( getAct_size() );
+                stat_sb.append(" RPA:\"");
+                stat_sb.append(reIndexDSHEntry.getData_dsh().getDs().getPath());
+                stat_sb.append("\"");
+                stat_sb.append(" RDS:");
+                stat_sb.append(reIndexDSHEntry.getData_dsh().getDs().getId());
+                stat_sb.append(" RDA:");
+                stat_sb.append(reIndexDSHEntry.getData_dsh().getDs().getDiskArchive().getId());
+                stat_sb.append(" TRCNT:");
+                stat_sb.append(getTotal_cnt());
+                stat_sb.append(" TRSIZ:");
+                stat_sb.append(getTotal_size());
+                stat_sb.append(" ARCNT:");
+                stat_sb.append(getAct_cnt());
+                stat_sb.append(" ARSIZ:");
+                stat_sb.append(getAct_size());
             }
-            stat_sb.append( " MSG:\"" );
-            stat_sb.append( getLast_msg() );
-            stat_sb.append( "\"");
+            stat_sb.append(" MSG:\"");
+            stat_sb.append(getLast_msg());
+            stat_sb.append("\"");
         }
         return stat_sb.toString();
     }

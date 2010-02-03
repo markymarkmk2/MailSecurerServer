@@ -241,9 +241,18 @@ public abstract class GenericRealmAuth
 
     public ArrayList<String> get_mailaliaslist_for_user( String user ) throws NamingException
     {
+
         ArrayList<String> user_list = new ArrayList<String>();
         user_list.add(user);
-        return list_mailaliases_for_userlist(  user_list );
+        ArrayList<String> mail_list = list_mailaliases_for_userlist(  user_list );
+        if ((act.getFlags() & CS_Constants.ACCT_USER_IS_MAIL) == CS_Constants.ACCT_USER_IS_MAIL)
+        {
+            if (!mail_list.contains(user))
+            {
+                mail_list.add(user);
+            }
+        }
+        return mail_list;
     }
 
     String get_dbs_mail_for_user( String user )

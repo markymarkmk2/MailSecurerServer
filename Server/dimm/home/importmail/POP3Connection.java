@@ -115,7 +115,9 @@ public class POP3Connection extends ProxyConnection
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
-                
+
+                reset_timeout();
+
                 // QUIT
                 if (do_quit)
                 {
@@ -154,6 +156,7 @@ public class POP3Connection extends ProxyConnection
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
 
+                    reset_timeout();
 
                     if (RETRBYTE() > 0)
                     {
@@ -182,6 +185,7 @@ public class POP3Connection extends ProxyConnection
                 // write it to the POP server
                 serverWriter.write(sData.getBytes());
                 serverWriter.flush();
+                reset_timeout();
                 
                 if (is_command_multiline( sData ))
                 {
@@ -248,6 +252,7 @@ public class POP3Connection extends ProxyConnection
         }
 
         boolean encoded = true;
+        reset_timeout();
 
         MandantContext m_ctx = Main.get_control().get_m_context(pe.get_proxy().getMandant());
         String suffix = ".eml";

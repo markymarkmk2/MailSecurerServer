@@ -17,6 +17,7 @@ import dimm.home.importmail.ProxyConnection;
 import dimm.home.importmail.ProxyEntry;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.license.LicenseTicket;
 import home.shared.mail.EncodedMailOutputStream;
@@ -356,6 +357,12 @@ public class MailProxyServer extends ListWorkerParent
                 for (int i = 0; i < connection_list.size(); i++)
                 {
                     ProxyConnection m = connection_list.get(i);
+                    if (m.is_timeout())
+                    {
+                        LogManager.err_log("Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());
+                        m.closeConnections();
+                    }
+
                     if (!m.is_connected())
                     {                        
                         connection_list.remove(m);

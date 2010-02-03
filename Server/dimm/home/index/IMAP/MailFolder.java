@@ -29,6 +29,7 @@ public class MailFolder
     String uid_validity;
     int year;
     int month;
+    int day;
 
     int cnt_level( String path )
     {
@@ -95,18 +96,51 @@ public class MailFolder
         this.key = key;
         this.year = year;
         this.month = month;
+        day = -1;
 
         uid_map_list = new ArrayList<MWMailMessage>();
 
-        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        uid_validity = Integer.toString(year*365 + month*31 + day);
     }
-    void fill()
+    // CREATE DATAFOLDER
+    public MailFolder(MailKonto konto, int year, int month, int day, String key)
     {
-        GroupEntry ge = new GroupEntry();
+        this.konto = konto;
+       // this.file = file;
+        this.key = key;
+        this.year = year;
+        this.month = month;
+        this.day = day;
 
-        GregorianCalendar cal1 = new GregorianCalendar(year, month - 1, 1);
+        uid_map_list = new ArrayList<MWMailMessage>();
+
+        uid_validity = Integer.toString(year*365 + month*31 + day);
+    }
+    synchronized void fill()
+    {
+        if (!konto.can_browse())
+            return;
+        
+        // DO DATA IN MONTH FOLDER
+        if (day == -1 && MailKonto.day_folder)
+            return;
+
+        GroupEntry ge = new GroupEntry();
+        GregorianCalendar cal1;
+        if (day == -1)
+        {
+            cal1 = new GregorianCalendar(year, month - 1, 1);
+        }
+        else
+        {
+            cal1 = new GregorianCalendar(year, month - 1, day);
+        }
         Date d1 = cal1.getTime();
-        cal1.add(GregorianCalendar.MONTH, 1);
+        if (day == -1)
+            cal1.add(GregorianCalendar.MONTH, 1);
+        else
+            cal1.add(GregorianCalendar.DAY_OF_MONTH, 1);
+        
         Date d2 = cal1.getTime();
 
        
@@ -490,7 +524,7 @@ public class MailFolder
     }
 
     public void add_new_mail_resultlist( MandantContext m_ctx, SearchCall sc ) throws IOException
-    {
+    {        
         last_uid_map = uid_map_list;
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
@@ -556,7 +590,7 @@ public class MailFolder
 
     void update_uid_validity()
     {
-        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        //uid_validity = Long.toString(System.currentTimeMillis() / 1000);
     }
     
     

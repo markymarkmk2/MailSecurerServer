@@ -190,6 +190,10 @@ public class Preferences
 
     boolean noPwd;
 
+    public boolean hasNoPwd()
+    {
+        return noPwd;
+    }
     public ArrayList<String> get_prop_list()
     {
         return prop_names;
@@ -289,14 +293,7 @@ public class Preferences
         // TRY TO OBFUSCATE PWD
         if (pwd != null && pwd.length() > 0)
         {
-            try
-            {
-                password = CryptTools.calculateRFC2104HMAC(pwd, CS_Constants.get_InternalPassPhrase());
-            }
-            catch (SignatureException signatureException)
-            {
-                password = pwd;
-            }
+             password = pwd;
         }
     }
 

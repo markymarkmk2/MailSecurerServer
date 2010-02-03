@@ -17,7 +17,6 @@ import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Notification;
-import dimm.home.mailarchiv.TempFileHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
@@ -30,7 +29,6 @@ import home.shared.filter.FilterValProvider;
 import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
 import home.shared.hibernate.AccountConnector;
-import home.shared.hibernate.MailAddress;
 import home.shared.hibernate.MailHeaderVariable;
 import home.shared.mail.RFCMailAddress;
 import java.io.File;
@@ -55,7 +53,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
@@ -508,7 +505,8 @@ public class IndexManager extends WorkerParent
     }
 
     // RETURN FALSE IF MAIL SHOULD BE DELETED
-    public boolean index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw ) throws MessagingException, IOException, IndexException
+    public boolean index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, 
+            RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw,  boolean delete_after_index, boolean skip_account_filter ) throws MessagingException, IOException, IndexException
     {
         String subject = mime_msg.getMsg().getSubject();
         if (mime_msg.getEmail_list().size() == 0)
@@ -529,22 +527,32 @@ public class IndexManager extends WorkerParent
                 break;
             }
         }
+
         // IF WE DO NOT FIND A MATCHING ACCOUNT, WE DELETE MAIL
-        if (acct_match == null)
+        if (acct_match == null && !skip_account_filter)
         {
-            delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
+            if (delete_after_index)
+            {
+                delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
+            }
             return false;
         }
 
-        ArrayList<String> domain_list = m_ctx.get_index_manager().getAllowed_domains();
-        boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded(domain_list, mime_msg.getEmail_list());
-        if (exceeded)
+        if (!skip_account_filter)
         {
-            Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded"));
-            delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
-            return false;
-        }
+            ArrayList<String> domain_list = m_ctx.get_index_manager().getAllowed_domains();
+            boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded(domain_list, mime_msg.getEmail_list());
+            if (exceeded)
+            {
+                Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded"));
 
+                if (delete_after_index)
+                {
+                    delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
+                }
+                return false;
+            }
+        }
 
 
 
@@ -1335,7 +1343,8 @@ public class IndexManager extends WorkerParent
                         RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
 
                         // TRY INDEX IN FOREGROUND
-                        if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/ true, /*parallel_index*/ false))
+                        if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, 
+                                        /*delete_after_index*/ true, /*parallel_index*/ false, /*skip_account_match*/ false))
                         {
                             // IF THIS FAILES, WE DEL MSG -> NOT IN INDEX
                             // THIS SHOULD ONLY HAPPEN ON HEAVILY BROKEN FILES
@@ -1449,9 +1458,9 @@ public class IndexManager extends WorkerParent
         return true;
     }
 
-    public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index ) throws IndexException
+    public void create_IndexJobEntry_task( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean skip_account_match ) throws IndexException
     {
-        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index, skip_account_match);
 
         File index_path = m_ctx.getTempFileHandler().get_index_buffer_mail_path();
 
@@ -1476,9 +1485,10 @@ public class IndexManager extends WorkerParent
         }
     }
 
-    public boolean handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean parallel_index )
+    public boolean handle_IndexJobEntry( MandantContext m_ctx, String uuid, int da_id, int ds_id, DiskSpaceHandler index_dsh, 
+            RFCGenericMail msg, boolean delete_after_index, boolean parallel_index, boolean skip_account_match )
     {
-        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index);
+        IndexJobEntry ije = new IndexJobEntry(this, m_ctx, uuid, da_id, ds_id, index_dsh, msg, delete_after_index, skip_account_match);
         return ije.handle_index(parallel_index);
     }
 

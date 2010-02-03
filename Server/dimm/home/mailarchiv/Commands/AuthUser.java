@@ -9,13 +9,15 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.hibernate.HXStream;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import home.shared.SQL.UserSSOEntry;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
-import home.shared.CS_Constants;
 import home.shared.Utilities.CryptTools;
-import java.security.SignatureException;
+import home.shared.Utilities.ZipUtilities;
 import java.util.ArrayList;
 
 /**
@@ -78,25 +80,32 @@ public class AuthUser extends AbstractCommand
             }
             else if (cmd.compareTo("admin") == 0)
             {
-                String helik_hash;
-                try
-                {
-                    helik_hash = CryptTools.calculateRFC2104HMAC("helikonn", CS_Constants.get_InternalPassPhrase());
-                }
-                catch (SignatureException signatureException)
-                {
-                    helik_hash = "?";
-                }
+                String db_passwd = m_ctx.getMandant().getPassword();
+                String db_decr_passwd = CryptTools.crypt_internal( db_passwd, LogManager.get_instance(), CryptTools.ENC_MODE.DECRYPT);
+                boolean invalid = false;
+                boolean passwd_ok = false;
+
+                // TEST FOR PASSWORD ENCRYPTED, UNENCRYPTED AND MAGIC
+                if (pwd.equals("helikon"))
+                    passwd_ok = true;
+                if (pwd.equals(db_passwd))
+                    passwd_ok = true;
+                if (db_decr_passwd != null && db_decr_passwd.equals(pwd))
+                    passwd_ok = true;
+
 
                 if (!m_ctx.getMandant().getLoginname().equals(name))
                 {
+                    invalid = true;
                     answer = "1: " + Main.Txt("Der_Benutzername_stimmt_nicht");
                 }
-                else if (!m_ctx.getMandant().getPassword().equals(pwd) && !pwd.equals(helik_hash))
+                if (!passwd_ok)
                 {
+                    invalid = true;
                     answer = "2: " + Main.Txt("Das_Passwort_stimmt_nicht");
                 }
-                else
+
+                if (!invalid)
                 {
                     int sso_id = m_ctx.create_admin_sso_id( name, pwd );
                     if (sso_id != -1)
@@ -105,6 +114,16 @@ public class AuthUser extends AbstractCommand
                     }
                 }
             }
+            else if (cmd.compareTo("getsso") == 0)
+            {
+                String sso_token = pt.GetString("SSO:");
+                UserSSOEntry entry = Main.get_control().get_sso(sso_token);
+                HXStream xs = new HXStream();
+                String xml = xs.toXML(entry);
+                String cxml = ZipUtilities.compress(xml);
+                answer = "0: CSSO:" + cxml;
+            }
+
             else
             {
                 answer = "3: unknown subcommand: " + cmd;

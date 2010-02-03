@@ -13,7 +13,7 @@ import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.UserSSOEntry;
+import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;

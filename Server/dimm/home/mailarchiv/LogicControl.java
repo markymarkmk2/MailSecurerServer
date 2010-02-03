@@ -8,6 +8,7 @@
  */
 package dimm.home.mailarchiv;
 
+import home.shared.SQL.UserSSOEntry;
 import dimm.home.Updater.UpdateWorker;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.importmail.DBXImporter;
@@ -147,9 +148,9 @@ public class LogicControl
         org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = change_session.beginTransaction();
 
-        check_db_changes( change_session, "select max(mu_id) from mu_add_link", true, "create table mu_add_link " +
+        check_db_changes( change_session, "select max(mu_id) from mailuser_add_link", true, "create table mailuser_add_link " +
                 "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
-        check_db_changes( change_session, "select max(mu_id) from mu_view_link", true, "create table mu_view_link " +
+        check_db_changes( change_session, "select max(mu_id) from mailuser_view_link", true, "create table mailuser_view_link " +
                 "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
 
 /*        check_db_changes( change_session, "select count(smtp_port) from mandant where smtp_port is null", false, "alter table mandant drop smtp_port", null  );
@@ -1237,6 +1238,7 @@ public class LogicControl
                 for (int i = 0; i < l.size(); i++)
                 {
                     Mandant m = (Mandant)l.get(i);
+                    HibernateUtil.forceLoad(m);
                     add_mandant( m );
                 }
             }

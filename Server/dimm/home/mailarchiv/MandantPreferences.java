@@ -41,18 +41,13 @@ public class MandantPreferences extends Preferences
 
     
     public static final String SSO_TIMEOUT_S = "SSOTimeout_s";
-    public static final long   DFTL_SSO_TIMEOUT_S = 1200;  // 20 MINUTES
+    public static final long   DFTL_SSO_TIMEOUT_S = 7200;  // 20 MINUTES
 
     public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
     
     MandantContext context;
 
-    boolean noPwd;
-
-    public boolean hasNoPwd()
-    {
-        return noPwd;
-    }
+    
 
     
     /** Creates a new instance of Preferences */

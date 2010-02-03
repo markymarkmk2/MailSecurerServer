@@ -17,6 +17,7 @@
  */
 package dimm.home.index.IMAP;
 
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import java.net.*;
 import java.io.*;
@@ -28,6 +29,7 @@ import java.util.*;
 public class MWImapServer extends Thread
 {
     private final static String RESTAG = "* ";
+    boolean shutdown = false;
 
     
    void add( ImapCmd cmd )
@@ -188,55 +190,28 @@ public class MWImapServer extends Thread
     @Override
     public void run()
     {
-        HashMap<String, String[]> cmd_map = new HashMap<String,  String[]>();
-
-        String[] list = {"4 login mw 12345", "5 select Suchen", "6 UID fetch 16 (UID BODY.PEEK[HEADER.FIELDS (Content-Type Content-Transfer-Encoding)] BODY.PEEK[TEXT]<0.2048>)"};
-        cmd_map.put("test1", list);
-        String cmd = "test1";
-
-        boolean test = false;
         try
         {
-            if (test)
-            {
-                out = new PrintWriter( System.out, true);
-            }
-            else
-            {
-                out = new PrintWriter(s.getOutputStream(), true);
-            }
+            out = new PrintWriter(s.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            response(null, true, "localhost IMAP4 31.08.2006");
-            while (true)
+            
+            response(null, true, "MailSecurer IMAP4 V" + Main.get_version_str());
+
+            while (!shutdown)
             {
                 String line = null;
-                if (test)
+
+                line = in.readLine();
+
+                if (line == null)
                 {
-                    String[] lines = cmd_map.get(cmd);
-                    for (int i = 0; i < lines.length; i++)
-                    {
-                        line = lines[i];
-                        line = line.trim();
-                        if (!line.equals(""))
-                        {
-                            techno(line);
-                        }
-                    }
+                    break;
                 }
-                else
+
+                line = line.trim();
+                if (!line.equals(""))
                 {
-                    line = in.readLine();
-
-                    if (line == null)
-                    {
-                        break;
-                    }
-
-                    line = line.trim();
-                    if (!line.equals(""))
-                    {
-                        techno(line);
-                    }
+                    techno(line);
                 }
             }
             out.close();

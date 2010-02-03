@@ -60,7 +60,7 @@ class LengthOutputStream extends OutputStream
             }
             catch (IOException iOException)
             {
-                throw new IOException( iOException.getMessage() );
+                System.out.println("Error during los write (" + len + "," + act_length + "): " + iOException.getMessage());
             }
             act_length += len;
             return;

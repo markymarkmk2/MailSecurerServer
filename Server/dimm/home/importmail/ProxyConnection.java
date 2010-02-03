@@ -29,6 +29,8 @@ public abstract class ProxyConnection
  * and open the template in the editor.
  */
 
+    // OVERALL WATCHDOG
+    private static final int ACTIVITY_TIMEOUT = 60;
 
     static final int SOCKET_TIMEOUT[] = {60000, 60000};
 //    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000, 45000};
@@ -83,6 +85,8 @@ public abstract class ProxyConnection
     abstract String[] get_multi_line_commands();
     abstract public int get_default_port();
 
+    long last_activity;
+
     static final Semaphore mtx = new Semaphore(MAX_THREADS);
 
     ProxyEntry pe;
@@ -94,6 +98,7 @@ public abstract class ProxyConnection
         m_Command = -1;
         clientSocket = _clientSocket;
         pe.set_connection( this );
+        reset_timeout();
     }
 
     public boolean is_connected()
@@ -336,6 +341,16 @@ public abstract class ProxyConnection
         Main.debug_msg(dbg, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
     }
 
+    protected void reset_timeout()
+    {
+        last_activity = System.currentTimeMillis();
+    }
+    public boolean is_timeout()
+    {
+        if ((System.currentTimeMillis()- last_activity)/1000 > ACTIVITY_TIMEOUT)
+            return true;
+        return false;
+    }
 
 
     StringBuffer getDataFromInputStream(InputStream reader)
@@ -355,6 +370,8 @@ public abstract class ProxyConnection
 
         int avail = 0;
 
+
+
         // WAIT TEN SECONDS (100*100ms) FOR DATA
         int maxwait = 100;
         while (avail == 0 && maxwait > 0)
@@ -367,7 +384,10 @@ public abstract class ProxyConnection
             {
             }
             if (avail > 0)
+            {
+                reset_timeout();
                 break;
+            }
             Main.sleep(100);
             maxwait--;
         }
@@ -411,6 +431,8 @@ public abstract class ProxyConnection
                             rlen = reader.read(buffer, 0, avail);
                         }
                     }
+                    reset_timeout();
+
                     avail = reader.available();
 
                     if (rlen == END_OF_MULTILINE.length)
@@ -441,6 +463,7 @@ public abstract class ProxyConnection
                 {
                     rlen = reader.read(buffer);
                 }
+                reset_timeout();
                 avail = reader.available();
 
                 // NO MORE DATA ?
@@ -568,7 +591,10 @@ public abstract class ProxyConnection
             {
             }
             if (avail > 0)
+            {
+                reset_timeout();
                 break;
+            }
             Main.sleep(100);
             maxwait--;
         }
@@ -617,6 +643,7 @@ public abstract class ProxyConnection
                     {
                         log(DBG_DATA_VERB, new String(buffer, 0, rlen));
                     }
+                    reset_timeout();
 
                 }
                 else
@@ -628,6 +655,7 @@ public abstract class ProxyConnection
                         {
                             log(DBG_DATA_VERB, new String(buffer, 0, rlen));
                         }
+                        reset_timeout();
                     }
                     else
                     {
@@ -644,6 +672,7 @@ public abstract class ProxyConnection
                                 finished = true;
                             }
                         }
+                        reset_timeout();
 
                         if (!finished && rlen < END_OF_MULTILINE.length)
                         {
@@ -717,6 +746,7 @@ public abstract class ProxyConnection
 
 
                     Writer.write(buffer, 0, rlen);
+                    reset_timeout();
 
 
                     if (finished)
@@ -729,6 +759,7 @@ public abstract class ProxyConnection
                         try
                         {
                             bos.write(buffer, 0, rlen);
+
                         }
                         catch (Exception exc)
                         {
@@ -842,6 +873,7 @@ public abstract class ProxyConnection
             try
             {
                 first_line[i] = (byte) serverReader.read();
+                reset_timeout();
             }
             catch (IOException iOException)
             {

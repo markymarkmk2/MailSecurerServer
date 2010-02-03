@@ -7,6 +7,7 @@ package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.SQL.UserSSOEntry;
 /**
  *
  * @author mw
@@ -46,7 +47,8 @@ public class Login extends ImapCmd
                 if (is.m_ctx.authenticate_user(user, pwd))
                 {
                     //Alles Ok
-                    is.konto = new MailKonto(user, pwd, is.m_ctx, is.m_ctx.get_mailaliases(user, pwd));
+                    UserSSOEntry sso_entry = is.m_ctx.get_from_sso_cache(user, pwd);
+                    is.konto = new MailKonto(user, pwd, is.m_ctx, is.m_ctx.get_mailaliases(user, pwd), sso_entry);
                     is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged in");
                     return 0;
                 }

@@ -4,6 +4,7 @@
  */
 package dimm.home.mailarchiv;
 
+import home.shared.SQL.UserSSOEntry;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
@@ -34,6 +35,7 @@ import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
+import home.shared.hibernate.RoleOption;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.io.File;
@@ -552,7 +554,7 @@ public class MandantContext
         UserSSOEntry ussc = get_from_sso_cache(user, pwd);
         if (ussc != null)
         {
-            return ussc.mail_list;
+            return ussc.getMail_list();
         }
         return null;
     }
@@ -617,7 +619,7 @@ public class MandantContext
             for (int i = 0; i < user_sso_list.size(); i++)
             {
                 UserSSOEntry entry = user_sso_list.get(i);
-                if (entry.user.compareTo(user) == 0)
+                if (entry.getUser().compareTo(user) == 0)
                 {
                     user_sso_list.remove(i);
                     i--;
@@ -633,7 +635,7 @@ public class MandantContext
             for (int i = 0; i < user_sso_list.size(); i++)
             {
                 UserSSOEntry entry = user_sso_list.get(i);
-                if (entry.user_sso_id == id)
+                if (entry.getUser_sso_id() == id)
                 {
                     return entry;
                 }
@@ -650,7 +652,7 @@ public class MandantContext
             return -1;
         }
 
-        return ssoc.user_sso_id;
+        return ssoc.getUser_sso_id();
     }
 
     public UserSSOEntry get_from_sso_cache( String user, String pwd )
@@ -660,7 +662,7 @@ public class MandantContext
             for (int i = 0; i < user_sso_list.size(); i++)
             {
                 UserSSOEntry entry = user_sso_list.get(i);
-                if (entry.user.compareTo(user) == 0 && entry.pwd.compareTo(pwd) == 0)
+                if (entry.getUser().compareTo(user) == 0 && entry.getPwd().compareTo(pwd) == 0)
                 {
                     return entry;
                 }
@@ -681,13 +683,13 @@ public class MandantContext
             long now = System.currentTimeMillis();
 
             // TOO OLD
-            if (now - sso.last_auth < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S) * 1000)
+            if (now - sso.getLast_auth() < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S) * 1000)
             {
                 // REWIND CLOCK
-                sso.last_auth = System.currentTimeMillis();
+                sso.setLast_auth( System.currentTimeMillis() );
                 return true;
             }
-            remove_from_sso_cache(sso.user);
+            user_sso_list.remove(sso);
         }
         return false;
     }
@@ -709,11 +711,23 @@ public class MandantContext
             user_sso_list.add(usc);
 
             // STORE ACT RESULTS
-            usc.last_auth = now;
-            usc.mail_list = null;
+            usc.setLast_auth( now );
+            usc.setMail_list( null );
 
             return user_sso_id;
         }
+    }
+    public boolean role_has_option( Role role, String opt_token)
+    {
+        Set<RoleOption> ros = role.getRoleOptions();
+        for (Iterator<RoleOption> it = ros.iterator(); it.hasNext();)
+        {
+            RoleOption roleOption = it.next();
+            if (roleOption.getToken().equals(opt_token))
+                return true;
+        }
+        return false;
+
     }
 
     public boolean authenticate_user( String user, String pwd ) throws AuthException
@@ -727,13 +741,13 @@ public class MandantContext
             if (usc != null)
             {
                 // USER STILL VALID
-                if (now - usc.last_auth < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
+                if (now - usc.getLast_auth() < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
                 {
                     // REWIND CLOCK
-                    usc.last_auth = System.currentTimeMillis();
+                    usc.setLast_auth( System.currentTimeMillis() );
                     return true;
                 }
-                remove_from_sso_cache(user);
+                user_sso_list.remove(usc);
             }
         }
         boolean role_found = false;
@@ -770,6 +784,8 @@ public class MandantContext
             }
 
             ArrayList<String> mail_list = null;
+
+
             try
             {
                 mail_list = auth_realm.get_mailaliaslist_for_user(user);
@@ -815,8 +831,8 @@ public class MandantContext
                     user_sso_list.add(usc);
 
                     // STORE ACT RESULTS
-                    usc.last_auth = now;
-                    usc.mail_list = mail_list;
+                    usc.setLast_auth(now);
+                    usc.setMail_list(mail_list);
                 }
                 break;
             }
@@ -830,7 +846,6 @@ public class MandantContext
         {
             throw new AuthException(Main.Txt("No_Role_matches_this_user"));
         }
-
 
         // BENUTZER WAR OK / NICHT OK, BYE BYE
         return auth_ok;

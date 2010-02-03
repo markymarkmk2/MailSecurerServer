@@ -71,9 +71,12 @@ public class IMAPBrowser implements WorkerParentChild
                 {
                     if (mWImapServer.get_folder() == null)
                         continue;
-                    
-                    mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
-                    mWImapServer.has_searched = true;
+
+                    if (mWImapServer.get_folder().getKey().startsWith(MailFolder.QRYTOKEN))
+                    {
+                        mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
+                        mWImapServer.has_searched = true;
+                    }
                 }
                 catch (IOException iOException)
                 {

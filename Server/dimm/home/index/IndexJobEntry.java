@@ -36,13 +36,14 @@ public class IndexJobEntry  implements Runnable
     private DiskSpaceHandler index_dsh;
     RFCGenericMail msg;
     boolean delete_after_index;
+    boolean skip_account_match;
     IndexManager ixm;
     Document doc;
     IndexWriter writer;
     Thread thread;
     RFCMimeMail mime_msg;
 
-    public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index )
+    public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean skip_account_match )
     {
         this.ixm = ixm;
         this.m_ctx = m_ctx;
@@ -52,10 +53,12 @@ public class IndexJobEntry  implements Runnable
         this.index_dsh = index_dsh;
         this.msg = msg;
         this.delete_after_index = delete_after_index;
+        this.skip_account_match = skip_account_match;
         doc = null;
         writer = null;
         thread = null;
         mime_msg = null;
+
     }
 
     @Override
@@ -175,7 +178,7 @@ public class IndexJobEntry  implements Runnable
         try
         {
             // DO THE REAL WORK (EXTRACT AND INDEX)
-            boolean ok = ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, mime_mail, docw);
+            boolean ok = ixm.index_mail_file(m_ctx, unique_id, da_id, ds_id, msg, mime_mail, docw, delete_after_index, skip_account_match);
 
             // IF INDEX GIVES FALSE, WE DONT WANT THIS MAIL IN INDEX (EXCLUDE, WRONG DOMAIN ETC.)
             if (!ok)

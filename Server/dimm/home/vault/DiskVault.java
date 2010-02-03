@@ -339,7 +339,7 @@ public class DiskVault implements Vault, StatusHandler
         
         if (parallel_index && background_index)
         {
-            idx.create_IndexJobEntry_task(m_ctx, uuid, da_id, ds_id,  index_dsh, msg, /*delete_after_index*/true);
+            idx.create_IndexJobEntry_task(m_ctx, uuid, da_id, ds_id,  index_dsh, msg, /*delete_after_index*/true,/*skip_account_match*/ false);
         }
         else
         {
@@ -347,7 +347,7 @@ public class DiskVault implements Vault, StatusHandler
                 LogManager.log(Level.SEVERE, "No parallel index");
             
             // NO, DO RIGHT HERE
-            idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true, parallel_index);
+            idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true, parallel_index, /*skip_account_match*/ false);
         }
     }
 

@@ -18,9 +18,13 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.MandantContext;
+import home.shared.SQL.OptCBEntry;
+import home.shared.SQL.UserSSOEntry;
+import home.shared.hibernate.Role;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Set;
 
 public class MailKonto
 {
@@ -32,15 +36,32 @@ public class MailKonto
     ArrayList<String> mail_alias_list;
     ArrayList<MailFolder> mail_folders;
     MandantContext m_ctx;
+    UserSSOEntry sso_entry;
     public static final boolean qry_folder = true;
     public static final boolean browse_folder = true;
+    public static final boolean day_folder = true;
 
+    boolean can_browse()
+    {
+        if (sso_entry == null)
+            return true;
+        
+        if (sso_entry.is_admin())
+            return true;
 
-    public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list)
+        // CHECK FOR ADMIN FLAG IN ROLE
+        if (sso_entry.role_has_option(OptCBEntry.IMAP_BROWSE))
+            return true;
+
+        return false;
+    }
+
+    public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list, UserSSOEntry sso_entry)
     {
         this.user = user;
         this.pwd = pwd;
         this.name = user;
+        this.sso_entry = sso_entry;
         m_ctx = _mtx;
         this.mail_alias_list = mail_alias_list;
 
@@ -104,11 +125,8 @@ public class MailKonto
     public String getParameter(String folder)
     {
         System.out.println("getParameter " + folder);
-
-
-            //Eigenschaften ermiiteln 
-            return "";
-        
+        //Eigenschaften ermiiteln
+        return "";
     }
     
     
@@ -179,7 +197,7 @@ public class MailKonto
                 return mf;
             }
         }
-        if (key.startsWith(MailFolder.BROWSETOKEN))
+        if (can_browse() && key.startsWith(MailFolder.BROWSETOKEN))
         {
             String[] arr = key.split("/");
             if (arr.length == 3)
@@ -188,6 +206,17 @@ public class MailKonto
                 int month = Integer.parseInt(arr[2]);
 
                 MailFolder folder = new MailFolder(this, year, month, key);
+                folder.fill();
+                mail_folders.add(folder);
+                return folder;
+            }
+            if (arr.length == 4)
+            {
+                int year = Integer.parseInt(arr[1]);
+                int month = Integer.parseInt(arr[2]);
+                int day = Integer.parseInt(arr[3]);
+
+                MailFolder folder = new MailFolder(this, year, month, day, key);
                 folder.fill();
                 mail_folders.add(folder);
                 return folder;
@@ -217,7 +246,7 @@ public class MailKonto
                 if (qry_folder)
                     fs.add(MailFolder.QRYTOKEN);
 
-                if (browse_folder)
+                if (browse_folder && can_browse())
                 {
                     fs.add(MailFolder.BROWSETOKEN);
                     int last_year = -1;
@@ -237,6 +266,16 @@ public class MailKonto
                             last_year = act_year;
                         }
                         fs.add( year_str + "/" + (act_month < 10 ? "0"+act_month : act_month));
+                        if (day_folder)
+                        {
+                            GregorianCalendar dcal = new GregorianCalendar(act_year, month, 1);
+                            int days = cal.getMaximum(GregorianCalendar.DAY_OF_MONTH);
+
+                            for (int act_day = 1; act_day <= days; act_day++)
+                            {
+                                fs.add( year_str + "/" + (act_month < 10 ? "0"+act_month : act_month) + "/" + (act_day < 10 ? "0"+act_day : act_day));
+                            }                            
+                        }
                     }
                 }
 

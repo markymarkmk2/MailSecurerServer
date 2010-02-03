@@ -13,6 +13,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.SQL.RMXFile;
 import java.io.IOException;
 import javax.swing.filechooser.FileSystemView;
 
@@ -25,19 +26,26 @@ public class FileSystemViewCommand extends AbstractCommand
     static File toFile( String s )
     {
         XStream xs = new XStream();
-        File f = (File)xs.fromXML( s );
-        return f;
+        RMXFile f = (RMXFile)xs.fromXML( s );
+        return new File( f.getAbsolutePath() );
     }
 
     static String fromFile( File f )
     {
+        RMXFile real_f = new RMXFile(f);
         XStream xs = new XStream();
-        return xs.toXML(f);
+        return xs.toXML(real_f);
     }
     static String fromFileArray( File[] f )
     {
+        RMXFile[] real_f = new RMXFile[f.length];
+        for (int i = 0; i < f.length; i++)
+        {
+            File file = f[i];
+            real_f[i] = new RMXFile(file);
+        }
         XStream xs = new XStream();
-        return xs.toXML(f);
+        return xs.toXML(real_f);
     }
 
 
@@ -70,8 +78,11 @@ public class FileSystemViewCommand extends AbstractCommand
 
             if (cmd.compareTo("createNewFolder") == 0)
             {
-                File ret = fsv.createNewFolder(file_arg);
-                answer = "0: " + fromFile(ret);
+                boolean ret = file_arg.mkdir();
+                if (!ret)
+                    answer = "1: failed";
+                else
+                    answer = "0: " + fromFile(file_arg);
             }
             else if (cmd.compareTo("createFileObject") == 0)
             {
@@ -87,10 +98,27 @@ public class FileSystemViewCommand extends AbstractCommand
             {
                 boolean ufh = pt.GetBoolean("UF:");
                 File[] ret = fsv.getFiles( file_arg, ufh);
+
                 answer = "0: " + fromFileArray(ret);
             }
+            else if (cmd.compareTo("getRoot") == 0)
+            {
+                File[] arr = File.listRoots();
+                String fpath = file_arg.getAbsolutePath();
+                File ret = null;
+                for (int i = 0; i < arr.length; i++)
+                {
+                    File file = arr[i];
+                    if (fpath.startsWith(file.getAbsolutePath()) )
+                    {
+                            ret = file;
+                            break;
+                    }
+                }
+                answer = "0: " + fromFile(ret);
+            }
             else if (cmd.compareTo("getRoots") == 0)
-            {                
+            {
                 File[] ret = File.listRoots(); //fsv.getRoots();
                 answer = "0: " + fromFileArray(ret);
             }

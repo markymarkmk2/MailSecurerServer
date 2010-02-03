@@ -29,6 +29,7 @@ public class Logout extends ImapCmd
             //Alles Ok
             is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged out");
             is.m_ctx = null;
+            is.shutdown = true;
             return 0;
         }
         is.response(sid, false, "LOGIN failed");

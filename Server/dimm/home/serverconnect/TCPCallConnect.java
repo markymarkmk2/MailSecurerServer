@@ -37,7 +37,7 @@ import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
-import dimm.home.mailarchiv.UserSSOEntry;
+import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
@@ -565,7 +565,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, String ret, OutputStream out ) throws IOException
     {
-        Main.debug_msg( DBG_LVL_VERB, "Answer is <" + ret + ">");
+        Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret + ">");
         StringBuffer answer = new StringBuffer();
 
         if (ok)
@@ -603,7 +603,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, long alen, InputStream in, OutputStream out ) throws IOException
     {
-        Main.debug_msg(DBG_LVL_VERB, "Answer is stream with len " + alen + ">");
+        Main.debug_msg(DBG_LVL_VERB -1, "Answer is stream with len " + alen + ">");
 
         StringBuffer answer = new StringBuffer();
 
@@ -717,6 +717,8 @@ public class TCPCallConnect extends WorkerParent
                     if (arg.startsWith("SSO:") && arg.indexOf('.') >= 5 && Character.isDigit( arg.charAt(4)) )
                     {
                         String sso_token = arg.substring(4);
+                        Main.debug_msg(DBG_LVL_VERB - 1, "Detected SSO <" + sso_token + ">");
+
                         if (!is_valid_sso(sso_token))
                         {
                             write_tcp_answer(true, "8: unauthorized", out);

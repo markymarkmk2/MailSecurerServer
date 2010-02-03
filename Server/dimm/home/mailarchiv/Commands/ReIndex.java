@@ -75,8 +75,9 @@ public class ReIndex extends AbstractCommand
                     {
                         rctx = new ReIndexContext(m_ctx, da_id, ds_id);
 
-                        rctx.start();
                         m_ctx.setRctx(rctx);
+                        rctx.start();
+                        
 
                         answer = "0: ok";
                     }
@@ -85,8 +86,9 @@ public class ReIndex extends AbstractCommand
                 {
                     rctx = new ReIndexContext(m_ctx, da_id);
 
-                    rctx.start();
                     m_ctx.setRctx(rctx);
+                    rctx.start();
+                    
                     answer = "0: ok";
                 }
                 else

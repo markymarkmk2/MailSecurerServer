@@ -563,7 +563,6 @@ public class DiskSpaceHandler
         String parent_path = getMailPath();
         String absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode, fmode );
 
-
         File mail_file = new File( absolutePath );
         if (!mail_file.exists())
         {
@@ -571,6 +570,7 @@ public class DiskSpaceHandler
         }
 
         Date d = new Date(time);
+        
         RFCFileMail mail = new RFCFileMail( mail_file, d, (enc_mode == RFCFileMail.ENC_NONE) ? false : true);
         if (enc_mode != RFCGenericMail.ENC_NONE)
         {

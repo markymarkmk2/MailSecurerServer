@@ -5,7 +5,7 @@
 
 package dimm.home.index;
 
-import dimm.home.mailarchiv.UserSSOEntry;
+import home.shared.SQL.UserSSOEntry;
 
 /**
  *

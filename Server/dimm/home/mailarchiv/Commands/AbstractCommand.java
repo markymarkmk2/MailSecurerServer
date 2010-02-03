@@ -9,8 +9,7 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.UserSSOEntry;
+import home.shared.SQL.UserSSOEntry;
 import java.io.InputStream;
 import java.net.Socket;
 

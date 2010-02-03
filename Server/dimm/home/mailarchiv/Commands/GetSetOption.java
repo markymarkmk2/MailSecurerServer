@@ -168,6 +168,7 @@ public class GetSetOption extends AbstractCommand
                 {
                     mprefs.set_password(new_val);
                     mprefs.store_props();
+                    mprefs.read_props();
                     answer = "0:";
                     return true;
                 }
