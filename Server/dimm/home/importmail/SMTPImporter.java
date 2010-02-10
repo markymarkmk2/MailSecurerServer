@@ -13,7 +13,6 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
-import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.hibernate.SmtpServer;
@@ -23,7 +22,6 @@ import java.util.*;
 import java.net.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.commons.lang.builder.EqualsBuilder;
 import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.auth.LoginFailedException;
 import org.subethamail.smtp.auth.PlainAuthenticationHandlerFactory;
@@ -75,20 +73,16 @@ class SmtpImporterServer extends SMTPServer
 }
 
 
-public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMessageListener
+public class SMTPImporter  extends WorkerParentChild implements SimpleMessageListener
 {	
 	private SmtpImporterServer server;
         String status_txt;
-        boolean do_shutdown;
-
+  
         public static final int MAX_SMTP_BACKLOG = 30000;
 	public static final int MAX_SMTP_CONNECTIONS = 1024*1024;
 
         SmtpServer smtp_db_entry;
-        private boolean started;
-        private boolean finished;
-
- 	public SMTPImporter(SmtpServer smtp_server)
+  	public SMTPImporter(SmtpServer smtp_server)
         {
             this.smtp_db_entry = smtp_server;
 	}
@@ -209,17 +203,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
         }
     }
 
-    @Override
-    public String get_status_txt()
-    {
-        return status.get_status_txt();
-    }
-
-    @Override
-    public int get_status_code()
-    {
-        return status.get_status_code();
-    }
+   
 
 
     @Override
@@ -231,7 +215,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
     @Override
     public void finish()
     {
-        do_shutdown = true;
+        do_finish = true;
         server.stop();
     }
 
@@ -239,12 +223,10 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
     public void run_loop()
     {
         started = true;
-        while (!startup())
-        {
-            LogicControl.sleep(60*1000);
-        }
+        // WAIT A MINUTE BEFORE STARTING
+        sleep_seconds(60);
 
-        while(!do_shutdown)
+        while(!do_finish)
         {
             // YAWN....
             LogicControl.sleep(1000);
@@ -257,11 +239,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
         return started;
     }
 
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
+  
 
     @Override
     public Object get_db_object()
@@ -275,11 +253,7 @@ public class SMTPImporter implements StatusHandler, WorkerParentChild, SimpleMes
         return "";
     }
 
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-        return EqualsBuilder.reflectionEquals( smtp_db_entry, db_object);
-    }
+  
 
     @Override
     public String get_name()

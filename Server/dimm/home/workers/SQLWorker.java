@@ -41,14 +41,7 @@ import org.hibernate.tool.hbm2ddl.SchemaExport;
 public class SQLWorker extends WorkerParent
 {
     
-/*
-Hallo Herr Schenck,
-hier die erforderlichen Daten:
-thales
-SSH: root / 92Wn5Yi6t0	
-MySQL root /eKmIklz37T
 
- */
     //private static final String db_server="thales.ebiz-webhosting.de";
    //private static final String db_server="localhost";
     private static String db_user="APP";
@@ -89,11 +82,7 @@ MySQL root /eKmIklz37T
         connect = derby_connect;
         db_user = "APP";
     }
- /*   public static void set_to_postgres_db()
-    {
-        connect = postgres_connect;
-        db_user="postgres";
-    }*/
+
     public static String get_db_connect_string()
     {
         return connect;
@@ -110,13 +99,12 @@ MySQL root /eKmIklz37T
         last_vpn_ip = null;
         last_real_ip = null;   
         
-        conn_timeout_s = (int)Main.get_long_prop(GeneralPreferences.SQL_CONN_TIMEOUT, (long)4);
-        
+        conn_timeout_s = (int)Main.get_long_prop(GeneralPreferences.SQL_CONN_TIMEOUT, (long)4);        
     }
     
     void set_conn_timeout()
     {
-            DriverManager.setLoginTimeout(conn_timeout_s);
+        DriverManager.setLoginTimeout(conn_timeout_s);
     }
     
 
@@ -135,8 +123,8 @@ MySQL root /eKmIklz37T
         }
         catch (Exception exc)
         {
-                    Main.err_log_fatal("Cannot connect to local database, i am lost");
-                    throw new SQLException( "OpenSQLConnect failed: " + exc.getMessage() );
+            Main.err_log_fatal("Cannot connect to local database, i am lost");
+            throw new SQLException( "OpenSQLConnect failed: " + exc.getMessage() );
         }   
     }
     
@@ -255,8 +243,7 @@ MySQL root /eKmIklz37T
         }     
         return ret;
     }
-    
-    
+        
     
     public boolean lock_list()
     {
@@ -429,13 +416,11 @@ MySQL root /eKmIklz37T
 
     @Override
     public boolean initialize()
-    {                
-        
+    {                        
         try
         {
             // LOAD LOCAL AND REMOTE DB
-            load_jdbc_drivers();
-            
+            load_jdbc_drivers();            
             
             // READ STATIONNAME
             Connection c = open_db_connect();
@@ -450,8 +435,7 @@ MySQL root /eKmIklz37T
                         
             rs.close();
             sta.close();
-            c.close();                                
-            
+            c.close();                                            
         } 
         catch (Exception ex)
         {

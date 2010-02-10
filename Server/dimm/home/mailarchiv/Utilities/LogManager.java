@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.logging.Level;
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.DailyRollingFileAppender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -232,6 +233,8 @@ public class LogManager implements  LogListener
 
     static Logger main_logger;
     static LogManager manager;
+    public static final String MONTHLY_ROLL = "'.'yyyy-MM";
+    public static final String WEEKLY_ROLL = "'.'yyyy-ww";
     static
     {
         main_logger = Logger.getLogger("dimm.MailSecurerServer");
@@ -241,7 +244,9 @@ public class LogManager implements  LogListener
         try
         {
             PatternLayout layout = new PatternLayout("%-5p: %d{dd.MM.yyyy HH:mm:ss,SSS}: %m%n");
-            FileAppender fileAppender = new FileAppender(layout, LOG_PATH + LOG_L4J, true);
+            CompressingDailyRollingFileAppender fileAppender = new CompressingDailyRollingFileAppender(layout, LOG_PATH + LOG_L4J, WEEKLY_ROLL);
+            fileAppender.setMaxNumberOfDays("365");
+
 
             main_logger.addAppender(fileAppender);
             //Logger.getRootLogger().addAppender(fileAppender);

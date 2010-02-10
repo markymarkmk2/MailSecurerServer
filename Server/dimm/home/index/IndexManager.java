@@ -16,7 +16,7 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Notification;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
@@ -396,11 +396,19 @@ public class IndexManager extends WorkerParent
         return mime_msg;
     }
 
-    public boolean matches_domain( AccountConnector acct, final RFCMimeMail mime_msg )
+    private boolean check_exclude_list( AccountConnector acct, final RFCMimeMail mime_msg )
     {
+        // THEN TEST FOR EXCLUDES
+        if (acct_exclude_list == null)
+        {
+            return false;
+        }
+
+
         final ArrayList<RFCMailAddress> mail_list = mime_msg.getEmail_list();
 
         // FIRST CHECK FOR CORRECT DOMAIN
+        /*
         boolean matches_domain = false;
         for (Iterator<RFCMailAddress> it = mail_list.iterator(); it.hasNext();)
         {
@@ -415,13 +423,8 @@ public class IndexManager extends WorkerParent
         if (!matches_domain)
         {
             return false;
-        }
+        }*/
 
-        // THEN TEST FOR EXCLUDES
-        if (acct_exclude_list == null)
-        {
-            return true;
-        }
 
         // BUILD A VAL PROVIDER FOR THIS MESSAGE
         FilterValProvider acct_excl_provider = new FilterValProvider()
@@ -498,10 +501,10 @@ public class IndexManager extends WorkerParent
         FilterMatcher fm = new FilterMatcher(acct_exclude_list.getChildren(), acct_excl_provider);
         if (fm.eval())
         {
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     // RETURN FALSE IF MAIL SHOULD BE DELETED
@@ -521,7 +524,7 @@ public class IndexManager extends WorkerParent
         AccountConnector acct_match = null;
         for (AccountConnector acct : m_ctx.getMandant().getAccountConnectors())
         {
-            if (matches_domain(acct, mime_msg))
+            if (!check_exclude_list(acct, mime_msg))
             {
                 acct_match = acct;
                 break;

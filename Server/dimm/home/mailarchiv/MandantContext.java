@@ -4,6 +4,7 @@
  */
 package dimm.home.mailarchiv;
 
+import dimm.home.mailarchiv.Notification.Notification;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
@@ -51,6 +52,9 @@ import java.util.Set;
  */
 public class MandantContext
 {
+
+    private static final long MIN_TMP_FREE_SPACE = 100000000l;  // 100 MB
+    private static final long LOW_TMP_FREE_SPACE = 10000000000l; // 10GB
 
     private MandantPreferences prefs;
     private Mandant mandant;
@@ -437,6 +441,10 @@ public class MandantContext
         {
             worker_list.get(i).setShutdown(b);
         }
+    }
+    public boolean isShutdown()
+    {
+        return shutdown;
     }
 
     public boolean wait_for_shutdown( int secs )
@@ -1006,4 +1014,76 @@ public class MandantContext
             return;
         }
     }
+
+    boolean low_tmp_space_left;
+    boolean no_tmp_space_left;
+
+    private void set_no_tmp_space_left( boolean b)
+    {
+        // DETECT STATUS CHANGE
+        if (no_tmp_space_left != b)
+        {
+            no_tmp_space_left = b;
+            
+            if (no_tmp_space_left)
+            {
+                Notification.throw_notification(this.getMandant(), Notification.NF_FATAL_ERROR, 
+                    Main.Txt("No_space_left_in_working_directory") + ": " + get_tmp_path());
+            }
+            else
+            {
+                Notification.throw_notification(this.getMandant(), Notification.NF_INFORMATIVE, 
+                    Main.Txt("Space_in_working_directory_is_sufficient_again") + ": " + get_tmp_path());
+            }
+        }
+    }
+    private void set_low_tmp_space_left( boolean b)
+    {
+        if (low_tmp_space_left != b)
+        {
+            low_tmp_space_left = b;
+
+            if (low_tmp_space_left)
+            {
+                Notification.throw_notification(this.getMandant(), Notification.NF_WARNING,
+                    Main.Txt("Low_space_left_in_working_directory") + ": " + get_tmp_path());
+            }
+        }
+    }
+    
+    void check_free_space()
+    {
+
+        File tmp_path = this.get_tmp_path();
+        double free = tmp_path.getFreeSpace();
+        double total = tmp_path.getTotalSpace();
+
+        set_no_tmp_space_left( free <MIN_TMP_FREE_SPACE );
+        set_low_tmp_space_left( free <LOW_TMP_FREE_SPACE );
+       
+    }
+
+    public boolean no_tmp_space_left()
+    {
+        return no_tmp_space_left;
+    }
+
+    public boolean test_flag( int f )
+    {
+        try
+        {
+            int flags = Integer.parseInt(mandant.getFlags());
+            return (flags & f) == f;
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        return false;
+    }
+    // IF FLAG IS NOT SET, WE WILL WAIT, USER HAS TO ACTIVELY SET THIS FLAG TO IGNORE MAILS IN THIS STATE
+    public boolean wait_on_no_space()
+    {
+        return !test_flag( CS_Constants.MA_NOWAIT_ON_NO_SPACE );
+    }
+
 }

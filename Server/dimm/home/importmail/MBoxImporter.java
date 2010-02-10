@@ -33,7 +33,7 @@ import javax.mail.internet.MimeMessage;
  *
  * @author mw
  */
-public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
+public class MBoxImporter extends WorkerParentChild implements MultipleMailImporter
 {
 
     Long[] message_positions;
@@ -46,8 +46,6 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
 
     File msg_file;
     RandomAccessFile raf = null;
-    private boolean started;
-    private boolean finished;
 
     public MBoxImporter( String p ) throws Exception
     {
@@ -62,11 +60,6 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public void finish()
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
     @Override
     public void run_loop()
@@ -383,18 +376,7 @@ public class MBoxImporter implements WorkerParentChild, MultipleMailImporter
     }
   
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
-
+  
     @Override
     public Object get_db_object()
     {

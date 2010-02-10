@@ -80,7 +80,7 @@ class dbx_s
  *
  * @author mw
  */
-public class DBXImporter implements WorkerParentChild, MultipleMailImporter
+public class DBXImporter extends WorkerParentChild implements MultipleMailImporter
 {
 
     public static final int DBX_MASK_INDEX = 0x01;
@@ -97,8 +97,6 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
     };
     File dbx_file;
     dbx_s dbx;
-    private boolean started;
-    private boolean finished;
 
     public DBXImporter( String p ) throws Exception
     {
@@ -115,11 +113,6 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override
-    public void finish()
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
     @Override
     public void run_loop()
@@ -759,18 +752,7 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         dbx_file.delete();
     }
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
-
+ 
     @Override
     public Object get_db_object()
     {
@@ -783,12 +765,7 @@ public class DBXImporter implements WorkerParentChild, MultipleMailImporter
         return "";
     }
 
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
+ 
     @Override
     public String get_name()
     {

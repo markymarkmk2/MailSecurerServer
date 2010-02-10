@@ -15,6 +15,7 @@ public interface StatusHandler
 
     public String get_status_txt();
     public int get_status_code();
+    public void  set_status( int code, String text);
 
 
 }

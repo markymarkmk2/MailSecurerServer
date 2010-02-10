@@ -15,8 +15,10 @@ import com.sendmail.jilter.JilterProcessor;
 import home.shared.hibernate.Milter;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCMimeMail;
@@ -39,7 +41,6 @@ import javax.mail.Address;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
@@ -130,17 +131,18 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     ArrayList<String>header_list;
     StringBuffer header_sb;
     String connect_host;
-    Milter milter;
+   
 
     //File tmp_file;
     OutputStream os;
     RFCFileMail file_mail;
     byte[] tmp_buffer;
+    MilterImporter handler;
 
 
-    public MailImportJilterHandler(Milter _milter)
+    public MailImportJilterHandler(MilterImporter handler)
     {
-        milter = _milter;
+        this.handler = handler;
 
         initialize();
     }
@@ -189,7 +191,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         esmtp_from_args.clear();
         esmtp_rcpt_args.clear();
 
-        MandantContext m_ctx = Main.get_control().get_m_context(milter.getMandant());
+        MandantContext m_ctx = Main.get_control().get_m_context(handler.get_milter().getMandant());
 
         try
         {
@@ -259,8 +261,26 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
             add_bcc_recpients( mime_mail.getMsg() );
 
-            
-            Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
+            // CHECK FOR SPACE AND ARCHIVE
+            Milter milter = handler.get_milter();
+            MandantContext m_ctx = Main.get_control().get_m_context(milter.getMandant());
+            Vault vault = m_ctx.get_vault_by_da_id(milter.getDiskArchive().getId());
+            if (!vault.has_sufficient_space())
+            {
+                LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail_from_milter") );
+                if (m_ctx.wait_on_no_space())
+                {
+                    handler.set_status( StatusEntry.WAITING, Main.Txt("No_space_left_for_mail_from_milter") );
+                    while (!vault.has_sufficient_space() && !handler.is_finished())
+                    {
+                        handler.sleep_seconds(10);
+                    }
+                }
+            }
+            if (!vault.has_sufficient_space())
+            {
+                Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
+            }
         }
 
         catch (Exception ex)
@@ -350,7 +370,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     }
 }
 
-public class MilterImporter implements WorkerParentChild
+public class MilterImporter extends WorkerParentChild
 {
 
     private ServerSocketChannel serverSocketChannel = null;
@@ -358,8 +378,6 @@ public class MilterImporter implements WorkerParentChild
 
     final ArrayList<JilterServerRunnable> active_milter_list;
     Milter milter;
-    private boolean started;
-    private boolean finished;
 
     public Milter get_milter()
     {
@@ -368,7 +386,7 @@ public class MilterImporter implements WorkerParentChild
 
     private JilterHandler newHandler() throws InstantiationException, IllegalAccessException
     {
-        return new MailImportJilterHandler( milter );
+        return new MailImportJilterHandler( this );
     }
     public SocketAddress getSocketAddress()
     {
@@ -405,7 +423,6 @@ public class MilterImporter implements WorkerParentChild
         LogManager.debug_msg( s, e );
     }
 
-    boolean do_finish;
 
     @Override
     public void finish()
@@ -499,18 +516,7 @@ public class MilterImporter implements WorkerParentChild
         return r;
     }
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
-
+   
     @Override
     public Object get_db_object()
     {
@@ -522,12 +528,7 @@ public class MilterImporter implements WorkerParentChild
         return "";
     }
 
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-        return EqualsBuilder.reflectionEquals( milter, db_object);
-
-    }
+   
 
     @Override
     public String get_name()

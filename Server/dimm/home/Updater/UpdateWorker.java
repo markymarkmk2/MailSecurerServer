@@ -46,8 +46,7 @@ sonicbox_lnx.zip";
 
 
 public class UpdateWorker extends WorkerParent
-{
-        
+{    
     String app_name;
     String os_name;
     String server_path;

@@ -31,8 +31,7 @@ public abstract class GenericDAO
         Object object = (Object) session.get(persistedClass, id);
         return object;
     }
-
-    public static boolean save( org.hibernate.Session session, Object object )
+    public static boolean save_new( org.hibernate.Session session, Object object )
     {
         try
         {
@@ -53,9 +52,10 @@ public abstract class GenericDAO
         }
         return false;
     }
-    public boolean save( Object object )
+
+    public boolean save_new( Object object )
     {
-       return save( session, object );
+       return save_new( session, object );
     }
     public static boolean update( org.hibernate.Session session, Object object )
     {

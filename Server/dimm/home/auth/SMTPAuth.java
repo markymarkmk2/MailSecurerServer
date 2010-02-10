@@ -207,7 +207,7 @@ public class SMTPAuth extends GenericRealmAuth
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(SMTPAuth.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.err_log( "Cannot close SMTP connect", ex);
         }
     }
 

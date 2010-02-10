@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
-import dimm.home.mailarchiv.Utilities.Preferences;
 import java.util.zip.ZipOutputStream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -45,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.1.0";
+    private static final String VERSION = "1.1.3";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -83,11 +82,9 @@ public class Main
     public static String work_dir;
     
     public static boolean trace_mode = false;
+   
     
-    
-    static LogicControl control;
-    
-    public static boolean create_licensefile = false;
+    static LogicControl control;    
     public static String ws_ip = "127.0.0.1";
     public static int ws_port = 8050;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
@@ -113,6 +110,8 @@ public class Main
     {
         me = this;
         work_dir = new File(".").getAbsolutePath();
+
+        boolean init_db = false;
         
         
         print_system_property( "java.version" );
@@ -144,7 +143,11 @@ public class Main
 
             f = new File( DATABASEPATH );
             if (!f.exists())
-                f.mkdirs();
+            {
+                init_db = true;
+                // DO NOT CREATE DIR, DERBY WANTS A NON-EXISTING DIRECTORY
+                //f.mkdirs();
+            }
 
             f = new File( TEMP_PATH );
             if (!f.exists())
@@ -190,8 +193,6 @@ public class Main
             if (args[i].compareTo("-t") == 0)
                 trace_mode = true;
             
-            if (args[i].compareTo("-L") == 0)
-                create_licensefile = true;            
             
            
             if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
@@ -212,16 +213,14 @@ public class Main
             }
             if (args[i].compareTo("-init_db") == 0)
             {
-                SQLWorker.build_hibernate_tables();
+                init_db = true;
             }
             if (args[i].compareTo("-derby") == 0)
             {
                 SQLWorker.set_to_derby_db();
             }
-/*            if (args[i].compareTo("-postgres") == 0)
-            {
-                SQLWorker.set_to_postgres_db();
-            }*/
+
+            
             // CREATE INSTALLER --sb lnx / mac / win
             if (args[i].compareTo("--sb") == 0 && (i + 1) < args.length)
             {
@@ -245,6 +244,13 @@ public class Main
         {
             exc.printStackTrace();
         }
+
+        if (init_db)
+        {
+            info_msg("Building new database");
+            SQLWorker.build_hibernate_tables();
+        }
+
 
         info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
 
@@ -319,6 +325,7 @@ public class Main
             {
                 err_log_fatal( "Caught unhandled exception, restarting application:" + exc.getMessage() );
                 exc.printStackTrace( );               
+                LogicControl.sleep(5000);
             }
         }
         info_msg( Main.APPNAME + " is shut down");

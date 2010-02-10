@@ -25,7 +25,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
  *
  * @author mw
  */
-public class IMAPBrowser implements WorkerParentChild
+public class IMAPBrowser extends WorkerParentChild
 {
 
     ServerSocket sock;
@@ -34,8 +34,6 @@ public class IMAPBrowser implements WorkerParentChild
     int port;
 //    final ArrayList<SKImapServer> srv_list;
     final ArrayList<MWImapServer> srv_list;
-    private boolean started;
-    private boolean finished;
 
 /*
     static int get_folder_validity( SKMailFolder fld )
@@ -97,7 +95,6 @@ public class IMAPBrowser implements WorkerParentChild
 
         sock = new ServerSocket(port, 0, InetAddress.getByName(host));
 
-        do_finish = false;
         srv_list = new ArrayList<MWImapServer>();
 
 
@@ -112,8 +109,7 @@ public class IMAPBrowser implements WorkerParentChild
     {
         LogManager.debug_msg(s, e);
     }
-    boolean do_finish;
-
+    
     @Override
     public void finish()
     {
@@ -143,7 +139,6 @@ public class IMAPBrowser implements WorkerParentChild
     {
         started = true;
 
-        log_debug(Main.Txt("Going_to_accept"));
         while (!do_finish)
         {
             try
@@ -155,92 +150,18 @@ public class IMAPBrowser implements WorkerParentChild
                 srv_list.add(mwimap);
                 mwimap.start();
 
+                // WAIT FOR NEXT ACCEPT TO PREVENT DENIAL OF SERVICE
+                sleep_seconds(1);
+
             }
-            catch (IOException iOException)
+            catch (Exception iOException)
             {
                 if (!do_finish)
                     iOException.printStackTrace();
             }
         }
-/*
-        try
-        {
-            XMLConfiguration.setVerbosity(false);
 
-            // create new XMLConfiguration instance and read the given XML configuration data
 
-            XMLConfiguration cfg = new XMLConfiguration("dwarf/main.xml");
-
-            // create new MainServer instance according to the given XML configuration
-
-            MainServer server = (MainServer) cfg.getService();
-            List src = server.getServices();
-
- 
-
-            // initialize the server
-
-            server.init(null);
-
-            LogServer logServer = (LogServer)server.getService("Log Server");
-            FileLogger fl = (FileLogger)logServer.getService("File Logger");
-            fl.setLevels("error");
-
-            // start the server
-
-            server.start();
-
-            SKImapServer is = (SKImapServer) server.getService("IMAP4 Server");
- 
-
-            try
-            {
-                ACLStore acl_store = is.getACLStore("joe");
-                acl_store.addPermission("joe", new MailPermission("*", "lrs"));
-                acl_store.addPermission("joe", new MailPermission("*.*", "lrs"));
-            }
-            catch (MailException mailException)
-            {
-                mailException.printStackTrace();
-            }
-
-        }
-        catch (XMLConfigurationException xMLConfigurationException)
-        {
-            xMLConfigurationException.printStackTrace();
-        }
-        catch (ServiceException serviceException)
-        {
-            serviceException.printStackTrace();
-        }
-*/
-        /*
-        MainServer mainServer = new MainServer("Main Server");
-        mainServer.setLogFacility("server");
-
-        SKImapServer srv = new SKImapServer(m_ctx, null, false);
-        try
-        {
-        mainServer.addService(srv);
-        mainServer.init(null);
-
-        //            srv.init(null);
-        //           srv.start();
-        }
-        catch (Exception serviceException)
-        {
-        serviceException.printStackTrace();
-        }
-
-        synchronized (srv_list)
-        {
-        srv_list.add(srv);
-        }*/
-
-        while (!do_finish)
-        {
-                LogicControl.sleep(1000);
-        }
         finished = true;
     }
 
@@ -279,18 +200,7 @@ public class IMAPBrowser implements WorkerParentChild
         return r;
     }
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
-
+   
     @Override
     public Object get_db_object()
     {
@@ -303,11 +213,7 @@ public class IMAPBrowser implements WorkerParentChild
         return "";
     }
 
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-         return EqualsBuilder.reflectionEquals( get_db_object(), db_object);
-    }
+   
 
     @Override
     public String get_name()

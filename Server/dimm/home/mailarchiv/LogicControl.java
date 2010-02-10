@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -147,6 +148,9 @@ public class LogicControl
     {
         org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
         org.hibernate.Transaction tx = change_session.beginTransaction();
+
+        check_db_changes( change_session, "select notificationlist from mandant where notificationlist is null", false, "update mandant set notificationlist='' where notificationlist is null", null  );
+        check_db_changes( change_session, "select mailfrom from mandant where mailfrom is null", false, "update mandant set mailfrom='' where mailfrom is null", null  );
 
         check_db_changes( change_session, "select max(mu_id) from mailuser_add_link", true, "create table mailuser_add_link " +
                 "(mu_id int not null, ma_id int not null, primary key ( mu_id, ma_id ) )", null );
@@ -405,10 +409,62 @@ public class LogicControl
             throw new VaultException("Cannot find vault for incoming mailfile with archive " + da.getName());
         }
     }
-
-    
     public void add_rfc_file_mail( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
     {
+        add_rfc_file_mail(mf, mandant, da, null, background, delete_afterwards);
+    }
+    
+    public void add_rfc_file_mail( final RFCFileMail mf, final Mandant mandant, final DiskArchive da, WorkerParentChild handler, boolean background, final boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
+    {
+        // CHECK FOR SPACE AND ARCHIVE
+        MandantContext m_ctx = Main.get_control().get_m_context( mandant );
+        Vault vault = m_ctx.get_vault_by_da_id(da.getId());
+        if (!vault.has_sufficient_space() && m_ctx.no_tmp_space_left())
+        {
+            String source = "";
+            if ( handler != null)
+                source = handler.get_name();
+
+            LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail") + ": " + source );
+
+            if (m_ctx.wait_on_no_space())
+            {
+                if (handler != null)
+                    handler.set_status( StatusEntry.WAITING, Main.Txt("No_space_left_for_mail") );
+
+                // IF WE STILL HAVE TMP SPACE, WE ALLOW ARCHIVAL
+                while (!vault.has_sufficient_space() && m_ctx.no_tmp_space_left())
+                {
+                    if (handler != null)
+                    {
+                         if (handler.is_finished())
+                             break;
+
+                         handler.sleep_seconds(10);
+                    }
+                    else
+                    {
+                        sleep(1000);
+                        if (m_ctx.isShutdown())
+                        {
+                            break;
+                        }
+                    }
+                    // RELEAD VIA ID
+                    m_ctx = Main.get_control().get_m_context( mandant );
+                }
+            }
+        }
+        if (!vault.has_sufficient_space() && m_ctx.no_tmp_space_left())
+        {
+            // THIS IS REALLY BAD: SKIPPING INCOMING MAIL, WE HAVE NO SPACE TO SAVE IT TO
+            LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail_skipping_mail" ));
+            Notification.throw_notification_one_shot(mandant, Notification.NF_ERROR, Main.Txt("No_space_left_for_mail_skipping_mail" ) );
+            return;
+        }
+        Notification.clear_notification_one_shot(mandant, Main.Txt("No_space_left_for_mail_skipping_mail" ) );
+
+
         if (!Main.get_bool_prop(GeneralPreferences.WRITE_MAIL_IN_BG, true))
             background = false;
 
@@ -424,14 +480,6 @@ public class LogicControl
         {
             LogManager.log(Level.SEVERE, "No parallel archive");
             master_add_mail_file(mf, mandant, da, background);
-
-           /* if (delete_afterwards)
-            {
-                if (mf.getFile().exists())
-                    mf.delete();
-                else
-                    LogManager.err_log("Mail file " + mf.getFile().getAbsolutePath() + " was already deleted");
-            }*/
         }
     }
 
@@ -918,6 +966,7 @@ public class LogicControl
 
     // MAIN WORK LOOP
     private static final int LIC_UMAP_UPDATE_CYCLE = 5*60*1000;
+    private static final int CHECK_SPACE_CYCLE = 10*60*1000;
     void run()
     {
         long last_date_set = 0;
@@ -925,6 +974,7 @@ public class LogicControl
         boolean last_start_written = false;
         long started = System.currentTimeMillis();
         long last_lic_update = 0;
+        long last_check_space = 0;
 
 
         final int MIN_VALID_RUN_TIME = 10000;  // AFTER THIS TIME WE WRITE OUR VALID TIMESTAMP
@@ -1002,6 +1052,18 @@ public class LogicControl
                     lic_checker.do_idle();
                     last_lic_update = now;
                 }
+
+                // ALLE 10 MINUTEN SPEICHER CHECKEN
+                if ((now - last_check_space) > CHECK_SPACE_CYCLE)
+                {
+                    last_check_space = now;
+                    for (int i = 0; i < mandanten_list.size(); i++)
+                    {
+                        MandantContext ctx = mandanten_list.get(i);
+                        ctx.check_free_space();
+                    }
+                }
+
 
                 if (!last_start_written)
                 {

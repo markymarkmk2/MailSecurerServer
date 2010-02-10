@@ -91,6 +91,17 @@ public abstract class ProxyConnection
 
     ProxyEntry pe;
 
+    @Override
+    public String toString()
+    {
+        if (clientSocket != null && clientSocket.isConnected())
+            return this.getClass().getSimpleName() + ": " + clientSocket.getRemoteSocketAddress().toString();
+
+        return this.getClass().getSimpleName();
+    }
+
+
+
     ProxyConnection(ProxyEntry _pe, Socket _clientSocket)
     {
         pe = _pe;       
@@ -112,9 +123,20 @@ public abstract class ProxyConnection
     {
         return pe;
     }
+    boolean has_args( String sData)
+    {
+        int idx = sData.indexOf(' ');
+        {
+            if (idx > 3 && sData.length() > 5 && !Character.isWhitespace( sData.charAt(5) ))
+                return true;
+        }
+        return false;
+    }
 
     boolean is_command_multiline(String sData)
     {
+        String orig_data = sData;
+
         if (sData.length() > 5)
             sData = sData.substring(0, 5 );
 
@@ -124,7 +146,16 @@ public abstract class ProxyConnection
         for (int i = 0; i < cmds.length; i++)
         {
             if (cmds[i].compareTo(sData) == 0)
+            {
+                if (sData.compareTo("UIDL") == 0)
+                {
+                    if (has_args(orig_data))
+                    {
+                        return false;
+                    }
+                }
                 return true;
+            }
         }
 
         return false;
@@ -132,6 +163,8 @@ public abstract class ProxyConnection
 
     boolean is_command_singleline(String sData)
     {
+        String orig_data = sData;
+        
         if (sData.length() > 5)
             sData = sData.substring(0, 5 );
 
@@ -141,7 +174,16 @@ public abstract class ProxyConnection
         for (int i = 0; i < cmds.length; i++)
         {
             if (cmds[i].compareTo(sData) == 0)
+            {
+                if (sData.compareTo("UIDL") == 0)
+                {
+                    if (!has_args(orig_data))
+                    {
+                        return false;
+                    }
+                }
                 return true;
+            }
         }
 
         return false;
@@ -175,7 +217,7 @@ public abstract class ProxyConnection
         else
         {
 
-            sockThread = new Thread()
+            sockThread = new Thread(toString())
             {
 
                 @Override
@@ -358,6 +400,30 @@ public abstract class ProxyConnection
         return getDataFromInputStream( reader, m_Command );
     }
 
+    int wait_for_avail( InputStream reader, int s )
+    {
+        int maxwait = s * 10;
+        int avail = 0;
+
+        while (avail == 0 && maxwait > 0)
+        {
+            try
+            {
+                avail = reader.available();
+            }
+            catch (Exception exc)
+            {
+            }
+            if (avail > 0)
+            {
+                reset_timeout();
+                return avail;
+            }
+            Main.sleep(100);
+            maxwait--;
+        }
+        return 0;
+    }
 
     StringBuffer getDataFromInputStream(InputStream reader, int command_type)
     {
@@ -373,28 +439,12 @@ public abstract class ProxyConnection
 
 
         // WAIT TEN SECONDS (100*100ms) FOR DATA
-        int maxwait = 100;
-        while (avail == 0 && maxwait > 0)
-        {
-            try
-            {
-                avail = reader.available();
-            }
-            catch (Exception exc)
-            {
-            }
-            if (avail > 0)
-            {
-                reset_timeout();
-                break;
-            }
-            Main.sleep(100);
-            maxwait--;
-        }
-
-        if (maxwait <= 0)
+         avail = wait_for_avail( reader, 10 );
+        if (avail == 0)
             Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
 
+
+        
         while ( !finished && m_error < 0)
         {
             try
@@ -463,8 +513,18 @@ public abstract class ProxyConnection
                 {
                     rlen = reader.read(buffer);
                 }
-                reset_timeout();
+
+                if (rlen > 0)
+                    reset_timeout();
+
+
+                // CHECK FOR STOPPED INPUT CONNECTION FROM APPLE MAIL
                 avail = reader.available();
+                if (rlen == 0 && avail == 0)
+                {
+                    if (wait_for_avail( reader, 5 ) == 0)
+                        rlen = -1;
+                }
 
                 // NO MORE DATA ?
                 if (rlen == -1)

@@ -4,13 +4,13 @@
  */
 package dimm.home.auth;
 
-import com.sun.mail.imap.IMAPStore;
+import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.CS_Constants;
 import java.net.Socket;
 
 import java.util.Properties;
-import javax.mail.MessagingException;
 import javax.mail.Session;
-import javax.mail.URLName;
+import javax.mail.Store;
 
 
 
@@ -24,7 +24,7 @@ class IMAPUserContext
 public class IMAPAuth extends GenericRealmAuth
 {    
     Socket imap_sock;
-    IMAPStore store;
+    Store store;
 
 
     IMAPUserContext user_context;
@@ -113,22 +113,27 @@ public class IMAPAuth extends GenericRealmAuth
         props.put("mail.port", port);
 
         props = set_conn_props(props, "imap", port);
-       
+        String protocol = "imap";
         try
         {
-            Session mailConnection = Session.getInstance(props, null);
-            URLName params = new URLName("imap", host, port, null, user_principal, pwd);
-            store = new IMAPStore(mailConnection, params);
+            protocol = "imap";
+            if (test_flag( CS_Constants.ACCT_USE_SSL))
+            {
+                protocol = "imaps";
+            }
+            Session mailConnection = Session.getDefaultInstance(props, null);
+            store = mailConnection.getStore(protocol);
 
-            store.connect();
+            store.connect(host, port, user_principal, pwd);
 
             if (store.isConnected())
             {
                 return new IMAPUserContext();
             }
         }
-        catch (MessagingException messagingException)
+        catch (Exception exc)
         {
+            LogManager.err_log("Cannot connect to IMAP server " + protocol + "://" + host + ":" + port, exc );
         }
         return null;
     }

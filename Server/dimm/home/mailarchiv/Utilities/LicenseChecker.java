@@ -14,7 +14,6 @@ import home.shared.license.ValidTicketContainer;
 import home.shared.mail.RFCMailAddress;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -107,13 +106,15 @@ public class LicenseChecker
         // SO THIS WILL HAPPEN ONLY ONCE AFTER INSTALLATION!
         boolean create_lic = false;
 
-        if (!exists_ticket(LicenseTicket.PRODUCT_BASE) && exists_ticket("Demo"))
+        if (exists_ticket("Demo"))
         {
             File trick_demo_file = get_lic_file("Demo");
+
             // MAKE THIS ONE-SHOT, HEHE
             trick_demo_file.delete();
 
-            create_lic = true;
+            if (!exists_ticket(LicenseTicket.PRODUCT_BASE))
+                create_lic = true;
         }
 
         if (create_lic)
@@ -330,8 +331,9 @@ public class LicenseChecker
                         license_user_map = (HashMap) o;
                     }
                 }
-                catch (FileNotFoundException fileNotFoundException)
+                catch (Exception exc)
                 {
+                    LogManager.err_log(Main.Txt("Error_while_reading_usermap"), exc);
                 }
                 finally
                 {
@@ -549,8 +551,10 @@ public class LicenseChecker
                     return vtck;
                 }
             }
-            catch (FileNotFoundException fileNotFoundException)
+            catch (Exception exc)
             {
+                LogManager.err_log_warn( "Found invalid license ticket " + lic_path + ": " + exc);
+
             }
             finally
             {

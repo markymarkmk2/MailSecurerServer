@@ -18,4 +18,10 @@ public class DiskSpaceDAO extends GenericDAO
     {
         super (DiskSpace.class);
     }
+
+    public void update( DiskSpace ds )
+    {
+        super.update(ds);
+    }
 }
+

@@ -14,11 +14,12 @@ import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.StatusEntry;
-import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.Utilities.ZipUtilities;
 import java.io.File;
@@ -29,7 +30,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import org.apache.commons.lang.builder.EqualsBuilder;
 
 class HFFilenameFilter implements FilenameFilter
 {
@@ -143,7 +143,7 @@ class HFFilenameFilter implements FilenameFilter
  *
  * @author mw
  */
-public class HotFolderImport implements StatusHandler, WorkerParentChild
+public class HotFolderImport extends WorkerParentChild
 {
 
     final Hotfolder hfolder;
@@ -167,14 +167,17 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     {
         hfolder = _hf;
     }
-    boolean do_finish;
-    boolean started;
-    boolean finished;
-
-    @Override
-    public void finish()
+    boolean is_disabled()
     {
-        do_finish = true;
+        try
+        {
+            int flags = Integer.parseInt(hfolder.getFlags());
+            return (flags & CS_Constants.HF_FLAG_DISABLED) == CS_Constants.HF_FLAG_DISABLED;
+        }
+        catch (Exception numberFormatException)
+        {
+        }
+        return false;
     }
 
     @Override
@@ -182,18 +185,31 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
     {
         started = true;
         ArrayList<DirectoryEntry> last_entry_list = new ArrayList<DirectoryEntry>();
+        MandantContext m_ctx = Main.get_control().get_mandant_by_id(hfolder.getMandant().getId());
+        long da_id = hfolder.getDiskArchive().getId();
+        Vault vault = m_ctx.get_vault_by_da_id(da_id);
 
         while (!do_finish)
         {
-            try
+            if (!vault.has_sufficient_space())
             {
-                status.set_status(StatusEntry.SLEEPING, Main.Txt("sleeping") );
+                status.set_status(StatusEntry.ERROR, Main.Txt("Not_enough_space_in_archive_to_process") );
 
-                Thread.sleep(HF_SLEEP_SECS * 1000);
+                sleep_seconds( HF_SLEEP_SECS );
+                continue;
             }
-            catch (InterruptedException ex)
+
+            if (is_disabled())
             {
+                status.set_status(StatusEntry.SLEEPING, Main.Txt("disabled") );
+                sleep_seconds( HF_SLEEP_SECS );
+                continue;
             }
+
+            
+            status.set_status(StatusEntry.SLEEPING, Main.Txt("sleeping") );
+            sleep_seconds( HF_SLEEP_SECS );
+
             try
             {
                 int flags = Integer.parseInt(hfolder.getFlags());
@@ -321,7 +337,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         {
             // Create a mail session
             RFCMimeMail mm = new RFCMimeMail();
-            mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), Main.Txt("Hotfolder_") + arch_file.getName(),
+            mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), /*cc*/null, Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
         
             Message m = mm.getMsg();
@@ -342,34 +358,13 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         
     }
 
-    @Override
-    public String get_status_txt()
-    {
-        return status.get_status_txt();
-    }
-
-    @Override
-    public int get_status_code()
-    {
-        return status.get_status_code();
-    }
-
+  
     public Hotfolder get_hf()
     {
         return hfolder;
     }
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
-    }
+  
     @Override
     public String get_task_status_txt()
     {
@@ -382,11 +377,7 @@ public class HotFolderImport implements StatusHandler, WorkerParentChild
         return hfolder;
     }
 
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-        return EqualsBuilder.reflectionEquals( hfolder, db_object);
-    }
+   
 
     @Override
     public String get_name()

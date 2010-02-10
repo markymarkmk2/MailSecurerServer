@@ -8,16 +8,18 @@ import com.sun.mail.imap.IMAPFolder;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.LogicControl;
 import java.io.IOException;
 import java.util.*;
 
 
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.StatusEntry;
-import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
 import java.net.UnknownHostException;
@@ -32,28 +34,18 @@ import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.event.MessageCountAdapter;
 import javax.mail.event.MessageCountEvent;
-import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
 
 
-public class MailBoxFetcher implements StatusHandler, WorkerParentChild
+public class MailBoxFetcher extends WorkerParentChild
 {
 
     public static final int WAIT_PERIOD_S = 60;
     public static final int IMAP_IDLE_PERIOD = 10;
 
-    /*public static final int CONN_MODE_MASK = 0x000f;
-    public static final int CONN_MODE_INSECURE = 0x0001;
-    public static final int CONN_MODE_FALLBACK = 0x0002;
-    public static final int CONN_MODE_TLS = 0x0003;
-    public static final int CONN_MODE_SSL = 0x0004;
-    public static final int FLAG_MASK = 0xfff0;
-    public static final int FLAG_AUTH_CERT = 0x0010;
-    public static final int FLAG_POP3 = 0x0020;
-    public static final int FLAG_IMAP_IDLE = 0x0040;
-*/
+    
 
     private final String DEFAULT_SSL_FACTORY = "home.shared.Utilities.DefaultSSLSocketFactory";
     private final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
@@ -66,8 +58,6 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
 
     ImapFetcher imfetcher;
-    private boolean finished;
-    private boolean started;
 
     @Override
     public String get_name()
@@ -142,29 +132,30 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         {
             props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "true");
-            props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(flags));
         }
         else if (test_flag(CS_Constants.IMF_USE_TLS_FORCE))
         {
             props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
-            props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(flags));
         }
         else if (test_flag(CS_Constants.IMF_USE_SSL))
         {
-            protocol = protocol + "s";            
-            props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(flags));
+            protocol = protocol + "s";
             props.put("mail." + protocol + ".socketFactory.port", port);
-            props.put("mail." + protocol + ".socketFactory.fallback", "false");
-
+        }
+        if (test_flag(CS_Constants.IMF_HAS_TLS_CERT))
+        {
+            props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(flags));
             String ca_cert_file = System.getProperty("javax.net.ssl.trustStore");
             props.put("javax.net.ssl.trustStore", ca_cert_file);
         }
 
+
         // DEFAULTTIMOUT IS 300 S
         // FAILS ON IMAP LOGIN
-       // props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
-       // props.put("mail." + protocol + ".timeout", 300 * 1000);
+        props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
+        props.put("mail." + protocol + ".timeout", 300 * 1000);
+
         props.put( "mail.debug", "false");
         if (LogManager.get_debug_lvl() > 5)
             props.put( "mail.debug", "true");
@@ -174,7 +165,7 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
 
     private void connect( String protocol, String server, int port, String username, String password, Properties props ) throws Exception
     {
-        Session session = Session.getInstance(props, null);
+        Session session = Session.getDefaultInstance(props, null);
 
         if (LogManager.get_debug_lvl() > 5)
         {
@@ -274,13 +265,6 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         }
         return;
     }
-    boolean do_finish;
-
-    @Override
-    public void finish()
-    {
-        do_finish = true;
-    }
 
     @Override
     public void run_loop()
@@ -298,9 +282,21 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         }
 
         do_finish = false;
+        MandantContext m_ctx = Main.get_control().get_mandant_by_id(imfetcher.getMandant().getId());
+        long da_id = imfetcher.getDiskArchive().getId();
+        Vault vault = m_ctx.get_vault_by_da_id(da_id);
 
         while (!do_finish)
         {
+            if (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
+            {
+                status.set_status(StatusEntry.ERROR, Main.Txt("Not_enough_space_in_archive_to_process") );
+
+                sleep_seconds(IMAP_IDLE_PERIOD);
+                continue;
+            }
+
+
 
             status.set_status(StatusEntry.BUSY, "Connecting mail server <" + imfetcher.getServer() + ">");
             try
@@ -332,13 +328,9 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
                 catch (Exception ed)
                 {
                 }
-                try
-                {
-                    Thread.sleep(WAIT_PERIOD_S * 1000);
-                }
-                catch (Exception e2)
-                {
-                }
+
+                sleep_seconds(WAIT_PERIOD_S);
+               
                 continue;
             }
 
@@ -365,14 +357,8 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
             }
 
             // PAUSE TODO: PUT INTO PARAMETER
-            try
-            {
-                if (!do_finish)
-                    Thread.sleep(IMAP_IDLE_PERIOD * 1000);
-            }
-            catch (Exception e)
-            {
-            }
+            sleep_seconds(IMAP_IDLE_PERIOD);
+            
         }
         finished = true;
     }
@@ -656,34 +642,11 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
         while (!complete);
     }
 
-    @Override
-    public String get_status_txt()
-    {
-        return status.get_status_txt();
-    }
-
-    @Override
-    public int get_status_code()
-    {
-        return status.get_status_code();
-    }
 
     @Override
     public void idle_check()
     {
         // NOTHING
-    }
-
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
-
-    @Override
-    public boolean is_finished()
-    {
-        return finished;
     }
 
     @Override
@@ -696,12 +659,6 @@ public class MailBoxFetcher implements StatusHandler, WorkerParentChild
     public String get_task_status_txt()
     {
         return "";
-    }
-
-    @Override
-    public boolean is_same_db_object( Object db_object )
-    {
-        return EqualsBuilder.reflectionEquals( imfetcher, db_object);
     }
 
 

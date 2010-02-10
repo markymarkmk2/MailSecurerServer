@@ -5,21 +5,75 @@
 
 package dimm.home.mailarchiv;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+
 /**
  *
  * @author mw
  */
-public interface WorkerParentChild
+public abstract class WorkerParentChild  implements StatusHandler
 {
-    public void idle_check();
-    public void finish();
-    public void run_loop();
-    public boolean is_started();
-    public boolean is_finished();
-    public Object get_db_object();
-    public String get_task_status_txt();
-    public String get_name();
+    protected boolean do_finish;
+    protected boolean started;
+    protected boolean finished;
 
-    public boolean is_same_db_object( Object db_object );
+    public abstract void idle_check();
+    public abstract void run_loop();
+    public abstract Object get_db_object();
+    public abstract String get_task_status_txt();
+    public abstract String get_name();
+
+    
+    public void finish()
+    {
+        do_finish = true;
+    }
+    public boolean is_started()
+    {
+        return started;
+    }
+    public void set_started( boolean b)
+    {
+        this.started = b;
+    }
+
+    public void sleep_seconds( int seconds )
+    {
+        // CHECK FINISHED EVERY 100ms
+        seconds *= 10;
+        while (!do_finish && seconds > 0)
+        {
+            LogicControl.sleep(100);
+        }
+    }
+
+    public boolean is_finished()
+    {
+        return finished;
+    }
+    
+    @Override
+    public String get_status_txt()
+    {
+        return status.get_status_txt();
+    }
+
+    @Override
+    public int get_status_code()
+    {
+        return status.get_status_code();
+    }
+    @Override
+    public void set_status( int code, String st)
+    {
+        status.set_status(code, st);
+    }
+
+    public boolean is_same_db_object( Object db_object )
+    {
+        return EqualsBuilder.reflectionEquals( get_db_object(), db_object);
+    }
+
+
 
 }

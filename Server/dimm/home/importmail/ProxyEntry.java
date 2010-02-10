@@ -15,31 +15,20 @@ import org.apache.commons.lang.builder.EqualsBuilder;
  *
  * @author mw
  */
-public class ProxyEntry implements WorkerParentChild
+public class ProxyEntry extends WorkerParentChild
 {
     private int instanceCnt;
-    boolean finish;
-    boolean started;
     ProxyConnection conn;
     ServerSocket ss;
 
-    public void set_started( boolean started )
-    {
-        this.started = started;
-    }
 
-    @Override
-    public boolean is_started()
-    {
-        return started;
-    }
 
     Proxy proxy;
     public ProxyEntry( Proxy p )
     {
         proxy = p;
         instanceCnt = 0;
-        finish = false;
+        finished = false;
         conn = null;
     }
 
@@ -68,7 +57,7 @@ public class ProxyEntry implements WorkerParentChild
     @Override
     public void finish()
     {
-        finish = true;
+        finished = true;
         if (conn != null)
         {
             conn.closeConnections();
@@ -99,12 +88,7 @@ public class ProxyEntry implements WorkerParentChild
     }
 
 
-    @Override
-    public boolean is_finished()
-    {
-        return finish;
-    }
-
+   
     @Override
     public Object get_db_object()
     {

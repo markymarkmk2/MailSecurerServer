@@ -15,9 +15,10 @@ public class POP3Connection extends ProxyConnection
 {
 
     private static final String NAME = "POP3-Proxy";
-    
+
+    // UIDL IS BOTH SINGLE AND MULTILINE (WITHOUT ARGS ->MULTI)
     String multi_line_commands[] = {"LIST", "RETR", "UIDL", "TOP", "CAPA"};
-    String single_line_commands[] = {"QUIT", "USER", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
+    String single_line_commands[] = {"QUIT", "USER", "UIDL", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
 
     static int thread_count = 0;
 

@@ -199,32 +199,37 @@ public abstract class GenericRealmAuth
 
         if (test_flag( CS_Constants.ACCT_USE_TLS_IF_AVAIL))
         {
-            props.put("mail." + protocol + ".starttls.enable", "true");
+//            props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "true");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(with_cert));
         }
         else if (test_flag( CS_Constants.ACCT_USE_TLS_FORCE))
         {
-            props.put("mail." + protocol + ".starttls.enable", "true");
+//            props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(with_cert));
         }
         else if (test_flag( CS_Constants.ACCT_USE_SSL))
         {
             protocol = protocol + "s";
-            props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(with_cert));
             props.put("mail." + protocol + ".socketFactory.port", port);
-            props.put("mail." + protocol + ".socketFactory.fallback", "false");
-            
+        }
+        
+        if (test_flag( CS_Constants.ACCT_HAS_TLS_CERT))
+        {
             String ca_cert_file = System.getProperty("javax.net.ssl.trustStore");
             props.put("javax.net.ssl.trustStore", ca_cert_file);
-
         }
 
         // DEFAULTTIMOUT IS 10 S
         // FAILS ON IMAP LOGIN
-    //    props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
-    //    props.put("mail." + protocol + ".timeout", 10 * 1000);
+        props.put("mail." + protocol + ".connectiontimeout", 10 * 1000);
+        props.put("mail." + protocol + ".timeout", 300 * 1000);
+
+        props.put( "mail.debug", "false");
+        if (LogManager.get_debug_lvl() > 5)
+            props.put( "mail.debug", "true");
+
 
         return props;
     }
@@ -234,7 +239,7 @@ public abstract class GenericRealmAuth
         return test_flag( CS_Constants.ACCT_USE_SSL );
     }
 
-    private boolean test_flag( int test_flag )
+    protected boolean test_flag( int test_flag )
     {
         return (flags & test_flag) == test_flag;
     }

@@ -17,7 +17,7 @@ import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
-import dimm.home.mailarchiv.Notification;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.StatusHandler;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -221,7 +221,7 @@ public class DiskVault implements Vault, StatusHandler
             ds.setStatus( CS_Constants.DS_FULL);
 
             DiskSpaceDAO dao = new DiskSpaceDAO();
-            dao.save(ds);
+            dao.update(ds);
 
             DiskSpaceHandler new_dsh = get_next_active_diskspace( 0, dsh.is_data() );
 
@@ -283,8 +283,6 @@ public class DiskVault implements Vault, StatusHandler
         // AND SHOVE IT RIGHT IN!!!!
         write_mail_file( context, data_dsh, index_dsh, msg, background_index );
 
-        // ADD CAPACITY COUNTER
-        data_dsh.add_message_info(msg);
 
         // TODO: MAYBE THIS SLOWS DOWN
        // data_dsh.flush();
@@ -324,6 +322,8 @@ public class DiskVault implements Vault, StatusHandler
             LogManager.log(Level.SEVERE, null, ex);
             throw new ArchiveMsgException("Cannot write data file: " + ex.getMessage());
         }
+        
+
 
         String uuid = data_dsh.get_message_uuid(msg);
         LogManager.log(Level.FINE, "Wrote mail file " + uuid);
@@ -392,6 +392,25 @@ public class DiskVault implements Vault, StatusHandler
     public String get_name()
     {
         return disk_archive.getName();
+    }
+
+    @Override
+    public boolean has_sufficient_space()
+    {
+        DiskSpaceHandler dsh = get_next_active_data_diskspace(0);
+        if (dsh == null)
+            return false;
+
+        if (dsh.no_space_left())
+            return false;
+
+        return true;
+    }
+
+    @Override
+    public void set_status( int code, String text )
+    {
+        status.set_status(code, text);
     }
 
 

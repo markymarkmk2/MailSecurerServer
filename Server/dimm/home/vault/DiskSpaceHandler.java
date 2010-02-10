@@ -15,6 +15,7 @@ import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
@@ -53,6 +54,8 @@ public class DiskSpaceHandler
 
     DiskSpace ds;
     DiskSpaceInfo dsi;
+    boolean info_touched;
+
     boolean _open;
     IndexWriter write_index;
     AsyncIndexWriter async_index_writer;
@@ -61,14 +64,22 @@ public class DiskSpaceHandler
     public final String idx_lock = "idx";
     public final String data_lock = "data";
     private long next_flush_optimize_ts;
+    boolean low_space_left;
+    boolean no_space_left;
+
 
     private static long FLUSH_OPTIMIZE_CYCLE_MS = 60*60*1000;
+    private static final long MIN_FREE_SPACE = 100000000l;  // 100 MB
+    private static final long LOW_FREE_SPACE = 10000000000l; // 10GB
+
+
 
     public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
     {
         m_ctx = _m_ctx;
         ds = _ds;        
         _open = false;
+        info_touched = false;
 
         FLUSH_OPTIMIZE_CYCLE_MS = Main.get_long_prop(GeneralPreferences.OPTIMIZE_FLUSH_CYCLETIME, FLUSH_OPTIMIZE_CYCLE_MS);
         next_flush_optimize_ts = 0;  // OPTIMIZE AT STARTUP
@@ -382,7 +393,10 @@ public class DiskSpaceHandler
                 Object o = read_info_object( "dsinfo.xml" );
 
                 if (o instanceof DiskSpaceInfo)
+                {
                     dsi = (DiskSpaceInfo)o;
+                    info_touched = false;
+                }
                 else
                     throw new VaultException( ds, "Invalid info file" );
             }
@@ -450,11 +464,16 @@ public class DiskSpaceHandler
 
     private void update_info() throws VaultException
     {
+        // ONLY UPDATE IF DATA CHANGED
+        if (!info_touched)
+            return;
+
         try
         {
             synchronized( data_lock )
             {
                 write_info_object( dsi, "dsinfo.xml" );
+                info_touched = false;
             }
         }
         catch (Exception ex)
@@ -476,14 +495,19 @@ public class DiskSpaceHandler
     }
 
 
-    public void add_message_info( RFCGenericMail msg ) throws VaultException
+    public void add_message_info( RFCGenericMail msg )
     {
+        long last_capacity = dsi.getCapacity();
         dsi.incCapacity( msg.get_length() );
+        long new_capacity = dsi.getCapacity();
+
+        check_capacity_limits( last_capacity, new_capacity );
+
         dsi.setLastEntryTS(msg.getDate().getTime());
         if (dsi.getFirstEntryTS() == 0)
             dsi.setFirstEntryTS(dsi.getLastEntryTS());
 
-        update_info();
+        info_touched = true;
     }
 
     void del_recursive(File f)
@@ -498,6 +522,7 @@ public class DiskSpaceHandler
         }
         f.delete();
         dsi.decCapacity(f.length());
+        info_touched = true;
     }
 
     public void delete_mail( long time, int enc_mode, RFCGenericMail.FILENAME_MODE fmode   ) throws VaultException
@@ -515,6 +540,7 @@ public class DiskSpaceHandler
         {
             mail_file.delete();
             dsi.decCapacity(mail_file.length());
+            info_touched = true;
         }
         catch (Exception e)
         {
@@ -701,6 +727,7 @@ public class DiskSpaceHandler
 
         // TODO: CHECK ENCMODE AND FMODE
         dsi = info_recursive( path, local_dsi );
+        info_touched = true;
     }
 
     public boolean exists()
@@ -795,25 +822,6 @@ public class DiskSpaceHandler
     }
 
 
-    public boolean checkCapacity(  long len )
-    {
-        File path = new File( ds.getPath() );
-
-        long allowed_cap = parse_capacity(ds.getMaxCapacity());
-
-        // TEST IF FS IS FULL ANYWAY
-        if (path.getFreeSpace() < len + 1024*1024)  // AT LEAST 1MB ON FS
-            return false;
-
-        // READ SIZE FROM DISK
-        long act_cap = dsi.getCapacity();
-
-        // CHECK IF OKAY
-        if (allowed_cap > 0 && act_cap + len > allowed_cap)
-            return false;
-
-        return true;
-    }
 /*
     public long read_act_capacity()
     {
@@ -944,6 +952,11 @@ public class DiskSpaceHandler
                 {
                 }
             }
+            
+            
+            // ADD CAPACITY COUNTER
+            add_message_info(msg);
+
         }
     }
     public InputStream open_decrypted_mail_stream(RFCGenericMail msg, String password ) throws  VaultException
@@ -1026,6 +1039,8 @@ public class DiskSpaceHandler
                 throw new VaultException( ex.getMessage() );
             }
         }
+        // CHECK FOR HARD DISK LIMITS
+        check_free_space();
     }
 
     public boolean is_disabled()
@@ -1059,4 +1074,98 @@ public class DiskSpaceHandler
     {
         return rebuild_lock ;
     }
+
+
+    private void set_no_space_left( boolean b)
+    {
+        // DETECT STATUS CHANGE
+        if (no_space_left != b)
+        {
+            no_space_left = b;
+
+            if (no_space_left)
+            {
+                Notification.throw_notification(m_ctx.getMandant(), Notification.NF_FATAL_ERROR,
+                    Main.Txt("No_space_left_in_disk_space") + ": " + ds.getPath());
+            }
+            else
+            {
+                Notification.throw_notification(m_ctx.getMandant(), Notification.NF_INFORMATIVE,
+                    Main.Txt("Space_in_disk_space_is_sufficient_again") + ": " + ds.getPath());
+            }
+        }
+    }
+    private void set_low_space_left( boolean b)
+    {
+        if (low_space_left != b)
+        {
+            low_space_left = b;
+
+            if (low_space_left)
+            {
+                Notification.throw_notification(m_ctx.getMandant(), Notification.NF_WARNING,
+                    Main.Txt("Low_space_left_in_disk_space") + ": " + ds.getPath());
+            }
+        }
+    }
+
+    // CALLED DURING FLUSH
+    void check_free_space()
+    {
+        File tmp_path = new File( ds.getPath() );
+        double free = tmp_path.getFreeSpace();
+
+        set_no_space_left( free <MIN_FREE_SPACE );
+        set_low_space_left( free <LOW_FREE_SPACE );
+    }
+
+    
+    public boolean no_space_left()
+    {
+        return no_space_left;
+    }
+
+    // CALLED FOR EVERY MAIL, KEEP IT SIMPLE
+    private void check_capacity_limits( long last_capacity, long new_capacity )
+    {
+        long allowed_cap = parse_capacity(ds.getMaxCapacity());
+        int last_percent = (int)((last_capacity * 100) / allowed_cap);
+        int new_percent = (int)((new_capacity * 100) / allowed_cap);
+
+        int last_perdek = last_percent / 10;
+        int new_perdek  = new_percent / 10;
+
+        if ((last_perdek != new_perdek) || (new_perdek >= 9 && last_percent != new_percent))
+        {
+            // DONT BOTHER IF LESS THAN 50%
+            if (new_perdek < 5)
+                return;
+
+            int level = Notification.NF_INFORMATIVE;
+            if (new_perdek >= 7)
+                level = Notification.NF_WARNING;
+            if (new_perdek >= 9)
+                level = Notification.NF_ERROR;
+
+            Notification.throw_notification(m_ctx.getMandant(), level,
+                    Main.Txt("Disk_space")  + " " + ds.getPath() + " " + Main.Txt("is_filled_by") + " >= " + Integer.toString(new_perdek * 10) + "%");
+
+        }
+    }
+
+    // CALLED FOR EVERY MAIL, KEEP IT SIMPLE
+    public boolean checkCapacity(  long len )
+    {
+        long allowed_cap = parse_capacity(ds.getMaxCapacity());
+
+        // READ SIZE FROM DISK
+        long act_cap = dsi.getCapacity();
+
+        // CHECK IF OKAY
+        if (allowed_cap > 0 && act_cap + len > allowed_cap)
+            return false;
+
+        return true;
+    }
+
 }
