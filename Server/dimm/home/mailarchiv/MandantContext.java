@@ -30,6 +30,7 @@ import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import home.shared.CS_Constants;
+import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
@@ -431,7 +432,6 @@ public class MandantContext
                 LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName(), ex);
             }
         }
-
     }
 
     void setShutdown( boolean b )
@@ -1000,6 +1000,11 @@ public class MandantContext
                     LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
                     continue;
                 }
+                if (!dv.has_sufficient_space())
+                {
+                    LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_not_enough_space") + " " + dv.get_name());
+                    continue;
+                }
 
                 // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
                 Main.get_control().register_new_import(this, dv.get_da(), file.getAbsolutePath());
@@ -1028,16 +1033,16 @@ public class MandantContext
             if (no_tmp_space_left)
             {
                 Notification.throw_notification(this.getMandant(), Notification.NF_FATAL_ERROR, 
-                    Main.Txt("No_space_left_in_working_directory") + ": " + get_tmp_path());
+                    Main.Txt("No_space_left_in_working_directory") + ": " + get_tmp_path().getAbsolutePath());
             }
             else
             {
                 Notification.throw_notification(this.getMandant(), Notification.NF_INFORMATIVE, 
-                    Main.Txt("Space_in_working_directory_is_sufficient_again") + ": " + get_tmp_path());
+                    Main.Txt("Space_in_working_directory_is_sufficient_again") + ": " + get_tmp_path().getAbsolutePath());
             }
         }
     }
-    private void set_low_tmp_space_left( boolean b)
+    private void set_low_tmp_space_left( boolean b, double free)
     {
         if (low_tmp_space_left != b)
         {
@@ -1045,8 +1050,9 @@ public class MandantContext
 
             if (low_tmp_space_left)
             {
+                String space = new SizeStr( free ).toString() + "B";
                 Notification.throw_notification(this.getMandant(), Notification.NF_WARNING,
-                    Main.Txt("Low_space_left_in_working_directory") + ": " + get_tmp_path());
+                    Main.Txt("Low_space_left_in_working_directory") + ": " + get_tmp_path().getAbsolutePath() + ": < " + space );
             }
         }
     }
@@ -1059,7 +1065,7 @@ public class MandantContext
         double total = tmp_path.getTotalSpace();
 
         set_no_tmp_space_left( free <MIN_TMP_FREE_SPACE );
-        set_low_tmp_space_left( free <LOW_TMP_FREE_SPACE );
+        set_low_tmp_space_left( free <LOW_TMP_FREE_SPACE, free );
        
     }
 

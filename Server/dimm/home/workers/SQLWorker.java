@@ -87,7 +87,6 @@ public class SQLWorker extends WorkerParent
     {
         return connect;
     }
-    private boolean is_started = false;
 
     
     /** Creates a new instance of SQLWorker */

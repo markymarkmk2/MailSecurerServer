@@ -59,7 +59,6 @@ public class UserTaskServer extends WorkerParent
     SwingWorker idle_worker;
 
     boolean m_Stop = false;
-    private boolean is_started = false;
     
     
     /** Creates a new instance of StatusDisplay */

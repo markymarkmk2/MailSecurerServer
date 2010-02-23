@@ -44,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.1.3";
+    private static final String VERSION = "1.1.4";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -192,7 +192,7 @@ public class Main
         {
             if (args[i].compareTo("-t") == 0)
                 trace_mode = true;
-            
+
             
            
             if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
@@ -354,7 +354,13 @@ public class Main
      * @param args the command line arguments
      */
     public static void main(String[] args)
-    {        
+    {
+        if (args.length == 1 && args[0].compareTo("-version") == 0)
+        {
+            System.out.println(Main.get_version_str());
+            return;
+        }
+
         Main m = new Main(args);
 
       /*  m.import_moonrug();

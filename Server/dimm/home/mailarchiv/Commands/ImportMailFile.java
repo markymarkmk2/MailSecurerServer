@@ -14,7 +14,9 @@ import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.serverconnect.OutputStreamEntry;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.ParseToken;
+import dimm.home.vault.DiskVault;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import java.io.File;
@@ -54,6 +56,14 @@ public class ImportMailFile extends AbstractCommand
             MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
             Mandant m = m_ctx.getMandant();
             DiskArchive da = m_ctx.get_da_by_id(da_id);
+            DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
+
+            // CHECK FOR SPACE
+            if (!dv.has_sufficient_space())
+            {
+                answer = "2: " + Main.Txt("Cannot_import_mail,_not_enough_space") + " " + da_id;
+                return true;
+            }
 
             TCPCallConnect conn = m_ctx.get_tcp_call_connect();
             OutputStreamEntry ose = null;
@@ -73,7 +83,6 @@ public class ImportMailFile extends AbstractCommand
             conn.RMX_CloseOutStream( getSsoEntry(), oid);
 
             File nf = m_ctx.getTempFileHandler().create_new_import_file(ose.file.getName(), da_id);
-
             if (!ose.file.renameTo(nf))
             {
                 answer = "3: " + Main.Txt("cannot rename") + " " + ose.file.getName() + " -> " + nf.getAbsolutePath();
@@ -82,7 +91,6 @@ public class ImportMailFile extends AbstractCommand
 
             // THIS FILE CONTAINS THE MAIL FILE
             String path = nf.getAbsolutePath();  // == new_path
-
 
             // PREFIX IS UploadMailFile.IMPMAIL_PREFIX, SUFFIX DEPENDS ON SOURCE
             // REGISTER AT TASK

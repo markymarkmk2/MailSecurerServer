@@ -23,7 +23,6 @@ public class ListWorkerParent extends WorkerParent
 
     final ArrayList<WorkerParentChild> child_list;
     SwingWorker idle_worker;
-    boolean is_started;
 
     public ListWorkerParent( String _name )
     {

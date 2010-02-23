@@ -1097,6 +1097,7 @@ public class LogicControl
         catch (Exception ex)
         {
             ex.printStackTrace();
+
         }
         
         // WRITE USERMAP
@@ -1134,8 +1135,18 @@ public class LogicControl
             boolean ok = true;
             for (int i = 0; i < worker_list.size(); i++)
             {
-                if (!worker_list.get(i).isFinished())
+                if (!worker_list.get(i).isStarted())
+                    continue;
+
+                if (!worker_list.get(i).isFinished() )
+                {
+                    if (!worker_list.get(i).isShutdown())
+                    {
+                        worker_list.get(i).setShutdown(true);
+                    }
+
                     ok = false;
+                }
             }
             if (ok)
                 return true;

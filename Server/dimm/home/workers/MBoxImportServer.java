@@ -59,7 +59,6 @@ public class MBoxImportServer extends WorkerParent
     final ArrayList<MBoxImporterEntry> import_list;
     SwingWorker idle_worker;
     boolean m_Stop = false;
-    boolean is_started = false;
 
     /** Creates a new instance of StatusDisplay */
     public MBoxImportServer()

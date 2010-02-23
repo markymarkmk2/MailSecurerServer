@@ -253,9 +253,12 @@ public class MailProxyServer extends ListWorkerParent
 
         LogicControl.sleep(1100);
 
-        while (!idle_worker.finished())
+        if (idle_worker != null)
         {
-            LogicControl.sleep(1000);
+            while (!idle_worker.finished())
+            {
+                LogicControl.sleep(1000);
+            }
         }
     }
 

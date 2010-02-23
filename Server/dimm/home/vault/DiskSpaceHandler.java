@@ -20,6 +20,7 @@ import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import home.shared.SQL.SQLArrayResult;
+import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.DiskSpace;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
@@ -308,6 +309,8 @@ public class DiskSpaceHandler
         dsi.setFmode( m_ctx.getPrefs().get_boolean_prop(MandantPreferences.DSH_HOUR_DIRS, true) ?
             RFCGenericMail.FILENAME_MODE.H_OK_DIR_MS_FILE : RFCGenericMail.FILENAME_MODE.HMS_FILE);
 
+        info_touched = true;
+
         try
         {
             // TOUCH (NOT OPEN!) INDEX
@@ -410,6 +413,7 @@ public class DiskSpaceHandler
                 {
                     LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
                     dsi = (DiskSpaceInfo)o;
+                    info_touched = true;
                     update_info();
 
                     return;
@@ -446,6 +450,7 @@ public class DiskSpaceHandler
                 
                 dsi.setCapacity(capacity);
                 dsi.setEncMode(  enc_mode );
+                info_touched = true;
                 LogManager.err_log_fatal(Main.Txt("We_recovered_disk_info_and_need_reindex_for") + ": " + ds.getPath());
                 update_info();
 
@@ -457,6 +462,7 @@ public class DiskSpaceHandler
     }
     public void close() throws VaultException
     {
+        info_touched = true;
         update_info();
 
         _open = false;
@@ -983,6 +989,24 @@ public class DiskSpaceHandler
             throw new VaultException(ds, e);
         }
     }
+    private static long size_recursive(File f)
+    {
+        long len = 0;
+        if (f.isDirectory())
+        {
+            File[] f_list = f.listFiles();
+            for (int i = 0; i < f_list.length; i++)
+            {
+                len += size_recursive( f_list[i] );
+            }
+        }
+        else
+        {
+            len = f.length();
+        }
+        return len;
+    }
+
 
     void flush() throws IndexException, VaultException
     {
@@ -1007,7 +1031,15 @@ public class DiskSpaceHandler
                         LogManager.log(Level.INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
                         write_index.optimize();
                     }
+                }
 
+                String path = getIndexPath();
+                long index_capacity = size_recursive( new File(path) );
+                if (!is_data())
+                {
+                    dsi.setCapacity(index_capacity);
+                    info_touched = true;
+                    update_info();
                 }
             }
             catch (CorruptIndexException ex)
@@ -1095,7 +1127,7 @@ public class DiskSpaceHandler
             }
         }
     }
-    private void set_low_space_left( boolean b)
+    private void set_low_space_left( boolean b, double free)
     {
         if (low_space_left != b)
         {
@@ -1103,8 +1135,9 @@ public class DiskSpaceHandler
 
             if (low_space_left)
             {
+                String space = new SizeStr( free ).toString() + "B";
                 Notification.throw_notification(m_ctx.getMandant(), Notification.NF_WARNING,
-                    Main.Txt("Low_space_left_in_disk_space") + ": " + ds.getPath());
+                    Main.Txt("Low_space_left_in_disk_space") + ": " + ds.getPath() + ": < " + space);
             }
         }
     }
@@ -1116,7 +1149,7 @@ public class DiskSpaceHandler
         double free = tmp_path.getFreeSpace();
 
         set_no_space_left( free <MIN_FREE_SPACE );
-        set_low_space_left( free <LOW_FREE_SPACE );
+        set_low_space_left( free <LOW_FREE_SPACE,  free);
     }
 
     

@@ -407,7 +407,7 @@ public class UpdateWorker extends WorkerParent
     {
         long last_time_checked = System.currentTimeMillis();
         
-        while (true)
+        while (!Main.get_control().is_shutdown())
         {
             long now = System.currentTimeMillis();
             if (now > last_time_checked + cycle_duration)

@@ -23,6 +23,7 @@ public abstract class WorkerParent
     private boolean goodState;
     String last_status = "";
     protected boolean finished = false;
+    protected boolean is_started = false;
     
     /** Creates a new instance of WorkerParent */
     public WorkerParent(String _name)
@@ -52,6 +53,10 @@ public abstract class WorkerParent
     public boolean isFinished()
     {
         return finished;
+    }
+    public boolean isStarted()
+    {
+        return is_started;
     }
 
     public String getStatusTxt()

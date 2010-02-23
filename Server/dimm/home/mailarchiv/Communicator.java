@@ -74,6 +74,7 @@ public class Communicator extends WorkerParent
         cmd_list.add( new StartVPN() );
         cmd_list.add( new ImportMailFile() );
         cmd_list.add( new UploadMailFile() );
+        cmd_list.add( new LicenseConfig() );
         is_started = false;
     }
 
@@ -637,9 +638,10 @@ public class Communicator extends WorkerParent
         }
         else
         {
-            // FILTER CALLS FOR THIS STATION
+            // FILTER CALLS FOR THIS STATION OR STATION 0
             String station = Main.get_station_id() + ":";
-            if (len > station.length() && str.substring(0, station.length()).compareTo( station) == 0)
+            if (len > station.length() && 
+                    (str.substring(0, station.length()).compareTo( station) == 0 || str.substring(0, 2).compareTo( "0:" ) == 0))
             {
                 // TRIM STATION
                 str = str.substring(station.length());
@@ -695,7 +697,7 @@ public class Communicator extends WorkerParent
     }
     void answer_udp( DatagramSocket s, DatagramPacket in_packet, String answer ) throws SocketException, IOException
     {
-        Main.debug_msg( 5, "Sending answer <" + answer + "> to " + in_packet.getSocketAddress().toString() );
+        Main.debug_msg( 8, "Sending answer <" + answer + "> to " + in_packet.getSocketAddress().toString() );
         
         //byte frame_nr = (byte)(in_packet.getData()[0] - '0');
         

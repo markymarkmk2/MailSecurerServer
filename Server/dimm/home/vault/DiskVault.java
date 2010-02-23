@@ -127,7 +127,7 @@ public class DiskVault implements Vault, StatusHandler
             File dsf = new File( ds.getPath() );
             if ( !dsf.exists() )
             {
-                LogManager.err_log_fatal("DiskSpace <" + dsf.getAbsolutePath() + "> was not found, skipping");
+                LogManager.err_log( Main.Txt("DiskSpace_was_not_found") + ": " + dsf.getAbsolutePath());
                 continue;
             }
 
@@ -176,11 +176,20 @@ public class DiskVault implements Vault, StatusHandler
             }
             catch (IOException _ex)
             {
-                throw new ArchiveMsgException("Error while writing to disk" + _ex.getMessage()  );
+                status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("Error_while_writing_to_disk") + ": " +  _ex.getMessage());
+                LogManager.err_log( status.get_status_txt() );
+                throw new ArchiveMsgException( status.get_status_txt()   );
             }
         }
         return ret;
     }
+
+    @Override
+    public String toString()
+    {
+        return Main.Txt("DiskArchive") + " " + get_da().getName();
+    }
+
 
     public DiskSpaceHandler open_dsh( DiskSpaceHandler dsh, long free_space) throws VaultException
     {
@@ -197,7 +206,6 @@ public class DiskVault implements Vault, StatusHandler
         }
         catch (VaultException vaultException)
         {
-            LogManager.err_log(Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
             if (dsh.getDs().getStatus().compareTo(CS_Constants.DS_EMPTY) == 0)
             {
                 dsh.create();
@@ -207,6 +215,8 @@ public class DiskVault implements Vault, StatusHandler
             }
             else
             {
+                status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath() + ": " +  vaultException.getMessage());
+                LogManager.err_log( status.get_status_txt() );
                 throw new VaultException( vaultException.getMessage() );
             }
         }
@@ -216,7 +226,7 @@ public class DiskVault implements Vault, StatusHandler
         {
             DiskSpace ds = dsh.getDs();
 
-            status.set_status(StatusEntry.BUSY, "DiskSpace " + ds.getPath() + " is full" );
+            status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("DiskSpace") + " <" + ds.getPath() + "> " + Main.Txt("is_full") );
             Notification.throw_notification( disk_archive.getMandant(), Notification.NF_INFORMATIVE, status.get_status_txt() );
             ds.setStatus( CS_Constants.DS_FULL);
 
@@ -227,7 +237,9 @@ public class DiskVault implements Vault, StatusHandler
 
             if (new_dsh == null)
             {
-                throw new VaultException("No diskspace for " + (dsh.is_data() ? "data" : "index") + " found" );
+                status.set_status(StatusEntry.ERROR, toString() + ": " + Main.Txt("No_DiskSpace_found_for_type") + " " + Main.Txt((dsh.is_data() ? "data" : "index")));
+                Notification.throw_notification( disk_archive.getMandant(), Notification.NF_ERROR, status.get_status_txt() );
+                throw new VaultException(status.get_status_txt() );
             }
             dsh = new_dsh;
 
@@ -242,7 +254,7 @@ public class DiskVault implements Vault, StatusHandler
             }
             catch (VaultException vaultException)
             {
-                LogManager.err_log( Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
+                LogManager.err_log( toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
                 dsh.create();
                 
                 dsh.open();
@@ -263,15 +275,15 @@ public class DiskVault implements Vault, StatusHandler
         DiskSpaceHandler index_dsh = get_next_active_index_diskspace( index );
         if (data_dsh == null)
         {
-            throw new VaultException("No diskspace for data found" );
+            throw new VaultException(toString() + ": " + Main.Txt("No_diskspace_for_data_found") );
         }
         if (index_dsh == null)
         {
-            throw new VaultException("No diskspace for index found" );
+            throw new VaultException(toString() + ": " + Main.Txt("No_diskspace_for_index_found") );
         }
         if (index_dsh.islock_for_rebuild() || data_dsh.islock_for_rebuild())
         {
-            throw new VaultException("Index Rebuild in process" );
+            throw new VaultException(toString() + ": " + Main.Txt("Index_Rebuild_in_process") );
         }
 
         // GET THE DISKSPACES FOR DATA AND INDEX
@@ -320,7 +332,7 @@ public class DiskVault implements Vault, StatusHandler
         catch (Exception ex)
         {
             LogManager.log(Level.SEVERE, null, ex);
-            throw new ArchiveMsgException("Cannot write data file: " + ex.getMessage());
+            throw new ArchiveMsgException(toString() + ": " + Main.Txt("Cannot write data file") + ": " +   ex.getMessage());
         }
         
 

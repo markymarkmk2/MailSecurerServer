@@ -980,7 +980,7 @@ public class TCPCallConnect extends WorkerParent
                     Main.err_log("Kommunikationsport geschlossen: " + exc.getMessage());
                     this.setStatusTxt("Communication is closed (2 processes?): " + exc.getMessage());
                     this.setGoodState(false);
-                    LogicControl.sleep(5000);
+                    LogicControl.sleep(1000);
                 }
             }
             if (tcp_s != null)
@@ -1000,6 +1000,7 @@ public class TCPCallConnect extends WorkerParent
     @Override
     public void setShutdown( boolean shutdown )
     {
+        super.setShutdown(shutdown);
 
         if (shutdown)
         {
@@ -1010,8 +1011,7 @@ public class TCPCallConnect extends WorkerParent
             catch (Exception exc)
             {
             }
-        }
-        super.setShutdown(shutdown);
+        }        
     }
 
     public String RMX_open( UserSSOEntry ssoc, String db_name )

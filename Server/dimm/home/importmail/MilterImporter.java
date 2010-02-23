@@ -195,13 +195,43 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
         try
         {
-            File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
-            file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
-            os = file_mail.open_outputstream();
+            Vault vault = m_ctx.get_vault_by_da_id(handler.get_milter().getDiskArchive().getId());
+            
+            // CHECK FOR TEMP AND VAULT SPACE
+            if (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
+            {
+                if (m_ctx.wait_on_no_space())
+                {
+                    handler.set_status( StatusEntry.WAITING, Main.Txt("No_space_left_for_mail_from_milter") );
+                    LogManager.log(Level.SEVERE, handler.get_status_txt() );
+
+                    while (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
+                    {
+                        handler.sleep_seconds(10);
+                        if (handler.is_finished())
+                            break;
+                    }
+                }
+            }
+            
+            // IF WE AT LEAST HAVE TEMP SPACE, WE ACCEPT MAIL, THIS CAN HAPPEN ON handler->is_finished
+            if (!m_ctx.no_tmp_space_left())
+            {
+                File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
+                file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
+                os = file_mail.open_outputstream();
+            }
+            else
+            {
+                handler.set_status( StatusEntry.ERROR, Main.Txt("No_space_left_for_mail_from_milter,_skipping_mail") );
+                LogManager.log(Level.SEVERE, handler.get_status_txt() );
+                return JilterStatus.SMFIS_TEMPFAIL;
+            }
         }
         catch (Exception archiveMsgException)
         {
             LogManager.log(Level.SEVERE, Main.Txt("cannot_create_temp_file"), archiveMsgException);
+            return JilterStatus.SMFIS_TEMPFAIL;
         }
 	return JilterStatus.SMFIS_CONTINUE;
     }
@@ -281,6 +311,11 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             {
                 Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
             }
+            else
+            {
+                LogManager.log(Level.SEVERE, Main.Txt("Skipping_mail_from_milter,_no_space_left") );
+                return JilterStatus.SMFIS_TEMPFAIL;
+            }
         }
 
         catch (Exception ex)
@@ -314,6 +349,8 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         catch (IOException iOException)
         {
             LogManager.log(Level.SEVERE, Main.Txt("Could_not_write_milter_body"), iOException);
+            return JilterStatus.SMFIS_TEMPFAIL;
+
         }
         return super.body(bodyp);
     }
