@@ -68,6 +68,7 @@ public class GeneralPreferences extends Preferences
     public static final String HTTPPWD = "HttpPwd";
     public static final String MAX_STAY_VALID_DAYS = "MaxUserValidDays";
     public static final String SYSADMIN_NAME = "SysAdminName";
+    public static final String SYNCSRV_PORT = "SyncServerPort";
 
     
     /** Creates a new instance of Preferences */
@@ -121,6 +122,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( HTTPPWD );
         prop_names.add( MAX_STAY_VALID_DAYS );
         prop_names.add( SYSADMIN_NAME );
+        prop_names.add( SYNCSRV_PORT );
         
                 
         read_props();

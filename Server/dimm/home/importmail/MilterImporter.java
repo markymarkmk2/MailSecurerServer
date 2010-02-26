@@ -15,6 +15,7 @@ import com.sendmail.jilter.JilterProcessor;
 import home.shared.hibernate.Milter;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
@@ -215,18 +216,24 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             }
             
             // IF WE AT LEAST HAVE TEMP SPACE, WE ACCEPT MAIL, THIS CAN HAPPEN ON handler->is_finished
-            if (!m_ctx.no_tmp_space_left())
+            if (m_ctx.no_tmp_space_left())
             {
-                File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
-                file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
-                os = file_mail.open_outputstream();
-            }
-            else
-            {
+                // THIS IS REALLY BAD: SKIPPING INCOMING MAIL, WE HAVE NO SPACE TO SAVE IT TO
+                Notification.throw_notification_one_shot(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("No_space_left_for_mail_skipping_mail" ) );
+
                 handler.set_status( StatusEntry.ERROR, Main.Txt("No_space_left_for_mail_from_milter,_skipping_mail") );
                 LogManager.log(Level.SEVERE, handler.get_status_txt() );
                 return JilterStatus.SMFIS_TEMPFAIL;
             }
+            
+            // IN REGULAR CASE CLEAR NOTI
+            Notification.clear_notification_one_shot(m_ctx.getMandant(), Main.Txt("No_space_left_for_mail_skipping_mail" ) );
+
+
+            File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
+            file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
+            os = file_mail.open_outputstream();
+
         }
         catch (Exception archiveMsgException)
         {
@@ -295,27 +302,9 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             Milter milter = handler.get_milter();
             MandantContext m_ctx = Main.get_control().get_m_context(milter.getMandant());
             Vault vault = m_ctx.get_vault_by_da_id(milter.getDiskArchive().getId());
-            if (!vault.has_sufficient_space())
-            {
-                LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail_from_milter") );
-                if (m_ctx.wait_on_no_space())
-                {
-                    handler.set_status( StatusEntry.WAITING, Main.Txt("No_space_left_for_mail_from_milter") );
-                    while (!vault.has_sufficient_space() && !handler.is_finished())
-                    {
-                        handler.sleep_seconds(10);
-                    }
-                }
-            }
-            if (!vault.has_sufficient_space())
-            {
-                Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
-            }
-            else
-            {
-                LogManager.log(Level.SEVERE, Main.Txt("Skipping_mail_from_milter,_no_space_left") );
-                return JilterStatus.SMFIS_TEMPFAIL;
-            }
+            
+
+            Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
         }
 
         catch (Exception ex)

@@ -99,6 +99,7 @@ class MailBGEntry
         }
         catch (Exception ex)
         {
+            LogManager.err_log("Unknown error during archive", ex);
             Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
         }
         finally

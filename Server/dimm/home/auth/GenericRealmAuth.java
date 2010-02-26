@@ -276,6 +276,31 @@ public abstract class GenericRealmAuth
                 break;
             }
         }
+        // IF NOT IN DB WE CHECK IF FLAG (USER IS MAIL) IS SET
+        if (ret == null && (act.getFlags() & CS_Constants.ACCT_USER_IS_MAIL) == CS_Constants.ACCT_USER_IS_MAIL)
+        {
+            ret = get_mail_from_user( ret );
+        }
+        return ret;
+    }
+    String get_mail_from_user( String user )
+    {
+        String ret = null;
+
+        if ((act.getFlags() & CS_Constants.ACCT_USER_IS_MAIL) == CS_Constants.ACCT_USER_IS_MAIL)
+        {
+            if (act.getMailattribute() != null && act.getMailattribute().length() > 0)
+            {
+                if (user.indexOf('@') == -1 && act.getMailattribute().indexOf('@') == -1)
+                    ret = user + "@" + act.getMailattribute();
+                else
+                    ret = user + act.getMailattribute();
+            }
+            else
+            {
+                ret = user;
+            }
+        }
         return ret;
     }
 

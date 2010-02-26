@@ -54,6 +54,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.BindException;
+import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
@@ -980,7 +982,12 @@ public class TCPCallConnect extends WorkerParent
                     Main.err_log("Kommunikationsport geschlossen: " + exc.getMessage());
                     this.setStatusTxt("Communication is closed (2 processes?): " + exc.getMessage());
                     this.setGoodState(false);
-                    LogicControl.sleep(1000);
+                    
+                    // LONG PAUSE IF BIND FAILS -> WRONG PARAMS -> 2 MANDANT SHARE SAME PORT
+                    if (exc instanceof BindException)
+                        LogicControl.sleep(10000);
+                    else
+                        LogicControl.sleep(1000);
                 }
             }
             if (tcp_s != null)

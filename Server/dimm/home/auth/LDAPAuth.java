@@ -185,13 +185,13 @@ public class LDAPAuth extends GenericRealmAuth
         String rootSearchBase = get_user_search_base();
         // BUILD ORED LIST OF DNs
         StringBuffer ldap_qry = new StringBuffer();
-        ldap_qry.append("(objectClass=group) (|");
+        ldap_qry.append("(&(objectClass=group)(|");
         for (int i = 0; i < users.size(); i++)
         {
             String string = users.get(i);
             ldap_qry.append("(" + search_attribute + "=" + string + ")");
         }
-        ldap_qry.append(")");
+        ldap_qry.append("))");
 
         LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
@@ -221,7 +221,7 @@ public class LDAPAuth extends GenericRealmAuth
         if (group != null && group.length() > 0)
         {
             String rootSearchBase = get_user_search_base();
-            return list_dn_qry("(objectClass=user)(memberOf=CN=" + group + "," + rootSearchBase + ")");
+            return list_dn_qry("(&(objectClass=user)(memberOf=CN=" + group + "))");
         }
         return list_dn_qry("(objectClass=user)");
     }

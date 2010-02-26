@@ -659,8 +659,12 @@ public abstract class ProxyConnection
             maxwait--;
         }
 
-        if (maxwait <= 0)
+        if (avail <= 0)
+        {
             Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
+            m_error = ERROR_UNKNOWN;
+            return m_error;            
+        }
 
         long dgb_level = Main.get_debug_lvl();
         byte[] last_4 = new byte[4];
@@ -690,9 +694,18 @@ public abstract class ProxyConnection
                     {
                     }
                     if (avail > 0)
+                    {
+                        reset_timeout();
                         break;
+                    }
                     Main.sleep(1000);
                     maxwait--;
+                }
+                if (avail <= 0)
+                {
+                    Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
+                    m_error = ERROR_UNKNOWN;
+                    return m_error;
                 }
 
 
@@ -704,7 +717,6 @@ public abstract class ProxyConnection
                         log(DBG_DATA_VERB, new String(buffer, 0, rlen));
                     }
                     reset_timeout();
-
                 }
                 else
                 {
@@ -908,7 +920,7 @@ public abstract class ProxyConnection
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                Main.err_log(e.getMessage());
+                LogManager.err_log("Error in get_multiline_proxy_data", e);
             }
         }
 

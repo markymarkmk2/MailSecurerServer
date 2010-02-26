@@ -117,6 +117,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
 
             connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
+           // connect_env.put("java.naming.ldap.version", "2");
             
 
             ctx = new InitialLdapContext(connect_env, null);
@@ -165,7 +166,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
     @Override
     public ArrayList<String> list_groups() throws NamingException
     {
-        return list_dn_qry("(&(objectClass=group)(name=*))");
+        return list_attribute_qry("(&(objectClass=group)(name=*))", "name");
     }
 
     @Override
@@ -174,18 +175,18 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         // RETURN VALS
         SearchControls ctrl = new SearchControls();
         ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses"});
+        ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses", "otherMailbox"});
         // USER ROOT
         String rootSearchBase = get_user_search_base();
         // BUILD ORED LIST OF DNs
         StringBuffer ldap_qry = new StringBuffer();
-        ldap_qry.append("(objectClass=user) (|");
+        ldap_qry.append("(&(objectClass=user)(|");
         for (int i = 0; i < users.size(); i++)
         {
             String string = users.get(i);
-            ldap_qry.append("(" + ActiveDirectoryAuth.DN + "=" + string + ")");
+            ldap_qry.append("(name=" + string + ")");
         }
-        ldap_qry.append(")");
+        ldap_qry.append("))");
 
         LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
@@ -194,24 +195,50 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         while (results.hasMoreElements())
         {
             SearchResult searchResult = (SearchResult) results.nextElement();
-            String mail = searchResult.getAttributes().get("mail").get().toString();
-            if (mail != null && mail.length() > 0)
+            Attribute attr = searchResult.getAttributes().get("mail");
+            if (attr != null)
             {
-                mail_list.add(mail);
-            }
-            // proxyAddresses ARE CODED SMTP:mail@domain.com
-            String proxyAddresses = searchResult.getAttributes().get("proxyAddresses").get().toString();
-            if (proxyAddresses != null && proxyAddresses.length() > 0)
-            {
-                if (proxyAddresses.toLowerCase().startsWith("smtp:"))
+                String mail = searchResult.getAttributes().get("mail").get().toString();
+                if (mail != null && mail.length() > 0)
                 {
-                    mail_list.add(proxyAddresses.substring(5));
+                    if (!mail_list.contains(mail))
+                            mail_list.add(mail);
                 }
             }
-            String upn = searchResult.getAttributes().get("userPrincipalName").get().toString();
-            if (upn != null && upn.length() > 0)
+            // proxyAddresses ARE CODED SMTP:mail@domain.com
+            attr = searchResult.getAttributes().get("proxyAddresses");
+            if (attr != null)
             {
-                mail_list.add(upn);
+                String proxyAddresses = attr.get().toString();
+                if (proxyAddresses != null && proxyAddresses.length() > 0)
+                {
+                    if (proxyAddresses.toLowerCase().startsWith("smtp:"))
+                    {
+                        String m = proxyAddresses.substring(5);
+                        if (!mail_list.contains(m))
+                            mail_list.add(m);
+                    }
+                }
+            }
+            attr = searchResult.getAttributes().get("userPrincipalName");
+            if (attr != null)
+            {
+                String upn = attr.get().toString();
+                if (upn != null && upn.length() > 0)
+                {
+                    if (!mail_list.contains(upn))
+                        mail_list.add(upn);
+                }
+            }
+            attr = searchResult.getAttributes().get("otherMailbox");
+            if (attr != null)
+            {
+                String other_mb = attr.get().toString();
+                if (other_mb != null && other_mb.length() > 0)
+                {
+                    if (!mail_list.contains(other_mb))
+                        mail_list.add(other_mb);
+                }
             }
         }
         return mail_list;
@@ -221,11 +248,10 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
     public ArrayList<String> list_users_for_group( String group ) throws NamingException
     {
         if (group != null && group.length() > 0)
-        {
-            String rootSearchBase = get_user_search_base();
-            return list_dn_qry("(objectClass=user)(memberOf=CN=" + group + "," + rootSearchBase + ")");
+        {            
+            return list_attribute_qry("(&(objectClass=user)(memberOf=" + group + "))", "name");
         }
-        return list_dn_qry("(objectClass=user)");
+        return list_attribute_qry("(objectClass=user)", "name");
     }
 
     @Override
@@ -375,6 +401,30 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         {
             SearchResult searchResult = (SearchResult) results.nextElement();
             dn_list.add( searchResult.getAttributes().get(DN).get().toString() );
+        }
+
+        return dn_list;
+    }
+    ArrayList<String> list_attribute_qry( String ldap_qry, String attributname ) throws NamingException
+    {
+        SearchControls ctrl = new SearchControls();
+        ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        ctrl.setReturningAttributes(new String[]
+                {
+                    attributname
+                });
+
+        String rootSearchBase = get_user_search_base();
+
+        LogManager.debug_msg(4, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
+        NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry, ctrl);
+
+        ArrayList<String> dn_list = new ArrayList<String>();
+
+        while (results.hasMoreElements())
+        {
+            SearchResult searchResult = (SearchResult) results.nextElement();
+            dn_list.add( searchResult.getAttributes().get(attributname).get().toString() );
         }
 
         return dn_list;

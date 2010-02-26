@@ -1,6 +1,7 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.*;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
 import home.shared.mail.RFCGenericMail;
 import java.net.Socket;
@@ -212,12 +213,13 @@ public class POP3Connection extends ProxyConnection
         catch (Exception e)
         {
             if (!pe.is_finished())
-                Main.err_log(e.getMessage());
+            {
+                LogManager.err_log("Error in handle_connection", e);
+            }
         }
         finally
         {
-            closeConnections();
-            System.gc();
+            closeConnections();            
         }
         log(DBG_VERB -2, Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer()  );
     }  // handleConnection

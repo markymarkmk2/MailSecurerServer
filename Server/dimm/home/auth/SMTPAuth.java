@@ -137,16 +137,18 @@ public class SMTPAuth extends GenericRealmAuth
         props.put("mail.host", host);
         props.put("mail.port", port);
         props.put("mail.smtp.auth", true );
+        String protocol = "smtp";
         if ( is_ssl())
         {
             props.put("mail.smtp.ssl.enable", true );
+            protocol = "smtps";
         }        
         props = set_conn_props(props, "smtp", port);
 
         try
         {
             Session mailConnection = Session.getInstance(props, null);
-            URLName params = new URLName("smtp", host, port, null, user_principal, pwd);
+            URLName params = new URLName(protocol, host, port, null, user_principal, pwd);
             SMTPTransport transport = new SMTPTransport(mailConnection, params);
 
             transport.connect(smtp_sock);
