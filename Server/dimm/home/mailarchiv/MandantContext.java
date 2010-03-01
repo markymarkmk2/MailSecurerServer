@@ -18,12 +18,14 @@ import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.BackupScript;
 import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.ReIndexContext;
 import dimm.home.vault.Vault;
+import dimm.home.workers.BackupServer;
 import dimm.home.workers.HotfolderServer;
 import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MailBoxFetcherServer;
@@ -32,6 +34,7 @@ import dimm.home.workers.MilterServer;
 import home.shared.CS_Constants;
 import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.AccountConnector;
+import home.shared.hibernate.Backup;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.Milter;
@@ -417,6 +420,15 @@ public class MandantContext
             mb_fetcher_server.add_child(child);
         }
 
+        Set<Backup> bas = getMandant().getBackups();
+        Iterator<Backup> ba_it = bas.iterator();
+
+        BackupServer ba_server = control.get_ba_server();
+        while (ba_it.hasNext())
+        {
+            ba_server.add_child(new BackupScript(ba_it.next()));
+        }
+
         if (getMandant().getImap_port() > 0)
         {
             IMAPBrowserServer ibs = control.get_imap_browser_server();
@@ -541,6 +553,15 @@ public class MandantContext
         while (if_it.hasNext())
         {
             mb_fetcher_server.remove_child(if_it.next());
+        }
+
+        Set<Backup> bas = getMandant().getBackups();
+        Iterator<Backup> ba_it = bas.iterator();
+
+        BackupServer ba_server = Main.get_control().get_ba_server();
+        while (ba_it.hasNext())
+        {
+            ba_server.remove_child(ba_it.next());
         }
 
         if (getMandant().getImap_port() > 0)
@@ -1090,6 +1111,21 @@ public class MandantContext
     public boolean wait_on_no_space()
     {
         return !test_flag( CS_Constants.MA_NOWAIT_ON_NO_SPACE );
+    }
+
+    public Backup get_backup_by_id( long id )
+    {
+        Iterator<Backup> it = getMandant().getBackups().iterator();
+
+        while (it.hasNext())
+        {
+            Backup ba = it.next();
+            if (ba.getId() == id)
+            {
+                return ba;
+            }
+        }
+        return null;
     }
 
 }

@@ -8,17 +8,60 @@ package dimm.home.vault;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.DirectoryEntry;
+import dimm.home.mailarchiv.Notification.Notification;
+import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.WorkerParentChild;
 import dimm.home.serverconnect.DimmCommand;
 import home.shared.CS_Constants;
 import home.shared.hibernate.Backup;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import javax.xml.bind.ParseConversionEvent;
 
+
+class SourceTargetEntry
+{
+    String name;
+    File source;
+    String target;
+    boolean is_file;
+
+    public SourceTargetEntry( String name, File source, String target, boolean is_file )
+    {
+        this.name = name;
+        this.source = source;
+        this.target = target;
+        this.is_file = is_file;
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+
+
+    public File getSource()
+    {
+        return source;
+    }
+
+    public String getTarget()
+    {
+        return target;
+    }
+
+    public boolean is_file()
+    {
+        return is_file;
+    }
+
+
+}
 /**
  *
  * @author mw
@@ -26,11 +69,16 @@ import java.util.GregorianCalendar;
 public class BackupScript extends WorkerParentChild
 {
     private static final int BA_TIME_WINDOW_S = 60;
+    private static final int SY_FILEJOB_ID = 9999;
 
     Backup backup;
     long next_ba_time_s;
     boolean backup_was_started;
     Date base_date;
+    Thread ba_thread;
+    String job_status;
+    boolean last_result_ok;
+    boolean last_result_nok;
 
     public BackupScript( Backup _ba )
     {
@@ -66,10 +114,6 @@ public class BackupScript extends WorkerParentChild
     public void run_loop()
     {
         started = true;
-        ArrayList<DirectoryEntry> last_entry_list = new ArrayList<DirectoryEntry>();
-        MandantContext m_ctx = Main.get_control().get_mandant_by_id(backup.getMandant().getId());
-        long da_id = backup.getDiskArchive().getId();
-        Vault vault = m_ctx.get_vault_by_da_id(da_id);
 
         next_ba_time_s = calc_next_ba_time();
 
@@ -83,7 +127,7 @@ public class BackupScript extends WorkerParentChild
 
             long now_s = System.currentTimeMillis() / 1000;
             // NOT IN TIMEWINDOW ?
-            if (now_s < next_ba_time_s || now_s > (next_ba_time_s + BA_TIME_WINDOW_S * 1000))
+            if (now_s < next_ba_time_s || now_s > (next_ba_time_s + BA_TIME_WINDOW_S ))
             {
                 // FIRST TIME AFTER BACKUP ?
                 if (backup_was_started)
@@ -94,6 +138,7 @@ public class BackupScript extends WorkerParentChild
                 }
                 continue;
             }
+
             // WE WERE STARTED ALREADY IN THIS TIMEWINDOW
             if (backup_was_started)
             {
@@ -117,10 +162,7 @@ public class BackupScript extends WorkerParentChild
         }
     }
 
-    
-
-
-    public Backup get_hf()
+    public Backup get_backup()
     {
         return backup;
     }
@@ -172,11 +214,12 @@ public class BackupScript extends WorkerParentChild
             // BETTER A STRANGE BACKUP THAN NONE...
             cycle_secs = (6*60*60);
         }
+        
         // CALC DIFFERENZ TO BASE DATE
         long rel_s = now_s - base_start_time_s;
 
         // IN THE FUTURE
-        if (rel_s <= base_start_time_s)
+        if (rel_s < 0)
         {
             // THIS IS SIMPLE THE
             return base_start_time_s;
@@ -184,7 +227,7 @@ public class BackupScript extends WorkerParentChild
         
         // OK NEXT START IS BASE PLUS ACT TIME MODULO CyCLE
         long n_cycles = rel_s / cycle_secs;
-        return base_start_time_s + n_cycles * cycle_secs;
+        return base_start_time_s + (n_cycles + 1) * cycle_secs;
     }
 
     private long calc_next_schedule_time_s()
@@ -208,7 +251,10 @@ public class BackupScript extends WorkerParentChild
             int day = day_idx % 7;
             boolean enable = enable_list[day] != null && enable_list[day].length() > 0 && enable_list[day].charAt(0) == '1';
             if (!enable)
+            {
+                day_idx++;
                 continue;
+            }
 
             int h = 0;
             int m = 0;
@@ -224,6 +270,7 @@ public class BackupScript extends WorkerParentChild
             }
             catch( Exception exc)
             {
+                day_idx++;
                 continue;
             }
             ba_time_s = cal.getTime().getTime() / 1000;
@@ -296,10 +343,308 @@ public class BackupScript extends WorkerParentChild
         return GregorianCalendar.MONDAY;
     }
 
-    private void start_backup()
+    public boolean start_backup()
     {
-        DimmCommand sync_cmd = new DimmCommand( (int)Main.get_long_prop(GeneralPreferences.SYNCSRV_PORT, 11170 ) );
-        sync_cmd.send_cmd( "copy_files" );
+        final MandantContext m_ctx = Main.get_control().get_mandant_by_id(backup.getMandant().getId());
+
+        long da_id = backup.getDiskArchive().getId();
+        Vault vault = m_ctx.get_vault_by_da_id(da_id);
+
+        last_result_ok = false;
+        last_result_nok = false;
+
+
+        // WE WEANT TO COPY ALL DISKSPACES AND MAYBE THE SYSTEMDATA
+        final ArrayList<SourceTargetEntry> backup_dir_list = new ArrayList<SourceTargetEntry>();
+        if (!(vault instanceof DiskVault))
+        {
+            LogManager.err_log("Backup ist only supported for Diskvaults");
+            return false;
+        }
+        final DiskVault dv = (DiskVault) vault;
+
+        if (test_flag(CS_Constants.BACK_SYS))
+        {
+            backup_dir_list.add( new SourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System prefs", new File( Main.work_dir + "/preferences"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System lib", new File( Main.work_dir + "/lib"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System lic", new File( Main.work_dir + "/license"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System Server", new File( Main.work_dir + "/MailArchiv.jar"), get_system_subpath(m_ctx), true) );
+
+        }
+
+        for (int i = 0; i < dv.get_dsh_list().size(); i++)
+        {
+            DiskSpaceHandler dsh = dv.get_dsh_list().get(i);
+            String name = dv.get_name() + " DS " + dsh.getDs().getId();
+            File src = new File( dsh.getDs().getPath());
+            String trg = get_ds_subpath(m_ctx, dv, dsh);
+
+            SourceTargetEntry ste = new SourceTargetEntry( name, src, trg, false );
+
+
+            backup_dir_list.add( ste  );
+        }
+
+        if (ba_thread != null && ba_thread.isAlive())
+        {
+            LogManager.err_log("Backup already running");
+            return false;
+        }
+
+
+
+        final String ag_ip = backup.getAgentip();
+        final int ag_port = backup.getAgentport();
+        final String ag_path = backup.getAgentpath();
+
+        Runnable r = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    backup_entrylist( m_ctx, dv, backup_dir_list, ag_ip, ag_port, ag_path );
+                }
+                catch (Exception ex)
+                {
+                     LogManager.err_log("Error occured while running backup script " + backup.getId() + ": ", ex);
+                }
+            }
+        };
+
+        ba_thread = new Thread( r, "BackupScript " + backup.getId() );
+        ba_thread.start();
+
+        return true;
+       
     }
 
+
+    String get_ds_subpath( MandantContext m_ctx, DiskVault dv, DiskSpaceHandler dsh )
+    {
+        return m_ctx.getMandant().getId() + "." + dv.get_da().getId() + "." + dsh.getDs().getId();
+    }
+    String get_system_subpath( MandantContext m_ctx )
+    {
+        return "" + m_ctx.getMandant().getId();
+    }
+
+    boolean do_abort = false;
+    private boolean backup_entrylist( MandantContext m_ctx, DiskVault dv, ArrayList<SourceTargetEntry> backup_dir_list, String ag_ip, int ag_port, String ag_path )
+    {
+        boolean ok = true;
+        do_abort = false;
+
+        DimmCommand sync_cmd = new DimmCommand( (int)Main.get_long_prop(GeneralPreferences.SYNCSRV_PORT, 11170 ) );
+        if (!sync_cmd.connect())
+        {
+            return false;
+        }
+        try
+        {
+       // { "copy_files", "		    SRC_NAME SRC_IP SRC_PORT SRC_PATH TRG_NAME TRG_IP TRG_PORT TRG_PATH", handle_copy_files, SYSTEM_FUNC},
+            for (int i = 0; i < backup_dir_list.size(); i++)
+            {
+
+                SourceTargetEntry ste = backup_dir_list.get(i);
+                String targetpath =  ag_path + "/" + ste.getTarget();
+                String src_path = ste.getSource().getAbsolutePath();
+                if (src_path.length() > 3 && src_path.endsWith("."))
+                {
+                    src_path = src_path.substring(0, src_path.length() - 2);
+                }
+                String cmd = "copy_files "+ (ste.is_file() ? "FILE":"FOLDER") + " \"" + ste.getName() + "\" 127.0.0.1 11172 \"" + src_path + "\" \"" +
+                            ste.getName() + "\" " + ag_ip + " " + ag_port + " \"" + targetpath + "\" NO_ERRORS NOWAIT CP:0";
+
+                cmd = cmd.replace('\\', '/');
+                set_status(StatusEntry.BUSY, Main.Txt("Starting_backup_of") + " "+ ste.getName());
+
+                String ret = sync_cmd.send_cmd( cmd, 60*60 );
+                if (ret == null)
+                {
+                    ok = false;
+                    LogManager.err_log("Error while contacting backup server");
+                    break;
+                }
+                if (ret.charAt(0) != '0')
+                {
+                    LogManager.err_log(Main.Txt("Error_during_start_backup_of") + " " + ste.getName() + ": " + ret);
+                    ok = false;
+                    break;
+                }
+                
+                if (!wait_for_sync_ready( sync_cmd ))
+                {
+                    ok = false;
+                }
+
+                if (do_abort)
+                    break;
+
+            }
+        }
+        catch (Exception exc )
+        {
+            LogManager.err_log(Main.Txt("Error_during_start_backup"), exc);
+        }
+        finally
+        {
+            sync_cmd.disconnect();
+            do_abort = false;
+        }
+
+        if (ok)
+        {
+            last_result_ok = true;
+            set_status(StatusEntry.SLEEPING, Main.Txt("Last_backup_succeeded"));
+        }
+        else
+        {
+            last_result_nok = true;
+            Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("Backup_for_disk_archive_failed") + ": " + dv.get_name() );
+            set_status(StatusEntry.ERROR, Main.Txt("Last_backup_failed"));
+        }
+        
+        return ok;
+    }
+    public void abort_backup( )
+    {
+        // STOP PENDING JOBLIST
+         do_abort = true;
+
+         DimmCommand sync_cmd = new DimmCommand( (int)Main.get_long_prop(GeneralPreferences.SYNCSRV_PORT, 11170 ) );
+         sync_cmd.connect();
+         abort_backup(sync_cmd);
+         sync_cmd.disconnect();
+    }
+    
+    void abort_backup(DimmCommand sync_cmd )
+    {
+        job_status = null;
+        String ret = sync_cmd.send_cmd( "abort_task " + SY_FILEJOB_ID  );
+        if (ret == null || ret .charAt(0) != ' ')
+        {
+            LogManager.err_log("Error while aborting backup server");
+        }
+    }
+    void finish_backup(DimmCommand sync_cmd )
+    {
+        job_status = null;
+        String ret = sync_cmd.send_cmd( "abort_task " + SY_FILEJOB_ID  );
+        if (ret == null || ret .charAt(0) != ' ')
+        {
+            LogManager.err_log("Error while finishing backup server");
+        }
+    }
+
+    private boolean wait_for_sync_ready(DimmCommand sync_cmd )
+    {
+        job_status = null;
+        while (true)
+        {
+            sleep_seconds(2);
+            
+            if (do_finish)
+            {
+                abort_backup(sync_cmd);
+                break;
+            }
+
+            String cmd = "list_sync_status";
+            String ret = sync_cmd.send_cmd( cmd );
+            if (ret == null || ret.charAt(0) != '0')
+            {
+                LogManager.err_log("Error while contacting backup server");
+                break;
+            }
+            // EMPTY ?
+            if (ret.length() < 10)
+            {
+                job_status = null;
+                break;
+            }
+            ParseToken pt = new ParseToken(ret);
+            long id = pt.GetLong("ID:");
+            if (id != SY_FILEJOB_ID)
+            {
+                job_status = null;
+                break;
+            }
+
+            job_status = ret;
+            // "ID:%ld TB:%.0lf CB:%.0lf TF:%ld TD:%ld CF:%ld CD:%ld SP:%.0lf STF:%.0lf SCF:%.0lf LT:%.0lf PC:%d",
+            System.out.println(ret);
+            
+            long state = pt.GetLong("JS:");
+            if (state == DimmCommand.JOB_READY)
+            {
+                finish_backup( sync_cmd );
+                return true;
+            }
+            if (state == DimmCommand.JOB_ERROR)
+            {
+                abort_backup( sync_cmd );
+                break;
+            }
+            if (do_abort)
+                break;
+        }
+
+        String ret = sync_cmd.send_cmd( "list_results ID 9999 LINES 1");
+        if (ret != null && ret.charAt(0) == '0')
+        {
+            ParseToken pt = new ParseToken(ret);
+            long err_code = pt.GetLongValue("CD:");
+            if (err_code != 0)
+                return false;
+            
+            return true;
+        }
+
+        return false;
+    }
+
+    public String get_sync_status()
+    {
+        job_status = null;
+
+        DimmCommand sync_cmd = new DimmCommand( (int)Main.get_long_prop(GeneralPreferences.SYNCSRV_PORT, 11170 ) );
+        if (!sync_cmd.connect())
+        {
+            return "1: Cannot connect backup server";
+        }
+
+        String cmd = "list_sync_status" ;
+        String ret = sync_cmd.send_cmd( cmd );
+        if (ret == null)
+        {
+            return "1: error while contacting backup server";
+        }
+        if (ret.charAt(0) != '0')
+        {
+            return "2: error from backup server: " + ret;
+        }
+        ParseToken pt = new ParseToken(ret);
+        long id = pt.GetLong("ID:");
+        if (id == SY_FILEJOB_ID)
+        {
+            job_status = ret;
+        }
+
+        sync_cmd.disconnect();
+        return ret;
+    }
+
+    public String get_job_status()
+    {
+        get_sync_status();
+
+        if (job_status != null)
+        {
+            return job_status;
+        }
+        return "0: NS:" + next_ba_time_s + " LOK:" + (last_result_ok ? "1" : "0") + " LNOK:" + (last_result_nok ? "1" : "0");
+    }
 }

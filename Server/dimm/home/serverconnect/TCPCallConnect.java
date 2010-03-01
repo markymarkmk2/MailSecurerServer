@@ -6,6 +6,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.AuthUser;
+import dimm.home.mailarchiv.Commands.BackupCommand;
 import dimm.home.mailarchiv.Commands.DumpLog;
 import dimm.home.mailarchiv.Commands.FileSystemViewCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
@@ -54,7 +55,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.BindException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -168,6 +168,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new ReIndex() );
         cmd_list.add( new FileSystemViewCommand() );
         cmd_list.add( new LicenseConfig() );
+        cmd_list.add( new BackupCommand() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

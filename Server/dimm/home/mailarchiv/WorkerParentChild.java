@@ -44,6 +44,7 @@ public abstract class WorkerParentChild  implements StatusHandler
         while (!do_finish && seconds > 0)
         {
             LogicControl.sleep(100);
+            seconds--;
         }
     }
 

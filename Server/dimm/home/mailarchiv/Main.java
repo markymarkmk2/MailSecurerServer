@@ -110,6 +110,8 @@ public class Main
     {
         me = this;
         work_dir = new File(".").getAbsolutePath();
+        if (work_dir.endsWith("."))
+            work_dir = work_dir.substring(0, work_dir.length() - 2);
 
         boolean init_db = false;
         

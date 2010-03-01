@@ -21,6 +21,18 @@ public class DimmCommand
     Socket socket;
     private static final int SHORT_TIMEOUT = 10000;
 
+    public static final int JOB_INVALID = -1;
+    public static final int JOB_SLEEPING = 0;
+    public static final int JOB_BUSY = 1;
+    public static final int JOB_READY = 2;
+    public static final int JOB_USERQRY = 3;
+    public static final int JOB_ERROR = 4;
+    public static final int JOB_DELAYED = 5;
+    public static final int JOB_WAITING = 6;
+    public static final int JOB_USER_READY = 7;
+    public static final int JOB_WARNING = 8;
+
+
     public DimmCommand( String server, int port )
     {
         this.server = server;
@@ -49,16 +61,19 @@ public class DimmCommand
 
     public boolean connect()
     {
+        disconnect();
         try
         {
-            socket = new Socket(server, port);
+            socket = new Socket();
             socket.setReuseAddress(true);
             socket.setSoTimeout(SHORT_TIMEOUT);
+
             socket.connect(new InetSocketAddress(server, port), SHORT_TIMEOUT );
             return true;
         }
         catch (Exception iOException)
         {
+            LogManager.err_log("Cannot connect to " + server + ":" + port, iOException);
         }
         return false;
     }
@@ -95,6 +110,7 @@ public class DimmCommand
 
             StringBuffer sb = new StringBuffer();
             String tcmd = string + "\n";
+            System.out.println("DCS: " + string);
             socket.getOutputStream().write(tcmd.getBytes("UTF-8"));
 
             while (true)
@@ -108,7 +124,12 @@ public class DimmCommand
                 }
                 if (is_finished( sb ))
                 {
+                    System.out.println("DCR: " + sb.toString());
                     return sb.toString();
+                }
+                if (rlen <= 0)
+                {
+                    return null;
                 }
             }
         }

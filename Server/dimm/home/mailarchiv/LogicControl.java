@@ -33,6 +33,7 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
+import dimm.home.workers.BackupServer;
 import dimm.home.workers.HotfolderServer;
 import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MBoxImportServer;
@@ -131,6 +132,7 @@ public class LogicControl
     IMAPBrowserServer ibs;
     TCPCallConnect tcc;
     UpdateWorker upd;
+    BackupServer ba_server;
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -259,6 +261,10 @@ public class LogicControl
 
             upd = new UpdateWorker();
             worker_list.add(upd);
+
+            ba_server = new BackupServer();
+            worker_list.add(ba_server);
+
 
         }
         catch (Exception ex)
@@ -703,6 +709,8 @@ public class LogicControl
                 LogManager.info_msg("Loading new mandant");
 
                 Mandant new_m = (Mandant) l.get(0);
+                HibernateUtil.forceLoad(new_m);
+
                 if (ctx != null)
                 {
                     ctx.reload_mandant(new_m);
@@ -728,6 +736,10 @@ public class LogicControl
 
                 ctx.initialize_mandant(this);
             }
+        }
+        finally
+        {
+            tx.commit();
         }
 
         // RESTART LOCAL WORKER LIST
@@ -1563,6 +1575,11 @@ public class LogicControl
     MailBoxFetcherServer get_mb_fetcher_server()
     {
         return mb_fetcher_server;
+    }
+
+    public BackupServer get_ba_server()
+    {
+        return ba_server;
     }
 
     IMAPBrowserServer get_imap_browser_server()
