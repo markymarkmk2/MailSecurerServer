@@ -17,18 +17,20 @@ public abstract class GenericDAO
 {
 
     protected Class persistedClass;
-    protected Session session;
+    //protected Session session;
 
     public GenericDAO( Class persistedClass )
     {
-        SessionFactory factory = HibernateUtil.getSessionFactory();
-        this.session = factory.getCurrentSession();
+        //SessionFactory factory = HibernateUtil.getSessionFactory();
+        //this.session = factory.getCurrentSession();
         this.persistedClass = persistedClass;
     }
 
     public Object findById( int id )
     {
+        Session session = HibernateUtil.open_session();
         Object object = (Object) session.get(persistedClass, id);
+        HibernateUtil.close_session(session);
         return object;
     }
     public static boolean save_new( org.hibernate.Session session, Object object )
@@ -38,6 +40,7 @@ public abstract class GenericDAO
             session.beginTransaction();
             session.save(object);
             session.getTransaction().commit();
+
             return true;
 
         }
@@ -55,7 +58,10 @@ public abstract class GenericDAO
 
     public boolean save_new( Object object )
     {
-       return save_new( session, object );
+        Session session = HibernateUtil.open_session();
+        boolean ret = save_new( session, object );
+        HibernateUtil.close_session(session);
+        return ret;
     }
     public static boolean update( org.hibernate.Session session, Object object )
     {
@@ -80,7 +86,10 @@ public abstract class GenericDAO
     }
     public boolean update( Object object )
     {
-       return update( session, object );
+        Session session = HibernateUtil.open_session();
+        boolean ret = update( session, object );
+        HibernateUtil.close_session(session);
+        return ret;
     }
 
     public static boolean delete( Session session, Object object )
@@ -105,6 +114,9 @@ public abstract class GenericDAO
     }
     public boolean delete( Object object )
     {
-       return delete( session, object );
+        Session session = HibernateUtil.open_session();
+        boolean ret = delete( session, object );
+        HibernateUtil.close_session(session);
+        return ret;
     }
 }

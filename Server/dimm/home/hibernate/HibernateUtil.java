@@ -5,14 +5,20 @@
 package dimm.home.hibernate;
 
 import dimm.home.mailarchiv.Main;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.hibernate.EntityMode;
 import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
+import org.hibernate.Session;
 import org.hibernate.cfg.AnnotationConfiguration;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Environment;
@@ -28,14 +34,21 @@ public class HibernateUtil
 {
 
     private static final SessionFactory sessionFactory;
+    //private static final Semaphore db_sema;
+    private static AnnotationConfiguration conf;
+    private static final ReentrantReadWriteLock rwl;
+
 
     static
     {
         try
         {
+            rwl = new ReentrantReadWriteLock();
+           // db_sema = new Semaphore(1);
+
             // Create the SessionFactory from standard (hibernate.cfg.xml) 
             // config file.
-            AnnotationConfiguration conf = new AnnotationConfiguration().configure("dimm/home/hibernate/hibernate.cfg.xml");
+            conf = new AnnotationConfiguration().configure("dimm/home/hibernate/hibernate.cfg.xml");
 
             conf = conf.setProperty(Environment.FORMAT_SQL, "false");
             // ADFUST SETTINGS
@@ -54,7 +67,12 @@ public class HibernateUtil
             logger = Logger.getLogger("org.hibernate.cfg.annotations.Version");
             logger.addAppender(fileAppender);
 
+
             sessionFactory = conf.buildSessionFactory();
+            Session sess = sessionFactory.getCurrentSession();
+            sess.close();
+
+
 
         }
         catch (Throwable ex)
@@ -65,7 +83,7 @@ public class HibernateUtil
         }
     }
 
-    public static SessionFactory getSessionFactory()
+    private static SessionFactory getSessionFactory()
     {
         return sessionFactory;
     }
@@ -140,4 +158,78 @@ public class HibernateUtil
         stack_list.remove(entity);
 
     }
+    public static boolean shutdown_db()
+    {
+        rwl.writeLock().lock();
+        try
+        {
+            DriverManager.getConnection("jdbc:derby:MailArchiv;shutdown=true");
+        }
+        catch (SQLException sQLException)
+        {
+        }
+        return true;
+    }
+    public static void reopen_db()
+    {
+        rwl.writeLock().unlock();
+
+        String connect_str = conf.getProperty("hibernate.connection.url");
+        String user = conf.getProperty("hibernate.connection.username");
+        String pwd = conf.getProperty("hibernate.connection.password");
+
+        try
+        {
+            Connection conn = DriverManager.getConnection(connect_str, user, pwd);
+            conn.close();
+        }
+        catch (SQLException sQLException)
+        {
+        }
+    }
+
+    public static void close_session( Session sess )
+    {
+        if (sess == null)
+            return;
+        
+        Connection conn = sess.disconnect();
+
+        try
+        {
+            if (conn != null)
+                conn.close();
+        }
+        catch (SQLException sQLException)
+        {
+        }
+        sess.close();
+        rwl.readLock().unlock();
+
+    }
+    public static Session open_session(  )
+    {
+        rwl.readLock().lock();
+        // Session session = HibernateUtil.getSessionFactory().openSession();
+
+        String connect_str = conf.getProperty("hibernate.connection.url");
+        String user = conf.getProperty("hibernate.connection.username");
+        String pwd = conf.getProperty("hibernate.connection.password");
+
+        Session sess = null;
+
+        try
+        {
+            Connection conn = DriverManager.getConnection(connect_str, user, pwd);
+            sess = sessionFactory.openSession(conn);
+
+        }
+        catch (SQLException sQLException)
+        {
+        }
+
+        return sess;
+
+    }
+
 }

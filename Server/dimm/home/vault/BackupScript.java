@@ -5,6 +5,7 @@
 
 package dimm.home.vault;
 
+import dimm.home.hibernate.HibernateUtil;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -21,7 +22,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import javax.xml.bind.ParseConversionEvent;
 
 
 class SourceTargetEntry
@@ -59,8 +59,14 @@ class SourceTargetEntry
     {
         return is_file;
     }
+}
 
-
+class DBSourceTargetEntry extends SourceTargetEntry
+{
+    public DBSourceTargetEntry( String name, File source, String target, boolean is_file )
+    {
+        super( name, source, target, is_file );
+    }
 }
 /**
  *
@@ -365,7 +371,7 @@ public class BackupScript extends WorkerParentChild
 
         if (test_flag(CS_Constants.BACK_SYS))
         {
-            backup_dir_list.add( new SourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new DBSourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System prefs", new File( Main.work_dir + "/preferences"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lib", new File( Main.work_dir + "/lib"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lic", new File( Main.work_dir + "/license"), get_system_subpath(m_ctx), false) );
@@ -405,12 +411,14 @@ public class BackupScript extends WorkerParentChild
             {
                 try
                 {
+
                     backup_entrylist( m_ctx, dv, backup_dir_list, ag_ip, ag_port, ag_path );
                 }
                 catch (Exception ex)
                 {
                      LogManager.err_log("Error occured while running backup script " + backup.getId() + ": ", ex);
                 }
+                
             }
         };
 
@@ -447,29 +455,50 @@ public class BackupScript extends WorkerParentChild
        // { "copy_files", "		    SRC_NAME SRC_IP SRC_PORT SRC_PATH TRG_NAME TRG_IP TRG_PORT TRG_PATH", handle_copy_files, SYSTEM_FUNC},
             for (int i = 0; i < backup_dir_list.size(); i++)
             {
-
                 SourceTargetEntry ste = backup_dir_list.get(i);
+                boolean close_db = (ste instanceof DBSourceTargetEntry);
+
                 String targetpath =  ag_path + "/" + ste.getTarget();
                 String src_path = ste.getSource().getAbsolutePath();
                 if (src_path.length() > 3 && src_path.endsWith("."))
                 {
                     src_path = src_path.substring(0, src_path.length() - 2);
                 }
+
                 String cmd = "copy_files "+ (ste.is_file() ? "FILE":"FOLDER") + " \"" + ste.getName() + "\" 127.0.0.1 11172 \"" + src_path + "\" \"" +
                             ste.getName() + "\" " + ag_ip + " " + ag_port + " \"" + targetpath + "\" NO_ERRORS NOWAIT CP:0";
 
                 cmd = cmd.replace('\\', '/');
                 set_status(StatusEntry.BUSY, Main.Txt("Starting_backup_of") + " "+ ste.getName());
 
-                String ret = sync_cmd.send_cmd( cmd, 60*60 );
+                String ret = null;
+                try
+                {
+                    // SHUTDOWN DB DURING SYNC
+                    if (close_db)
+                        HibernateUtil.shutdown_db();
+
+                    ret = sync_cmd.send_cmd(cmd, 60 * 60);
+                }
+                catch (Exception e)
+                {
+                    LogManager.err_log("Error during sync", e);
+                }
+               
                 if (ret == null)
                 {
+                    if (close_db)
+                        HibernateUtil.reopen_db();
+
                     ok = false;
                     LogManager.err_log("Error while contacting backup server");
                     break;
                 }
                 if (ret.charAt(0) != '0')
                 {
+                    if (close_db)
+                        HibernateUtil.reopen_db();
+
                     LogManager.err_log(Main.Txt("Error_during_start_backup_of") + " " + ste.getName() + ": " + ret);
                     ok = false;
                     break;
@@ -479,6 +508,9 @@ public class BackupScript extends WorkerParentChild
                 {
                     ok = false;
                 }
+                if (close_db)
+                    HibernateUtil.reopen_db();
+
 
                 if (do_abort)
                     break;

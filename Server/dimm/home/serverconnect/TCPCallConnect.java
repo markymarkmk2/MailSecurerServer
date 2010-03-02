@@ -70,6 +70,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import org.apache.commons.codec.binary.Base64;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 
@@ -568,7 +569,11 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, String ret, OutputStream out ) throws IOException
     {
-        Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret + ">");
+        if (Main.get_debug_lvl() < DBG_LVL_VERB && ret.length() > 80)
+            Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret.substring(0, 80) + "...>");
+        else
+            Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret + ">");
+
         StringBuffer answer = new StringBuffer();
 
         if (ok)
@@ -1182,15 +1187,18 @@ public class TCPCallConnect extends WorkerParent
     public String RMX_DeleteObject( UserSSOEntry ssoc,  String cmd )
     {
         org.hibernate.Transaction tx = null;
+        Session sess = null;
         try
         {
             XStream xstream = new XStream();
             Object o = xstream.fromXML(cmd);
 
-            SessionFactory s = HibernateUtil.getSessionFactory();
-            tx = s.getCurrentSession().beginTransaction();
-            s.getCurrentSession().refresh(o);
-            s.getCurrentSession().delete(o);
+            //SessionFactory s = HibernateUtil.getSessionFactory();
+            sess = HibernateUtil.open_session();
+            tx = sess.beginTransaction();
+//            tx = s.getCurrentSession().beginTransaction();
+            sess.refresh(o);
+            sess.delete(o);
             tx.commit();
             
             return "0: ";
@@ -1203,6 +1211,10 @@ public class TCPCallConnect extends WorkerParent
             }
             Main.err_log("Call of delete object failed:" + exc.getMessage());
             return "1: " + exc.getMessage();
+        }
+        finally
+        {
+            HibernateUtil.close_session(sess);
         }
     }
 

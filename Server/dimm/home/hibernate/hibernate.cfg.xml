@@ -6,11 +6,12 @@
     <property name="hibernate.connection.driver_class">org.apache.derby.jdbc.EmbeddedDriver</property>
     <property name="hibernate.connection.url">jdbc:derby:MailArchiv;create=true</property>
     <property name="hibernate.connection.username">APP</property>
-    <property name="hibernate.connection.password"/>
+    <property name="hibernate.connection.password"/> 
     <property name="hibernate.current_session_context_class">org.hibernate.context.ThreadLocalSessionContext</property>
     <property name="hibernate.show_sql">false</property>
     <property name="hibernate.format_sql">false</property>
     <property name="hibernate.hbm2ddl.auto">update</property>
+    <property name="hibernate.connection.release_mode">after_transaction</property>
     <mapping resource="home/shared/hibernate/MailHeaderVariable.hbm.xml"/>
     <mapping resource="home/shared/hibernate/ImapFetcher.hbm.xml"/>
     <mapping resource="home/shared/hibernate/Proxy.hbm.xml"/>

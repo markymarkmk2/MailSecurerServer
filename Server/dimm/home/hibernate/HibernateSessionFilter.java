@@ -20,7 +20,7 @@ import javax.servlet.ServletResponse;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.Session;
-
+/*
 public class HibernateSessionFilter implements Filter {
 
     private FilterConfig filterConfig = null;
@@ -60,3 +60,4 @@ public class HibernateSessionFilter implements Filter {
         }
     }
 }
+ * */

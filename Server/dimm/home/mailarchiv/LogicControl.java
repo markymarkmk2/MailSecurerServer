@@ -149,7 +149,9 @@ public class LogicControl
 
     void check_db_changes()
     {
-        org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
+//        org.hibernate.classic.Session change_session = HibernateUtil.getSessionFactory().getCurrentSession();
+        org.hibernate.Session change_session = HibernateUtil.open_session();
+        //change_session.
         org.hibernate.Transaction tx = change_session.beginTransaction();
 
         check_db_changes( change_session, "select notificationlist from mandant where notificationlist is null", false, "update mandant set notificationlist='' where notificationlist is null", null  );
@@ -209,6 +211,8 @@ public class LogicControl
                             "update account_connector set  flags=0");
 */
         tx.commit();
+        HibernateUtil.close_session(change_session);
+
     }
 
 
@@ -682,7 +686,8 @@ public class LogicControl
         }
 
 
-        org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+        //org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+        org.hibernate.Session param_session = HibernateUtil.open_session();
         org.hibernate.Transaction tx = param_session.beginTransaction();
         org.hibernate.Query read_param_db_qry = param_session.createQuery("from Mandant where id=" + mid);
 
@@ -740,6 +745,7 @@ public class LogicControl
         finally
         {
             tx.commit();
+            HibernateUtil.close_session(param_session);
         }
 
         // RESTART LOCAL WORKER LIST
@@ -1246,7 +1252,7 @@ public class LogicControl
     }
 
 
-    boolean check_db_changes(org.hibernate.classic.Session change_session, String check_qry, boolean on_fail, String alter_cmd, String fill_cmd)
+    boolean check_db_changes(org.hibernate.Session change_session, String check_qry, boolean on_fail, String alter_cmd, String fill_cmd)
     {
 
         boolean failed = false;
@@ -1308,11 +1314,14 @@ public class LogicControl
         {
             LogManager.err_log_fatal("Error while checking database struct:", ex);
         }
+        org.hibernate.Session param_session = null;
+        org.hibernate.Transaction tx = null;
 
         try
         {
-            org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
-            org.hibernate.Transaction tx = param_session.beginTransaction();
+            //org.hibernate.classic.Session param_session = HibernateUtil.getSessionFactory().getCurrentSession();
+            param_session = HibernateUtil.open_session();
+            tx = param_session.beginTransaction();
             org.hibernate.Query read_param_db_qry = param_session.createQuery("from Mandant");
 
             List l = read_param_db_qry.list();
@@ -1329,11 +1338,18 @@ public class LogicControl
                 }
             }
 
-            tx.commit();
         }
         catch (Exception e)
         {
             e.printStackTrace();
+        }
+        finally
+        {
+            if (tx != null)
+                tx.commit();
+
+            HibernateUtil.close_session(param_session);
+
         }
     }
 
