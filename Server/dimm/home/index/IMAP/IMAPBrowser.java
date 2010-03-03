@@ -5,7 +5,6 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.index.SearchCall;
-import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -17,7 +16,6 @@ import java.net.ServerSocket;
 
 import java.net.Socket;
 import java.util.ArrayList;
-import org.apache.commons.lang.builder.EqualsBuilder;
 
 
 
@@ -58,7 +56,7 @@ public class IMAPBrowser extends WorkerParentChild
 
     public void set_search_results( SearchCall sc, String user, String pwd )
     {
-        LogManager.debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
+        log_debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
         for (int i = 0; i < srv_list.size(); i++)
         {
             MWImapServer mWImapServer = srv_list.get(i);
@@ -92,22 +90,22 @@ public class IMAPBrowser extends WorkerParentChild
         this.port = port;
         log_debug(Main.Txt("Opening_socket"));
 
-
         sock = new ServerSocket(port, 0, InetAddress.getByName(host));
 
         srv_list = new ArrayList<MWImapServer>();
-
-
     }
 
-    private void log_debug( String s )
+    void log_debug( String s )
     {
-        LogManager.debug_msg(s);
+        System.out.println(s);
+//        LogManager.err_log(s);
+//        LogManager.debug_msg(s);
     }
 
-    private void log_debug( String s, Exception e )
+    void log_debug( String s, Exception e )
     {
-        LogManager.debug_msg(s, e);
+        LogManager.err_log(s, e);
+//        LogManager.debug_msg(s, e);
     }
     
     @Override
@@ -143,7 +141,7 @@ public class IMAPBrowser extends WorkerParentChild
         {
             try
             {
-                log_debug(Main.Txt("Going_to_accept"));
+                log_debug(Main.Txt("Accepting_new_connection"));
                 Socket cl = sock.accept();
 
                 MWImapServer mwimap = new MWImapServer(m_ctx, cl, true);
@@ -160,7 +158,6 @@ public class IMAPBrowser extends WorkerParentChild
                     iOException.printStackTrace();
             }
         }
-
 
         finished = true;
     }

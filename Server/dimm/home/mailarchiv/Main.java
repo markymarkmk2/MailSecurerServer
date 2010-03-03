@@ -44,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.1.4";
+    private static final String VERSION = "1.1.6";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -699,7 +699,7 @@ System.out.println("Core POI came from " + path);
 
         if (!missing_transl_tokens.contains(string))
         {
-            System.err.println("Missing translation resource: " + string);
+            System.out.println("Missing translation resource: " + string);
 
             missing_transl_tokens.add(string);
             try

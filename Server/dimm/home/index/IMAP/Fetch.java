@@ -405,7 +405,7 @@ public class Fetch extends ImapCmd
                         is.rawwrite("UID " + uid);
                         had_uid = true;
                     }
-                    else if (tag.startsWith("body.peek["))
+                    else if (tag.startsWith("body.peek[") && !tag.equals("body.peek[]"))
                     {
 
                         String peek_content = tag.substring(10);
@@ -429,6 +429,7 @@ public class Fetch extends ImapCmd
 
                             write_text(is, msg, orig_tag, tag);
                         }
+
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
                     {
@@ -469,6 +470,18 @@ public class Fetch extends ImapCmd
                         }
                         needs_space = true;
                         is.rawwrite("INTERNALDATE \"" + msg.get_internaldate() + "\"");
+                    }
+                    else if (tag.equals("bodystructure"))
+                    {
+                        if (needs_space)
+                        {
+                            is.rawwrite(" ");
+                        }
+                        needs_space = true;
+
+                        String structure = msginfo.getBodystructure();
+
+                        is.rawwrite("BODYSTRUCTURE (" + structure + ")");
                     }
                 }
             }

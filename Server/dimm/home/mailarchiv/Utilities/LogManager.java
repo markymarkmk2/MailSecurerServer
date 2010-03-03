@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv.Utilities;
 
+import dimm.home.mailarchiv.Main;
 import home.shared.Utilities.LogListener;
 import java.io.File;
 import java.io.FileWriter;
@@ -269,6 +270,7 @@ public class LogManager implements  LogListener
     public static final String WRN = "WRN";
     public static final String DBG = "DBG";
     public static final String SYS = "SYS";
+    public static final String SYNC = "SYNC";
     public static File get_file_by_type( String log_type )
     {
         if (log_type.compareTo(L4J) == 0)
@@ -283,6 +285,8 @@ public class LogManager implements  LogListener
             return new File(LOG_PATH + LOG_DEBUG);
         if (log_type.compareTo(SYS) == 0)
             return new File(LOG_PATH + LOG_DEBUG);
+        if (log_type.compareTo(SYNC) == 0)
+            return new File( Main.work_dir + "/syncsrv.log");
 
         return null;
     }

@@ -28,4 +28,6 @@ public interface MailInfo
     public String getRFC822header() throws IOException;
 
     public String getEnvelope() throws IOException;
+
+    public String getBodystructure() throws IOException;
 }

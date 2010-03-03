@@ -800,6 +800,11 @@ public class MandantContext
             catch (NumberFormatException numberFormatException)
             {
             }
+            if ((acct.getFlags() & CS_Constants.ACCT_DISABLED) == CS_Constants.ACCT_DISABLED)
+            {
+                    LogManager.debug_msg(4, "Skipping disabled realm for role " + role.getName());
+                    continue;
+            }
 
 
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm(acct);

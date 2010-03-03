@@ -50,7 +50,7 @@ public class MailFolder
     public static final String QRYTOKEN = "Suchen";
     public static final String BROWSETOKEN = "Browsen";
 
-    public static int uid = 42;
+    //public static int uid = 42;
     public MailFolder(MailKonto konto, /*String file,*/String key)
     {
         this.konto = konto;        
@@ -307,7 +307,7 @@ public class MailFolder
         for (int i = 0; i < uid_map_list.size(); i++)
         {
             MWMailMessage mm = uid_map_list.get(i);
-            if (mm.uid == uid)
+            if (mm.getUID() == uid)
                 return mm.uuid;
 
         }
@@ -403,6 +403,9 @@ public class MailFolder
 
 
 
+        // WE DO NOT HAVE TO LOOK FOR UID IN INDEX, UID WAS GENERATORD BY FOLDER, JUST SORT OUT WHAT HE WAATS
+        boolean search_uid = false;
+
         String pattern = "EEE, d MMM yyyy HH:mm:ss Z";
         SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.ENGLISH);
 
@@ -497,26 +500,32 @@ public class MailFolder
    
             next_is_not = false;*/
         }
+        if (!search_uid)
+        {
 
-        SearchCall sc = new SearchCall(konto.m_ctx);
-        try
-        {
-            MandantContext m_ctx = konto.m_ctx;
-            sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
+            SearchCall sc = new SearchCall(konto.m_ctx);
+            try
+            {
+                MandantContext m_ctx = konto.m_ctx;
+                sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
 
-            add_new_mail_resultlist( m_ctx, sc );
+                add_new_mail_resultlist( m_ctx, sc );
+            }
+            catch (IOException ex)
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            catch (IllegalArgumentException ex)
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            catch (org.apache.lucene.queryParser.ParseException ex)
+            {
+                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        catch (IOException ex)
+        else
         {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (IllegalArgumentException ex)
-        {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        catch (org.apache.lucene.queryParser.ParseException ex)
-        {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
         }
 
 
@@ -557,10 +566,7 @@ public class MailFolder
         for (int i = 0; i < results; i++)
         {
             SearchResult result = sc.get_res(i);
-
-            //RFCGenericMail rfc = sc.get_generic_mail_from_res(i);
-            Vault vault = m_ctx.get_vault_by_da_id(result.getDa_id());
-
+            
             DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
             if (dsh == null)
             {
@@ -570,13 +576,10 @@ public class MailFolder
             try
             {
                 long time = DiskSpaceHandler.get_time_from_uuid(result.getUuid());
+                
                 RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
 
-               // InputStream stream =  rfc.open_inputstream();
-
-                MWMailMessage mail = new MWMailMessage( this, konto, rfc, uid++, result );
-
-              //  stream.close();
+                MWMailMessage mail = new MWMailMessage( this, konto, rfc, 42 + i, result );
 
                 uid_map_list.add( mail );
             }

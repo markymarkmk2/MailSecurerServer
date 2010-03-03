@@ -35,18 +35,22 @@ public class List extends ImapCmd
             {
                 if (part[1].length() == 0)
                 {
-                    is.response("LIST (\\Marked) \"/\" ");  // \\NoInferiors \\HasNoChildren
+                    is.response("LIST (\\Marked) \"/\" \"\"");  // \\NoInferiors \\HasNoChildren
                     is.response(sid, true, "LIST completed");
                     return 0;
                 }
+                /*
                 if (part[1].compareTo("*") == 0)
                 {
                     if (MailKonto.qry_folder)
                         is.response("LIST (\\Marked) \"/\" " + MailFolder.QRYTOKEN);  // \\NoInferiors \\HasNoChildren
+                    if (MailKonto.browse_folder)
+                        is.response("LIST (\\Marked) \"/\" " + MailFolder.BROWSETOKEN);  // \\NoInferiors \\HasNoChildren
                     is.response("LIST (\\Marked) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
+                    
                     is.response(sid, true, "LIST completed");
                     return 0;
-                }
+                }*/
                 if (part[1].startsWith("INBOX"))
                 {
                     is.response("LIST (\\Marked) \"/\" INBOX");  // \\NoInferiors \\HasNoChildren
@@ -65,7 +69,7 @@ public class List extends ImapCmd
                 for (int i = 0; i < dirlist.length; i++)
                 {
                     String qreq[] = pathsplit(dirlist[i]);
-                    if (req.length != qreq.length)
+                    if (req.length != qreq.length && req.length > 0 && !req[0].equals("*"))
                     {
                         continue;
                     }
@@ -75,7 +79,7 @@ public class List extends ImapCmd
                         {
                             continue;
                         }
-                        if (req[h].equals(qreq[h]))
+                        if (req[h].equals(qreq[h]) || req[h].equals("*"))
                         {
                             continue;
                         }
