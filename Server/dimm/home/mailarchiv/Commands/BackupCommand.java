@@ -10,6 +10,7 @@
 package dimm.home.mailarchiv.Commands;
 
 
+import dimm.home.dao.BackupDAO;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -55,6 +56,11 @@ public class BackupCommand extends AbstractCommand
                 long bs_id = pt.GetLongValue("BS:");
                 MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
                 Backup backup = m_ctx.get_backup_by_id( bs_id );
+                if (backup != null)
+                {
+                    BackupDAO dao = new BackupDAO();
+                    dao.refresh(backup);
+                }
                 BackupScript script = (BackupScript)Main.get_control().get_ba_server().get_child(backup);
                 if (script == null)
                 {

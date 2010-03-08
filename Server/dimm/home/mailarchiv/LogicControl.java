@@ -154,6 +154,8 @@ public class LogicControl
         //change_session.
         org.hibernate.Transaction tx = change_session.beginTransaction();
 
+        check_db_changes( change_session, "select flags from mail_header_variable where flags is null", false, "update mail_header_variable set flags=0", null  );
+
         check_db_changes( change_session, "select notificationlist from mandant where notificationlist is null", false, "update mandant set notificationlist='' where notificationlist is null", null  );
         check_db_changes( change_session, "select mailfrom from mandant where mailfrom is null", false, "update mandant set mailfrom='' where mailfrom is null", null  );
 

@@ -28,20 +28,17 @@ import org.apache.commons.httpclient.methods.GetMethod;
  */
 
 
-// WE COMPARE TO REAL_STATION_ID FIRST
-// THEN TO VIRTUAL_STATION_ID 
+// WE COMPARE TO SERIAL FIRST
 // FINNALLY JUST TO REGULAR VERSION FILE
 /*
-sonicbox_lnx_S17_ver.txt";
-sonicbox_lnx_S142_ver.txt";
-sonicbox_lnx_ver.txt";
+mailsecurer_lnx_S123456_ver.txt";
+mailsecurer_lnx_ver.txt";
 
 */
 // THE NAMES OF THE DL FILES ARE APPROPRIATE
 /*
-sonicbox_lnx_S17.zip";
-sonicbox_lnx_S142.zip";
-sonicbox_lnx.zip";
+mailsecurer_lnx_S123456.zip";
+mailsecurer_lnx.zip";
 */
 
 
@@ -103,9 +100,9 @@ public class UpdateWorker extends WorkerParent
         String ver_file = server_path + "/" + app_name + "_" + os_name + "_ver.txt";
         return ver_file;
     }
-    String get_remote_ver_path_by_station(long station_id)
+    String get_remote_ver_path_by_serial(int  serial)
     {
-        String ver_file = server_path + "/" + app_name + "_" + os_name + "_S" + station_id + "_ver.txt";
+        String ver_file = server_path + "/" + app_name + "_" + os_name + "_S" + serial + "_ver.txt";
         return ver_file;
     }
     String get_remote_upd_path()
@@ -113,9 +110,9 @@ public class UpdateWorker extends WorkerParent
         String upd_file = server_path + "/" + app_name + "_" + os_name + ".zip";
         return upd_file;
     }
-    String get_remote_upd_path_by_station(long station_id)
+    String get_remote_upd_path_by_serial(long serial)
     {
-        String upd_file = server_path + "/" + app_name + "_" + os_name + "_S" + station_id + ".zip";
+        String upd_file = server_path + "/" + app_name + "_" + os_name + "_S" + serial + ".zip";
         return upd_file;
     }
     String get_local_upd_path()
@@ -136,11 +133,12 @@ public class UpdateWorker extends WorkerParent
         String http_pwd = Main.get_prop(GeneralPreferences.HTTPPWD, Main.HTTPPWD);
         FileTransferManager fman = new FileTransferManager( upd_server, http_user, http_pwd);
         
-        // TRY UPDATE FILES FOR STATION-ID FIRST
-        remote_ver_path = get_remote_ver_path_by_station(Main.get_station_id());
+        // TRY UPDATE FILES FOR SERIAL FIRST
+        int serial = Main.get_control().get_license_checker().get_serial();
+        remote_ver_path = get_remote_ver_path_by_serial( serial );
         if (fman.exists_file(remote_ver_path))
         {
-            remote_upd_path = get_remote_upd_path_by_station( Main.get_station_id() );
+            remote_upd_path = get_remote_upd_path_by_serial( serial );
         }
        
         

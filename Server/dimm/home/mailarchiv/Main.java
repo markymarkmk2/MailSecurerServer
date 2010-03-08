@@ -27,7 +27,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
@@ -35,6 +39,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.zip.ZipOutputStream;
+import javax.crypto.NoSuchPaddingException;
+import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
@@ -44,7 +50,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.1.6";
+    private static final String VERSION = "1.1.7";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -357,6 +363,8 @@ public class Main
      */
     public static void main(String[] args)
     {
+
+
         if (args.length == 1 && args[0].compareTo("-version") == 0)
         {
             System.out.println(Main.get_version_str());
@@ -364,6 +372,24 @@ public class Main
         }
 
         Main m = new Main(args);
+
+        String key = "12345";
+        for ( int i = 0; i < 20; i++)
+        {
+            System.out.print("Key len: " + key.length());
+
+            try
+            {
+                CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
+                String s = cos.toString();                
+                System.out.println( " OK" );
+            }
+            catch (Exception exc)
+            {
+                System.out.println( " NOK:" + exc.getMessage() );
+            }
+            key += Integer.toString(i%10);
+        }
 
       /*  m.import_moonrug();
 

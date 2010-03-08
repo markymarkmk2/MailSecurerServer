@@ -51,6 +51,9 @@ public class Idle extends ImapCmd
                 if (is.in.ready())
                 {
                     String rline = is.in.readLine();
+                    if (is.trace)
+                        System.out.println( "In: " + rline );
+
                     if (rline.toLowerCase().startsWith("done") || rline.toLowerCase().endsWith("close") || rline.toLowerCase().endsWith("logout"))
                     {
                         is.response(sid, true, "IDLE completed");

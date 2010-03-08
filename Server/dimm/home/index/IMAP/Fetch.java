@@ -5,6 +5,7 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.Utilities.LogManager;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,7 @@ import java.io.OutputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
+import javax.mail.Part;
 
 
 class LengthOutputStream extends OutputStream
@@ -40,6 +42,8 @@ class LengthOutputStream extends OutputStream
     @Override
     public void write( int b ) throws IOException
     {
+        System.out.print((char)b);
+        
         if (act_length < length)
         {
             os.write(b);
@@ -52,6 +56,7 @@ class LengthOutputStream extends OutputStream
     @Override
     public void write( byte[] b, int off, int len ) throws IOException
     {
+        System.out.print(new String(b, off, len, "UTF-8"));
         if (act_length + len <= length)
         {
             try
@@ -148,42 +153,49 @@ public class Fetch extends ImapCmd
         byte[] hdata = header.getBytes();
         String return_tag = orig_tag.replace(".PEEK[", "[");
 
-        is.rawwrite(return_tag + " {" + hdata.length + "}\r\n");
-        is.s.getOutputStream().write(hdata);
-        //is.rawwrite(header);
-
-
+        is.rawwrite(return_tag + " {" + hdata.length + "}\r\n");        
+        is.rawwrite(hdata, 0, hdata.length);
     }
 
     private static void write_text( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
     {
-        Range range = Range.range_factory(tag);
-        InputStream stream = msg.mmail.getMsg().getInputStream();
-        stream.skip(range.start);
-        byte[] data = new byte[range.len];
-        int rlen = stream.read(data);
-
-        stream.close();
-
-        String return_tag = orig_tag;
-        return_tag = return_tag.replace(".PEEK[", "[");
-
-        if (rlen < range.len)
+        if (tag.indexOf('<') > -1)
         {
-            int idx_range = return_tag.indexOf('<');
-            if (idx_range > 0)
+            msg.load_rfc_mail();
+            Range range = Range.range_factory(tag);
+            InputStream stream = msg.mmail.getMsg().getInputStream();
+            stream.skip(range.start);
+            byte[] data = new byte[range.len];
+            int rlen = stream.read(data);
+
+            stream.close();
+
+            String return_tag = orig_tag;
+            return_tag = return_tag.replace(".PEEK[", "[");
+
+            if (rlen < range.len)
             {
-                return_tag = return_tag.substring(0, idx_range) + '<' + range.start + '>';
+                int idx_range = return_tag.indexOf('<');
+                if (idx_range > 0)
+                {
+                    return_tag = return_tag.substring(0, idx_range) + '<' + range.start + '>';
+                }
             }
+            OutputStream os = is.s.getOutputStream();
+
+            is.rawwrite( return_tag + " {" + rlen + "}\r\n");
+            os.write(data, 0, rlen);
         }
+        else
+        {
+            msg.load_rfc_mail();
+            String txt = msg.mmail.get_text_content();
+            byte[] data = txt.getBytes("UTF-8");
 
-        OutputStream os = is.s.getOutputStream();
-
-        is.rawwrite( return_tag + " {" + rlen + "}\r\n");
-        os.write(data, 0, rlen);
-//        is.rawwrite(return_tag + " {" + rlen + "}\r\n");
-//        is.rawwrite( text );
-        //is.rawwrite(data, 0, rlen);
+            String return_tag = orig_tag;
+            is.rawwrite( return_tag + " {" + data.length + "}\r\n");            
+            is.rawwrite(data, 0, data.length);
+        }
     }
 
     public Fetch()
@@ -322,7 +334,9 @@ public class Fetch extends ImapCmd
                 }
             }
 
-            is.rawwrite(RESTAG + cmd.getNextCounter() + " FETCH (");
+            int id = (is_uid ? msginfo.getUID() : cmd.getNextCounter());
+
+            is.rawwrite(RESTAG + id + " FETCH (");
 
             long size = msginfo.getRFC822size();
             String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
@@ -340,7 +354,7 @@ public class Fetch extends ImapCmd
                     String orig_tag = tags[x].trim();
                     String tag = orig_tag.toLowerCase();
 
-                    System.out.print("<<got tag " + tag + ">>");
+                   // System.out.print("<<got tag " + tag + ">>");
 
 
                     if (tag.equals("envelope"))
@@ -418,7 +432,16 @@ public class Fetch extends ImapCmd
                             needs_space = true;
                             write_header_fields(is, msg, orig_tag, tag);
                         }
-                        if (peek_content.startsWith("text"))
+                        else if (peek_content.startsWith("header"))
+                        {
+                            if (needs_space)
+                            {
+                                is.rawwrite(" ");
+                            }
+                            needs_space = true;
+                            write_header_fields(is, msg, orig_tag, null);
+                        }
+                        else if (peek_content.startsWith("text"))
                         {
 
                             if (needs_space)
@@ -429,7 +452,27 @@ public class Fetch extends ImapCmd
 
                             write_text(is, msg, orig_tag, tag);
                         }
+                        else if (Character.isDigit( peek_content.charAt(0) ))
+                        {
+                            if (needs_space)
+                            {
+                                is.rawwrite(" ");
+                            }
+                            needs_space = true;
 
+                            int end_idx = peek_content.lastIndexOf(']');
+                            peek_content = peek_content.substring(0, end_idx);
+
+                            Part bp = msg.get_body_part(peek_content);
+                            if (bp != null)
+                            {
+                                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                                bp.writeTo(bos);
+                                byte[] data = bos.toByteArray();
+                                is.rawwrite("" + tag.toUpperCase() + " {" + data.length + "}\r\n");
+                                is.rawwrite(data, 0, data.length);
+                            }
+                        }
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
                     {
@@ -471,6 +514,7 @@ public class Fetch extends ImapCmd
                         needs_space = true;
                         is.rawwrite("INTERNALDATE \"" + msg.get_internaldate() + "\"");
                     }
+                    
                     else if (tag.equals("bodystructure"))
                     {
                         if (needs_space)
@@ -481,7 +525,7 @@ public class Fetch extends ImapCmd
 
                         String structure = msginfo.getBodystructure();
 
-                        is.rawwrite("BODYSTRUCTURE (" + structure + ")");
+                        is.rawwrite("BODYSTRUCTURE " + structure);
                     }
                 }
             }

@@ -6,12 +6,13 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskSpaceHandler;
-import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.filter.ExprEntry;
 import home.shared.filter.GroupEntry;
+import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
+import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,6 +50,7 @@ public class MailFolder
 
     public static final String QRYTOKEN = "Suchen";
     public static final String BROWSETOKEN = "Browsen";
+    public static final String TESTTOKEN = "TEST";
 
     //public static int uid = 42;
     public MailFolder(MailKonto konto, /*String file,*/String key)
@@ -83,6 +85,11 @@ public class MailFolder
         if (key.startsWith(BROWSETOKEN))
         {
 
+        }
+        if (key.startsWith(TESTTOKEN))
+        {
+            RFCFileMail testmessage = new RFCFileMail( new File("M:\\test.eml"), false);
+            uid_map_list.add( new MWMailMessage( this, konto, testmessage, 42, null ) );
         }
     }
 

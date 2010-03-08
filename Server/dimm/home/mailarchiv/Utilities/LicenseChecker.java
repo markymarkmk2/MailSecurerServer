@@ -471,13 +471,20 @@ public class LicenseChecker
 
         synchronized (umap_mtx)
         {
-            Set<Entry<String, StatMailAddress>> set = license_user_map.entrySet();
-            for (Entry<String, StatMailAddress> entry : set)
+            boolean done = false;
+            while (!done)
             {
-                if ((now - entry.getValue().getTimestamp()) > MAX_STAY_VALID_MS)
+                done = true;
+                Set<Entry<String, StatMailAddress>> set = license_user_map.entrySet();
+                for (Entry<String, StatMailAddress> entry : set)
                 {
-                    LogManager.info_msg(Main.Txt("Removing_inactive_user_from_usermap") + ": " + entry.getValue().get_mail());
-                    set.remove(entry);
+                    if ((now - entry.getValue().getTimestamp()) > MAX_STAY_VALID_MS)
+                    {
+                        LogManager.info_msg(Main.Txt("Removing_inactive_user_from_usermap") + ": " + entry.getValue().get_mail());
+                        set.remove(entry);
+                        done = false;
+                        break;
+                    }
                 }
             }
         }
@@ -489,6 +496,18 @@ public class LicenseChecker
         // DO NOT RECREATE EVERY TIME, LICENSE FILE HAS TO BE MISSING
         File lic_path = get_lic_file( product );
         return lic_path.exists();
+    }
+    public int get_serial()
+    {
+        ValidTicketContainer ticket = get_ticket( LicenseTicket.PRODUCT_BASE );
+        if (ticket != null)
+        {
+            if (ticket.isValid())
+            {
+                return ticket.getTicket().getSerial();
+            }
+        }
+        return 0;
     }
 
     File get_lic_file( String product )

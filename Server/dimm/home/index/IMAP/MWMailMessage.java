@@ -21,6 +21,7 @@ import dimm.home.index.SearchResult;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +35,6 @@ import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Part;
 import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimePart;
 
 public class MWMailMessage implements MailInfo
@@ -159,7 +159,11 @@ public class MWMailMessage implements MailInfo
         this.parent = parent;
         this.mailfile = mailfile;
 
-        this.uuid = sc.getUuid();
+        if (sc != null)
+            this.uuid = sc.getUuid();
+        else
+            this.uuid = Integer.toString(uid);
+        
         this.uid = uid;
         this.rfc = rfc;
         this.sc_result = sc;
@@ -234,10 +238,13 @@ public class MWMailMessage implements MailInfo
      @Override
     public long getRFC822size()
     {
-        return sc_result.getSize();
-/*        load_rfc_mail();
+         if (sc_result != null)
+            return sc_result.getSize();
+
         try
         {
+            load_rfc_mail();
+
             int s = mmail.getMsg().getSize();
             if (s == -1)
             {
@@ -259,7 +266,7 @@ public class MWMailMessage implements MailInfo
         {
             messagingException.printStackTrace();
         }
-        return -1;*/
+        return -1;
     }
 
  
@@ -317,7 +324,27 @@ public class MWMailMessage implements MailInfo
     String get_internaldate()
     {
         Date d = new Date();
-        d.setTime( sc_result.getTime() );
+        if (sc_result != null)
+            d.setTime( sc_result.getTime() );
+        else
+        {
+            try
+            {
+                if (mmail.getMsg().getReceivedDate() != null)
+                {
+                    d = mmail.getMsg().getReceivedDate();
+
+                }
+                else if (mmail.getMsg().getSentDate() != null)
+                {
+                    d = mmail.getMsg().getSentDate();
+
+                }
+            }
+            catch (MessagingException messagingException)
+            {
+            }
+        }
         return internaldate_sdf.format(d);
 
     }
@@ -363,31 +390,80 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         load_rfc_mail();
         StringBuffer sb = new StringBuffer();
 
-        int idx = tag.indexOf('(');
-        int last_idx = tag.lastIndexOf(')');
-        String header_list = tag.substring(idx + 1, last_idx);
-        StringTokenizer str = new StringTokenizer( header_list, " ");
-        try
+        if (tag == null)
         {
-            while (str.hasMoreElements())
+            try
             {
-                String hdr = str.nextToken();
-                String val = mmail.getMsg().getHeader(hdr, ",");
-                if (val != null)
+                Enumeration e = mmail.getMsg().getAllHeaderLines();
+                while (e.hasMoreElements())
                 {
-                    sb.append(hdr + ": " + val + "\r\n");
+                    Object o = e.nextElement();
+                    if (o instanceof Header)
+                    {
+                        Header header_entry = (Header) o;
+                        sb.append(header_entry.getName());
+                        sb.append("=");
+                        sb.append(header_entry.getValue());
+                        sb.append("\r\n");
+                    }
+                    if (o instanceof String)
+                    {
+                        sb.append(o.toString());
+                        sb.append("\r\n");
+                    }
                 }
             }
+            catch (MessagingException ex)
+            {
+                ex.printStackTrace();
+                Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        catch (MessagingException messagingException)
+        else
         {
-            messagingException.printStackTrace();
-        }
 
+
+            int idx = tag.indexOf('(');
+            int last_idx = tag.lastIndexOf(')');
+            String header_list = tag.substring(idx + 1, last_idx);
+            StringTokenizer str = new StringTokenizer( header_list, " ");
+            try
+            {
+                while (str.hasMoreElements())
+                {
+                    String hdr = str.nextToken();
+                    String val = mmail.getMsg().getHeader(hdr, ",");
+                    if (val != null)
+                    {
+                        sb.append(hdr + ": " + val + "\r\n");
+                    }
+                }
+            }
+            catch (MessagingException messagingException)
+            {
+                messagingException.printStackTrace();
+            }
+        }
         return sb.toString();
     }
 
+    void add_attr( StringBuffer sb, int attr )
+    {
+        char last_char  = 0;
+        if (sb.length() > 0)
+            last_char = sb.charAt(sb.length() - 1);
 
+        boolean needs_space = false;
+
+        // INSIDE PARENTHESIS NO SPACE
+        if (last_char != '(')
+            needs_space = true;
+
+        if (needs_space)
+            sb.append(' ');
+
+        sb.append(attr);
+    }
     void add_attr( StringBuffer sb, String attr )
     {
         char last_char  = 0;
@@ -395,8 +471,14 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
             last_char = sb.charAt(sb.length() - 1);
 
         boolean needs_space = false;
-        if (last_char == '\"')
+
+        // INSIDE PARENTHESIS NO SPACE
+        if (last_char != '(' && (attr == null || !attr.equals(")")) && sb.length() > 0 )
             needs_space = true;
+
+        // NO SPACE BETWEEN BRACKET CLOSE / OPEN
+        if (attr != null && attr.equals("(") && last_char == ')')
+            needs_space = false;
 
         if (needs_space)
             sb.append(' ');
@@ -428,15 +510,45 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
     private String get_content_subtype( Part p ) throws MessagingException
     {
         String mt = p.getContentType();
-        if (mt != null && mt.length() > 0)
+        if (mt != null && mt.length() > 1)
         {
-            String[] cts = mt.split("/");
-            return cts[0];
+            String[] cts = mt.split("[/;\" ]");
+            return cts[1];
         }
         return null;
     }
-    private void add_mailheaders( StringBuffer sb, Part p ) throws MessagingException
+    private String get_content_attributes( Part p ) throws MessagingException
     {
+        StringBuffer sb = new StringBuffer();
+
+        String mt = p.getContentType();
+        int atr_idx = mt.indexOf(';');
+        if (atr_idx == -1)
+            atr_idx = mt.indexOf('\n');
+        if (atr_idx == -1)
+            return "";
+
+
+        String attr = mt.substring(atr_idx) + 1;
+
+        String delim = "[/;\"=\n\r\t ]";
+        StringTokenizer st = new StringTokenizer(attr, delim);
+        String name = st.nextToken();
+        String eq = st.nextToken("\"\n\r");
+        String val = st.nextToken("\"\n\r");
+
+        if (name != null && val != null)
+        {
+            add_attr( sb, name );
+            add_attr( sb, val );
+        }
+        return sb.toString();
+    }
+
+    /*
+    private String get_mailheaders( Part p ) throws MessagingException
+    {
+        StringBuffer sb = new StringBuffer();
         Enumeration mail_header_list = p.getAllHeaders();
         if (mail_header_list.hasMoreElements())
         {
@@ -448,13 +560,39 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
                 if (header_entry instanceof Header)
                 {
                     Header ih = (Header) header_entry;
-                    add_attr( sb, ih.getName() );
-                    add_attr( sb, ih.getValue() );
+                    String value = ih.getValue();
+                    if ( value == null)
+                        continue;
+
+
+                    // THIS ONE IS HANDLED OUTSIDE
+                    if (ih.getName().toLowerCase().contains("content-type"))
+                    {
+                        int idx = value.indexOf("charset");
+                        if (idx > 0)
+                        {
+                            value = value.substring(idx);
+                        }
+                        else
+                            continue;
+                    }
+                    else
+                        continue;
+                    
+
+                    String[] arg_list = value.split("[=\"\']");
+                    for (int i = 0; i < arg_list.length; i++)
+                    {
+                        if (arg_list[i].length() > 0)
+                            add_attr( sb, arg_list[i] );
+                    }
                 }
             }
             add_attr( sb, ")" );
         }
+        return sb.toString();
     }
+     * */
 
     private void get_part_struct( StringBuffer sb, Object content ) throws MessagingException, IOException
     {
@@ -463,6 +601,11 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
             Multipart mp = (Multipart) content;
             try
             {
+                if (mp.getCount() == 1)
+                {
+                    Part p = mp.getBodyPart(0);
+                    get_part_struct( sb, p.getContent() );
+                }
                 for (int i = 0; i < mp.getCount(); i++)
                 {
                     Part p = mp.getBodyPart(i);
@@ -486,14 +629,26 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
                 Multipart mp = (Multipart) p.getContent();
                 get_part_struct( sb, mp );
 
+                
                 add_attr( sb, get_content_subtype(p) );
-                add_attr( sb, "(" );
-                add_mailheaders(sb, p);
+                
+                String h_entry = get_content_attributes(p);
+                if (h_entry.length() >0)
+                {
+                    add_attr( sb, "(" );
+                    sb.append(h_entry);
+                    add_attr( sb, ")" );
+                }
+                else
+                    add_attr( sb, null );
+
+
                 add_attr( sb, null );
                 add_attr( sb, null );
-                add_attr( sb, null );
+                
+                
                 add_attr( sb, ")" );
-                add_attr( sb, ")" );
+                
             }
             else
             {
@@ -516,7 +671,15 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
 
 
                 // BODY PARAMETERS
-                add_mailheaders( sb, p );
+                String h_entry = get_content_attributes(p);
+                if (h_entry.length() >0)
+                {
+                    add_attr( sb, "(" );
+                    sb.append(h_entry);
+                    add_attr( sb, ")" );
+                }
+                else
+                    add_attr( sb, null );
 
                 // ID
                 add_attr( sb, p.getContentID() );
@@ -528,22 +691,100 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
                 add_attr( sb, p.getEncoding() );
 
                 // SIZE
-                sb.append(Integer.toString( p.getSize() ) );
+                add_attr( sb, p.getSize() );
 
                 // TYPE SPECIFIC
                 if (p.isMimeType("text/*"))
                 {
-                    add_attr( sb, Integer.toString( p.getLineCount() ) );
-                    add_attr( sb, null );
-                    add_attr( sb, null );
-                    add_attr( sb, null );
+                    int lc = p.getLineCount();
+                    if (lc == -1)
+                    {
+                        lc = 0;
+                        String t = p.getContent().toString();
+                        for (int l = 0; l < t.length(); l++)
+                        {
+                            if (t.charAt(l) == '\n')
+                                lc++;
+                        }
+                    }
+                    add_attr( sb, lc );
                 }
+
+                add_attr( sb, null );
+                add_attr( sb, null );
+                add_attr( sb, null );
+                add_attr( sb, null );
                 // MESSAGE/RFC822 IS MISSING
 
                 add_attr( sb, ")" );
             }
         }
     }
+    
+    Part get_part( Object content,  String id ) throws MessagingException, IOException
+    {
+        Multipart mp = null;
+        if (content instanceof Multipart)
+        {
+            mp = (Multipart)content;
+        }
+        else if (content instanceof Part)
+        {
+            Part p = (Part)content;
+            if (p.isMimeType("multipart/*"))
+            {
+                if (p.getContent() instanceof Multipart)
+                {
+                    mp = (Multipart)p.getContent();
+                }
+            }
+        }
+        if (mp == null)
+        {
+            System.out.println("Invalid content in get_part ");
+            return null;
+        }
+        
+        
+        
+        String[] plist = id.split("\\.");
+        if (plist.length == 0)
+        {
+            System.out.println("Invalid id in get_part ");
+            return null;
+        }
+
+        int this_part = Integer.parseInt(plist[0]) - 1;
+        Part bp  = mp.getBodyPart(this_part);
+        
+        if (plist.length > 1 )
+        {
+            int idx = id.indexOf('.');
+            Part pp = get_part( bp, id.substring(idx + 1) );
+            return pp;
+        }
+        return bp;
+    }
+    public Part get_body_part( String id ) throws IOException
+    {
+        load_rfc_mail();
+
+        MimeMessage msg = mmail.getMsg();
+
+        try
+        {
+            Part p = get_part(msg.getContent(), id);
+
+            return p;
+        }
+        catch (MessagingException messagingException)
+        {
+            messagingException.printStackTrace();
+        }
+
+        return null;
+    }
+
     
     @Override
     public String getBodystructure() throws IOException
@@ -556,9 +797,9 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
 
         try
         {
-            Object content = msg.getContent();
+//            Object content = msg.getContent();
 
-            get_part_struct( sb, content );
+            get_part_struct( sb, msg );
         }
         catch (MessagingException messagingException)
         {

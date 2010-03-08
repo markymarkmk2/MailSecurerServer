@@ -41,6 +41,8 @@ public class MailKonto
     public static final boolean browse_folder = true;
     public static final boolean day_folder = true;
 
+    public static final boolean test_folder = true;
+
     boolean can_browse()
     {
         if (sso_entry == null)
@@ -72,6 +74,8 @@ public class MailKonto
             mail_folders.add( new MailFolder(this,  MailFolder.QRYTOKEN));
         if (browse_folder)
             mail_folders.add( new MailFolder(this,  MailFolder.BROWSETOKEN));
+        if (test_folder)
+            mail_folders.add( new MailFolder(this,  MailFolder.TESTTOKEN));
         
         try
         {
@@ -245,6 +249,9 @@ public class MailKonto
                 fs.add("INBOX");
                 if (qry_folder)
                     fs.add(MailFolder.QRYTOKEN);
+
+                if (test_folder)
+                    fs.add(MailFolder.TESTTOKEN);
 
                 if (browse_folder && can_browse())
                 {

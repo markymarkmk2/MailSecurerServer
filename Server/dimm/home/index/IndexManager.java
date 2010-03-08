@@ -209,7 +209,29 @@ public class IndexManager extends WorkerParent
 
         build_domain_and_excl_list();
 
+        build_header_lists();
+
+
         is_started = false;
+    }
+
+    public ArrayList<String>get_email_headers()
+    {
+        return email_headers;
+    }
+
+    private void build_header_lists()
+    {
+        Set<MailHeaderVariable> mhv_set = m_ctx.getMandant().getMailHeaderVariable();
+        for (Iterator<MailHeaderVariable> it = mhv_set.iterator(); it.hasNext();)
+        {
+            MailHeaderVariable mhv = it.next();
+            // IS EMAIL HEADER?
+            if ((mhv.getFlags() & CS_Constants.MHV_CONTAINS_EMAIL) == CS_Constants.MHV_CONTAINS_EMAIL)
+                email_headers.add( mhv.getVarName() );
+            else
+                allowed_headers.add( mhv.getVarName() );
+        }
     }
 
     private void build_domain_and_excl_list()

@@ -92,6 +92,35 @@ public abstract class GenericDAO
         return ret;
     }
 
+    public static boolean refresh( org.hibernate.Session session, Object object )
+    {
+        try
+        {
+            session.beginTransaction();
+            session.refresh(object);
+            session.getTransaction().commit();
+            return true;
+
+        }
+        catch (Throwable e)
+        {
+            if (session.getTransaction().isActive())
+            {
+                session.getTransaction().rollback();
+            }
+
+            System.out.println(e.getMessage());
+        }
+        return false;
+    }
+    public boolean refresh( Object object )
+    {
+        Session session = HibernateUtil.open_session();
+        boolean ret = refresh( session, object );
+        HibernateUtil.close_session(session);
+        return ret;
+    }
+
     public static boolean delete( Session session, Object object )
     {
         try

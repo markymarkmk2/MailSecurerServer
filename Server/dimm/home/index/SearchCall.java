@@ -538,12 +538,12 @@ public class SearchCall
             String mail_adress = mail_aliases.get(i);
             if (mail_adress.length() > 0)
             {
-
-                filter.addTerm(new Term(CS_Constants.FLD_TO, mail_adress));
-                filter.addTerm(new Term(CS_Constants.FLD_FROM, mail_adress));
-                filter.addTerm(new Term(CS_Constants.FLD_CC, mail_adress));
-                filter.addTerm(new Term(CS_Constants.FLD_BCC, mail_adress));
-                filter.addTerm(new Term(CS_Constants.FLD_DELIVEREDTO, mail_adress));
+                ArrayList<String> mail_headers = m_ctx.get_index_manager().get_email_headers();
+                for (int m = 0; m < mail_headers.size(); m++)
+                {
+                    String field_name = mail_headers.get(m);
+                    filter.addTerm(new Term(field_name, mail_adress));
+                }
             }
         }
         return filter;
@@ -846,11 +846,12 @@ public class SearchCall
                                 if (mail_adress != null && mail_adress.length() > 0)
                                 {
                                     filter = new TermsFilter();
-                                    filter.addTerm(new Term(CS_Constants.FLD_TO, mail_adress));
-                                    filter.addTerm(new Term(CS_Constants.FLD_FROM, mail_adress));
-                                    filter.addTerm(new Term(CS_Constants.FLD_CC, mail_adress));
-                                    filter.addTerm(new Term(CS_Constants.FLD_BCC, mail_adress));
-                                    filter.addTerm(new Term(CS_Constants.FLD_DELIVEREDTO, mail_adress));
+                                    ArrayList<String> mail_headers = m_ctx.get_index_manager().get_email_headers();
+                                    for (int i = 0; i < mail_headers.size(); i++)
+                                    {
+                                        String field_name = mail_headers.get(i);
+                                        filter.addTerm(new Term(field_name, mail_adress));
+                                    }
                                 }
 
                                 Sort sort = new Sort(CS_Constants.FLD_TM);
