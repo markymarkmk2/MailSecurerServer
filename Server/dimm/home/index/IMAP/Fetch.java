@@ -5,7 +5,6 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.Utilities.LogManager;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,6 +13,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.Part;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringEscapeUtils;
 
 
 class LengthOutputStream extends OutputStream
@@ -159,9 +160,10 @@ public class Fetch extends ImapCmd
 
     private static void write_text( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
     {
+        msg.load_rfc_mail();
+
         if (tag.indexOf('<') > -1)
         {
-            msg.load_rfc_mail();
             Range range = Range.range_factory(tag);
             InputStream stream = msg.mmail.getMsg().getInputStream();
             stream.skip(range.start);
@@ -170,7 +172,7 @@ public class Fetch extends ImapCmd
 
             stream.close();
 
-            String return_tag = orig_tag;
+            String return_tag = orig_tag.toUpperCase();
             return_tag = return_tag.replace(".PEEK[", "[");
 
             if (rlen < range.len)
@@ -188,12 +190,144 @@ public class Fetch extends ImapCmd
         }
         else
         {
-            msg.load_rfc_mail();
             String txt = msg.mmail.get_text_content();
-            byte[] data = txt.getBytes("UTF-8");
+            Part p = msg.mmail.get_text_part();
+            String charset = msg.get_charset( p );
+            if (charset == null)
+               charset = "UTF-8";
+            byte[] data = txt.getBytes( charset );
 
             String return_tag = orig_tag;
             is.rawwrite( return_tag + " {" + data.length + "}\r\n");            
+            is.rawwrite(data, 0, data.length);
+        }
+    }
+
+    private static byte[] rfc_str( String toString, boolean is_utf8 )
+    {
+        char[] hex = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+
+       
+
+        StringBuffer sb = new StringBuffer();
+        int line_len = 0;
+        for (int i = 0; i < toString.length(); i++)
+        {
+            char ch = toString.charAt(i);
+            if (!is_utf8 && ch > 0x7F)
+            {
+                sb.append('=');
+                ch &= 0xFF;
+                sb.append(hex[ch/16]);
+                sb.append(hex[ch%16]);
+                line_len+=3;
+            }
+            else
+            {
+                sb.append(ch);
+                line_len++;
+            }
+            if (line_len >= 76)
+            {
+                sb.append("=\r\n");
+                line_len = 0;
+            }
+        }
+
+        return sb.toString().getBytes();
+    }
+
+    private static void write_body_part( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
+    {
+        msg.load_rfc_mail();
+
+        String peek_content = tag.substring(tag.indexOf('[') + 1);
+        int end_idx = peek_content.lastIndexOf(']');
+        peek_content = peek_content.substring(0, end_idx);
+
+        Range range = null;
+        if (tag.indexOf('<') > -1)
+        {
+            range = Range.range_factory(tag);
+        }
+
+        Part bp = msg.get_body_part(peek_content);
+        if (bp != null)
+        {
+            byte[] data = null;
+            Object c  = bp.getContent();
+            if (c instanceof InputStream)
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                InputStream istr = bp.getInputStream();
+                byte[]tmp = new byte[4096];
+
+                   /*/
+                    int len = range.len;
+                    while (len > 0)
+                    {
+                        int ilen = len;
+                        if (ilen > tmp.length)
+                            ilen = tmp.length;
+
+                        int rlen = istr.read(tmp, 0, ilen);
+                        if (rlen <= 0)
+                            break;
+                        bos.write(tmp, 0, rlen);
+                        len -= rlen;
+                    }
+                }
+                else*/
+                {
+                    while (true)
+                    {
+                        int rlen = istr.read(tmp);
+                        if (rlen <= 0)
+                            break;
+                        bos.write(tmp, 0, rlen);
+                    }
+                }
+                data = bos.toByteArray();
+                data = Base64.encodeBase64Chunked(data);
+                byte[] _data;
+                if (range != null)
+                {
+                     int dlen = range.len;
+                     if (dlen >= data.length)
+                         dlen = data.length - 2;
+
+                    _data = new byte[dlen];
+                    System.arraycopy(data, range.start, _data, 0, _data.length);
+                }
+                else
+                {
+                    // CUT OFF TRAILING BLANKS
+                    _data = new byte[data.length - 2];
+                    System.arraycopy(data, 0, _data, 0, _data.length);
+                }
+                
+                data = _data;
+            }
+            else
+            {
+                String charset = msg.get_charset(bp);
+                if (charset == null)
+                    charset = "UTF-8";
+
+                if (charset.compareToIgnoreCase("UTF-8") == 0)
+                    data = rfc_str( c.toString(), true );
+                else
+                {
+                    String txt = c.toString();
+                    txt = new String( txt.getBytes(charset) );
+                    data = rfc_str( c.toString(), false );
+                }
+            }
+            String return_tag = orig_tag.toUpperCase();
+            return_tag = return_tag.replace(".PEEK[", "[");
+            
+
+            is.rawwrite("" + return_tag + " {" + data.length + "}\r\n");
             is.rawwrite(data, 0, data.length);
         }
     }
@@ -419,10 +553,12 @@ public class Fetch extends ImapCmd
                         is.rawwrite("UID " + uid);
                         had_uid = true;
                     }
-                    else if (tag.startsWith("body.peek[") && !tag.equals("body.peek[]"))
+                    else if (tag.startsWith("body.peek[") && !tag.equals("body.peek[]") ||
+                            tag.startsWith("body[") && !tag.equals("body[]") )
                     {
 
-                        String peek_content = tag.substring(10);
+                        String peek_content = tag.substring(tag.indexOf('[') + 1);
+
                         if (peek_content.startsWith("header.fields"))
                         {
                             if (needs_space)
@@ -460,18 +596,7 @@ public class Fetch extends ImapCmd
                             }
                             needs_space = true;
 
-                            int end_idx = peek_content.lastIndexOf(']');
-                            peek_content = peek_content.substring(0, end_idx);
-
-                            Part bp = msg.get_body_part(peek_content);
-                            if (bp != null)
-                            {
-                                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                                bp.writeTo(bos);
-                                byte[] data = bos.toByteArray();
-                                is.rawwrite("" + tag.toUpperCase() + " {" + data.length + "}\r\n");
-                                is.rawwrite(data, 0, data.length);
-                            }
+                            write_body_part( is, msg, orig_tag, tag );
                         }
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
@@ -493,7 +618,8 @@ public class Fetch extends ImapCmd
                         msg.getRFC822body(byas);
                         byte[] mdata = byas.toByteArray();
                         tsize = mdata.length;*/
-                        is.rawwrite("" + tag.toUpperCase() + " {" + tsize + "}\r\n");
+                        String return_tag = tag.toUpperCase().replace(".PEEK[", "[");
+                        is.rawwrite("" + return_tag + " {" + tsize + "}\r\n");
 
                         LengthOutputStream los = new LengthOutputStream(tsize, is.s.getOutputStream());
                         msg.getRFC822body( los );

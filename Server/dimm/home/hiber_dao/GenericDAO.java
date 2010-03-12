@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package dimm.home.DAO;
+package dimm.home.hiber_dao;
 
 
 /**

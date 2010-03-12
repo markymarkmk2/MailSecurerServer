@@ -53,6 +53,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
@@ -66,6 +67,7 @@ import javax.mail.internet.MimePart;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.PerFieldAnalyzerWrapper;
+import org.apache.lucene.analysis.StopAnalyzer;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -74,13 +76,6 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.MatchAllDocsQuery;
-import org.apache.lucene.search.ParallelMultiSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Searchable;
-import org.apache.lucene.search.TermsFilter;
-import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 
 class ZipEntryInputStream extends InputStream
@@ -148,6 +143,8 @@ class MyMimetype
     }
 }
 
+
+
 /**
  *
  * @author mw
@@ -169,9 +166,7 @@ public class IndexManager extends WorkerParent
     ArrayList<String> allowed_headers;
     ArrayList<String> allowed_domains;
     GroupEntry acct_exclude_list;
-    ArrayList<IndexSearcher> hash_searcher_list;
-    private boolean is_started;
-
+    
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
         super("Indexmanager");
@@ -268,32 +263,42 @@ public class IndexManager extends WorkerParent
     }
 
     // OPEN AND IF NOT EXISTS, CREATE, SO OPEN ALWAYS SUCCEEDS
-    public IndexWriter open_index( String path, String language ) throws IOException
+    public IndexWriter open_index( String path, String language, boolean can_create ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
         Analyzer analyzer = create_analyzer(language, true);
 
         // CHECK IF INDEX EXISTS
-        boolean create = !IndexReader.indexExists(path);
-
+        boolean create = false;
+        if (can_create)
+        {
+            create = !IndexReader.indexExists(path);
+            if (create)
+            {
+                Main.err_log_warn(Main.Txt("Creating_new_index_in") + " " + path);
+            }
+        }
+        
         if (IndexWriter.isLocked(dir))
         {
-            Main.err_log("/*Unlocking already locked IndexWriter*/");
+            Main.err_log_warn(Main.Txt("Unlocking_already_locked_IndexWriter"));
             IndexWriter.unlock(dir);
         }
 
         IndexWriter writer = new IndexWriter(dir, analyzer, create, new IndexWriter.MaxFieldLength(100000));
         writer.setRAMBufferSizeMB(32);
         writer.setMergeFactor(16);
-        writer.setMaxMergeDocs(32);
+
+        //
+        //writer.setMaxMergeDocs(32);  // THIS KEEPS AMOUNT OF FILES HIGH ???!?
         //writer.setMaxFieldLength(100000);
         //writer.setUseCompoundFile(false);
 
         return writer;
     }
 
-    public IndexReader open_read_index( String path ) throws IOException
+    public static IndexReader open_read_index( String path ) throws IOException
     {
         FSDirectory dir = FSDirectory.getDirectory(path);
 
@@ -1420,7 +1425,9 @@ public class IndexManager extends WorkerParent
 
         setStatusTxt(Main.Txt("Updating_index"));
 
-        while (!isShutdown())
+        int max_jobs_in_a_row = 1000;
+
+        while (!isShutdown() && max_jobs_in_a_row > 0)
         {
             IndexJobEntry ije = null;
             synchronized (index_job_list)
@@ -1438,6 +1445,7 @@ public class IndexManager extends WorkerParent
 
             // NOT LOCKED, OTHERS CAN ADD ENTRIES TO LIST
             ije.handle_index();
+            max_jobs_in_a_row--;
         }
 
         clrStatusTxt(Main.Txt("Updating_index"));
@@ -1624,62 +1632,8 @@ public class IndexManager extends WorkerParent
         return ret;
     }
 
-    public boolean handle_existing_mail_in_vault( DiskVault dv, RFCGenericMail msg )
-    {
 
-        // return false;
-        boolean ret = false;
-        String hash = new String(Base64.encodeBase64(msg.get_hash()));
-
-
-        // BUILD SEARCHABLE ARRAY
-        Searchable[] search_arr = new Searchable[hash_searcher_list.size()];
-        for (int i = 0; i < hash_searcher_list.size(); i++)
-        {
-            search_arr[i] = hash_searcher_list.get(i);
-        }
-
-        // SORT BY DATE REVERSE
-        // Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
-
-        try
-        {
-            // PARALLEL SEARCH
-            ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
-
-            Term term = new Term(CS_Constants.FLD_HASH, hash);
-            Query qry = new MatchAllDocsQuery();
-
-            TermsFilter filter = new TermsFilter();
-            filter.addTerm(term);
-            // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE ONE RESULT
-            TopDocs tdocs = pms.search(qry, filter, 1, null);
-
-            if (tdocs.totalHits > 0)
-            {
-                // FOUND SAME MAIL
-                Document doc = pms.doc(tdocs.scoreDocs[0].doc);
-                int doc_ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
-                int doc_da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
-                String doc_hash = doc.get(CS_Constants.FLD_HASH);
-
-                DiskSpaceHandler dsh = dv.get_dsh(doc_ds_id);
-
-                if (dsh.getDs().getId() == doc_ds_id)
-                {
-                    // UPDATE IF NECESSARY WITH  NEW BCC
-                    ret = handle_bcc_and_update(dsh, doc, msg);
-                }
-            }
-        }
-        catch (Exception iOException)
-        {
-        }
-
-        return ret;
-    }
-
-    void update_document( Document doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException, VaultException
+    static void update_document( Document doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException, VaultException, IndexException
     {
         IndexWriter writer = index_dsh.get_write_index();
         if (writer == null)
@@ -1687,17 +1641,16 @@ public class IndexManager extends WorkerParent
             writer = index_dsh.open_write_index();
         }
 
-
         Term term = new Term(CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME));
+        
         // SHOVE IT RIGHT OUT!!!
-
         synchronized (index_dsh.idx_lock)
         {
             writer.updateDocument(term, doc);
         }
     }
 
-    boolean handle_bcc_and_update( DiskSpaceHandler index_dsh, Document doc, RFCGenericMail msg )
+    public static boolean handle_bcc_and_update( DiskSpaceHandler index_dsh, Document doc, RFCGenericMail msg )
     {
         boolean needs_updated_index = false;
         // TODO: DO WE REALLY NEED THE SECOND ENTRY? THE HASH SAYS THE MESSAGE IS IDENTICAL, SO WHY BOTHER?
@@ -1721,7 +1674,6 @@ public class IndexManager extends WorkerParent
             }
         }
 
-        String uuid = doc.get(CS_Constants.FLD_UID_NAME);
         int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
         int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
 
@@ -1750,31 +1702,9 @@ public class IndexManager extends WorkerParent
         return false;
     }
 
-    public void close_hash_searcher_list()
+
+    public void create_hash_searcher_list() throws VaultException, IOException, IndexException
     {
-        for (int i = 0; i < hash_searcher_list.size(); i++)
-        {
-            IndexSearcher s = hash_searcher_list.get(i);
-            try
-            {
-                s.getIndexReader().close();
-                s.close();
-            }
-            catch (IOException iOException)
-            {
-            }
-        }
-
-    }
-
-    public void create_hash_searcher_list()
-    {
-
-        // GO THROUGH ALL DISKSPACES OF THIS VAULT
-        ArrayList<DiskSpaceHandler> dsh_list = new ArrayList<DiskSpaceHandler>();
-
-        // TODO: MAYBE WE SHOULD SPEED THIS UP WITH LOCAL DB?
-
         ArrayList<Vault> vault_array = m_ctx.getVaultArray();
         for (int i = 0; i < vault_array.size(); i++)
         {
@@ -1789,35 +1719,10 @@ public class IndexManager extends WorkerParent
                     {
                         continue;
                     }
-
-                    if (dsh.is_index())
-                    {
-                        dsh_list.add(dsh);
-                    }
+                    dsh.create_hash_checker();
                 }
             }
         }
-
-        ArrayList<IndexSearcher> searcher_list = new ArrayList<IndexSearcher>();
-
-        // FIRST PASS, OPEN INDEX READERS
-        for (int i = 0; i < dsh_list.size(); i++)
-        {
-            DiskSpaceHandler dsh = dsh_list.get(i);
-            IndexReader reader = null;
-            try
-            {
-                reader = dsh.create_read_index();
-                IndexSearcher searcher = new IndexSearcher(reader);
-                searcher_list.add(searcher);
-            }
-            catch (Exception vaultException)
-            {
-                LogManager.err_log("Cannot add index to hash search list " + dsh.getDs().getPath(), vaultException);
-            }
-        }
-
-        hash_searcher_list = searcher_list;
     }
 
     private void delete_mail_before_index( MandantContext m_ctx, String unique_id, int da_id, int ds_id )
@@ -1833,6 +1738,93 @@ public class IndexManager extends WorkerParent
         {
             LogManager.err_log("Cannot delete mail " + unique_id + ": ", vaultException);
         }
+    }
+
+
+/**
+ * Creates an index called 'index' in a temporary directory.
+ * The number of documents to add to this index, the mergeFactor and
+ * the maxMergeDocs must be specified on the command line
+ * in that order - this class expects to be called correctly.
+ *
+ * Note: before running this for the first time, manually create the
+ * directory called 'index' in your temporary directory.
+ */
+    public static void main(String[] args) throws Exception
+    {
+        int docsInIndex  = Integer.parseInt(args[0]);
+
+        // create an index called 'index' in a temporary directory
+        String indexDir = "m:/tmp/lucenetest";
+
+        Analyzer    analyzer = new StopAnalyzer();
+        IndexWriter writer   = new IndexWriter(indexDir, analyzer, true, new IndexWriter.MaxFieldLength(100000) );
+        FSDirectory dir = FSDirectory.getDirectory(indexDir);
+
+        IndexReader reader = IndexReader.open(dir, /*rd_only*/ true);
+
+        // set variables that affect speed of indexing
+        if (args.length > 1)
+            writer.setMergeFactor( Integer.parseInt(args[1]) );
+        if (args.length > 2)
+            writer.setMaxMergeDocs( Integer.parseInt(args[2]) );
+
+        long startTime = System.currentTimeMillis();
+        MessageDigest md = null;
+        md = MessageDigest.getInstance("SHA-256");
+
+        boolean with_idx = true;
+
+        long last_now = System.currentTimeMillis();
+        int last_docs = 0;
+        for (int i = 0; i < docsInIndex; i++)
+        {
+            long now = System.currentTimeMillis();
+            String data = "Bibamus, moriendum est e  dkfjlkfd  slkdjf lskd rotke erojt e öotrj liejrtopiejrot erijtoerti operutoieurto iueroi t" + i;
+            Document doc = new Document();
+            String str = new String( Base64.encodeBase64(md.digest(data.getBytes())));
+            doc.add(new Field("fieldname1", str + now, Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("fieldname2", str + now + 1, Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("fieldname3", str + now + 2, Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("fieldname4", str + now + 3, Field.Store.YES, Field.Index.ANALYZED));
+            doc.add(new Field("fieldname5", str + now + 4, Field.Store.YES, Field.Index.ANALYZED));
+            if (with_idx)
+            {
+                 IndexReader newReader = reader.reopen();
+                 if (newReader != reader)
+                 {
+                        System.out.println("Reopen detected");
+                        reader.close();
+                 }
+                 reader = newReader;
+
+                int docs = reader.numDocs();
+                if (docs != last_docs)
+                {
+                    System.out.println("Docs in index: " +  docs + "/" + i);
+                    last_docs = docs;
+                }
+            }
+            writer.addDocument(doc);
+            
+            if (i % 1000 == 0)
+            {
+                long diff = now - last_now;
+                if (diff == 0)
+                    diff = 1;
+                last_now = now;
+                System.out.println("Speed: " + Double.toString(1000.0*1000.0 / diff)+ " 1/s");
+                writer.commit();
+            }
+        }
+
+        reader.close();
+
+        long closeTime = System.currentTimeMillis();
+        writer.close();
+        long stopTime = System.currentTimeMillis();
+        System.out.println("Close time: " + (stopTime - closeTime) + " ms");
+        System.out.println("Total time: " + (stopTime - startTime) + " ms");
     }
 }
 

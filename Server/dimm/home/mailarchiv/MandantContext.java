@@ -364,8 +364,15 @@ public class MandantContext
         build_vault_list();
 
         // BUILD CACHE SEARCHERLIST
-        idx_util.create_hash_searcher_list();
-
+        try
+        {
+            idx_util.create_hash_searcher_list();
+        }
+        catch (Exception ex)
+        {
+            LogManager.err_log_fatal(Main.Txt("Cannot_create_has_searcher_list") + " " + getMandant().getName(), ex);
+        }
+        
 
         Set<Milter> milters = getMandant().getMilters();
         Iterator<Milter> milter_it = milters.iterator();
@@ -1132,5 +1139,34 @@ public class MandantContext
         }
         return null;
     }
+
+    /*
+     * So geht rollen 4 augen
+     *
+     * Erzeugen (Haken setzen)darf nur Admin plus DSB
+     *
+     *  Alle mitglieder der Rolle 4 augen dürfen das Kreuz wieder mit Admin oder DSB ebtfernen
+     *
+     * 4-Augen Prinzip muss in allen CLients sichtbar sein (Plugins und Client)
+     *
+     * Alle Änderungen bei Rolle dürfen nur Admin  + DSB durchführen
+     * *
+     * Mail von 4-Augen Mitgliedern darf nicht vom Admin gelesen wedren (auch Subject nicht) Ersatztext (z.B. not for your Eyes)
+     *  Beim Öffnen, Verschicken und Exportieren geht Authehtifitierung 4-Augen auf -> DSB oder user selbst)
+     *
+     * */
+
+    /* Auditor wie admin, nur lesen (auch logs, aber keine 4-Eyes Mails)*/
+
+    /* Audit-Log (sichtbar für Admin und Auditor)
+
+     * Start Stop
+     * Zyklische Standsmeldung
+     * Parametrierung
+     * Alle Clientcalls IP, Uhrzeit, Benutzer, Aktion,
+     * - Exportieren (ist auf Client, muss gemeldet werden)
+     *
+
+     */
 
 }

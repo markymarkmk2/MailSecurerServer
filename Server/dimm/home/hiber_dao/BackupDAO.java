@@ -3,9 +3,9 @@
  * and open the template in the editor.
  */
 
-package dimm.home.dao;
+package dimm.home.hiber_dao;
 
-import dimm.home.DAO.GenericDAO;
+import dimm.home.hiber_dao.GenericDAO;
 import home.shared.hibernate.Backup;
 
 

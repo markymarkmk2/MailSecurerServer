@@ -534,15 +534,57 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         String delim = "[/;\"=\n\r\t ]";
         StringTokenizer st = new StringTokenizer(attr, delim);
         String name = st.nextToken();
-        String eq = st.nextToken("\"\n\r");
-        String val = st.nextToken("\"\n\r");
+        String eq = null;
+        if (st.hasMoreTokens())
+            eq = st.nextToken("\"\n\r");
+        String val = null;
+        if (st.hasMoreTokens())
+            st.nextToken("\"\n\r");
 
-        if (name != null && val != null)
+        if (name != null)
         {
             add_attr( sb, name );
+        }
+        if (val == null && eq != null)
+            val = eq.substring(1);
+        if (val != null)
+        {
             add_attr( sb, val );
         }
         return sb.toString();
+    }
+    public String get_charset( Part p ) throws MessagingException
+    {
+        if (p == null)
+            return null;
+        
+        String mt = p.getContentType();
+        int atr_idx = mt.indexOf(';');
+        if (atr_idx == -1)
+            atr_idx = mt.indexOf('\n');
+        if (atr_idx == -1)
+            return "";
+
+
+        String attr = mt.substring(atr_idx) + 1;
+
+        String delim = "[/;\"=\n\r\t ]";
+        StringTokenizer st = new StringTokenizer(attr, delim);
+        String name = st.nextToken();
+        try
+        {
+            if (name.compareToIgnoreCase("charset") == 0)
+            {
+                String eq = st.nextToken("\"\n\r");
+                String val = st.nextToken("\"\n\r");
+                return javax.mail.internet.MimeUtility.javaCharset(val);
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("Invalid Charset: " + mt);
+        }
+        return "UTF-8";
     }
 
     /*
@@ -604,7 +646,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
                 if (mp.getCount() == 1)
                 {
                     Part p = mp.getBodyPart(0);
-                    get_part_struct( sb, p.getContent() );
+                    get_part_struct( sb, p );
                 }
                 for (int i = 0; i < mp.getCount(); i++)
                 {
@@ -628,8 +670,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
 
                 Multipart mp = (Multipart) p.getContent();
                 get_part_struct( sb, mp );
-
-                
+               
                 add_attr( sb, get_content_subtype(p) );
                 
                 String h_entry = get_content_attributes(p);

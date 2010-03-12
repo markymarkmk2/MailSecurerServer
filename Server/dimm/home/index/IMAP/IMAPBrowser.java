@@ -19,6 +19,18 @@ import java.util.ArrayList;
 
 
 
+class MailFolderCache
+{
+    ArrayList<MailFolder> browse_mail_folders;
+    String user;
+
+    public MailFolderCache(String user )
+    {
+        browse_mail_folders = new ArrayList<MailFolder>();
+        this.user = user;
+    }
+
+}
 /**
  *
  * @author mw
@@ -30,15 +42,10 @@ public class IMAPBrowser extends WorkerParentChild
     MandantContext m_ctx;
     String host;
     int port;
-//    final ArrayList<SKImapServer> srv_list;
     final ArrayList<MWImapServer> srv_list;
+    ArrayList<MailFolderCache> folder_cache;
 
-/*
-    static int get_folder_validity( SKMailFolder fld )
-    {
-        return fld.uid_validity;
-    }
-*/
+
     public String getHost()
     {
         return host;
@@ -53,29 +60,40 @@ public class IMAPBrowser extends WorkerParentChild
     {
         return port;
     }
+ 
+/*
+ *
 
+
+ * */
     public void set_search_results( SearchCall sc, String user, String pwd )
     {
-        log_debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
-        for (int i = 0; i < srv_list.size(); i++)
+        synchronized(srv_list)
         {
-            MWImapServer mWImapServer = srv_list.get(i);
-            if (user.compareTo( mWImapServer.get_konto().get_username()) == 0 &&
-                pwd.compareTo( mWImapServer.get_konto().get_pwd()) == 0)
+            log_debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
+            for (int i = 0; i < srv_list.size(); i++)
             {
-                try
-                {
-                    if (mWImapServer.get_folder() == null)
-                        continue;
+                MWImapServer mWImapServer = srv_list.get(i);
+                if (mWImapServer.get_konto() == null)
+                    continue;
 
-                    if (mWImapServer.get_folder().getKey().startsWith(MailFolder.QRYTOKEN))
-                    {
-                        mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
-                        mWImapServer.has_searched = true;
-                    }
-                }
-                catch (IOException iOException)
+                if (user.compareTo( mWImapServer.get_konto().get_username()) == 0 &&
+                    pwd.compareTo( mWImapServer.get_konto().get_pwd()) == 0)
                 {
+                    try
+                    {
+                        if (mWImapServer.get_folder() == null)
+                            continue;
+
+                        if (mWImapServer.get_folder().getKey().startsWith(MailFolder.QRYTOKEN))
+                        {
+                            mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
+                            mWImapServer.has_searched = true;
+                        }
+                    }
+                    catch (IOException iOException)
+                    {
+                    }
                 }
             }
         }
@@ -93,6 +111,7 @@ public class IMAPBrowser extends WorkerParentChild
         sock = new ServerSocket(port, 0, InetAddress.getByName(host));
 
         srv_list = new ArrayList<MWImapServer>();
+        folder_cache = new ArrayList<MailFolderCache>();
     }
 
     void log_debug( String s )
@@ -144,8 +163,11 @@ public class IMAPBrowser extends WorkerParentChild
                 log_debug(Main.Txt("Accepting_new_connection"));
                 Socket cl = sock.accept();
 
-                MWImapServer mwimap = new MWImapServer(m_ctx, cl, true);
-                srv_list.add(mwimap);
+                MWImapServer mwimap = new MWImapServer(this, m_ctx, cl, true);
+                synchronized(srv_list)
+                {
+                    srv_list.add(mwimap);
+                }
                 mwimap.start();
 
                 // WAIT FOR NEXT ACCEPT TO PREVENT DENIAL OF SERVICE
@@ -216,6 +238,40 @@ public class IMAPBrowser extends WorkerParentChild
     public String get_name()
     {
         return "IMAPBrowser";
+    }
+
+    MailFolder get_cached_folder( String user, String key)
+    {
+        for (int i = 0; i < folder_cache.size(); i++)
+        {
+            MailFolderCache entry = folder_cache.get(i);
+            if (!entry.user.equals(user))
+                continue;
+
+            for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+            {
+                MailFolder folder = entry.browse_mail_folders.get(j);
+                if (folder.key.equals(key))
+                    return folder;
+            }
+        }
+        return null;
+    }
+
+    void add_to_folder_cache( MailFolder folder, String user )
+    {
+        for (int i = 0; i < folder_cache.size(); i++)
+        {
+            MailFolderCache entry = folder_cache.get(i);
+            if (!entry.user.equals(user))
+                continue;
+
+            entry.browse_mail_folders.add( folder);
+            return;
+        }
+        MailFolderCache entry = new MailFolderCache( user);
+        entry.browse_mail_folders.add(folder);
+        folder_cache.add(entry);
     }
 
     

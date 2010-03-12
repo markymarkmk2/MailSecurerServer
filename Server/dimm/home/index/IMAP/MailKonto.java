@@ -37,11 +37,13 @@ public class MailKonto
     ArrayList<MailFolder> mail_folders;
     MandantContext m_ctx;
     UserSSOEntry sso_entry;
+    MWImapServer is;
+
     public static final boolean qry_folder = true;
     public static final boolean browse_folder = true;
     public static final boolean day_folder = true;
 
-    public static final boolean test_folder = true;
+    public static final boolean test_folder = false;
 
     boolean can_browse()
     {
@@ -58,8 +60,9 @@ public class MailKonto
         return false;
     }
 
-    public MailKonto(String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list, UserSSOEntry sso_entry)
+    public MailKonto(MWImapServer is, String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list, UserSSOEntry sso_entry)
     {
+        this.is = is;
         this.user = user;
         this.pwd = pwd;
         this.name = user;
@@ -203,6 +206,13 @@ public class MailKonto
         }
         if (can_browse() && key.startsWith(MailFolder.BROWSETOKEN))
         {
+            MailFolder cached_folder = is.get_parent().get_cached_folder(user, key);
+            if (cached_folder != null)
+            {
+                mail_folders.add(cached_folder);
+                return cached_folder;
+            }
+
             String[] arr = key.split("/");
             if (arr.length == 3)
             {
@@ -211,6 +221,7 @@ public class MailKonto
 
                 MailFolder folder = new MailFolder(this, year, month, key);
                 folder.fill();
+                is.get_parent().add_to_folder_cache(folder, user);
                 mail_folders.add(folder);
                 return folder;
             }
@@ -222,6 +233,7 @@ public class MailKonto
 
                 MailFolder folder = new MailFolder(this, year, month, day, key);
                 folder.fill();
+                is.get_parent().add_to_folder_cache(folder, user);
                 mail_folders.add(folder);
                 return folder;
             }

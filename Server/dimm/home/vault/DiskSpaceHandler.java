@@ -5,8 +5,9 @@
 
 package dimm.home.vault;
 
-import dimm.home.DAO.DiskSpaceDAO;
+import dimm.home.hiber_dao.DiskSpaceDAO;
 import dimm.home.index.AsyncIndexWriter;
+import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
@@ -35,12 +36,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Searchable;
 
 
 
@@ -48,8 +53,113 @@ import org.apache.lucene.index.IndexWriter;
  *
  * @author mw
  */
+class DocHashEntry
+{
+    String hash;
+    Document doc;
+    int ds_id;
 
+    public DocHashEntry( String hash, Document doc, int ds_id )
+    {
+        this.hash = hash;
+        this.doc = doc;
+        this.ds_id = ds_id;
+    }
 
+    public String getHash()
+    {
+        return hash;
+    }
+
+    public Document getDoc()
+    {
+        return doc;
+    }
+
+    public int get_ds_id()
+    {
+        return ds_id;
+    }
+
+}
+
+class HashChecker
+{
+    IndexReader reader;
+    IndexSearcher searcher;
+    final HashMap<String,DocHashEntry> map;
+
+    public HashChecker( IndexReader reader )
+    {
+        this.reader = reader;
+        searcher = new IndexSearcher(reader);
+        map = new HashMap<String, DocHashEntry>();
+    }
+
+    public IndexSearcher getSearcher() throws CorruptIndexException, IOException
+    {
+        synchronized( map )
+        {
+            IndexReader new_reader = reader.reopen();
+            if (new_reader != reader)
+            {
+                reader.close();
+                reader = new_reader;
+                searcher.close();
+                searcher = new IndexSearcher(reader);
+                map.clear();
+            }
+        }
+
+        return searcher;
+    }
+
+    public IndexReader getReader()
+    {
+        return reader;
+    }
+    public void close() throws IOException
+    {
+        synchronized( map )
+        {
+            map.clear();
+        }
+        searcher.close();
+        reader.close();
+    }
+    DocHashEntry get_short_term_hash( String hash )
+    {
+        synchronized( map )
+        {
+            return map.get(hash);
+        }
+    }
+
+    void reopen() throws CorruptIndexException, IOException
+    {
+        synchronized( map )
+        {
+            IndexReader new_reader = reader.reopen();
+            if (new_reader != reader)
+            {
+                reader.close();
+                reader = new_reader;
+                searcher.close();
+                searcher = new IndexSearcher(reader);
+            }
+            map.clear();
+        }
+    }
+    void add_entry( Document doc, int ds_id, String hash )
+    {
+        synchronized( map )
+        {
+            DocHashEntry dhe = new DocHashEntry(hash, doc, ds_id);
+            map.put(hash, dhe);
+        }
+    }
+
+}
 public class DiskSpaceHandler
 {
 
@@ -73,6 +183,9 @@ public class DiskSpaceHandler
     private static final long MIN_FREE_SPACE = 100000000l;  // 100 MB
     private static final long LOW_FREE_SPACE = 10000000000l; // 10GB
 
+    public static int LUC_OPTIMIZE_FILES = 10; // OPTIMIZE DOWN TO 10 FILES
+
+    HashChecker hash_checker;
 
 
     public DiskSpaceHandler( MandantContext _m_ctx, DiskSpace _ds )
@@ -89,6 +202,11 @@ public class DiskSpaceHandler
     public AsyncIndexWriter get_async_index_writer()
     {
         return async_index_writer;
+    }
+
+    HashChecker get_hash_checker()
+    {
+        return hash_checker;
     }
 
     public boolean is_open()
@@ -134,22 +252,23 @@ public class DiskSpaceHandler
         return ((f & flag) == flag);
     }
 
-    public IndexReader create_read_index() throws VaultException
+    public IndexReader create_read_index() throws VaultException, IndexException
     {
 
-        if (!is_open())
-        {
-            if (!exists_info() && (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0))
-            {
-                create();
-            }
-            open();
-        }
         try
         {
+            if (!is_open())
+            {
+                if (!exists_info() && (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0))
+                {
+                    create();
+                }
+                open();
+            }
+            
             if (is_index())
             {
-                return m_ctx.get_index_manager().open_read_index(getIndexPath());              
+                return IndexManager.open_read_index(getIndexPath());
             }
             else
                 throw new VaultException( ds, "Cannot open read index on non-index ds: " + ds.getPath());
@@ -165,14 +284,14 @@ public class DiskSpaceHandler
     {
         return (int)m_ctx.getPrefs().get_long_prop( MandantPreferences.INDEX_THREADS, MandantPreferences.DFTL_INDEX_THREADS );
     }
-    public IndexWriter create_write_index() throws VaultException
+    public IndexWriter create_write_index() throws VaultException, IndexException
     {
-        if (!is_open())
-        {
-            open();
-        }
         try
         {
+            if (!is_open())
+            {
+                open();
+            }
             if (is_index())
             {
                 synchronized( idx_lock )
@@ -199,14 +318,14 @@ public class DiskSpaceHandler
         }        
     }
   
-    public IndexWriter open_write_index() throws VaultException
+    public IndexWriter open_write_index() throws VaultException, IndexException
     {
-        if (!is_open())
-        {
-            open();
-        }
         try
         {
+            if (!is_open())
+            {
+                open();
+            }
             if (is_index())
             {
                 synchronized( idx_lock )
@@ -214,7 +333,10 @@ public class DiskSpaceHandler
                     if (write_index != null)
                         return write_index;
 
-                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage());
+                    // WE ALLOW INDEX CREATION ONLY IF WE HAVE NO INFO OBJECT
+                    boolean  can_create_index = !exists_info();
+
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), can_create_index);
                     if (async_index_writer != null)
                     {
                         async_index_writer.close();
@@ -239,11 +361,22 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
-                    async_index_writer.close();
-                    write_index.commit();
-                    write_index.close();
-                    write_index = null;
-                    async_index_writer = null;
+                    if (async_index_writer != null)
+                    {
+                        async_index_writer.close();
+                        async_index_writer = null;
+                    }
+                    if (write_index != null)
+                    {
+                        write_index.commit();
+                        write_index.close();
+                        write_index = null;
+                    }
+                    if (hash_checker != null)
+                    {
+                        hash_checker.close();
+                        hash_checker = null;
+                    }
                 }
             }
         }
@@ -255,7 +388,7 @@ public class DiskSpaceHandler
 
 
 
-    public void open() throws VaultException
+    public void open() throws VaultException, IndexException, CorruptIndexException, IOException
     {
         if (is_open())
         {
@@ -318,7 +451,7 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
-                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage());
+                    write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), /*can_create*/ true);
                     write_index.commit();
                     write_index.close();
                     write_index = null;
@@ -460,11 +593,14 @@ public class DiskSpaceHandler
             throw new VaultException( ds, "Cannot read info file: " + ex.getMessage());
         }
     }
-    public void close() throws VaultException
+    public void close() throws VaultException, IndexException, CorruptIndexException, IOException
     {
+        flush();
         info_touched = true;
         update_info();
 
+        close_write_index();
+        
         _open = false;
     }
 
@@ -1007,8 +1143,12 @@ public class DiskSpaceHandler
         return len;
     }
 
-
     void flush() throws IndexException, VaultException
+    {
+        flush( false);
+    }
+
+    void flush(boolean and_optimize) throws IndexException, VaultException
     {
         if (!is_open())
             return;
@@ -1016,7 +1156,7 @@ public class DiskSpaceHandler
         if (is_index() && write_index != null)
         {
             boolean optimize = false;
-            if (System.currentTimeMillis() > next_flush_optimize_ts)
+            if (System.currentTimeMillis() > next_flush_optimize_ts || and_optimize)
             {
                 next_flush_optimize_ts = System.currentTimeMillis() + FLUSH_OPTIMIZE_CYCLE_MS;
                 optimize = true;
@@ -1029,8 +1169,12 @@ public class DiskSpaceHandler
                     if (optimize)
                     {
                         LogManager.log(Level.INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
-                        write_index.optimize();
+                        write_index.optimize(LUC_OPTIMIZE_FILES);
                     }
+                }
+                if (hash_checker != null)
+                {
+                    hash_checker.reopen();
                 }
 
                 String path = getIndexPath();
@@ -1199,6 +1343,45 @@ public class DiskSpaceHandler
             return false;
 
         return true;
+    }
+
+    public void create_hash_checker() throws VaultException, IOException, IndexException
+    {
+        if (hash_checker != null)
+        {
+            hash_checker.close();
+        }
+            
+        IndexReader reader = create_read_index();
+        hash_checker = new HashChecker(reader);
+    }
+    public void close_hash_checker() throws VaultException, IOException
+    {
+        if (hash_checker != null)
+        {
+            hash_checker.close();
+            hash_checker = null;
+        }
+    }
+
+    public void add_hash_entry( String txt_hash, Document doc, int ds_id )
+    {
+        if (hash_checker != null)
+            hash_checker.add_entry(doc, ds_id, txt_hash);
+    }
+
+    DocHashEntry has_hash_entry( String hash )
+    {
+        if (hash_checker != null)
+            return hash_checker.get_short_term_hash(hash);
+        return null;
+    }
+
+    Searchable get_searcher() throws CorruptIndexException, IOException
+    {
+        if (hash_checker != null)
+            return hash_checker.getSearcher();
+        return null;
     }
 
 }

@@ -5,6 +5,7 @@
 package dimm.home.vault;
 
 import dimm.home.index.IndexManager;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
@@ -186,7 +187,7 @@ public class ReIndexContext
             {
                 try
                 {
-                    context.get_index_manager().close_hash_searcher_list();
+                    
 
                     prepare_reindex();
                     reindex();
@@ -197,7 +198,7 @@ public class ReIndexContext
                 }
                 finally
                 {
-                    context.get_index_manager().create_hash_searcher_list();
+                    
 
                     busy = false;
                 }
@@ -233,7 +234,7 @@ public class ReIndexContext
         reindex_list.add(re);
     }
 
-    void reindex() throws VaultException
+    void reindex() throws VaultException, IndexException, IOException
     {
         for (int i = 0; i < reindex_list.size() && !abort; i++)
         {
@@ -246,7 +247,7 @@ public class ReIndexContext
         }
     }
 
-    void reindex( ReIndexDSHEntry reIndexDSHEntry ) throws VaultException
+    void reindex( ReIndexDSHEntry reIndexDSHEntry ) throws VaultException, IndexException, IOException
     {
         DiskSpaceHandler data_dsh = reIndexDSHEntry.getData_dsh();
         DiskSpaceHandler index_dsh = reIndexDSHEntry.getIndex_dsh();
@@ -254,7 +255,7 @@ public class ReIndexContext
         data_dsh.lock_for_rebuild();
         if (index_dsh != data_dsh)
         {
-            data_dsh.lock_for_rebuild();
+            index_dsh.lock_for_rebuild();
         }
         try
         {
@@ -262,7 +263,6 @@ public class ReIndexContext
             if (data_dsh.is_open())
             {
                 data_dsh.close();
-
             }
             if (index_dsh.is_open())
             {
@@ -306,7 +306,7 @@ public class ReIndexContext
                     data_dsh.unlock_for_rebuild();
                     if (index_dsh != data_dsh)
                     {
-                        data_dsh.unlock_for_rebuild();
+                        index_dsh.unlock_for_rebuild();
                     }
                     while (pause && !abort)
                     {
@@ -315,7 +315,7 @@ public class ReIndexContext
                     data_dsh.lock_for_rebuild();
                     if (index_dsh != data_dsh)
                     {
-                        data_dsh.lock_for_rebuild();
+                        index_dsh.lock_for_rebuild();
                     }
                 }
 
@@ -381,20 +381,30 @@ public class ReIndexContext
             set_status(Main.Txt("Optimizing_index"));
             try
             {
-                data_dsh.get_write_index().optimize();
+                // 99 %
+                synchronized (stat_sb)
+                {
+                    reIndexDSHEntry.setAct_size((long)(reIndexDSHEntry.getTotal_size() * 0.99));
+                }
+
+                data_dsh.flush(/*optimize*/ true);
+
                 // 100 %
                 synchronized (stat_sb)
                 {
                     reIndexDSHEntry.setAct_size(reIndexDSHEntry.getTotal_size());
                 }
             }
-            catch (IOException iOException)
+            catch (IndexException iOException)
             {
                 set_status(Main.Txt("Index_is_corrupted") + " " + iOException.getMessage());
             }
 
             set_status(Main.Txt("Finished_reindex"));
             this.context.reinit_importbuffer();
+
+
+            index_dsh.create_hash_checker();
         }
         /*catch (IndexException indexException)
         {
@@ -411,7 +421,7 @@ public class ReIndexContext
             data_dsh.unlock_for_rebuild();
             if (index_dsh != data_dsh)
             {
-                data_dsh.unlock_for_rebuild();
+                index_dsh.unlock_for_rebuild();
             }
         }
 

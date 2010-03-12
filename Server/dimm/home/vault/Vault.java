@@ -27,4 +27,6 @@ public interface Vault
     public String get_name();
 
     public boolean has_sufficient_space();
+
+    public boolean is_in_rebuild();
 }

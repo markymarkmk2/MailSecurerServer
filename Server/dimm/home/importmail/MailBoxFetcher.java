@@ -286,11 +286,19 @@ public class MailBoxFetcher extends WorkerParentChild
         long da_id = imfetcher.getDiskArchive().getId();
         Vault vault = m_ctx.get_vault_by_da_id(da_id);
 
+
         while (!do_finish)
         {
             if (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
             {
                 status.set_status(StatusEntry.ERROR, Main.Txt("Not_enough_space_in_archive_to_process") );
+
+                sleep_seconds(IMAP_IDLE_PERIOD);
+                continue;
+            }
+            if (vault.is_in_rebuild())
+            {
+                status.set_status(StatusEntry.SLEEPING, Main.Txt("Rebuild_is_pending") );
 
                 sleep_seconds(IMAP_IDLE_PERIOD);
                 continue;

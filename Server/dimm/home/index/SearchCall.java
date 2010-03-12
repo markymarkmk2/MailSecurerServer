@@ -9,6 +9,7 @@ import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.SMTPAuth;
 import dimm.home.auth.SMTPUserContext;
 import dimm.home.mailarchiv.Exceptions.AuthException;
+import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
@@ -731,6 +732,10 @@ public class SearchCall
             {
                 LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
             }
+            catch (IndexException exc)
+            {
+                LogManager.err_log("Cannot read index " + dsh.getDs().getPath(), exc);
+            }
         }
 
         // BUILD SEARCHABLE ARRAY
@@ -740,8 +745,6 @@ public class SearchCall
             search_arr[i] = searcher_list.get(i);
         }
 
-        // SORT BY DATE REVERSE
-//        Sort sort = new Sort(CS_Constants.FLD_TM, /*rev*/ true);
         
         HexLongComparator hlc = new HexLongComparator();
         Sort sort = new Sort(new SortField(CS_Constants.FLD_DATE, hlc));
@@ -905,6 +908,10 @@ public class SearchCall
                         catch (VaultException vaultException)
                         {
                             LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
+                        }
+                        catch (IndexException exc)
+                        {
+                            LogManager.err_log("Cannot read index " + dsh.getDs().getPath(), exc);
                         }
                     }
                 }

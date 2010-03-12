@@ -12,6 +12,7 @@ import dimm.home.importmail.MultipleMailImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.vault.Vault;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import home.shared.mail.RFCFileMail;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import javax.mail.Message;
 import javax.swing.Timer;
+
 
 class MBoxImporterEntry
 {
@@ -45,8 +47,13 @@ class MBoxImporterEntry
         status = "";
         err = 0;
     }
-}
 
+    boolean is_in_rebuild()
+    {
+        Vault v = Main.get_control().get_m_context(mandant).get_vault_by_da_id(da.getId());
+        return v.is_in_rebuild();
+    }
+}
 /**
  *
  * @author Administrator
@@ -124,7 +131,14 @@ public class MBoxImportServer extends WorkerParent
 
                 if (!import_list.isEmpty())
                 {
-                    mbie = import_list.remove(0);
+                    mbie = import_list.get(0);
+                    
+                    // ARE WE BUSY
+                    if (mbie.is_in_rebuild())
+                        break;
+
+                    import_list.remove(mbie);
+
                 }
             }
             // LIST EMPTY ?

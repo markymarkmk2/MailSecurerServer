@@ -200,12 +200,15 @@ public class IndexJobEntry  implements Runnable
             {
                 String txt_hash = new String(Base64.encodeBase64(hash));
                 doc.add(new Field(CS_Constants.FLD_HASH, txt_hash, Field.Store.YES, Field.Index.NOT_ANALYZED));
+
+                index_dsh.add_hash_entry( txt_hash, doc, ds_id );
             }
             return true;
         }
         catch (Exception ex)
         {
             LogManager.log(Level.WARNING, "Error occured while indexing message " + unique_id + ": ", ex);
+            //ex.getStackTrace()[0];
         }
         return false;
     }

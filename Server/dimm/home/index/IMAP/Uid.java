@@ -5,6 +5,8 @@
 
 package dimm.home.index.IMAP;
 
+import java.io.IOException;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 
@@ -112,12 +114,12 @@ public class Uid extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( MWImapServer is, String sid, String parameter ) throws IOException
     {
         return uid( is, sid, parameter );
     }
 
-     private int uid( MWImapServer is, String sid, String par )
+     private int uid( MWImapServer is, String sid, String par ) throws IOException
     {
 
          resetCounter();
@@ -161,6 +163,10 @@ public class Uid extends ImapCmd
                     success = false;
                     break;
                 }
+            }
+            catch (SocketException e)
+            {
+                throw new IOException( e.getMessage());
             }
             catch (Exception iOException)
             {

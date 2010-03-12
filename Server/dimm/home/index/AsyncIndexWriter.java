@@ -17,7 +17,7 @@ import org.apache.lucene.index.CorruptIndexException;
 class WriteRunner implements Runnable
 {
 
-    AsyncIndexWriter aiw;
+    final AsyncIndexWriter aiw;
 
     public WriteRunner( AsyncIndexWriter aiw )
     {
@@ -50,14 +50,17 @@ class WriteRunner implements Runnable
                         IndexJobEntry xije = aiw.index_extract_queue.peek();
                         if (xije != null)
                         {
-                            if (xije.thread != null && !xije.thread.isAlive() || xije.thread.isInterrupted())
+                             Thread thread = xije.thread;
+
+                            if (thread != null && !thread.isAlive() || thread.isInterrupted())
                             {
                                 Thread.sleep(aiw.sleepMilisecondOnEmpty);
-                                if (!xije.thread.isAlive() || xije.thread.isInterrupted())
+                                if (!thread.isAlive() || thread.isInterrupted())
                                 {
                                     LogManager.err_log("Reviving dead extract thread");
-                                    xije.thread = new Thread(xije, "RevivedExtractorRunner");
-                                    xije.thread.start();
+                                    thread = new Thread(xije, "RevivedExtractorRunner");
+                                    xije.thread = thread;
+                                    thread.start();
                                 }
                             }
                         }
@@ -128,17 +131,17 @@ public class AsyncIndexWriter
      */
     public void add_to_write_queue( IndexJobEntry ije ) throws InterruptedException
     {
-        index_write_queue.put(ije);
+            index_write_queue.put(ije);
     }
 
     public void add_to_extract_queue( IndexJobEntry ije ) throws InterruptedException
     {
-        index_extract_queue.put(ije);
+            index_extract_queue.put(ije);
     }
 
     void remove_from_extract_queue( IndexJobEntry ije )
     {
-        index_extract_queue.remove(ije);
+            index_extract_queue.remove(ije);
     }
 
     public void startWriting()
@@ -146,8 +149,6 @@ public class AsyncIndexWriter
         WriteRunner wr = new WriteRunner(this);
         writerThread = new Thread(wr, "WriteRunner");
         writerThread.start();
-
-
     }
 
     /**

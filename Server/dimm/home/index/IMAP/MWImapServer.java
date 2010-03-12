@@ -38,13 +38,15 @@ public class MWImapServer extends Thread
     int con = 0;
     MandantContext m_ctx;
     boolean has_searched = false;
+    IMAPBrowser parent;
 
     static HashMap<String, ImapCmd> cmd_map;
 
-    public MWImapServer( MandantContext m_ctx, Socket s, boolean trace )
+    public MWImapServer( IMAPBrowser parent, MandantContext m_ctx, Socket s, boolean trace )
     {
         super("ImapServer for " + s.getRemoteSocketAddress().toString());
-        
+
+        this.parent = parent;
         this.s = s;
         this.m_ctx = m_ctx;
         this.trace = trace;
@@ -73,6 +75,11 @@ public class MWImapServer extends Thread
     public MailFolder get_folder()
     {
         return mailfolder;
+    }
+
+    public IMAPBrowser get_parent()
+    {
+        return parent;
     }
 
     
@@ -135,7 +142,7 @@ public class MWImapServer extends Thread
         write(res + message);
     }
 
-    private int techno( String line )
+    private int techno( String line ) throws IOException
     {
         line = line.trim();
 
@@ -212,6 +219,36 @@ public class MWImapServer extends Thread
         {
             e.printStackTrace();
         }
+        finally
+        {
+            if (out != null)
+            {
+                out.close();
+                out = null;
+            }
+            if (in != null)
+            {
+                try
+                {
+                    in.close();
+                }
+                catch (IOException iOException)
+                {
+                }
+                in = null;
+            }
+            if (s != null)
+            {
+                try
+                {
+                    s.close();
+                }
+                catch (IOException iOException)
+                {
+                }
+                s = null;
+            }
+        }
     }
 
 
@@ -235,7 +272,8 @@ public class MWImapServer extends Thread
     }
     public void close() throws IOException
     {
-        s.close();
+        if (s != null)
+            s.close();
     }
 
 

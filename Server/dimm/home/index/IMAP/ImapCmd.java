@@ -5,6 +5,7 @@
 
 package dimm.home.index.IMAP;
 
+import java.io.IOException;
 import java.util.Vector;
 
 /**
@@ -37,6 +38,19 @@ public abstract class ImapCmd
     {
         this.cmd = cmd;
     }
+    
+    /*
+
+     * 8.8 UID FETCH 3 (INTERNALDATE UID RFC822.SIZE FLAGS BODY.PEEK[HEADER.FIELDS (date subject from to cc message-id in-reply-to references x-priority x-mail-rss-source-name x-uniform-type-identifier x-universally-unique-identifier x-apple-mail-todo-message-id x-apple-mail-todo-id received-spf x-spam-status x-spam-flag content-type)])
+     * 9.8 UID FETCH 3 (BODYSTRUCTURE BODY.PEEK[HEADER])
+     * 10.8 UID FETCH 3 (BODY.PEEK[2] BODY.PEEK[3] BODY.PEEK[5] BODY.PEEK[1.1] BODY.PEEK[1.2])
+     * 7.8 FETCH 1:3 (FLAGS UID)
+     * 12.8 UID FETCH 3 BODY.PEEK[4]<65536.7048>
+     * 15.8 UID STORE 3 +FLAGS.SILENT (\Seen)
+     *
+     * */
+
+
     static String[] imapsplit( String line )
     {
 
@@ -73,7 +87,8 @@ public abstract class ImapCmd
                 i = line.indexOf(tr);
 
 
-            if (line.startsWith("BODY"))
+            // IF SPACE DELIMITED BODY, THEN WE SEARCH FOR CLOSING BRACKET
+            if (tr != ')' && line.startsWith("BODY"))
             {
                 int klauf = line.indexOf('[');
                 if (klauf > 0 && i > 0 && klauf < i)
@@ -132,5 +147,5 @@ public abstract class ImapCmd
     }
 
 
-    public abstract int action(  MWImapServer is, String sid, String parameter);
+    public abstract int action(  MWImapServer is, String sid, String parameter) throws IOException;
 }

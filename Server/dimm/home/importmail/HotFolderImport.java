@@ -194,7 +194,6 @@ public class HotFolderImport extends WorkerParentChild
             if (!vault.has_sufficient_space())
             {
                 status.set_status(StatusEntry.ERROR, Main.Txt("Not_enough_space_in_archive_to_process") );
-
                 sleep_seconds( HF_SLEEP_SECS );
                 continue;
             }
@@ -203,6 +202,12 @@ public class HotFolderImport extends WorkerParentChild
             {
                 status.set_status(StatusEntry.SLEEPING, Main.Txt("disabled") );
                 sleep_seconds( HF_SLEEP_SECS );
+                continue;
+            }
+            if (vault.is_in_rebuild())
+            {
+                status.set_status(StatusEntry.SLEEPING, Main.Txt("Rebuild_is_pending") );
+                sleep_seconds(HF_SLEEP_SECS);
                 continue;
             }
 

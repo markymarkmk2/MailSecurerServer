@@ -10,7 +10,7 @@
 package dimm.home.mailarchiv.Commands;
 
 
-import dimm.home.dao.BackupDAO;
+import dimm.home.hiber_dao.BackupDAO;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
