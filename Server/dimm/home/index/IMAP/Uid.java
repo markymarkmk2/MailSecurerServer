@@ -123,7 +123,7 @@ public class Uid extends ImapCmd
     {
 
          resetCounter();
-        if (is.konto == null || is.mailfolder == null)
+        if (is.get_konto() == null)
         {
             is.response(sid, false, "UID failed");
             return 1;
@@ -182,14 +182,15 @@ public class Uid extends ImapCmd
     boolean search( MWImapServer is, int min, int max, int offset, String part[] )
     {
         String result = "SEARCH";
-        int messages = is.mailfolder.anzMessages();
+        MailFolder folder = is.get_selected_folder();
+        int messages = folder.anzMessages();
 
         if (part.length >= 3 && part[1].toLowerCase().equals("uid"))
         {
             ArrayList<IRange> range_list = IRange.build_range_list( part[2] );
             for ( int i = 0; i < messages; i++)
             {
-                MailInfo msginfo = is.mailfolder.get_mail_message(i);
+                MailInfo msginfo = folder.get_mail_message(i);
                 int uid = msginfo.getUID();
 
                 boolean is_in_range = false;
@@ -216,23 +217,23 @@ public class Uid extends ImapCmd
             if (result.indexOf(' ') == -1 && messages > 0)
             {
                 // RFC WANTS AT LEAST ONE
-                result += " " +  is.mailfolder.get_mail_message(messages - 1).getUID();
+                result += " " +  folder.get_mail_message(messages - 1).getUID();
             }
 
             is.response( result );
             return true;
         }
 
-        is.mailfolder.search( min, max, offset, part) ;
+        folder.search( min, max, offset, part) ;
 
         
         for ( int i = 0; i < messages; i++)
         {
-            MailInfo msginfo = is.mailfolder.get_mail_message(i);
+            MailInfo msginfo = folder.get_mail_message(i);
             result += " " +  msginfo.getUID();
         }
         is.response( result );
-        is.has_searched = true;
+        is.set_has_searched( true );
         return true;
     }
 

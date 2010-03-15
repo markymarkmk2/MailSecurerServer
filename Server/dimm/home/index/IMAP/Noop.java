@@ -33,25 +33,35 @@ public class Noop extends ImapCmd
 
     static void handle_messages_searched(MWImapServer is)
     {
-        if (is.mailfolder != null && is.has_searched)
-        {
-            is.response(Integer.toString(is.mailfolder.anzMessages()) + " EXISTS");
+        MailFolder folder = is.get_selected_folder();
 
-            for (int m = 0; m < is.mailfolder.lastanzMessages(); m++)
+        if (folder != null && folder.key.equals(MailFolder.QRYTOKEN) && is.has_searched())
+        {
+
+            MailInfo msginfo = null;
+            /*if (folder.lastanzMessages() > 0)
             {
-                MailInfo msginfo = is.mailfolder.get_last_mail_message(m);
-                if (msginfo.getUID() == 42) // SKIP STATUSMAIL
-                    continue;
+                msginfo = folder.get_last_mail_message(folder.lastanzMessages() - 1);
+                is.response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
+            }*/
+            for (int m = 0; m < folder.lastanzMessages(); m++)
+            {
+                msginfo = folder.get_last_mail_message(0);
+                /*if (msginfo.getUID() == 42) // SKIP STATUSMAIL
+                    continue;*/
                 is.response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
             }
-            for (int m = 0; m < is.mailfolder.anzMessages(); m++)
+            is.response( "0 EXISTS");
+
+            for (int m = 0; m < folder.anzMessages(); m++)
             {
-                MailInfo msginfo = is.mailfolder.get_mail_message(m);
-                if (msginfo.getUID() == 42) // SKIP STATUSMAIL
-                    continue;
+                msginfo = folder.get_mail_message(m);
+               /* if (msginfo.getUID() == 42) // SKIP STATUSMAIL
+                    continue;*/
                 is.response(Integer.toString(msginfo.getUID()) + " RECENT");
             }
-            is.has_searched = false;
+            is.response(Integer.toString(folder.anzMessages()) + " EXISTS");
+            is.set_has_searched( false );
         }
     }
 

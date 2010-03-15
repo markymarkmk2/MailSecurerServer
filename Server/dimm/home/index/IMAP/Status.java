@@ -28,7 +28,7 @@ public class Status extends ImapCmd
         int anz;
 
 
-        if (is.konto != null)
+        if (is.get_konto() != null)
         {
             boolean with_uidnext = false;
             boolean with_unseen = false;
@@ -60,7 +60,7 @@ public class Status extends ImapCmd
                     return 0;
                 }
 
-                String dirlist[] = is.konto.getDirlist(".");
+                String dirlist[] = is.get_konto().getDirlist(".");
                 String req[] = pathsplit(part[1]);
                 for (int i = 0; i < dirlist.length; i++)
                 {

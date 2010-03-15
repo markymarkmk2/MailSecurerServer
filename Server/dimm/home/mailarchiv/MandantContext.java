@@ -765,7 +765,6 @@ public class MandantContext
         return false;
 
     }
-
     public boolean authenticate_user( String user, String pwd ) throws AuthException
     {
         boolean auth_ok = false;
@@ -783,7 +782,6 @@ public class MandantContext
                     usc.setLast_auth( System.currentTimeMillis() );
                     return true;
                 }
-                user_sso_list.remove(usc);
             }
         }
         boolean role_found = false;
@@ -861,19 +859,30 @@ public class MandantContext
             {
                 synchronized (user_sso_list)
                 {
-                    // NEUER CACHE ENTRY
-                    user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
-                    UserSSOEntry usc = new UserSSOEntry(user, pwd, role, acct, now, now, user_sso_id);
+                    // WE CAN SHARE AN SSO OVER MULTIPLE CONECTIONS -> IMAP-LIENTS UND USER OFTEN LOGIN DURING REGULAR WORK
+                    UserSSOEntry usc = get_from_sso_cache(user, pwd);
+                    if (usc != null)
+                    {
+                        // STORE ACT RESULTS
+                        usc.setLast_auth(now);
+                        usc.setMail_list(mail_list);
+                    }
+                    else
+                    {
+                        // NEUER CACHE ENTRY
+                        user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
+                        usc = new UserSSOEntry(user, pwd, role, acct, now, now, user_sso_id);
 
-                    // ALTE USERANGABEN RAUS
-                    remove_from_sso_cache(user);
+                        
+                        remove_from_sso_cache(user);
 
-                    // NEUE DAZU
-                    user_sso_list.add(usc);
+                        // NEUE DAZU
+                        user_sso_list.add(usc);
 
-                    // STORE ACT RESULTS
-                    usc.setLast_auth(now);
-                    usc.setMail_list(mail_list);
+                        // STORE ACT RESULTS
+                        usc.setLast_auth(now);
+                        usc.setMail_list(mail_list);
+                    }
                 }
                 break;
             }

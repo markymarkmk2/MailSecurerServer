@@ -24,12 +24,12 @@ public class Lsub extends ImapCmd
 
     static int lsub( MWImapServer is, String sid, String par )
     {
-        if (is.konto != null)
+        if (is.get_konto() != null)
         {
             String part[] = imapsplit(par);
             if (part != null && part.length >= 2)
             {
-                String dirlist[] = is.konto.getDirlist(part[0]);
+                String dirlist[] = is.get_konto().getDirlist(part[0]);
                 for (int i = 0; i < dirlist.length; i++)
                 {
                     boolean filter = true;

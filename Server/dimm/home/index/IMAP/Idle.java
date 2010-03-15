@@ -30,7 +30,7 @@ public class Idle extends ImapCmd
 
     int idle( MWImapServer is, String sid, String parameter )
     {
-        if (is.konto == null)
+        if (is.get_konto() == null)
         {
             is.response(sid, false, "IDLE failed");
             return 1;
@@ -106,7 +106,7 @@ public class Idle extends ImapCmd
             }
             catch (Exception e)
             {
-                is.konto.log(e);
+                is.get_konto().log(e);
                 is.response(sid, false, "IDLE failed");
                 try
                 {

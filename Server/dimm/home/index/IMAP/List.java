@@ -28,7 +28,7 @@ public class List extends ImapCmd
         int anz;
 
 
-        if (is.konto != null)
+        if (is.get_konto() != null)
         {
             String part[] = imapsplit(par);
             if (part != null && part.length >= 2)
@@ -64,7 +64,7 @@ public class List extends ImapCmd
                     return 0;
                 }
 
-                String dirlist[] = is.konto.getDirlist(".");
+                String dirlist[] = is.get_konto().getDirlist(".");
                 String req[] = pathsplit(part[1]);
                 for (int i = 0; i < dirlist.length; i++)
                 {

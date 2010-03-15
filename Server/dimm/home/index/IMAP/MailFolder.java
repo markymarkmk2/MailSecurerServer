@@ -11,7 +11,6 @@ import home.shared.filter.ExprEntry;
 import home.shared.filter.GroupEntry;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
-import home.shared.mail.RFCMimeMail;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -51,8 +50,9 @@ public class MailFolder
     public static final String QRYTOKEN = "Suchen";
     public static final String BROWSETOKEN = "Browsen";
     public static final String TESTTOKEN = "TEST";
+    int last_msg_id = 42;
 
-    //public static int uid = 42;
+    
     public MailFolder(MailKonto konto, /*String file,*/String key)
     {
         this.konto = konto;        
@@ -65,20 +65,8 @@ public class MailFolder
 
         if (key.startsWith(QRYTOKEN))
         {
-  /*          RFCMimeMail mm = new RFCMimeMail();
-            try
-            {
-                mm.create("status@MailSecurer.de", "status@MailSecurer.de", Main.Txt("Anzahl_Treffer:") + " " + 0, "", null);
-            }
-            catch (MessagingException ex)
-            {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-                uid_map_list.add( new MWMailMessage( this, konto, mm, 42, "0000" ) );*/
         }
-      //  int level = cnt_level(file);
-
+  
         if (key.startsWith("INBOX"))
         {
         }
@@ -402,7 +390,6 @@ public class MailFolder
         String arg2 = null;
         int skip = 1;
         GroupEntry ge = new GroupEntry();
-        GroupEntry work_ge = ge;
         boolean next_is_or = false;
         
         boolean next_is_not = false;
@@ -502,10 +489,7 @@ public class MailFolder
                 Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid search token: " + token );
             }
            
-            // RESET FLAGS
-        /*    next_is_or = false;
-   
-            next_is_not = false;*/
+       
         }
         if (!search_uid)
         {
@@ -535,12 +519,13 @@ public class MailFolder
         {
         }
 
-
         return true;                
     }
 
     public void add_new_mail_resultlist( MandantContext m_ctx, SearchCall sc ) throws IOException
-    {        
+    {
+        if (last_uid_map != null)
+            last_uid_map.clear();
         last_uid_map = uid_map_list;
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
@@ -548,25 +533,6 @@ public class MailFolder
         
 
         int results = sc.get_result_cnt();
-
-        RFCMimeMail mm = null;
-        /*try
-        {*/
-           /* StringBuffer sb = new StringBuffer();
-            SearchCall.gather_lucene_qry_text(sb, ge.getChildren(), 0);
-
-            mm = new RFCMimeMail();
-            mm.create("status@MailSecurer.de", "status@MailSecurer.de",
-                    Main.Txt("Anzahl_Treffer:") + " " + results,
-                    Main.Txt("Die_Abfrage_lautete:") + " " + sb.toString(), null);
-            */
-            //uid_map_list.add( new MWMailMessage( this, konto, mm, 42/*uid++*/, "0000" ) );
-       /* }
-        catch (MessagingException messagingException)
-        {
-        }*/
-
-
 
 
         Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Results found: " + results );
@@ -586,21 +552,33 @@ public class MailFolder
                 
                 RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
 
-                MWMailMessage mail = new MWMailMessage( this, konto, rfc, 42 + i, result );
+                MWMailMessage mail = new MWMailMessage( this, konto, rfc, last_msg_id++, result );
 
                 uid_map_list.add( mail );
+
+
             }
             catch (VaultException ex)
             {
                 Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+
+        konto.is.get_parent().update_to_folder_cache(this, konto.user);
+        
         update_uid_validity();
     }
 
     void update_uid_validity()
     {
-        //uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+    }
+
+    void reset()
+    {
+   /*     if (last_uid_map != null)
+            last_uid_map.clear();*/
+        
     }
     
     

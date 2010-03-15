@@ -68,6 +68,7 @@ public class IMAPBrowser extends WorkerParentChild
  * */
     public void set_search_results( SearchCall sc, String user, String pwd )
     {
+        ArrayList<MailFolder> update_list = new ArrayList<MailFolder>();
         synchronized(srv_list)
         {
             log_debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
@@ -82,13 +83,28 @@ public class IMAPBrowser extends WorkerParentChild
                 {
                     try
                     {
-                        if (mWImapServer.get_folder() == null)
-                            continue;
-
-                        if (mWImapServer.get_folder().getKey().startsWith(MailFolder.QRYTOKEN))
+                        // WE SET EACH DIFFERENT FOLDER WITH NEW CONTENTS AND SET FLAG FOR EACH CONNECTION
+                        // FOLDERS ARE SHRED BETWEEN CONNECTIONS
+                        MailFolder folder = mWImapServer.get_selected_folder();
+                        if (folder != null && folder.key.equals( MailFolder.QRYTOKEN))
                         {
-                            mWImapServer.get_folder().add_new_mail_resultlist(m_ctx, sc);
-                            mWImapServer.has_searched = true;
+                            if (!update_list.contains(folder))
+                            {
+                                folder.add_new_mail_resultlist(m_ctx, sc);
+                                update_list.add(folder);
+                            }
+                            mWImapServer.set_has_searched( true );
+                        }
+                        // ADD ONLKY ONE RESULT TO EACH FOLDER
+                        MailFolder qry_folder = get_cached_folder(user, MailFolder.QRYTOKEN);
+                        if (qry_folder != null)
+                        {
+                            if (!update_list.contains(qry_folder))
+                            {
+                                qry_folder.add_new_mail_resultlist(m_ctx, sc);
+                                update_list.add(qry_folder);
+                            }
+                            mWImapServer.set_has_searched( true );                            
                         }
                     }
                     catch (IOException iOException)
@@ -97,6 +113,7 @@ public class IMAPBrowser extends WorkerParentChild
                 }
             }
         }
+        update_list.clear();
     }
 
 
@@ -271,6 +288,37 @@ public class IMAPBrowser extends WorkerParentChild
         }
         MailFolderCache entry = new MailFolderCache( user);
         entry.browse_mail_folders.add(folder);
+        folder_cache.add(entry);
+    }
+
+    void update_to_folder_cache( MailFolder new_folder, String user )
+    {
+        for (int i = 0; i < folder_cache.size(); i++)
+        {
+            MailFolderCache entry = folder_cache.get(i);
+            if (!entry.user.equals(user))
+                continue;
+
+
+            // REPLACE
+            for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+            {
+                MailFolder folder = entry.browse_mail_folders.get(j);
+                if (folder.key.equals(new_folder.key))
+                {
+                    if (folder != new_folder)
+                    {
+                        entry.browse_mail_folders.remove(folder);
+                        entry.browse_mail_folders.add(new_folder);
+                    }
+                    return;
+                }
+            }
+            entry.browse_mail_folders.add( new_folder);
+            return;
+        }
+        MailFolderCache entry = new MailFolderCache( user);
+        entry.browse_mail_folders.add(new_folder);
         folder_cache.add(entry);
     }
 

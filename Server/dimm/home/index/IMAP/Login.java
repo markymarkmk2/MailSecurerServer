@@ -35,9 +35,9 @@ public class Login extends ImapCmd
 
             try
             {
-                if (is.konto != null)
+                if (is.get_konto() != null)
                 {
-                    if (is.konto.user.compareTo(user) == 0)
+                    if (is.get_konto().user.compareTo(user) == 0)
                     {
                         is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged in");
                         return 0;
@@ -48,7 +48,7 @@ public class Login extends ImapCmd
                 {
                     //Alles Ok
                     UserSSOEntry sso_entry = is.m_ctx.get_from_sso_cache(user, pwd);
-                    is.konto = new MailKonto(is, user, pwd, is.m_ctx, is.m_ctx.get_mailaliases(user, pwd), sso_entry);
+                    is.set_konto(  new MailKonto(is, user, pwd, is.m_ctx, is.m_ctx.get_mailaliases(user, pwd), sso_entry) );
                     is.response(sid, true, "User " + is.m_ctx.getMandant().getName() + " logged in");
                     return 0;
                 }

@@ -24,19 +24,22 @@ public class Select extends ImapCmd
 
     static int select(MWImapServer is,  String sid, String par )
     {
-        if (is.konto != null)
+        if (is.get_konto() != null)
         {
             String part[] = imapsplit(par);
             if (part != null && part.length >= 1)
             {
-                is.mailfolder = is.konto.select(part[0]);
-                if (is.mailfolder != null)
+                MailFolder folder = is.get_konto().select(part[0]);
+                
+                is.set_selected_folder( folder );
+                if (folder != null)
                 {
-                    is.response("" + is.mailfolder.anzMessages() + " EXISTS" );
-                    is.response("" + is.mailfolder.anzMessages() + " RECENT" );
+                    folder.reset();
+                    is.response("" + folder.anzMessages() + " EXISTS" );
+                    is.response("" + folder.anzMessages() + " RECENT" );
 
                     is.response("FLAGS (\\Answered \\Flagged \\Deleted \\Draft \\Seen)");
-                    is.response("OK [UIDVALIDITY " + is.mailfolder.get_uid_validity() + "] UIDVALIDITY value" );
+                    is.response("OK [UIDVALIDITY " + folder.get_uid_validity() + "] UIDVALIDITY value" );
                     is.response("OK [PERMANENTFLAGS (\\Answered \\Flagged \\Deleted \\Draft \\Seen)] Permanent flags)");
                 }
                 is.response(sid, true, "[READ-ONLY] SELECT completed");

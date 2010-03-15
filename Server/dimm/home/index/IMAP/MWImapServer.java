@@ -32,12 +32,12 @@ public class MWImapServer extends Thread
     PrintWriter out;
     BufferedReader in;
     Socket s = null;
-    MailKonto konto = null;
-    MailFolder mailfolder = null;
+    private MailKonto konto = null;
+    private MailFolder mailfolder = null;
     boolean trace = false;
     int con = 0;
     MandantContext m_ctx;
-    boolean has_searched = false;
+    private boolean has_searched = false;
     IMAPBrowser parent;
 
     static HashMap<String, ImapCmd> cmd_map;
@@ -72,14 +72,33 @@ public class MWImapServer extends Thread
     {
         return konto;
     }
-    public MailFolder get_folder()
+    void set_konto( MailKonto mailKonto )
+    {
+        konto = mailKonto;
+    }
+
+    public MailFolder get_selected_folder()
     {
         return mailfolder;
+    }
+    void set_selected_folder( MailFolder folder )
+    {
+        mailfolder = folder;
     }
 
     public IMAPBrowser get_parent()
     {
         return parent;
+    }
+
+    public boolean has_searched()
+    {
+        return has_searched;
+    }
+
+    public void set_has_searched( boolean has_searched )
+    {
+        this.has_searched = has_searched;
     }
 
     
@@ -275,6 +294,8 @@ public class MWImapServer extends Thread
         if (s != null)
             s.close();
     }
+
+
 
 
 }

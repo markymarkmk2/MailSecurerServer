@@ -69,9 +69,9 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
 import org.apache.commons.codec.binary.Base64;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 
 
 
@@ -390,7 +390,7 @@ public class TCPCallConnect extends WorkerParent
 
                     // WE HAVE SOCKET AS SECOND PARAM ?, THEN WE HAVE LEN AS THIRD (WLEN OR RLEN)
                     boolean with_socket = false;
-                    if (paramc.length >= 3 && paramc[1] == s.getClass() && paramc[2] == s_len.getClass())
+                    if (paramc.length >= 3 && (paramc[1] == Socket.class || paramc[1] == SSLSocket.class ) && paramc[2] == s_len.getClass())
                     {
                         with_socket = true;
                     }

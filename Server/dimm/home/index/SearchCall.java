@@ -189,18 +189,22 @@ public class SearchCall
         {
             return "1: invalid mandant";
         }
-        try
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
+        if (ssoc == null)
         {
-            if (!m_ctx.authenticate_user(user, pwd))
+            try
             {
-                return "2: login failed";
+                if (!m_ctx.authenticate_user(user, pwd))
+                {
+                    return "2: login failed";
+                }
+            }
+            catch (AuthException authException)
+            {
+                return "3: login failed: " + authException.getLocalizedMessage();
             }
         }
-        catch (AuthException authException)
-        {
-            return "3: login failed: " + authException.getLocalizedMessage();
-        }
-        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
+        ssoc = m_ctx.get_from_sso_cache(user, pwd);
         if (ssoc == null)
         {
             return "4: unauthorized";

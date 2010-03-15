@@ -20,11 +20,9 @@ package dimm.home.index.IMAP;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.SQL.OptCBEntry;
 import home.shared.SQL.UserSSOEntry;
-import home.shared.hibernate.Role;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Set;
 
 public class MailKonto
 {
@@ -74,11 +72,24 @@ public class MailKonto
 
         mail_folders.add( new MailFolder(this, "INBOX"));
         if (qry_folder)
-            mail_folders.add( new MailFolder(this,  MailFolder.QRYTOKEN));
+        {
+            MailFolder new_folder = is.parent.get_cached_folder(user, MailFolder.QRYTOKEN);
+            if (new_folder == null)
+            {
+                new_folder = new MailFolder(this,  MailFolder.QRYTOKEN);
+                is.parent.add_to_folder_cache(new_folder, user);
+            }
+
+            mail_folders.add(new_folder );            
+        }
         if (browse_folder)
+        {
             mail_folders.add( new MailFolder(this,  MailFolder.BROWSETOKEN));
+        }
         if (test_folder)
+        {
             mail_folders.add( new MailFolder(this,  MailFolder.TESTTOKEN));
+        }
         
         try
         {
@@ -109,8 +120,7 @@ public class MailKonto
     public boolean authenticate(String user,String passwd)
     {
         try
-        {
-            
+        {            
             if(!this.user.equals(user)) 
                 throw new Exception("wrong user "+user+" != "+this.user);
             
@@ -200,8 +210,17 @@ public class MailKonto
             MailFolder mf = mail_folders.get(i);
             if (mf.key.compareTo(key) == 0)
             {
-                mf.update_uid_validity();
+//                mf.update_uid_validity();
                 return mf;
+            }
+        }
+        if (key.startsWith(MailFolder.QRYTOKEN))
+        {
+            MailFolder cached_folder = is.get_parent().get_cached_folder(user, key);
+            if (cached_folder != null)
+            {
+                mail_folders.add(cached_folder);
+                return cached_folder;
             }
         }
         if (can_browse() && key.startsWith(MailFolder.BROWSETOKEN))

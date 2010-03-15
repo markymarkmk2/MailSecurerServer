@@ -43,7 +43,7 @@ class LengthOutputStream extends OutputStream
     @Override
     public void write( int b ) throws IOException
     {
-        System.out.print((char)b);
+        //System.out.print((char)b);
         
         if (act_length < length)
         {
@@ -57,7 +57,7 @@ class LengthOutputStream extends OutputStream
     @Override
     public void write( byte[] b, int off, int len ) throws IOException
     {
-        System.out.print(new String(b, off, len, "UTF-8"));
+        //System.out.print(new String(b, off, len, "UTF-8"));
         if (act_length + len <= length)
         {
             try
@@ -434,7 +434,10 @@ public class Fetch extends ImapCmd
     static boolean fetch( ImapCmd cmd, MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
         
-        MailFolder mailfolder = is.mailfolder;
+        MailFolder mailfolder = is.get_selected_folder();
+        // EMPTY FOLDER
+        if (mailfolder == null)
+            return true;
 
         for (int i = 0; i < mailfolder.anzMessages(); i++)
         {
