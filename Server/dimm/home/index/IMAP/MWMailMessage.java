@@ -577,6 +577,9 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
             {
                 String eq = st.nextToken("\"\n\r");
                 String val = st.nextToken("\"\n\r");
+                if (val == null)
+                    val = eq;
+                
                 return javax.mail.internet.MimeUtility.javaCharset(val);
             }
         }
