@@ -30,6 +30,17 @@ public class MailFolder
     int year;
     int month;
     int day;
+    long last_time_used;
+
+    public void set_last_time_used( long last_time_used )
+    {
+        this.last_time_used = last_time_used;
+    }
+
+    public long get_last_time_used()
+    {
+        return last_time_used;
+    }
 
     int cnt_level( String path )
     {
@@ -61,6 +72,7 @@ public class MailFolder
         uid_map_list = new ArrayList<MWMailMessage>();
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
+        last_time_used = System.currentTimeMillis();
 
 
         if (key.startsWith(QRYTOKEN))
@@ -521,11 +533,39 @@ public class MailFolder
 
         return true;                
     }
+    public void close()
+    {
+        if (last_uid_map != null)
+        {
+            for (int i = 0; i < last_uid_map.size(); i++)
+            {
+                MWMailMessage mWMailMessage = last_uid_map.get(i);
+                mWMailMessage.close();
+            }
+            last_uid_map.clear();
+        }
+        if (uid_map_list != null)
+        {
+            for (int i = 0; i < uid_map_list.size(); i++)
+            {
+                MWMailMessage mWMailMessage = uid_map_list.get(i);
+                mWMailMessage.close();
+            }
+            uid_map_list.clear();
+        }
+    }
 
     public void add_new_mail_resultlist( MandantContext m_ctx, SearchCall sc ) throws IOException
     {
         if (last_uid_map != null)
+        {
+            for (int i = 0; i < last_uid_map.size(); i++)
+            {
+                MWMailMessage mWMailMessage = last_uid_map.get(i);
+                mWMailMessage.close();
+            }
             last_uid_map.clear();
+        }
         last_uid_map = uid_map_list;
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
@@ -535,7 +575,7 @@ public class MailFolder
         int results = sc.get_result_cnt();
 
 
-        Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Results found: " + results );
+        LogManager.debug_msg(2, "Results found: " + results);
         for (int i = 0; i < results; i++)
         {
             SearchResult result = sc.get_res(i);

@@ -104,7 +104,7 @@ public class TCPCallConnect extends WorkerParent
         super("TCPCallConnect");
         this.m_ctx = m_ctx;
         
-        use_ssl = Main.get_bool_prop(GeneralPreferences.SERVER_SSL, false);
+        use_ssl = Main.get_bool_prop(GeneralPreferences.SERVER_SSL, true);
 
 
         if (m_ctx != null)

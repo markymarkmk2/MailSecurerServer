@@ -5,6 +5,7 @@
 
 package dimm.home.index;
 
+import java.io.IOException;
 import org.apache.lucene.search.Searcher;
 
 /**
@@ -117,5 +118,17 @@ public class SearchResult
     public boolean isHas_attachment()
     {
         return has_attachment;
+    }
+    public void close()
+    {
+        try
+        {
+            if (searcher != null)
+                searcher.close();
+        }
+        catch (IOException iOException)
+        {
+            iOException.printStackTrace();
+        }
     }
 }

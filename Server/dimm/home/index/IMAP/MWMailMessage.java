@@ -130,14 +130,20 @@ public class MWMailMessage implements MailInfo
         {
             t.start();
             t.join(120 * 1000);
+            if (t.isAlive())
+            {
+                t.interrupt();
+                mmail = null;
+                return false;
+            }
             return true;
         }
         catch (Exception interruptedException)
         {
             LogManager.err_log_fatal("Error while loading mail file", interruptedException);
         }
+        mmail = null;
         return false;
-
     }
     void load_rfc_mail() throws IOException
     {
@@ -854,4 +860,11 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         return sb.toString();
 
     }
+    public void close()
+    {
+        unload_rfc_mail();
+        if (sc_result != null)
+            sc_result.close();
+    }
+
 }

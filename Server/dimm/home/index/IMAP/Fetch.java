@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.Part;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.StringEscapeUtils;
 
 
 class LengthOutputStream extends OutputStream
@@ -471,8 +470,9 @@ public class Fetch extends ImapCmd
                 }
             }
 
-            int id = (is_uid ? msginfo.getUID() : cmd.getNextCounter());
+            int id = i +1;
 
+            // MESSAGE SEQUENCE NUMBER IS INDEX + 1
             is.rawwrite(RESTAG + id + " FETCH (");
 
             long size = msginfo.getRFC822size();

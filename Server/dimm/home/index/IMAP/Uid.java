@@ -183,7 +183,9 @@ public class Uid extends ImapCmd
     {
         String result = "SEARCH";
         MailFolder folder = is.get_selected_folder();
-        int messages = folder.anzMessages();
+        int messages = 0;
+        if (folder != null)
+            messages = folder.anzMessages();
 
         if (part.length >= 3 && part[1].toLowerCase().equals("uid"))
         {

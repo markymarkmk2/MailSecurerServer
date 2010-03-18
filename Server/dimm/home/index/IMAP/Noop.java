@@ -38,31 +38,18 @@ public class Noop extends ImapCmd
         if (folder != null && folder.key.equals(MailFolder.QRYTOKEN) && is.has_searched())
         {
 
-            MailInfo msginfo = null;
-            /*if (folder.lastanzMessages() > 0)
-            {
-                msginfo = folder.get_last_mail_message(folder.lastanzMessages() - 1);
-                is.response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
-            }*/
+            // WE EXPUNGE MESSAGE SEQUENCE NUMBERS (1... COUNT_OF_MSG_IN_FOLDER)
             for (int m = 0; m < folder.lastanzMessages(); m++)
             {
-                msginfo = folder.get_last_mail_message(0);
-                /*if (msginfo.getUID() == 42) // SKIP STATUSMAIL
-                    continue;*/
-                is.response(Integer.toString(msginfo.getUID()) + " EXPUNGE");
+                is.response("1 EXPUNGE");
             }
-            is.response( "0 EXISTS");
 
             for (int m = 0; m < folder.anzMessages(); m++)
             {
-                msginfo = folder.get_mail_message(m);
-               /* if (msginfo.getUID() == 42) // SKIP STATUSMAIL
-                    continue;*/
-                is.response(Integer.toString(msginfo.getUID()) + " RECENT");
+                is.response(Integer.toString(m+1) + " RECENT");
             }
             is.response(Integer.toString(folder.anzMessages()) + " EXISTS");
             is.set_has_searched( false );
         }
     }
-
 }

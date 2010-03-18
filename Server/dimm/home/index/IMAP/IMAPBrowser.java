@@ -21,7 +21,9 @@ import java.util.ArrayList;
 
 class MailFolderCache
 {
-    ArrayList<MailFolder> browse_mail_folders;
+    public static final int MAX_CACHED_FOLDERS = 10;
+
+    final ArrayList<MailFolder> browse_mail_folders;
     String user;
 
     public MailFolderCache(String user )
@@ -162,6 +164,21 @@ public class IMAPBrowser extends WorkerParentChild
                     imapServer.close();
                 }
             }
+            srv_list.clear();
+            for (int i = 0; i < folder_cache.size(); i++)
+            {
+                MailFolderCache c = folder_cache.get(i);
+                synchronized (c.browse_mail_folders)
+                {
+                    for (int j = 0; j < c.browse_mail_folders.size(); j++)
+                    {
+                        MailFolder f = c.browse_mail_folders.get(j);
+                        f.close();
+                    }
+                    c.browse_mail_folders.clear();
+                }
+            }
+            folder_cache.clear();
         }
         catch (IOException ex)
         {
@@ -180,7 +197,11 @@ public class IMAPBrowser extends WorkerParentChild
                 log_debug(Main.Txt("Accepting_new_connection"));
                 Socket cl = sock.accept();
 
-                MWImapServer mwimap = new MWImapServer(this, m_ctx, cl, true);
+                boolean trace = false;
+                if (Main.get_debug_lvl() > 6)
+                    trace = true;
+
+                MWImapServer mwimap = new MWImapServer(this, m_ctx, cl, trace);
                 synchronized(srv_list)
                 {
                     srv_list.add(mwimap);
@@ -265,11 +286,17 @@ public class IMAPBrowser extends WorkerParentChild
             if (!entry.user.equals(user))
                 continue;
 
-            for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+            synchronized (entry.browse_mail_folders)
             {
-                MailFolder folder = entry.browse_mail_folders.get(j);
-                if (folder.key.equals(key))
-                    return folder;
+                for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+                {
+                    MailFolder folder = entry.browse_mail_folders.get(j);
+                    if (folder.key.equals(key))
+                    {
+                        folder.set_last_time_used(System.currentTimeMillis());
+                        return folder;
+                    }
+                }
             }
         }
         return null;
@@ -283,7 +310,15 @@ public class IMAPBrowser extends WorkerParentChild
             if (!entry.user.equals(user))
                 continue;
 
-            entry.browse_mail_folders.add( folder);
+            synchronized (entry.browse_mail_folders)
+            {
+                if (entry.browse_mail_folders.size() > MailFolderCache.MAX_CACHED_FOLDERS)
+                {
+                    remove_oldest_folder( entry.browse_mail_folders );
+                }
+                
+                entry.browse_mail_folders.add( folder);
+            }
             return;
         }
         MailFolderCache entry = new MailFolderCache( user);
@@ -299,27 +334,62 @@ public class IMAPBrowser extends WorkerParentChild
             if (!entry.user.equals(user))
                 continue;
 
-
-            // REPLACE
-            for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+            synchronized (entry.browse_mail_folders)
             {
-                MailFolder folder = entry.browse_mail_folders.get(j);
-                if (folder.key.equals(new_folder.key))
+                // REPLACE
+                for (int j = 0; j < entry.browse_mail_folders.size(); j++)
                 {
-                    if (folder != new_folder)
+                    MailFolder folder = entry.browse_mail_folders.get(j);
+                    if (folder.key.equals(new_folder.key))
                     {
-                        entry.browse_mail_folders.remove(folder);
-                        entry.browse_mail_folders.add(new_folder);
+                        if (folder != new_folder)
+                        {
+                            entry.browse_mail_folders.remove(folder);
+                            entry.browse_mail_folders.add(new_folder);
+                            new_folder.set_last_time_used(System.currentTimeMillis());
+                            folder.close();
+                        }
+                        return;
                     }
-                    return;
                 }
+                if (entry.browse_mail_folders.size() > MailFolderCache.MAX_CACHED_FOLDERS)
+                {
+                    remove_oldest_folder( entry.browse_mail_folders );
+                }
+                entry.browse_mail_folders.add( new_folder);
             }
-            entry.browse_mail_folders.add( new_folder);
             return;
         }
         MailFolderCache entry = new MailFolderCache( user);
         entry.browse_mail_folders.add(new_folder);
         folder_cache.add(entry);
+    }
+
+    private void remove_oldest_folder( ArrayList<MailFolder> browse_mail_folders )
+    {
+        MailFolder oldest = null;
+
+        synchronized (browse_mail_folders)
+        {
+            for (int j = 0; j < browse_mail_folders.size(); j++)
+            {
+                MailFolder folder = browse_mail_folders.get(j);
+                if (oldest == null)
+                    oldest = folder;
+                else
+                {
+                    if (folder.get_last_time_used() < oldest.get_last_time_used())
+                    {
+                        oldest = folder;
+                    }
+                }
+            }
+            if (oldest != null)
+            {
+                browse_mail_folders.remove(oldest);
+                oldest.close();
+            }
+        }
     }
 
     
