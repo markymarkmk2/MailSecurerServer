@@ -322,7 +322,7 @@ public class LogicControl
         for (int i = 0; i < mandanten_list.size(); i++)
         {
             MandantContext mandantContext = mandanten_list.get(i);
-            if (mandantContext.getMandant() == m)
+            if (mandantContext.getMandant().getId() == m.getId())
             {
                 return mandantContext;
             }
@@ -431,6 +431,11 @@ public class LogicControl
     {
         // CHECK FOR SPACE AND ARCHIVE
         MandantContext m_ctx = Main.get_control().get_m_context( mandant );
+        if (m_ctx == null)
+        {
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
+        }
+
         Vault vault = m_ctx.get_vault_by_da_id(da.getId());
         if (!vault.has_sufficient_space() && m_ctx.no_tmp_space_left())
         {
@@ -504,6 +509,10 @@ public class LogicControl
 
 
         MandantContext context = get_m_context(mandant);
+        if (context == null)
+        {
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
+        }
 
         DiskSpaceHandler found_ds = null;
         ArrayList<Vault> vault_list = context.getVaultArray();
@@ -552,7 +561,13 @@ public class LogicControl
 
     public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
     {
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
+        MandantContext context = get_m_context(mandant);
+        if (context == null)
+        {
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
+        }
+
+        File tmp_file = context.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
 
         return tmp_file;
     }
@@ -565,8 +580,14 @@ public class LogicControl
             suffix = suffix + RFCGenericMail.get_suffix_for_encoded();
         }
 
+        MandantContext context = get_m_context(mandant);
+        if (context == null)
+        {
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
+        }
 
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
+
+        File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
 
         try
         {
@@ -606,8 +627,13 @@ public class LogicControl
         {            
             suffix = suffix + RFCGenericMail.get_suffix_for_encoded();
         }
+        MandantContext context = get_m_context(mandant);
+        if (context == null)
+        {
+            throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
+        }
 
-        File tmp_file = get_m_context(mandant).getTempFileHandler().create_temp_file(subdir, prefix, suffix, del_on_exit);
+        File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, del_on_exit);
         
 
         try

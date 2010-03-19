@@ -647,7 +647,7 @@ public class MailBoxFetcher extends WorkerParentChild
             status.set_status(StatusEntry.BUSY, Main.Txt("Fetching_new_messages_from_server") + " " + imfetcher.getServer());
             complete = archive_messages(messages);
         }
-        while (!complete);
+        while (!complete && !do_finish);
     }
 
 
