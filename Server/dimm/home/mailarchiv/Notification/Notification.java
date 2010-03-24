@@ -8,6 +8,7 @@ package dimm.home.mailarchiv.Notification;
 import com.sun.mail.smtp.SMTPTransport;
 import dimm.home.auth.SMTPAuth;
 import dimm.home.auth.SMTPUserContext;
+import dimm.home.mail.RFCCreateMimeMail;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -143,7 +144,7 @@ public class Notification
 
             Properties props = new Properties();
             props.put("mail.smtp.host", host);
-            RFCMimeMail mail = new RFCMimeMail(props);
+            RFCCreateMimeMail mail = new RFCCreateMimeMail(props);
             String subject = build_subject(m, lvl);
             
             mail.create(from_mail, to, cc, subject, t, null);

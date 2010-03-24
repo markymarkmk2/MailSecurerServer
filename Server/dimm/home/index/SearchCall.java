@@ -25,10 +25,13 @@ import home.shared.filter.ExprEntry;
 import home.shared.filter.FilterMatcher;
 import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
+import home.shared.hibernate.Role;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Properties;
+import java.util.Set;
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.Session;
@@ -787,8 +790,13 @@ public class SearchCall
             {
                 has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
             }
+            ArrayList<String> email_adresses = get_emailadrlist( doc );
 
-            SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
+            boolean is_4eyes = m_ctx.is_4eyes_email( email_adresses );
+
+            SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, 
+                    subject, has_attachment, email_adresses, is_4eyes);
+
             result.add(rs);
 
             // STOP AFTER N RESULTS
@@ -797,6 +805,27 @@ public class SearchCall
                 break;
             }
         }
+    }
+
+    ArrayList<String> get_emailadrlist( Document doc )
+    {
+        ArrayList<String> email_adresses = new ArrayList<String>();
+        ArrayList<String> mail_headers = m_ctx.get_index_manager().get_email_headers();
+        for (int m = 0; m < mail_headers.size(); m++)
+        {
+            String email_adress = doc.get( mail_headers.get(m));
+            if (email_adress != null && email_adress.length() > 0)
+            {
+                String[] email_adress_arr = email_adress.split("[ ,;\t\r\n<>]");
+                for (int i = 0; i < email_adress_arr.length; i++)
+                {
+                    String string = email_adress_arr[i];
+                    if (string.length() > 0)
+                        email_adresses.add(string);
+                }
+            }
+        }
+        return email_adresses;
     }
 
     void search( String mail_adress, String fld, String val, int n )
@@ -890,7 +919,12 @@ public class SearchCall
                                         has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
                                     }
 
-                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
+                                    ArrayList<String> email_adresses = get_emailadrlist( doc );
+
+                                    boolean is_4eyes = m_ctx.is_4eyes_email( email_adresses );
+
+                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, 
+                                            has_attachment, email_adresses, is_4eyes);
                                     result.add(rs);
 
                                     // STOP AFTER N INDEX

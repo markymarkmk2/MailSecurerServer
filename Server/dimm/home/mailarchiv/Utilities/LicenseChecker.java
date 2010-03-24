@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Set;
 
+
+
 class StatMailAddress extends RFCMailAddress
 {
 
@@ -146,7 +148,7 @@ public class LicenseChecker
     {
         try
         {
-            String hwid = HWIDLicenseTicket.generate_hwid();
+            String hwid = HWIDLicenseTicketHelper.generate_hwid();
             return hwid;
         }
         catch (IOException iOException)
@@ -170,13 +172,24 @@ public class LicenseChecker
         }
         return null;
     }
+    public boolean is_licensed( LicenseTicket ticket )
+    {
+        if (ticket == null)
+            return false;
+        if (ticket instanceof HWIDLicenseTicket)
+        {
+           return HWIDLicenseTicketHelper.isValid( (HWIDLicenseTicket)ticket );
+
+        }
+        return ticket.isValid();
+    }
    
     public boolean is_licensed(String product)
     {
         ValidTicketContainer ticket = get_ticket(product);
         if (ticket != null)
         {
-            return ticket.isValid();
+            return is_licensed( ticket.getTicket() );
         }
         return false;
     }
@@ -456,7 +469,7 @@ public class LicenseChecker
         ValidTicketContainer ticket = get_ticket( LicenseTicket.PRODUCT_BASE );
         if (ticket != null)
         {
-            if (ticket.isValid())
+            if (is_licensed(ticket.getTicket()))
             {
                 return ticket.getTicket().getUnits();
             }
@@ -502,7 +515,7 @@ public class LicenseChecker
         ValidTicketContainer ticket = get_ticket( LicenseTicket.PRODUCT_BASE );
         if (ticket != null)
         {
-            if (ticket.isValid())
+            if (is_licensed(ticket.getTicket()))
             {
                 return ticket.getTicket().getSerial();
             }
@@ -559,8 +572,8 @@ public class LicenseChecker
                 Object o = xs.fromXML(fis);
                 if (o instanceof LicenseTicket)
                 {
-                    LicenseTicket t = (LicenseTicket)o;
-                    boolean valid = t.isValid();
+                    LicenseTicket t = (LicenseTicket)o;                        
+                    boolean valid =   is_licensed(t);
                     ValidTicketContainer vtck = new ValidTicketContainer(t, valid);
                     if (valid)
                         LogManager.info_msg(Main.Txt("Found_valid_license") + ": " + vtck.getTicket().toString());

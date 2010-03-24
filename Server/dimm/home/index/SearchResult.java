@@ -6,6 +6,7 @@
 package dimm.home.index;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import org.apache.lucene.search.Searcher;
 
 /**
@@ -24,9 +25,12 @@ public class SearchResult
     private long size;
     private String subject;
     private boolean has_attachment;
+    private ArrayList<String> email_adresses;
+    private boolean is_4eyes;
 
 
-    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment )
+    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size,
+            String s, boolean has_attachment, ArrayList<String> email_adresses, boolean is_4eyes )
     {
         this.searcher = searcher;
         this.doc_index = doc_index;
@@ -38,6 +42,8 @@ public class SearchResult
         this.size = size;
         subject = s;
         this.has_attachment = has_attachment;
+        this.email_adresses = email_adresses;
+        this.is_4eyes = is_4eyes;
     }
 
     /**
@@ -131,4 +137,15 @@ public class SearchResult
             iOException.printStackTrace();
         }
     }
+
+    public ArrayList<String> getEmail_adresses()
+    {
+        return email_adresses;
+    }
+
+    public boolean is_4eyes()
+    {
+        return is_4eyes;
+    }
+
 }

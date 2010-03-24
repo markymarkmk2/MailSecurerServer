@@ -11,9 +11,9 @@ package dimm.home.mailarchiv.Commands;
 
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.HWIDLicenseTicketHelper;
 import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.Utilities.ZipUtilities;
-import home.shared.license.HWIDLicenseTicket;
 import home.shared.license.LicenseTicket;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,7 +81,7 @@ public class LicenseConfig extends AbstractCommand
         {
             try
             {
-                String hwid = HWIDLicenseTicket.generate_hwid();
+                String hwid = HWIDLicenseTicketHelper.generate_hwid();
                 answer = "0: HWID:\"" + hwid + "\"";
                 return true;
             }

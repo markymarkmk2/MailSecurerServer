@@ -4,6 +4,7 @@
  */
 package dimm.home.importmail;
 
+import dimm.home.mail.RFCCreateMimeMail;
 import home.shared.mail.RFCFileMail;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.Hotfolder;
@@ -341,7 +342,7 @@ public class HotFolderImport extends WorkerParentChild
         try
         {
             // Create a mail session
-            RFCMimeMail mm = new RFCMimeMail();
+            RFCCreateMimeMail mm = new RFCCreateMimeMail();
             mm.create(hfolder.getUsermailadress(), hfolder.getUsermailadress(), /*cc*/null, Main.Txt("Hotfolder_") + arch_file.getName(),
                         Main.Txt("This_mail_was_created_by_an_archive_hotfolder"), arch_file);
         

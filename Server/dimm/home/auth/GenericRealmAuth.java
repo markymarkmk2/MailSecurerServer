@@ -304,79 +304,9 @@ public abstract class GenericRealmAuth
         return ret;
     }
 
-    class UserFilterProvider implements FilterValProvider
-    {
-        String user;
-        ArrayList<String> mail_list;
-
-        UserFilterProvider( String user, ArrayList<String> mail_list )
-        {
-            this.user = user;
-            this.mail_list = mail_list;
-        }
-
-        @Override
-        public ArrayList<String> get_val_vor_name( String name )
-        {
-            ArrayList<String> list = null;
-            if (name.toLowerCase().compareTo("username") == 0)
-            {
-                list = new ArrayList<String>();
-                list.add(user);
-
-            }
-            if (name.toLowerCase().compareTo("email") == 0)
-            {
-                list = mail_list;
-            }
-            if (name.toLowerCase().compareTo("domain") == 0)
-            {
-                list = new ArrayList<String>();
-                for (int i = 0; i < mail_list.size(); i++)
-                {
-                    String mail = mail_list.get(i);
-                    int idx = mail.indexOf('@');
-                    if (idx > 0 && idx < mail.length() - 1)
-                        list.add(mail.substring(idx + 1));
-                }
-            }
-            return list;
-        }
-    }
+    
 
 
-    public boolean user_is_member_of( Role role, String user, ArrayList<String> mail_list )
-    {
-        // CREATE FILTER VALUE PROVIDER
-        UserFilterProvider f_provider = new UserFilterProvider(user, mail_list );
-
-        // GET FILTER STR AND PARSE TO ARRAYLIST
-        String compressed_list_str = role.getAccountmatch();
-        int role_flags = 0;
-        try
-        {
-            role_flags = Integer.parseInt(role.getFlags());
-        }
-        catch (NumberFormatException numberFormatException)
-        {
-        }
-
-        boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
-        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, compressed );
-        if (logic_list == null)
-        {
-            LogManager.err_log(Main.Txt("Invalid_role_filter"));
-            return false;
-        }
-
-        // CREATE FILTER AND EVAL FINALLY
-        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
-        boolean ret = matcher.eval();
-
-        LogManager.debug( "User " + user + " is " + (ret?"":"not ") + "member of role " + role.getName());
-
-        return ret;
-    }
-
+   
 
 }

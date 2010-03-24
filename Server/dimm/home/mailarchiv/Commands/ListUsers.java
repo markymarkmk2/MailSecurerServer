@@ -126,7 +126,7 @@ public class ListUsers extends AbstractCommand
                             System.out.println("naming Exception: " + namingException.getLocalizedMessage());
                         }
 
-                        if (auth_realm.user_is_member_of(role, user, mail_alias_list))
+                        if (MandantContext.user_is_member_of(role, user, mail_alias_list))
                         {
                             StringBuffer sb = new StringBuffer();
                             sb.append(user);

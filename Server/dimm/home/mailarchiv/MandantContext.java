@@ -7,6 +7,7 @@ package dimm.home.mailarchiv;
 import dimm.home.mailarchiv.Notification.Notification;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.auth.GenericRealmAuth;
+import dimm.home.auth.UserFilterProvider;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
@@ -33,6 +34,8 @@ import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import home.shared.CS_Constants;
 import home.shared.Utilities.SizeStr;
+import home.shared.filter.FilterMatcher;
+import home.shared.filter.LogicEntry;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Backup;
 import home.shared.hibernate.Hotfolder;
@@ -837,7 +840,7 @@ public class MandantContext
             }
             acct_connected = true;
 
-            if (!auth_realm.user_is_member_of(role, user, mail_list))
+            if (!user_is_member_of(role, user, mail_list))
             {
                 auth_realm.disconnect();
                 continue;
@@ -1148,6 +1151,64 @@ public class MandantContext
         }
         return null;
     }
+
+ public static boolean user_is_member_of( Role role, String user, ArrayList<String> mail_list )
+    {
+        // CREATE FILTER VALUE PROVIDER
+        UserFilterProvider f_provider = new UserFilterProvider(user, mail_list );
+
+        // GET FILTER STR AND PARSE TO ARRAYLIST
+        String compressed_list_str = role.getAccountmatch();
+        int role_flags = 0;
+        try
+        {
+            role_flags = Integer.parseInt(role.getFlags());
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+
+        boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, compressed );
+        if (logic_list == null)
+        {
+            LogManager.err_log(Main.Txt("Invalid_role_filter"));
+            return false;
+        }
+
+        // CREATE FILTER AND EVAL FINALLY
+        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
+        boolean ret = matcher.eval();
+
+        LogManager.debug( "User " + user + " is " + (ret?"":"not ") + "member of role " + role.getName());
+
+        return ret;
+    }
+
+    public boolean is_4eyes_email( ArrayList<String> email_adresses )
+    {
+        return false;
+        /*
+        Set<Role> roles = getMandant().getRoles();
+        for (Iterator<Role> it = roles.iterator(); it.hasNext();)
+        {
+            Role role = it.next();
+            
+            if (role_has_option(role, CS_Constants.
+            Set<RoleOption> optset = role.getRoleOptions();
+            for (Iterator<RoleOption> it1 = optset.iterator(); it1.hasNext();)
+            {
+                RoleOption roleOption = it1.next();
+                if (roleOption.
+
+            }
+
+
+
+        }*/
+
+    }
+
 
     /*
      * So geht rollen 4 augen
