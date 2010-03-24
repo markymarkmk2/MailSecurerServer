@@ -1,0 +1,1036 @@
+--
+-- PostgreSQL database dump
+--
+
+SET client_encoding = 'WIN1252';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+
+SET search_path = public, pg_catalog;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: account_connector; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE account_connector (
+    id integer NOT NULL,
+    mid integer,
+    type character varying(80),
+    ip character varying(80),
+    port integer
+);
+
+
+ALTER TABLE public.account_connector OWNER TO postgres;
+
+--
+-- Name: account_connector_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE account_connector_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.account_connector_id_seq OWNER TO postgres;
+
+--
+-- Name: account_connector_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE account_connector_id_seq OWNED BY account_connector.id;
+
+
+--
+-- Name: disk_archive; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE disk_archive (
+    id integer NOT NULL,
+    mid integer,
+    name character varying(255),
+    flags character varying(255)
+);
+
+
+ALTER TABLE public.disk_archive OWNER TO postgres;
+
+--
+-- Name: disk_archive_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE disk_archive_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.disk_archive_id_seq OWNER TO postgres;
+
+--
+-- Name: disk_archive_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE disk_archive_id_seq OWNED BY disk_archive.id;
+
+
+--
+-- Name: disk_space; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE disk_space (
+    id integer NOT NULL,
+    da_id integer NOT NULL,
+    path character varying(255) NOT NULL,
+    max_capacity character varying(80),
+    flags character varying(255),
+    status character varying(255)
+);
+
+
+ALTER TABLE public.disk_space OWNER TO postgres;
+
+--
+-- Name: COLUMN disk_space.max_capacity; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN disk_space.max_capacity IS 'Size in kB, MB, GB, TB etc';
+
+
+--
+-- Name: disk_space_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE disk_space_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.disk_space_id_seq OWNER TO postgres;
+
+--
+-- Name: disk_space_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE disk_space_id_seq OWNED BY disk_space.id;
+
+
+--
+-- Name: hotfolder; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE hotfolder (
+    id integer NOT NULL,
+    mid integer NOT NULL,
+    usermailadress character varying(255) NOT NULL,
+    path character varying(255) NOT NULL,
+    flags character varying(255),
+    da_id integer NOT NULL
+);
+
+
+ALTER TABLE public.hotfolder OWNER TO postgres;
+
+--
+-- Name: hotfolder_exclude; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE hotfolder_exclude (
+    id integer NOT NULL,
+    hf_id integer,
+    name character varying(256),
+    flags integer
+);
+
+
+ALTER TABLE public.hotfolder_exclude OWNER TO postgres;
+
+--
+-- Name: hotfolder_exclude_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE hotfolder_exclude_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.hotfolder_exclude_id_seq OWNER TO postgres;
+
+--
+-- Name: hotfolder_exclude_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE hotfolder_exclude_id_seq OWNED BY hotfolder_exclude.id;
+
+
+--
+-- Name: hotfolder_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE hotfolder_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.hotfolder_id_seq OWNER TO postgres;
+
+--
+-- Name: hotfolder_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE hotfolder_id_seq OWNED BY hotfolder.id;
+
+
+--
+-- Name: imap_fetcher; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE imap_fetcher (
+    id integer NOT NULL,
+    mid integer NOT NULL,
+    server character varying(255) NOT NULL,
+    port integer,
+    da_id integer NOT NULL,
+    username character varying(80),
+    password character varying(80),
+    flags character varying(255),
+    type character varying(255)
+);
+
+
+ALTER TABLE public.imap_fetcher OWNER TO postgres;
+
+--
+-- Name: imap_fetcher_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE imap_fetcher_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.imap_fetcher_id_seq OWNER TO postgres;
+
+--
+-- Name: imap_fetcher_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE imap_fetcher_id_seq OWNED BY imap_fetcher.id;
+
+
+--
+-- Name: mail; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail (
+    id bigint NOT NULL,
+    mid integer,
+    "from" text,
+    rfc822_size integer,
+    subject text,
+    location text,
+    location_id integer,
+    flags text,
+    rcv_timestamp integer
+);
+
+
+ALTER TABLE public.mail OWNER TO postgres;
+
+--
+-- Name: mail_header; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_header (
+    mail_id integer,
+    var_id integer,
+    var_value text,
+    id integer NOT NULL
+);
+
+
+ALTER TABLE public.mail_header OWNER TO postgres;
+
+--
+-- Name: mail_header_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mail_header_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mail_header_id_seq OWNER TO postgres;
+
+--
+-- Name: mail_header_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mail_header_id_seq OWNED BY mail_header.id;
+
+
+--
+-- Name: mail_header_variable; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_header_variable (
+    id integer NOT NULL,
+    var_name text
+);
+
+
+ALTER TABLE public.mail_header_variable OWNER TO postgres;
+
+--
+-- Name: mail_header_variable_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mail_header_variable_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mail_header_variable_id_seq OWNER TO postgres;
+
+--
+-- Name: mail_header_variable_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mail_header_variable_id_seq OWNED BY mail_header_variable.id;
+
+
+--
+-- Name: mail_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mail_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mail_id_seq OWNER TO postgres;
+
+--
+-- Name: mail_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mail_id_seq OWNED BY mail.id;
+
+
+--
+-- Name: mail_recipient; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_recipient (
+    id integer NOT NULL,
+    mail_adress text
+);
+
+
+ALTER TABLE public.mail_recipient OWNER TO postgres;
+
+--
+-- Name: mail_recipient_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mail_recipient_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mail_recipient_id_seq OWNER TO postgres;
+
+--
+-- Name: mail_recipient_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mail_recipient_id_seq OWNED BY mail_recipient.id;
+
+
+--
+-- Name: mail_recipient_link; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mail_recipient_link (
+    mail_id bigint,
+    mr_id integer,
+    type character varying(4),
+    id integer NOT NULL
+);
+
+
+ALTER TABLE public.mail_recipient_link OWNER TO postgres;
+
+--
+-- Name: COLUMN mail_recipient_link.type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN mail_recipient_link.type IS 'cc/bcc/to/from';
+
+
+--
+-- Name: mail_recipient_link_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mail_recipient_link_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mail_recipient_link_id_seq OWNER TO postgres;
+
+--
+-- Name: mail_recipient_link_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mail_recipient_link_id_seq OWNED BY mail_recipient_link.id;
+
+
+--
+-- Name: mandant; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE mandant (
+    id integer NOT NULL,
+    name text NOT NULL,
+    license character varying(100) NOT NULL,
+    password character varying(80) DEFAULT 12345 NOT NULL,
+    loginname character varying(80) DEFAULT 'admin'::character varying NOT NULL,
+    flags character varying(80) DEFAULT ''::character varying NOT NULL
+);
+
+
+ALTER TABLE public.mandant OWNER TO postgres;
+
+--
+-- Name: mandant_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE mandant_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.mandant_id_seq OWNER TO postgres;
+
+--
+-- Name: mandant_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE mandant_id_seq OWNED BY mandant.id;
+
+
+--
+-- Name: proxy; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE proxy (
+    id integer NOT NULL,
+    mid integer,
+    local_server character varying(255),
+    local_port integer,
+    remote_server character varying(255),
+    remote_port integer,
+    type character varying(80),
+    da_id integer,
+    flags character varying(255)
+);
+
+
+ALTER TABLE public.proxy OWNER TO postgres;
+
+--
+-- Name: proxy_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE proxy_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.proxy_id_seq OWNER TO postgres;
+
+--
+-- Name: proxy_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE proxy_id_seq OWNED BY proxy.id;
+
+
+--
+-- Name: milter; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE milter (
+    id integer DEFAULT nextval('proxy_id_seq'::regclass) NOT NULL,
+    mid integer,
+    in_server character varying(255),
+    in_port integer,
+    out_server character varying(255),
+    out_port integer,
+    type character varying(80),
+    da_id integer,
+    flags character varying(255)
+);
+
+
+ALTER TABLE public.milter OWNER TO postgres;
+
+--
+-- Name: role; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE role (
+    id integer NOT NULL,
+    mid integer,
+    name character varying(255),
+    license integer
+);
+
+
+ALTER TABLE public.role OWNER TO postgres;
+
+--
+-- Name: role_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE role_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.role_id_seq OWNER TO postgres;
+
+--
+-- Name: role_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE role_id_seq OWNED BY role.id;
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE account_connector ALTER COLUMN id SET DEFAULT nextval('account_connector_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE disk_archive ALTER COLUMN id SET DEFAULT nextval('disk_archive_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE disk_space ALTER COLUMN id SET DEFAULT nextval('disk_space_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE hotfolder ALTER COLUMN id SET DEFAULT nextval('hotfolder_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE hotfolder_exclude ALTER COLUMN id SET DEFAULT nextval('hotfolder_exclude_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE imap_fetcher ALTER COLUMN id SET DEFAULT nextval('imap_fetcher_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail ALTER COLUMN id SET DEFAULT nextval('mail_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_header ALTER COLUMN id SET DEFAULT nextval('mail_header_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_header_variable ALTER COLUMN id SET DEFAULT nextval('mail_header_variable_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_recipient ALTER COLUMN id SET DEFAULT nextval('mail_recipient_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mail_recipient_link ALTER COLUMN id SET DEFAULT nextval('mail_recipient_link_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE mandant ALTER COLUMN id SET DEFAULT nextval('mandant_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE proxy ALTER COLUMN id SET DEFAULT nextval('proxy_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE role ALTER COLUMN id SET DEFAULT nextval('role_id_seq'::regclass);
+
+
+--
+-- Name: account_connector_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY account_connector
+    ADD CONSTRAINT account_connector_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: disk_archive_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY disk_archive
+    ADD CONSTRAINT disk_archive_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: disk_space_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY disk_space
+    ADD CONSTRAINT disk_space_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: hotfolder_exclude_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY hotfolder_exclude
+    ADD CONSTRAINT hotfolder_exclude_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: hotfolder_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY hotfolder
+    ADD CONSTRAINT hotfolder_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: imap_fetcher_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY imap_fetcher
+    ADD CONSTRAINT imap_fetcher_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_header_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mail_header
+    ADD CONSTRAINT mail_header_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_header_variable_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mail_header_variable
+    ADD CONSTRAINT mail_header_variable_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mail
+    ADD CONSTRAINT mail_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_recipient_link_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mail_recipient_link
+    ADD CONSTRAINT mail_recipient_link_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_recipient_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mail_recipient
+    ADD CONSTRAINT mail_recipient_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mandant_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY mandant
+    ADD CONSTRAINT mandant_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: milter_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY milter
+    ADD CONSTRAINT milter_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: proxy_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY proxy
+    ADD CONSTRAINT proxy_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: role_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY role
+    ADD CONSTRAINT role_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ac_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX ac_mid_key ON account_connector USING btree (mid);
+
+
+--
+-- Name: da_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX da_mid_key ON disk_archive USING btree (mid);
+
+
+--
+-- Name: ds_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX ds_da_key ON disk_space USING btree (da_id);
+
+
+--
+-- Name: hf_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX hf_mid_key ON hotfolder USING btree (mid);
+
+
+--
+-- Name: if_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX if_da_key ON imap_fetcher USING btree (da_id);
+
+
+--
+-- Name: if_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX if_mid_key ON imap_fetcher USING btree (mid);
+
+
+--
+-- Name: mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mail_key ON mail_header USING btree (mail_id);
+
+
+--
+-- Name: mh_mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mh_mail_key ON mail_header USING btree (mail_id, var_id);
+
+
+--
+-- Name: milter_da_id_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX milter_da_id_key ON milter USING btree (da_id);
+
+
+--
+-- Name: milter_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX milter_mid_key ON milter USING btree (mid);
+
+
+--
+-- Name: mrl_mail_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mrl_mail_key ON mail_recipient_link USING btree (mail_id);
+
+
+--
+-- Name: mrl_mr_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX mrl_mr_key ON mail_recipient_link USING btree (mr_id);
+
+
+--
+-- Name: px_da_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX px_da_key ON proxy USING btree (da_id);
+
+
+--
+-- Name: px_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX px_mid_key ON proxy USING btree (mid);
+
+
+--
+-- Name: r_mid_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX r_mid_key ON role USING btree (mid);
+
+
+--
+-- Name: var_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX var_key ON mail_header USING btree (var_id);
+
+
+--
+-- Name: var_name_key; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE UNIQUE INDEX var_name_key ON mail_header_variable USING btree (var_name);
+
+
+--
+-- Name: da_mr; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY disk_archive
+    ADD CONSTRAINT da_mr FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_ac_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY account_connector
+    ADD CONSTRAINT f_ac_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE;
+
+
+--
+-- Name: f_da; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY disk_space
+    ADD CONSTRAINT f_da FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hotfolder
+    ADD CONSTRAINT f_hf_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hotfolder_exclude
+    ADD CONSTRAINT f_hf_id FOREIGN KEY (hf_id) REFERENCES hotfolder(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_hf_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hotfolder
+    ADD CONSTRAINT f_hf_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_if_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY imap_fetcher
+    ADD CONSTRAINT f_if_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_if_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY imap_fetcher
+    ADD CONSTRAINT f_if_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_mailid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mail_header
+    ADD CONSTRAINT f_mailid FOREIGN KEY (mail_id) REFERENCES mail(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_mif; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY milter
+    ADD CONSTRAINT f_mif FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_milter_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY milter
+    ADD CONSTRAINT f_milter_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_mrl_mr_link; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mail_recipient_link
+    ADD CONSTRAINT f_mrl_mr_link FOREIGN KEY (mr_id) REFERENCES mail_recipient(id) ON DELETE CASCADE;
+
+
+--
+-- Name: f_px_da_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY proxy
+    ADD CONSTRAINT f_px_da_id FOREIGN KEY (da_id) REFERENCES disk_archive(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_px_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY proxy
+    ADD CONSTRAINT f_px_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_ro_mid; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY role
+    ADD CONSTRAINT f_ro_mid FOREIGN KEY (mid) REFERENCES mandant(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: f_var_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mail_header
+    ADD CONSTRAINT f_var_id FOREIGN KEY (var_id) REFERENCES mail_header_variable(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: mail_recipient_link_mail_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY mail_recipient_link
+    ADD CONSTRAINT mail_recipient_link_mail_id_fkey FOREIGN KEY (mail_id) REFERENCES mail(id) ON DELETE CASCADE;
+
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM postgres;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
