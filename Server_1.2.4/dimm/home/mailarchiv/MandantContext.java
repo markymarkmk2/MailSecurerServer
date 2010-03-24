@@ -495,6 +495,8 @@ public class MandantContext
 
     void teardown_mandant()
     {
+        clear_sso_cache();
+        
         for (int i = 0; i < worker_list.size(); i++)
         {
             WorkerParent wp = worker_list.get(i);
@@ -647,6 +649,13 @@ public class MandantContext
     static int user_sso_id;
     final ArrayList<UserSSOEntry> user_sso_list = new ArrayList<UserSSOEntry>();
 
+    void clear_sso_cache()
+    {
+        synchronized (user_sso_list)
+        {
+            user_sso_list.clear();
+        }
+    }
     void remove_from_sso_cache( String user )
     {
         synchronized (user_sso_list)
