@@ -9,8 +9,11 @@ import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.mail.RFCMimeMail;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -26,6 +29,7 @@ import javax.mail.Session;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.mail.util.SharedByteArrayInputStream;
 
 
 /*
@@ -143,16 +147,39 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
         {
             try
             {
+                boolean archived = false;
                 MimeMessage m = (MimeMessage) message;
-                RFCMimeMail mail = new RFCMimeMail( m );
-                
-                String envelope_text = mail.get_text_content();
-
 
                 // GET ATTACHMENT
-                if (m.getContent() instanceof Multipart)
+                Object content_object = null;
+                try
                 {
-                    Multipart mp = (Multipart) m.getContent();
+                    // THIS CAN FAIL IF IMAP MESSAGE IS NOT WELLFORMED
+                    content_object = m.getContent();
+                }
+                catch (MessagingException mexc)
+                {
+                    // TRY TO READ DIRECTLY FROM STREAM
+                    LogManager.debug_msg(2, "Rereading broken IMAP message");
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    m.writeTo(bos);
+                    bos.close();
+                    SharedByteArrayInputStream bis =
+                                    new SharedByteArrayInputStream(bos.toByteArray());
+                    Session s = Session.getDefaultInstance( new Properties());
+                    m = new MimeMessage(s, bis);
+                    bis.close();
+                    content_object = m.getContent();
+                }
+
+                // NOW WE SHOULD BE ABLE TO READ CONTENTS
+                RFCMimeMail mail = new RFCMimeMail( m );
+                String envelope_text = mail.get_text_content();
+                String subject = m.getSubject();
+
+                if (content_object instanceof Multipart)
+                {
+                    Multipart mp = (Multipart) content_object;
                     for (int i = 0; i < mp.getCount(); i++)
                     {
                         BodyPart bp = mp.getBodyPart(i);
@@ -186,11 +213,22 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                             }
 
                             super.archive_message(cm);
-                        
+                            archived = true;                        
                         }
                     }
                 }
-                set_msg_deleted(message);
+
+                if (archived)
+                {
+                    set_msg_deleted(message);
+                    //Notification.clear_notification_one_shot(imfetcher.getMandant(), Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer());
+                }
+                else
+                {
+                    LogManager.err_log_warn(Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer() + ": " + subject);
+                    
+                    //Notification.throw_notification_one_shot(imfetcher.getMandant(), Notification.NF_ERROR, Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer());
+                }
             }
 
             catch (IOException ex)

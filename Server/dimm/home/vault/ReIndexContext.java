@@ -259,14 +259,21 @@ public class ReIndexContext
         }
         try
         {
-            // CLOSE ANY OPEN DSH
-            if (data_dsh.is_open())
+            try
             {
-                data_dsh.close();
+                // CLOSE ANY OPEN DSH
+                if (data_dsh.is_open())
+                {
+                    data_dsh.close();
+                }
+                if (index_dsh.is_open())
+                {
+                    index_dsh.close();
+                }
             }
-            if (index_dsh.is_open())
+            catch (Exception exc )
             {
-                index_dsh.close();
+                LogManager.err_log("Error closing last index", exc);
             }
 
             set_status(Main.Txt("Deleting_index_data"));
@@ -339,10 +346,12 @@ public class ReIndexContext
                     String uuid = data_dsh.get_message_uuid(rfc);
 
                     // AND INDEX IT
-                    System.out.println(mailfile.getAbsolutePath() + " " + mailfile.length());
+                    if (LogManager.get_debug_lvl() > 5)
+                    {
+                        LogManager.debug("Indexing " + mailfile.getAbsolutePath() + " " + mailfile.length());
+                    }
                     boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc,
-                            /*delete_after_index*/ false, /*parallel*/ true,/*skip_account_match*/ true);
-
+                            /*delete_after_index*/ false, /*parallel*/ /*true*/true,/*skip_account_match*/ true);
 
                     if (!ok)
                     {
@@ -372,9 +381,11 @@ public class ReIndexContext
                 }
             }
 
-            while (data_dsh.get_async_index_writer().get_queue_entries() > 0)
+            while (data_dsh.get_async_index_writer().get_queue_entries() > 0 || idx.get_index_thread_pool_entries() > 0)
             {
-                set_status(Main.Txt("Waiting_for_queues_to_finish: ") + data_dsh.get_async_index_writer().get_queue_entries());
+                set_status(Main.Txt("Waiting_for_queues_to_finish: ") + 
+                        Integer.toString( data_dsh.get_async_index_writer().get_queue_entries() +
+                                         idx.get_index_thread_pool_entries()) );
                 LogicControl.sleep(500);
             }
 

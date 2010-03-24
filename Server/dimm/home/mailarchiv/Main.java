@@ -44,7 +44,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.2.4";
+    private static final String VERSION = "1.2.6";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -776,6 +776,20 @@ System.out.println("Core POI came from " + path);
         }
     }
 
+    public static boolean is_win()
+    {
+        return (System.getProperty("os.name").startsWith("Win"));
+    }
+
+    public static boolean is_linux()
+    {
+        return (System.getProperty("os.name").startsWith("Linux"));
+    }
+
+    public static boolean is_osx()
+    {
+        return (System.getProperty("os.name").startsWith("Mac"));
+    }
 
     void import_moonrug()
     {

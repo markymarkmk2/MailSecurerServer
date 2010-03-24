@@ -13,6 +13,7 @@ import home.shared.mail.RFCMimeMail;
 import dimm.home.mailarchiv.Exceptions.ExtractionException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
@@ -56,6 +57,12 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import javax.mail.Address;
 import javax.mail.Header;
@@ -143,8 +150,189 @@ class MyMimetype
     }
 }
 
+class ThreadRunner implements Runnable
+{
+
+    final ThreadBlockList aiw;
+
+    public ThreadRunner( ThreadBlockList aiw )
+    {
+        this.aiw = aiw;
+    }
+
+    @Override
+    public void run()
+    {
+        while (aiw.keepRunning || !aiw.queue.isEmpty())
+        {
+            IndexJobEntry ije = aiw.queue.poll();
+            try
+            {
+                if (ije != null)
+                {
+                    ije.run();
+                }
+                else
+                {
+                    /*
+                     * Nothing in queue so lets wait
+                     */
+                    Thread.sleep(aiw.sleepMilisecondOnEmpty);
+                }
+
+            }
+            catch (Exception e)
+            {
+                LogManager.err_log("Error in index runner", e );
+                e.printStackTrace();
+            }
+        }
+        aiw.isWRunning = false;
+    }
+}
 
 
+
+class ThreadBlockList implements Runnable
+{
+    Thread[] thread_array;
+    Thread wathdog_thread;
+    BlockingQueue<IndexJobEntry> queue;
+    boolean isWRunning;
+    boolean keepRunning = true;
+    long sleepMilisecondOnEmpty = 100;
+
+    public ThreadBlockList( int cnt)
+    {
+        queue = new ArrayBlockingQueue<IndexJobEntry>(cnt);
+
+        thread_array = new Thread[cnt];
+        
+        for (int i = 0; i < cnt; i++)
+        {
+            thread_array[i] = start();
+        }
+
+        wathdog_thread = new Thread(this, "IndexWatchdog" );
+        wathdog_thread.start();
+    }
+
+    Thread start()
+    {
+        ThreadRunner wr = new ThreadRunner(this);
+        Thread thread = new Thread(wr, "IndexThread");
+        thread.start();
+        return thread;
+    }
+
+    private void stop()
+    {
+        this.keepRunning = false;
+        try
+        {
+            while (isWRunning )
+            {
+                //using the same sleep duration as writer uses
+                Thread.sleep(sleepMilisecondOnEmpty);
+            }
+        }
+        catch (InterruptedException e)
+        {
+            e.printStackTrace();
+        }
+    }
+    void execute( IndexJobEntry ije ) throws InterruptedException
+    {
+        //System.out.println("QS free: " + queue.remainingCapacity());
+        queue.put(ije);
+    }
+
+
+
+    public void close() throws CorruptIndexException, IOException
+    {
+        stop();
+    }
+
+    public int get_write_queue_size()
+    {
+        return queue.size();
+    }
+
+    public int get_queue_entries()
+    {
+        return get_write_queue_size() /*+ get_extract_queue_size()*/;
+    }
+
+    @Override
+    public void run()
+    {
+        while (this.keepRunning)
+        {
+            for (int i = 0; i < thread_array.length; i++)
+            {
+                Thread thread = thread_array[i];
+
+                if (thread.isInterrupted() || !thread.isAlive())
+                {
+                    // REVIVE
+                    thread_array[i] = start();
+                }
+            }
+            try
+            {
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException interruptedException)
+            {
+            }
+        }
+    }
+
+    int get_busy_threads()
+    {
+        return queue.size() - queue.remainingCapacity();
+    }
+}
+class BlockThreadPoolExecutor extends ThreadPoolExecutor
+{
+    Semaphore sem;
+    BlockingQueue<IndexJobEntry>[] queue_array;
+    public BlockThreadPoolExecutor(int cnt)
+    {
+        super(cnt, cnt, 1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>()  );
+        sem = new Semaphore(cnt);
+    }
+
+    @Override
+    public void execute( Runnable command )
+    {
+        try
+        {
+            sem.acquire();
+        }
+        catch (InterruptedException interruptedException)
+        {
+            return;
+        }
+        super.execute(command);
+    }
+
+
+    @Override
+    protected void afterExecute( Runnable r, Throwable t )
+    {
+        super.afterExecute(r, t);
+        sem.release();
+    }
+
+
+    int get_busy_threads()
+    {
+        return this.getCorePoolSize() - sem.availablePermits();
+    }
+
+}
 /**
  *
  * @author mw
@@ -166,6 +354,10 @@ public class IndexManager extends WorkerParent
     ArrayList<String> allowed_headers;
     ArrayList<String> allowed_domains;
     GroupEntry acct_exclude_list;
+
+    //private final BlockThreadPoolExecutor index_thread_pool;
+    private final ThreadBlockList index_thread_pool;
+    private static final long MAX_INDEX_THREADS = 8l;
     
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -206,10 +398,14 @@ public class IndexManager extends WorkerParent
 
         build_header_lists();
 
+        int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
+        index_thread_pool = new ThreadBlockList(index_threads);
+
 
         is_started = false;
     }
 
+    
     public ArrayList<String>get_email_headers()
     {
         return email_headers;
@@ -326,7 +522,7 @@ public class IndexManager extends WorkerParent
         writer.setMergeScheduler(new org.apache.lucene.index.SerialMergeScheduler());
         writer.setRAMBufferSizeMB(32);
         writer.setMergeFactor(16);
-        writer.setMaxMergeDocs(32);
+        //writer.setMaxMergeDocs(32);
         //writer.setMaxFieldLength(Integer.MAX_VALUE);
         //writer.setUseCompoundFile(false);
         return writer;
@@ -1825,6 +2021,17 @@ public class IndexManager extends WorkerParent
         long stopTime = System.currentTimeMillis();
         System.out.println("Close time: " + (stopTime - closeTime) + " ms");
         System.out.println("Total time: " + (stopTime - startTime) + " ms");
+    }
+
+    public int get_index_thread_pool_entries()
+    {
+        return index_thread_pool.get_busy_threads();
+    }
+
+
+    void execute( IndexJobEntry aThis ) throws InterruptedException
+    {
+        index_thread_pool.execute(aThis);
     }
 }
 

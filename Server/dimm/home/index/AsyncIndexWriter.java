@@ -35,6 +35,7 @@ class WriteRunner implements Runnable
                 if (ije != null)
                 {
                     ije.handle_post_index();
+                    
                 }
                 else
                 {
@@ -43,22 +44,30 @@ class WriteRunner implements Runnable
                      */
                     Thread.sleep(aiw.sleepMilisecondOnEmpty);
 
-
+/*
                     try
                     {
                         // LOOK FOR DEAD THREADS  (OOM-EXCEPTIONS DURING EXTRACT)
                         IndexJobEntry xije = aiw.index_extract_queue.peek();
                         if (xije != null)
                         {
-                             Thread thread = xije.thread;
+                            Thread thread = xije.finished;
+                            xije.ixm.get_index_thread_pool().
 
-                            if (thread != null && !thread.isAlive() || thread.isInterrupted())
+                            if (thread != null && (!thread.isAlive() || thread.isInterrupted()))
                             {
                                 Thread.sleep(aiw.sleepMilisecondOnEmpty);
                                 if (!thread.isAlive() || thread.isInterrupted())
                                 {
                                     LogManager.err_log("Reviving dead extract thread");
                                     thread = new Thread(xije, "RevivedExtractorRunner");
+                                    try
+                                    {
+                                        xije.thread.join(100);
+                                    }
+                                    catch (InterruptedException interruptedException)
+                                    {
+                                    }
                                     xije.thread = thread;
                                     thread.start();
                                 }
@@ -68,7 +77,7 @@ class WriteRunner implements Runnable
                     catch (Exception e)
                     {
                         e.printStackTrace();
-                    }
+                    }*/
                 }
 
             }
@@ -98,7 +107,7 @@ public class AsyncIndexWriter
      * A blocking queue of document to facilitate asynchronous writing.
      */
     BlockingQueue<IndexJobEntry> index_write_queue;
-    BlockingQueue<IndexJobEntry> index_extract_queue;
+   //BlockingQueue<IndexJobEntry> index_extract_queue;
     /*
      * Thread which makes writing asynchronous
      */
@@ -133,7 +142,7 @@ public class AsyncIndexWriter
     {
             index_write_queue.put(ije);
     }
-
+/*
     public void add_to_extract_queue( IndexJobEntry ije ) throws InterruptedException
     {
             index_extract_queue.put(ije);
@@ -142,7 +151,7 @@ public class AsyncIndexWriter
     void remove_from_extract_queue( IndexJobEntry ije )
     {
             index_extract_queue.remove(ije);
-    }
+    }*/
 
     public void startWriting()
     {
@@ -177,7 +186,7 @@ public class AsyncIndexWriter
             long sleepMilisecondOnEmpty )
     {
         index_write_queue = new ArrayBlockingQueue<IndexJobEntry>(100);
-        index_extract_queue = new ArrayBlockingQueue<IndexJobEntry>(queueSize);
+        //index_extract_queue = new ArrayBlockingQueue<IndexJobEntry>(queueSize);
         this.sleepMilisecondOnEmpty = sleepMilisecondOnEmpty;
         startWriting();
     }
@@ -197,7 +206,7 @@ public class AsyncIndexWriter
         this.keepRunning = false;
         try
         {
-            while (isWRunning && index_extract_queue.size() > 0)
+            while (isWRunning /*&& index_extract_queue.size() > 0*/)
             {
                 //using the same sleep duration as writer uses
                 Thread.sleep(sleepMilisecondOnEmpty);
@@ -222,14 +231,14 @@ public class AsyncIndexWriter
     {
         return index_write_queue.size();
     }
-
+/*
     public int get_extract_queue_size()
     {
         return index_extract_queue.size();
-    }
+    }*/
 
     public int get_queue_entries()
     {
-        return get_write_queue_size() + get_extract_queue_size();
+        return get_write_queue_size() /*+ get_extract_queue_size()*/;
     }
 }
