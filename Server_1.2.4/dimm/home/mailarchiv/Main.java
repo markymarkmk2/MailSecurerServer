@@ -5,15 +5,8 @@
 
 package dimm.home.mailarchiv;
 
-import com.moonrug.exchange.ExchangeException;
-import com.moonrug.exchange.IAttachment;
-import com.moonrug.exchange.IContentItem;
-import com.moonrug.exchange.IFolder;
-import com.moonrug.exchange.IMessage;
-import com.moonrug.exchange.IStore;
-import com.moonrug.exchange.Recipient;
-import com.moonrug.exchange.Session;
 import dimm.home.Updater.Updater;
+import dimm.home.mailarchiv.Commands.HandleCertificate;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
@@ -23,15 +16,16 @@ import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.security.Security;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Enumeration;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.zip.ZipOutputStream;
@@ -44,7 +38,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.2.6";
+    private static final String VERSION = "1.2.9";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -172,15 +166,12 @@ public class Main
             CryptAESInputStream.lame_security = true;
             CryptAESOutputStream.lame_security = true;
         }
-
-        // SETTING SECURITY PROPERTIES
-        init_mail_security();
-
-        // SETTING JAVA MAIL PARAMS
-        init_mail_settings();
-      
         
         info_msg("Starting " + APPNAME + " V" + VERSION );
+
+
+
+              
 
         // DEFAULT IS DERBY
         SQLWorker.set_to_derby_db();
@@ -194,9 +185,7 @@ public class Main
         {
             if (args[i].compareTo("-t") == 0)
                 trace_mode = true;
-
-            
-           
+                       
             if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
             {
                 ws_ip = args[i + 1];
@@ -229,12 +218,9 @@ public class Main
                 Updater.build_sb_installer( args[i + 1], "mailsecurerserver", "MSSI");
                 System.exit(0);
             }
-
         }            
         try
         {            
-            String pxs_port = get_prop(GeneralPreferences.PXSOCKSPORT);
-            
             if (is_proxy_enabled()  && Main.get_long_prop(GeneralPreferences.PXSOCKSPORT) > 0)
             {
                 System.setProperty("proxyPort",get_prop(GeneralPreferences.PXSOCKSPORT));
@@ -252,6 +238,15 @@ public class Main
             info_msg("Building new database");
             SQLWorker.build_hibernate_tables();
         }
+        
+        // SETTING SECURITY PROPERTIES
+        init_mail_security();
+
+        // SETTING JAVA MAIL PARAMS
+        init_mail_settings();
+        
+        // SETUP KEYSTORE IF NOT EXISTANT
+        init_keystore();
 
 
         info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
@@ -290,8 +285,11 @@ public class Main
         // MAYBEE NEEDED BY KERBEROS, I DUNNO
         ///        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
 
+        // SET DEFAULT TRUSTSTORE
         String java_home = System.getProperty("java.home").trim();
         String ca_cert_file = java_home + "/lib/security/cacerts";
+
+        ca_cert_file = Main.get_prop(GeneralPreferences.TRUSTSTORE, ca_cert_file);
         System.setProperty("javax.net.ssl.trustStore", ca_cert_file);
         props.put("javax.net.ssl.trustStore", ca_cert_file);
 
@@ -385,10 +383,7 @@ public class Main
             key += Integer.toString(i%10);
         }
 
-      /*  m.import_moonrug();
-
-        String[] _args = new String[0];
-        MBoxImporter.main(_args);*/
+   
         
         m.work();
      
@@ -791,69 +786,52 @@ System.out.println("Core POI came from " + path);
         return (System.getProperty("os.name").startsWith("Mac"));
     }
 
-    void import_moonrug()
+  
+    public static String get_fqdn()
     {
+        String fqdn = Main.get_prop(GeneralPreferences.FQDN);
+
         try
         {
-            import_moonrug_exc();
-        }
-        catch (Exception ex)
-        {
-            System.err.println("MR failed: " + ex.getMessage() );
-        }
-    }
+            Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
 
-    void import_moonrug_exc() throws ExchangeException, FileNotFoundException, IOException
-    {
-        Map<String, String> map = new HashMap<String, String> ();
-        map.put (Session.USERNAME, "EXJournal");
-        map.put (Session.PASSWORD, "12345");
-        map.put (Session.DOMAIN, "dimm.home");
-        map.put (Session.SERVER, "192.168.1.120");
-        System.setProperty("moonrug.license","J:\\Develop\\Java\\JMailArchiv\\Packages\\moonrug-0.8\\license\\License.xml");
-        Session session = Session.create (map);
-        IStore store = session.getStore();
-        IFolder inbox = store.getInbox();
-        IContentItem[] imails = inbox.getItems();
-
-        for (int i = 0; i < imails.length; i++)
-        {
-            IContentItem iContentItem = imails[i];
-            if (iContentItem instanceof IMessage)
+            while (en.hasMoreElements())
             {
-                IMessage msg = (IMessage)iContentItem;
-
-
-                Recipient[] recp = msg.getRecipients();
-
-                String body = msg.getBody();
-                FileOutputStream bfos = new FileOutputStream("c:\\tmp\\Mail_" + i + ".txt" );
-
-                bfos.write( body.getBytes() );
-                bfos.close();
-
-
-                if (msg.hasAttachments())
+                NetworkInterface ni = en.nextElement();
+                if (ni.getName().startsWith("lo") || ni.getHardwareAddress() == null || ni.getHardwareAddress().length == 0)
                 {
-                    IAttachment[] atts = msg.getAttachments();
-                    for (int j = 0; j < atts.length; j++)
+                    continue;
+                }
+                Enumeration<InetAddress> adr_set = ni.getInetAddresses();
+
+                while (adr_set.hasMoreElements())
+                {
+                    InetAddress adr = adr_set.nextElement();
+                    String chn = adr.getCanonicalHostName();
+                    if (chn == null || chn.length() == 0)
+                        continue;
+                    String[] host_parts = chn.split("\\.");
+                    if (host_parts.length > 2)
                     {
-                        IAttachment iAttachment = atts[j];
-
-                        Class cl = iAttachment.getClass();
-                        String name = iAttachment.getName();
-                        String cont_id = iAttachment.getContentId();
-                        String longname = iAttachment.getLongName();
-                        String mimetag = iAttachment.getMimeTag();
-
-                 /*       FileOutputStream fos = new FileOutputStream("c:\\tmp\\Mail_" + i + "_att_" + j + ".att" );
-                        iAttachment.writeTo( fos );
-                        fos.close();*/
+                        fqdn = chn;
+                        break;
                     }
                 }
-
+                if (fqdn != null)
+                    break;
             }
         }
+        catch (SocketException socketException)
+        {
+        }
+        return fqdn;
+
+    }
+
+
+    void init_keystore()
+    {
+        HandleCertificate.check_keystore(/*syskeystore*/ false );
     }
 }
 

@@ -559,7 +559,7 @@ public class LogicControl
     }
 
 
-    public File create_temp_file( Mandant mandant ) throws ArchiveMsgException
+    public File create_temp_file( Mandant mandant ) throws ArchiveMsgException, IOException
     {
         MandantContext context = get_m_context(mandant);
         if (context == null)
@@ -587,10 +587,10 @@ public class LogicControl
         }
 
 
-        File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
 
         try
         {
+            File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
             fm = new RFCFileMail(tmp_file, encoded );
             bos = fm.open_outputstream();
             msg.writeTo(bos);
@@ -632,12 +632,11 @@ public class LogicControl
         {
             throw new ArchiveMsgException(Main.Txt("Invalid_context_for_mail"));
         }
-
-        File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, del_on_exit);
         
 
         try
         {
+            File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, del_on_exit);
             BufferedInputStream bis = new BufferedInputStream(is);
             fm = new RFCFileMail(tmp_file, encoded );
             bos = fm.open_outputstream();

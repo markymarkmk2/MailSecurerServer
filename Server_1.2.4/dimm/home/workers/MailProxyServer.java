@@ -29,6 +29,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 
@@ -38,8 +41,12 @@ import java.util.ArrayList;
 public class MailProxyServer extends ListWorkerParent
 {
     public static final String NAME = "MailProxyServer";
+    private static final int MAX_THREADS = 100;
+
 
     final ArrayList<ProxyConnection> connection_list;
+    ExecutorService connect_thread_pool;
+
 
     /**
      * Constructor
@@ -53,6 +60,7 @@ public class MailProxyServer extends ListWorkerParent
         
   //      m_Stop = false;
         connection_list = new ArrayList<ProxyConnection>();
+        connect_thread_pool = Executors.newFixedThreadPool(MAX_THREADS);
     }
 
    
@@ -107,7 +115,7 @@ public class MailProxyServer extends ListWorkerParent
                         connection_list.add(m_POP3Connection);
                     }
                     
-                    m_POP3Connection.handleConnection();
+                    m_POP3Connection.handleConnection(connect_thread_pool);
 
                 }
                 catch (SocketTimeoutException ste)
@@ -195,7 +203,7 @@ public class MailProxyServer extends ListWorkerParent
                     }
                     
                     
-                    m_SMTPConnection.handleConnection();
+                    m_SMTPConnection.handleConnection(connect_thread_pool);
 
                 } catch (SocketTimeoutException ste)
                 {
@@ -242,8 +250,9 @@ public class MailProxyServer extends ListWorkerParent
         super.setShutdown(shutdown);
         if (!shutdown)
             return;
-        
-   
+
+        connect_thread_pool.shutdown();
+
 
         for (int i = 0; i < child_list.size(); i++)
         {
@@ -251,7 +260,26 @@ public class MailProxyServer extends ListWorkerParent
             pe.finish();
         }
 
-        LogicControl.sleep(1100);
+        try
+        {
+            connect_thread_pool.awaitTermination(5, TimeUnit.SECONDS);
+
+            connect_thread_pool.shutdownNow();
+            connect_thread_pool.awaitTermination(1, TimeUnit.SECONDS);
+        }
+        catch (InterruptedException ex)
+        {
+            connect_thread_pool.shutdownNow();
+            try
+            {
+                connect_thread_pool.awaitTermination(1, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException interruptedException)
+            {
+            }
+        }
+        
+        
 
         if (idle_worker != null)
         {

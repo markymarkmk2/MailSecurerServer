@@ -188,16 +188,16 @@ public class TempFileHandler
             }
         }
     }
-    public File create_temp_file(String subdir, String prefix, String suffix) throws ArchiveMsgException
+    public File create_temp_file(String subdir, String prefix, String suffix) throws IOException
     {
         return create_temp_file(subdir, prefix, suffix, true);
     }
-    public File create_file(String subdir, String prefix, String suffix) throws ArchiveMsgException
+    public File create_file(String subdir, String prefix, String suffix) throws IOException
     {
         return create_temp_file(subdir, prefix, suffix, false);
     }
 
-    public File create_temp_file(String subdir, String prefix, String suffix, boolean del_on_exit) throws ArchiveMsgException
+    public File create_temp_file(String subdir, String prefix, String suffix, boolean del_on_exit) throws IOException
     {
         File tmp_file = null;
         File directory = null;
@@ -233,20 +233,12 @@ public class TempFileHandler
         // IF THIS FAILS WE TRY TO USE DEFAULT TEMP DIR, THIS IS ACCEPTABLE FOR TMP FILES
         if (tmp_file == null)
         {
-            try
-            {
                 tmp_file = File.createTempFile(prefix, suffix, null);
-            }
-            catch (IOException ex)
-            {
-                LogManager.log(Level.SEVERE, null, ex);
-                throw new ArchiveMsgException("Cannot create temp file: " + ex.getMessage());
-            }
         }
 
         if (tmp_file.getParentFile().getFreeSpace() < Main.MIN_FREE_SPACE)
         {
-            throw new ArchiveMsgException(Main.Txt( "No_disk_space_left_in_temp_dir") + ": " + tmp_file.getParent());
+            throw new IOException(Main.Txt( "No_disk_space_left_in_temp_dir") + ": " + tmp_file.getParent());
         }
 
         // GET RID OF FILE ON EXIT OF JVM

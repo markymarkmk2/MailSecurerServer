@@ -70,6 +70,8 @@ public class GeneralPreferences extends Preferences
     public static final String SYSADMIN_NAME = "SysAdminName";
     public static final String SYNCSRV_PORT = "SyncServerPort";
     public static final String INDEX_MAIL_THREADS = "IndexMailThreads";
+    public static final String FQDN = "FQDN";
+    public static final String TRUSTSTORE = "TrustStore";
 
     
     /** Creates a new instance of Preferences */
@@ -125,6 +127,9 @@ public class GeneralPreferences extends Preferences
         prop_names.add( SYSADMIN_NAME );
         prop_names.add( SYNCSRV_PORT );
         prop_names.add( INDEX_MAIL_THREADS );
+        prop_names.add( FQDN );
+        prop_names.add( TRUSTSTORE );
+        prop_names.add( INDEX_TIMEOUT );
         
                 
         read_props();

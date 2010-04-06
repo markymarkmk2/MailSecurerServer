@@ -15,13 +15,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  * @author mw
  */
-public abstract class ProxyConnection
+public abstract class ProxyConnection implements Runnable
 {
 
 /*
@@ -30,22 +32,16 @@ public abstract class ProxyConnection
  */
 
     // OVERALL WATCHDOG
-    private static final int ACTIVITY_TIMEOUT = 60;
+    private static final int ACTIVITY_TIMEOUT = 25;
 
-    static final int SOCKET_TIMEOUT[] = {60000, 60000};
-//    static final int SOCKET_TIMEOUT[] = {400, 800, 1200, 1800, 2500, 3000, 6000, 10000, 45000};
+    static final int SOCKET_TIMEOUT[] = {30000, 60000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
     final static byte END_OF_LINE[] = {'\r','\n'};
 
-    // variables
-/*    String m_host;							// host name or IP adsress
-    int m_RemotePort = 110;					// port to connect
-    */
 
     static final int ERROR_TIMEOUT_EXCEEDED = 1;
     static final int ERROR_NO_ANSWER = 2;
     static final int ERROR_UNKNOWN = 3;
-
 
     InputStream serverReader;			// server reader
     InputStream clientReader;
@@ -72,8 +68,7 @@ public abstract class ProxyConnection
 
 
     int this_thread_id = 0;
-    private static final int MAX_THREADS = 50;
-
+    
 
     //abstract StringBuffer processMessage( StringBuffer msg );
     abstract void inc_thread_count();
@@ -87,7 +82,11 @@ public abstract class ProxyConnection
 
     long last_activity;
 
-    static final Semaphore mtx = new Semaphore(MAX_THREADS);
+    String last_command;
+
+    
+   // static final Semaphore sem = new Semaphore(MAX_THREADS);
+    static final String mtx = new String();
 
     ProxyEntry pe;
 
@@ -110,6 +109,8 @@ public abstract class ProxyConnection
         clientSocket = _clientSocket;
         pe.set_connection( this );
         reset_timeout();
+
+        
     }
 
     public boolean is_connected()
@@ -189,10 +190,22 @@ public abstract class ProxyConnection
         return false;
     }
 
-
-    public void handleConnection()
+    @Override
+    public void run()
     {
-        Thread sockThread;
+        runConnection();
+
+        synchronized (mtx)
+        {
+            dec_thread_count();
+            pe.decInstanceCnt();
+        }        
+    }
+
+
+    public void handleConnection(ExecutorService connect_thread_pool)
+    {
+        //Thread sockThread;
 
 
         // runs the server
@@ -205,6 +218,10 @@ public abstract class ProxyConnection
 
         log(DBG_VERB - 2, Main.Txt("Opening_Connection"));
 
+        connect_thread_pool.execute(this);
+        
+
+        /*
         if (get_thread_count() > MAX_THREADS)
         {
             runConnection();
@@ -235,7 +252,7 @@ public abstract class ProxyConnection
             };
 
             sockThread.start();
-        }
+        }*/
     }
 
 
@@ -247,26 +264,22 @@ public abstract class ProxyConnection
         {
             if (serverWriter != null)
             {
-                serverWriter.close();
-                serverWriter = null;
+                serverWriter.close();                
             }
 
             if (serverReader != null)
             {
                 serverReader.close();
-                serverReader = null;
             }
 
             if (clientWriter != null)
             {
                 clientWriter.close();
-                clientWriter = null;
             }
 
             if (clientWriter != null)
             {
                 clientWriter.close();
-                clientWriter = null;
             }
             if (clientSocket != null&& clientSocket.isConnected())
             {
@@ -387,26 +400,39 @@ public abstract class ProxyConnection
     {
         last_activity = System.currentTimeMillis();
     }
+    protected void disable_timeout()
+    {
+        last_activity = -1;
+    }
+
     public boolean is_timeout()
     {
+        if (last_activity == -1)
+            return false;
+        
         if ((System.currentTimeMillis()- last_activity)/1000 > ACTIVITY_TIMEOUT)
+        {
+            Main.err_log( "No activity for " + ACTIVITY_TIMEOUT + "s: " + get_description() + " last command:" + last_command );
             return true;
+        }
         return false;
     }
 
 
-    StringBuffer getDataFromInputStream(InputStream reader)
+    StringBuffer getDataFromInputStream(InputStream reader, Socket sock, boolean wait)
     {
-        return getDataFromInputStream( reader, m_Command );
+        return getDataFromInputStream( reader, sock, m_Command, wait );
     }
 
-    int wait_for_avail( InputStream reader, int s )
+    int wait_for_avail( InputStream reader, Socket sock, int s )
     {
         int maxwait = s * 10;
         int avail = 0;
 
         while (avail == 0 && maxwait > 0)
         {
+            if (sock.isClosed() || sock.isInputShutdown() || !sock.isConnected())
+                return 0;
             try
             {
                 avail = reader.available();
@@ -425,7 +451,17 @@ public abstract class ProxyConnection
         return 0;
     }
 
-    StringBuffer getDataFromInputStream(InputStream reader, int command_type)
+    String get_description()
+    {
+        String ret =  pe.get_proxy().getType() + " " + this.this_thread_id;
+
+        if (clientSocket != null && clientSocket.isConnected())
+            ret += ": " + clientSocket.getRemoteSocketAddress().toString();
+
+        return ret;
+    }
+
+    StringBuffer getDataFromInputStream(InputStream reader, Socket sock, int command_type, boolean wait)
     {
         final int MAX_BUF = 8192;  						// buffer 8 Kb
         byte buffer[] = new byte[MAX_BUF];			// buffer array
@@ -439,10 +475,12 @@ public abstract class ProxyConnection
 
 
         // WAIT TEN SECONDS (100*100ms) FOR DATA
-         avail = wait_for_avail( reader, 10 );
-        if (avail == 0)
-            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
-
+        if (wait)
+        {
+             avail = wait_for_avail( reader, sock, 10 );
+             if (avail == 0)
+                Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " getDataFromInputStream " + get_description() + " last command:" + last_command);
+        }
 
         
         while ( !finished && m_error < 0)
@@ -522,7 +560,7 @@ public abstract class ProxyConnection
                 avail = reader.available();
                 if (rlen == 0 && avail == 0)
                 {
-                    if (wait_for_avail( reader, 5 ) == 0)
+                    if (wait_for_avail( reader, sock, 5 ) == 0)
                         rlen = -1;
                 }
 
@@ -595,7 +633,9 @@ public abstract class ProxyConnection
                 // reader failed
                 m_error = ERROR_UNKNOWN;
                 if (!finished)
-                    Main.err_log("Exception: " + e.getMessage());
+                {
+                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                }
             }
         }
 
@@ -661,7 +701,7 @@ public abstract class ProxyConnection
 
         if (avail <= 0)
         {
-            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
+            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " start get_multiline_proxy_data " + get_description() + " last command:" + last_command );
             m_error = ERROR_UNKNOWN;
             return m_error;            
         }
@@ -703,7 +743,7 @@ public abstract class ProxyConnection
                 }
                 if (avail <= 0)
                 {
-                    Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") );
+                    Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " get_multiline_proxy_data " + get_description() + " last command:" + last_command );
                     m_error = ERROR_UNKNOWN;
                     return m_error;
                 }
@@ -755,6 +795,7 @@ public abstract class ProxyConnection
 
                             while (avail > 0 && (rlen + avail) <= buffer.length)
                             {
+                                reset_timeout();
                                 rlen += Reader.read(buffer, rlen, avail);
                                 if (dgb_level >= DBG_DATA_VERB)
                                     log( DBG_DATA_VERB, new String( buffer, 0, rlen ) );
@@ -828,10 +869,10 @@ public abstract class ProxyConnection
 
                     if (bos != null)
                     {
+                        disable_timeout();
                         try
                         {
                             bos.write(buffer, 0, rlen);
-
                         }
                         catch (Exception exc)
                         {
@@ -862,6 +903,7 @@ public abstract class ProxyConnection
                                 return m_error;
                             }
                         }
+                        reset_timeout();
                     }
                 }
                 else
@@ -920,7 +962,7 @@ public abstract class ProxyConnection
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                LogManager.err_log("Error in get_multiline_proxy_data", e);
+                LogManager.err_log("get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
             }
         }
 
@@ -933,10 +975,9 @@ public abstract class ProxyConnection
             return m_error;
 
         return -1;
-
     }
 
-    int read_one_line( InputStream serverReader, byte[] first_line )
+    int read_one_line( InputStream reader, byte[] first_line )
     {
         int i = 0;
         for (i = 0; i < first_line.length; i++)
@@ -944,7 +985,7 @@ public abstract class ProxyConnection
             byte b = 0;
             try
             {
-                first_line[i] = (byte) serverReader.read();
+                first_line[i] = (byte) reader.read();
                 reset_timeout();
             }
             catch (IOException iOException)
@@ -964,6 +1005,12 @@ public abstract class ProxyConnection
 
         return i;
     }
+
+    void close()
+    {
+        closeConnections();
+    }
+
 
 
 

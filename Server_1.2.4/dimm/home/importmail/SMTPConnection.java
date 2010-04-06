@@ -53,7 +53,15 @@ public class SMTPConnection extends ProxyConnection
      * @param host Host name or IP address
      */
 
-     
+    boolean is_connected( Socket sock )
+    {
+        return !(sock.isClosed() || sock.isInputShutdown() || !sock.isConnected());
+    }
+
+    boolean client_is_connected()
+    {
+        return is_connected(clientSocket);
+    }
 
     
    
@@ -104,7 +112,7 @@ public class SMTPConnection extends ProxyConnection
                 // read the answer from the server
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
-                sData = getDataFromInputStream(serverReader).toString();
+                sData = getDataFromInputStream(serverReader, serverSocket,/*-wait*/ true).toString();
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())
@@ -129,6 +137,8 @@ public class SMTPConnection extends ProxyConnection
                 {
                     clientWriter.write(sData.getBytes());
                     clientWriter.flush();
+                    reset_timeout();
+
                     if (DATA() != 0)
                     {
                         break;
@@ -150,6 +160,7 @@ public class SMTPConnection extends ProxyConnection
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
+                reset_timeout();
 
                 // QUIT
                 if (do_quit)
@@ -162,11 +173,29 @@ public class SMTPConnection extends ProxyConnection
 
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
-                // read the POP command from the client
-                sData = getDataFromInputStream(clientReader, SMTP_CLIENTREQUEST).toString();
+
+                // CHECK FOR CLIENT W/O LOGOUT
+                if (last_command != null && last_command.equals("DATA"))
+                {
+                    // WE LOG AFTER OUT 120 s
+                    disable_timeout();
+                    int avail = wait_for_avail( clientReader, clientSocket, 120 );
+                    if (avail == 0)
+                    {
+                        serverWriter.write("QUIT\r\n".getBytes());
+                        serverWriter.flush();
+                        break;
+                    }
+                }
+
+                // read the SMTP command from the client
+                sData = getDataFromInputStream(clientReader, clientSocket,  SMTP_CLIENTREQUEST, /*wait*/false).toString();
+                last_command = sData.toUpperCase().trim();
+
+               
 
                 // verify if the user stopped the thread
-                if (pe.is_finished())
+                if (pe.is_finished() )
                 {
                     break;
                 }
@@ -180,9 +209,10 @@ public class SMTPConnection extends ProxyConnection
                 if (dbg_level >= DBG_VERB)
                     log( "C: " + sData);
 
-                // write it to the POP server
+                // write it to the SMTP server
                 serverWriter.write(sData.getBytes());
                 serverWriter.flush();
+                reset_timeout();
 
                 String token = sData.toUpperCase();
                 if (token.startsWith("DATA") || token.endsWith("\r\nDATA\r\n") )
@@ -194,8 +224,7 @@ public class SMTPConnection extends ProxyConnection
                     if (is_command_singleline(sData))
                         m_Command = SMTP_SINGLELINE;
                     else
-                        m_Command = SMTP_MULTILINE;
-                    
+                        m_Command = SMTP_MULTILINE;                    
                 }
                 if (is_command_quit(sData))
                 {
@@ -213,13 +242,13 @@ public class SMTPConnection extends ProxyConnection
         catch (Exception e)
         {
             if (!pe.is_finished())
-                LogManager.err_log(e.getMessage());
+                LogManager.err_log(get_description() + ": " + e.getMessage() + " last command:" + last_command);
         }
         finally
         {
             closeConnections();
 
-            System.gc();
+            //System.gc();
         }
         log(DBG_VERB -2, Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer() );
         
@@ -231,7 +260,9 @@ public class SMTPConnection extends ProxyConnection
         int rlen = clientReader.read(buffer);
         if (rlen <= 0)
             return -1;
-        
+
+        reset_timeout();
+
         while ( buffer[ rlen - 1 ] != '\n' && buffer[ rlen - 1] != '\r')
         {
             int local_rlen = clientReader.read(buffer, rlen, buffer.length );
@@ -271,7 +302,9 @@ public class SMTPConnection extends ProxyConnection
 
 
         int ret = get_multiline_proxy_data(clientReader, serverWriter,  rfc_dump, bos);
-        
+
+        disable_timeout();
+
         // CLOSE STREAM
         try
         {
@@ -326,9 +359,5 @@ public class SMTPConnection extends ProxyConnection
     {
         return 25;
     }
-
- 
-
- 
-}  // POP3connection
+} 
 

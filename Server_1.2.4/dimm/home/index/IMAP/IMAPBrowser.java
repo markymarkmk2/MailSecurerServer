@@ -7,6 +7,7 @@ package dimm.home.index.IMAP;
 import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import java.io.IOException;
@@ -15,9 +16,153 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 
 import java.net.Socket;
+import java.net.URISyntaxException;
+import java.security.cert.Certificate;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
+
+/*****
+ * SSl
+ * C:\Programme\Java\jre6\bin>rm c:\ssl\mskeystore.str
+
+C:\Programme\Java\jre6\bin>keytool -genkey -keyalg "RSA" -keysize 1024 -dname "c
+n=MailSecurer" -alias mailsecurer -keypass 123456 -keystore c:\ssl\mskeystore.st
+r -storepass 123456 -validity 3650
+
+C:\Programme\Java\jre6\bin>keytool -selfcert -alias mailsecurer -dname "cn=MailS
+ecurer" -validity 3650 -keystore c:\ssl\mskeystore.str
+Geben Sie das Keystore-Passwort ein:
+
+C:\Programme\Java\jre6\bin>keytool -list -export -file c:\ssl\exp.cert -alias ma
+ilsecurer -rfc -keystore c:\ssl\mskeystore.str
+Geben Sie das Keystore-Passwort ein:
+Zertifikat in Datei <c:\ssl\exp.cert> gespeichert.
+ *
+ *
+ * C:\Programme\Java\jre6\bin>keytool -genkey -keyalg "RSA" -keysize 1024 -dname "c
+n=MailSecurer" -alias mailsecurer -keypass 123456 -keystore c:\ssl\mskeystore.st
+r -storepass 123456 -validity 3650
+
+C:\Programme\Java\jre6\bin>keytool -selfcert -alias mailsecurer -dname "cn=MailS
+ecurer" -validity 3650 -keystore c:\ssl\mskeystore.str
+Geben Sie das Keystore-Passwort ein:
+
+C:\Programme\Java\jre6\bin>keytool -list -export -file c:\ssl\exp.cert -alias ma
+ilsecurer -rfc -keystore c:\ssl\mskeystore.str
+Geben Sie das Keystore-Passwort ein:
+Zertifikat in Datei <c:\ssl\exp.cert> gespeichert.
+
+C:\Programme\Java\jre6\bin>keytool -importkeystore -srckeystore c:\ssl\mskeystor
+e.str -srcalias mailsecurer -srcstorepass 123456 -srcstoretype jks -destkeystore
+c:\ssl\mskey.p12 -deststoretype pkcs12 -deststorepass mailsecurer
+Unzulõssige Option:  -destkeystorec:\ssl\mskey.p12
+Verwenden Sie den Befehl keytool -help
+
+C:\Programme\Java\jre6\bin>keytool -importkeystore -srckeystore c:\ssl\mskeystor
+e.str -srcalias mailsecurer -srcstorepass 123456 -srcstoretype jks -destkeystore
+ c:\ssl\mskey.p12 -deststoretype pkcs12 -deststorepass mailsecurer
+
+C:\Programme\Java\jre6\bin>keytool -importkeystore -srckeystore c:\ssl\mskeystor
+e.str -srcalias mailsecurer -srcstorepass 123456 -srcstoretype jks -destkeystore
+ c:\ssl\mskey.p12 -deststoretype pkcs12 -deststorepass mailsecurer
+
+ * @author mw
+ */
+
+class MyKeyManager extends X509ExtendedKeyManager
+{
+
+    KeyStore ks;
+    public MyKeyManager( KeyStore _ks)
+    {
+        ks = _ks;
+    }
+
+    @Override
+    public String[] getClientAliases( String keyType, Principal[] issuers )
+    {
+        String[] ret = new String[] {"mykey"};
+        return ret;
+    }
+
+    @Override
+    public String chooseClientAlias( String[] keyType, Principal[] issuers, Socket socket )
+    {
+        String ret = "mailsecurer";
+        return ret;
+    }
+
+    @Override
+    public String[] getServerAliases( String keyType, Principal[] issuers )
+    {
+        String[] ret = new String[] {"mailsecurer"};
+        return ret;
+    }
+
+    @Override
+    public String chooseServerAlias( String keyType, Principal[] issuers, Socket socket )
+    {
+        String ret = "mailsecurer";
+        return ret;
+    }
+
+    @Override
+    public X509Certificate[] getCertificateChain( String alias )
+    {
+        if (ks == null)
+            return new X509Certificate[0];
+
+        try
+        {
+            Certificate[] list = ks.getCertificateChain(alias);
+            X509Certificate[] xlist =  new X509Certificate[list.length];
+            for (int i = 0; i < list.length; i++)
+            {
+                xlist[i] = (X509Certificate) list[i];
+            }
+            return xlist;
+        }
+        catch (Exception exc)
+        {
+            exc.printStackTrace();
+        }
+        return new X509Certificate[0];
 
 
+    }
+
+    @Override
+    public PrivateKey getPrivateKey( String alias )
+    {
+        KeyStore.PasswordProtection nullPasswordProt = new KeyStore.PasswordProtection("mailsecurer".toCharArray());
+        try
+        {
+            KeyStore.PrivateKeyEntry thePrivKeyEntry = (KeyStore.PrivateKeyEntry) ks.getEntry(alias, nullPasswordProt);
+            return thePrivKeyEntry.getPrivateKey();
+        }
+        catch (Exception exc)
+        {
+            exc.printStackTrace();
+        }
+        return null;
+
+    }
+}
 
 class MailFolderCache
 {
@@ -117,17 +262,60 @@ public class IMAPBrowser extends WorkerParentChild
         }
         update_list.clear();
     }
+    
+    ServerSocket getServerSocket(int serverPort, String server_ip) throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, URISyntaxException
+    {
+	SSLContext      sslContext = SSLContext.getInstance("TLS");
+        char[] password = "mailsecurer".toCharArray();
+
+        /*
+         * Allocate and initialize a KeyStore object.
+         */
+        KeyStore ks = KeyToolHelper.load_keystore(/*syskeystore*/ false);
+
+        /*
+         * Allocate and initialize a KeyManagerFactory.
+         */
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+        /*
+         * Allocate and initialize a TrustManagerFactory.
+         */
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
 
 
+        sslContext.init(kmf.getKeyManagers(),tmf.getTrustManagers(), null);
 
-    public IMAPBrowser( MandantContext m_ctx, String host, int port ) throws IOException
+        SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) sslContext.getServerSocketFactory();
+        
+        SSLServerSocket ssl_sock = (SSLServerSocket) sslserversocketfactory.createServerSocket(serverPort, 5, InetAddress.getByName(server_ip) );
+        return ssl_sock;
+    }
+
+
+    public IMAPBrowser( MandantContext m_ctx, String host, int port, boolean is_ssl ) throws IOException
     {
         this.m_ctx = m_ctx;
         this.host = host;
         this.port = port;
         log_debug(Main.Txt("Opening_socket"));
 
-        sock = new ServerSocket(port, 0, InetAddress.getByName(host));
+        if (is_ssl)
+        {
+            try
+            {
+                sock = getServerSocket(port, host);
+            }
+            catch (Exception iOException)
+            {
+                LogManager.err_log("Cannot create SSL IMAP Server", iOException);
+            }
+        }
+        else
+        {
+            sock = new ServerSocket(port, 0, InetAddress.getByName(host));
+        }
 
         srv_list = new ArrayList<MWImapServer>();
         folder_cache = new ArrayList<MailFolderCache>();
@@ -196,6 +384,8 @@ public class IMAPBrowser extends WorkerParentChild
             {
                 log_debug(Main.Txt("Accepting_new_connection"));
                 Socket cl = sock.accept();
+                if (cl instanceof SSLSocket)
+                    ((SSLSocket)cl).startHandshake();
 
                 boolean trace = false;
                 if (Main.get_debug_lvl() > 6)
@@ -215,7 +405,11 @@ public class IMAPBrowser extends WorkerParentChild
             catch (Exception iOException)
             {
                 if (!do_finish)
-                    iOException.printStackTrace();
+                {
+                    LogManager.err_log(Main.Txt("IMAP_connection_broken") + ": " + iOException.getMessage());
+                    // WAIT FOR NEXT ACCEPT TO PREVENT DENIAL OF SERVICE
+                    sleep_seconds(1);
+                }
             }
         }
 

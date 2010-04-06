@@ -73,8 +73,11 @@ public class LDAPAuth extends GenericRealmAuth
             return user_search_base;
         
         Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
+        String ret = "CN=Users";
         Attribute attribute = attributes.get("defaultNamingContext");
-        return "CN=Users," + attribute.get().toString();
+        if (attribute != null && attribute.get() != null)
+            ret += "," + attribute.get().toString();
+        return ret;
     }
 
 
@@ -119,8 +122,11 @@ public class LDAPAuth extends GenericRealmAuth
         {            
 
             Hashtable<String,String> connect_env = create_sec_env();
+            String rootSearchBase = get_user_search_base();
+            String admin_dn =  search_attribute + "=" + admin_name + "," + rootSearchBase;
 
-            connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
+            LogManager.debug_msg(4, "connect: " + admin_dn);
+            connect_env.put(Context.SECURITY_PRINCIPAL, admin_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
             
 
@@ -170,7 +176,7 @@ public class LDAPAuth extends GenericRealmAuth
     @Override
     public ArrayList<String> list_groups() throws NamingException
     {
-        return list_dn_qry("(&(objectClass=group)(name=*))");
+        return list_dn_qry("(" + search_attribute + "=*)");
     }
 
     @Override
@@ -185,13 +191,13 @@ public class LDAPAuth extends GenericRealmAuth
         String rootSearchBase = get_user_search_base();
         // BUILD ORED LIST OF DNs
         StringBuffer ldap_qry = new StringBuffer();
-        ldap_qry.append("(&(objectClass=group)(|");
+        ldap_qry.append("(|");
         for (int i = 0; i < users.size(); i++)
         {
             String string = users.get(i);
             ldap_qry.append("(" + search_attribute + "=" + string + ")");
         }
-        ldap_qry.append("))");
+        ldap_qry.append(")");
 
         LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
@@ -203,7 +209,12 @@ public class LDAPAuth extends GenericRealmAuth
             for (int i = 0; i < mail_fields_array.length; i++)
             {
                 String field = mail_fields_array[i];
-                String mail = searchResult.getAttributes().get(field).get().toString();
+                String mail = null;
+                Attribute field_attribute = searchResult.getAttributes().get(field);
+                if ( field_attribute != null)
+                {
+                    mail = field_attribute.get().toString();
+                }
                 if (mail != null && mail.length() > 0)
                 {
                     if (!mail_list.contains(mail))
@@ -220,10 +231,9 @@ public class LDAPAuth extends GenericRealmAuth
     {
         if (group != null && group.length() > 0)
         {
-            String rootSearchBase = get_user_search_base();
-            return list_dn_qry("(&(objectClass=user)(memberOf=CN=" + group + "))");
+            return list_dn_qry("(&(" + search_attribute + "=*)(memberOf=CN=" + group + "))");
         }
-        return list_dn_qry("(objectClass=user)");
+        return list_dn_qry("(" + search_attribute + "=*)");
     }
 
     @Override
@@ -238,7 +248,6 @@ public class LDAPAuth extends GenericRealmAuth
     {
         try
         {
-
             SearchControls ctrl = new SearchControls();
             ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
             ctrl.setReturningAttributes(new String[]
@@ -246,46 +255,13 @@ public class LDAPAuth extends GenericRealmAuth
                         search_attribute
                     });
 
-
             String rootSearchBase = get_user_search_base();
 
-            String searchFilter = "(&(objectClass=user)(" + search_attribute + "=" + user_name + "))";
+            String searchFilter = "(" + search_attribute + "=" + user_name + ")";
             int cnt  = 0;
 
             LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
             NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
-            if (!enumeration.hasMore())
-            {
-                searchFilter = "(&(objectClass=user)(name=" + user_name + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
-                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
-            }
-            else
-            {
-                cnt++;
-            }
-            if (!enumeration.hasMore())
-            {
-                searchFilter = "(&(objectClass=user)(userPrincipalName=" + user_name + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
-                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
-            }
-            else
-            {
-                cnt++;
-            }
-            if (!enumeration.hasMore())
-            {
-                searchFilter = "(&(objectCategory=person)(objectClass=user)(mail=" + user_name + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
-                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
-            }
-            else
-            {
-                cnt++;
-            }
-            System.out.println("" + cnt);
-            // NOT HERE
             if (!enumeration.hasMore())
             {
                 return null;
@@ -296,6 +272,7 @@ public class LDAPAuth extends GenericRealmAuth
             Attributes res_attr = sr.getAttributes();
             Attribute adn = res_attr.get(search_attribute);
             String user_dn = adn.get().toString();
+            String full_user_dn = search_attribute + "=" + user_dn + "," + rootSearchBase;
             
 
             // NOW GO FOR LOGIN USER WITH DN
@@ -303,7 +280,7 @@ public class LDAPAuth extends GenericRealmAuth
             Hashtable<String,String> connect_env = create_sec_env();
 
 
-            connect_env.put(Context.SECURITY_PRINCIPAL, user_dn);
+            connect_env.put(Context.SECURITY_PRINCIPAL, full_user_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, pwd);
 
             user_ctx = new InitialLdapContext(connect_env, null);
@@ -329,7 +306,7 @@ public class LDAPAuth extends GenericRealmAuth
         try
         {
             String rootSearchBase = get_user_search_base();
-            LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + search_attributes);
+            LogManager.debug_msg(4, "get_user_attribute: " + rootSearchBase + " " + search_attributes);
             NamingEnumeration<SearchResult> results = uctx.ctx.search(rootSearchBase, search_attributes, return_attributes);
             if (results.hasMoreElements())
             {

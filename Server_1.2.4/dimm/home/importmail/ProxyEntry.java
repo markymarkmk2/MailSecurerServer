@@ -60,7 +60,7 @@ public class ProxyEntry extends WorkerParentChild
         finished = true;
         if (conn != null)
         {
-            conn.closeConnections();
+            conn.close();
         }
         if (ss != null)
         {

@@ -82,7 +82,7 @@ public class POP3Connection extends ProxyConnection
                 // read the answer from the server
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
-                sData = getDataFromInputStream(serverReader).toString();
+                sData = getDataFromInputStream(serverReader, serverSocket, /*wait*/ true).toString();
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())
@@ -117,7 +117,6 @@ public class POP3Connection extends ProxyConnection
                 // write the answer to the POP client
                 clientWriter.write(sData.getBytes());
                 clientWriter.flush();
-
                 reset_timeout();
 
                 // QUIT
@@ -133,7 +132,8 @@ public class POP3Connection extends ProxyConnection
                     log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
                 
                 // read the POP command from the client
-                sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
+                sData = getDataFromInputStream(clientReader, clientSocket, POP_SINGLELINE, /*waot*/ false).toString();
+                last_command = sData;
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())
@@ -157,7 +157,6 @@ public class POP3Connection extends ProxyConnection
                     // write it to the POP server
                     serverWriter.write(sData.getBytes());
                     serverWriter.flush();
-
                     reset_timeout();
 
                     if (RETRBYTE() > 0)
@@ -172,7 +171,7 @@ public class POP3Connection extends ProxyConnection
                         break;
                     }
                     
-                    sData = getDataFromInputStream(clientReader, POP_SINGLELINE).toString();
+                    sData = getDataFromInputStream(clientReader, clientSocket, POP_SINGLELINE, /*wait*/ false).toString();
                     if (dbg_level >= DBG_VERB)
                         log( "C: " + sData);
 
@@ -214,7 +213,7 @@ public class POP3Connection extends ProxyConnection
         {
             if (!pe.is_finished())
             {
-                LogManager.err_log("Error in handle_connection", e);
+                LogManager.err_log(get_description() + ": " + e.getMessage() + " last command:" + last_command);
             }
         }
         finally
@@ -281,7 +280,9 @@ public class POP3Connection extends ProxyConnection
         
 
         int ret = get_multiline_proxy_data(serverReader, clientWriter,  rfc_dump, bos);
-        
+
+        disable_timeout();
+
         // CLOSE STREAM
         try
         {

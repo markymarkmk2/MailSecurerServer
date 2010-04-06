@@ -1079,7 +1079,7 @@ public class IndexManager extends WorkerParent
                 if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0)
                 {
                     doc.add(new Field(CS_Constants.FLD_TO, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.log(Level.FINEST, "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
+                    LogManager.debug_msg(10, "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
 
                     // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
                     doc.add(new Field(CS_Constants.FLD_TO + "REG", ih.getValue(), Field.Store.NO, Field.Index.ANALYZED));
@@ -1092,7 +1092,7 @@ public class IndexManager extends WorkerParent
                     String cs = get_charset_from_content_type(ih.getValue());
                     if (cs != null)
                     {
-                        LogManager.log(Level.FINEST, "Mail " + uid + " detected charset " + cs);
+                        LogManager.debug_msg(10, "Mail " + uid + " detected charset " + cs);
                         doc.add(new Field(CS_Constants.FLD_CHARSET, cs, Field.Store.YES, Field.Index.NOT_ANALYZED));
                     }
                 }
@@ -1100,7 +1100,7 @@ public class IndexManager extends WorkerParent
                 {
                     // STORE ALL HEADERS INTO INDEX DB, WE DO INDEX BECAUSE WE SEARCH FOR TOKENS
                     doc.add(new Field(header_field_name, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.log(Level.FINEST, "Mail " + uid + " adding header <" + header_field_name + "> Val <" + ih.getValue() + ">");
+                    LogManager.debug_msg(10, "Mail " + uid + " adding header <" + header_field_name + "> Val <" + ih.getValue() + ">");
 
                     // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
                     if (found_eh)
@@ -1110,7 +1110,7 @@ public class IndexManager extends WorkerParent
                 }
                 else
                 {
-                    LogManager.log(Level.FINEST, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                    LogManager.debug_msg(10, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
                 }
             }
         }
@@ -1242,7 +1242,7 @@ public class IndexManager extends WorkerParent
                     filename = "";
                 }
 
-                LogManager.log(Level.FINER, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc " + doc.get_uuid());
+                LogManager.debug_msg( 8, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc " + doc.get_uuid());
 
                 // YES
                 if (do_index_attachments)
@@ -1457,7 +1457,7 @@ public class IndexManager extends WorkerParent
                     continue;
                 }
 
-                LogManager.log(Level.FINER, "Indexing zip entry " + name + " + to " + doc.get_uuid());
+                LogManager.debug_msg( 8, "Indexing zip entry " + name + " + to " + doc.get_uuid());
                 String extention = name.substring(dot + 1, name.length());
 
                 ZipEntryInputStream zeis = new ZipEntryInputStream(zis, entry);

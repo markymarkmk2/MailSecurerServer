@@ -83,14 +83,12 @@ public class LogManager implements  LogListener
     {
         dbg_level = l;
         
-        if (l >8)
+        if (l >24)
             main_logger.setLevel(org.apache.log4j.Level.ALL);
-        else if (l >6)
+        else if (l >14)
             main_logger.setLevel(org.apache.log4j.Level.TRACE);
-        else if (l >4)
+        else if (l >0)
             main_logger.setLevel(org.apache.log4j.Level.DEBUG);
-        else if (l >1)
-            main_logger.setLevel(org.apache.log4j.Level.INFO);
         else
             main_logger.setLevel(org.apache.log4j.Level.WARN);
     }
@@ -134,7 +132,7 @@ public class LogManager implements  LogListener
     {
         long debug_level= get_debug_lvl();
 
-        if (level <= debug_level)
+        if (debug_level >= level)
         {
             main_logger.debug(string);
 //            file_log( "debug.log", string );
@@ -194,7 +192,7 @@ public class LogManager implements  LogListener
         {
             info_msg( text );
         }
-        else if (dbg_level > 0)
+        else if (dbg_level >= 10)
         {
             debug_msg( text );
         }

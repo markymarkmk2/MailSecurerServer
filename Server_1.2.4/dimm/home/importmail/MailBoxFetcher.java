@@ -157,7 +157,7 @@ public class MailBoxFetcher extends WorkerParentChild
         props.put("mail." + protocol + ".timeout", 300 * 1000);
 
         props.put( "mail.debug", "false");
-        if (LogManager.get_debug_lvl() > 5)
+        if (LogManager.get_debug_lvl() > 9)
             props.put( "mail.debug", "true");
 
         connect(protocol, server, port, username, password, props);
@@ -167,7 +167,7 @@ public class MailBoxFetcher extends WorkerParentChild
     {
         Session session = Session.getDefaultInstance(props, null);
 
-        if (LogManager.get_debug_lvl() > 5)
+        if (LogManager.get_debug_lvl() > 9)
         {
             session.setDebug(true);
         }

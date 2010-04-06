@@ -73,8 +73,6 @@ public class ListUsers extends AbstractCommand
                         continue;
                     }
 
-                    ArrayList<String> group_list = auth_realm.list_groups();
-
                     try
                     {
                         ArrayList<String> local_user_list = auth_realm.list_users_for_group("");

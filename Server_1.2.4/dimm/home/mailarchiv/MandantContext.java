@@ -93,6 +93,26 @@ public class MandantContext
         prefs.read_props();
         mandant = m;
     }
+    public int get_int_flags()
+    {
+        if (mandant.getFlags() == null || mandant.getFlags().length() == 0)
+            return 0;
+
+        try
+        {
+            return Integer.parseInt(mandant.getFlags());
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+            return 0;
+        }
+    }
+    public boolean test_flag( int f)
+    {
+        int iflags = get_int_flags();
+        return  ( (iflags & f) == f);
+    }
+
 
     public TempFileHandler getTempFileHandler()
     {
@@ -441,14 +461,17 @@ public class MandantContext
             IMAPBrowserServer ibs = control.get_imap_browser_server();
             try
             {
-                LogManager.info_msg("Starting IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
+                boolean imap_ssl = test_flag(CS_Constants.MA_IMAP_SSL);
 
-                imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port());
+                LogManager.info_msg("Starting " + (imap_ssl ? "SSL-" : "") + "IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
+
+
+                imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port(), imap_ssl);
                 ibs.add_child(imap_browser);
             }
             catch (IOException ex)
             {
-                LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName(), ex);
+                LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName() + ": " + ex.getMessage());
             }
         }
     }
@@ -1125,18 +1148,7 @@ public class MandantContext
         return no_tmp_space_left;
     }
 
-    public boolean test_flag( int f )
-    {
-        try
-        {
-            int flags = Integer.parseInt(mandant.getFlags());
-            return (flags & f) == f;
-        }
-        catch (NumberFormatException numberFormatException)
-        {
-        }
-        return false;
-    }
+
     // IF FLAG IS NOT SET, WE WILL WAIT, USER HAS TO ACTIVELY SET THIS FLAG TO IGNORE MAILS IN THIS STATE
     public boolean wait_on_no_space()
     {
