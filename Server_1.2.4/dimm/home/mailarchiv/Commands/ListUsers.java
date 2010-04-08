@@ -4,14 +4,13 @@
  */
 package dimm.home.mailarchiv.Commands;
 
-import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.GenericRealmAuth;
+import dimm.home.hibernate.HParseToken;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
-import home.shared.Utilities.ZipUtilities;
+import home.shared.Utilities.ParseToken;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Mandant;
 import home.shared.hibernate.Role;
@@ -158,10 +157,7 @@ public class ListUsers extends AbstractCommand
                     }
                 }
 
-                XStream xs = new XStream();
-                String xml = xs.toXML(result_list);
-                String cxml = null;
-                cxml = ZipUtilities.compress(xml);
+                String cxml = HParseToken.BuildCompressedString(result_list);
 
                 answer = "0: " + cxml;
                 return true;

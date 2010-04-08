@@ -10,11 +10,10 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.mailarchiv.GeneralPreferences;
-import java.util.StringTokenizer;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantPreferences;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.Preferences;
+import home.shared.Utilities.ParseToken;
 
 /**
  *

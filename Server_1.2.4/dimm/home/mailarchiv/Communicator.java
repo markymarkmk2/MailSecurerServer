@@ -20,8 +20,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Commands.*;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import home.shared.Utilities.ParseToken;
 
 /**
  *

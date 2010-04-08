@@ -11,7 +11,6 @@ package dimm.home.mailarchiv.Commands;
 
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 
 /**
  *

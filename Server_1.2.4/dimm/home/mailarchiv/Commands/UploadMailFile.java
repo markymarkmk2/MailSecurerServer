@@ -14,8 +14,8 @@ import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.TempFileHandler;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
+import home.shared.Utilities.ParseToken;
 import java.io.File;
 import java.net.InetSocketAddress;
 

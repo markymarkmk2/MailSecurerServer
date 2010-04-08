@@ -12,7 +12,7 @@ package dimm.home.mailarchiv.Commands;
 import java.io.File;
 import java.io.FileOutputStream;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ParseToken;
 
 /**
  *

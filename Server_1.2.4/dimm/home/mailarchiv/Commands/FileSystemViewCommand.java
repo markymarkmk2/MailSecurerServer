@@ -12,8 +12,8 @@ package dimm.home.mailarchiv.Commands;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.SQL.RMXFile;
+import home.shared.Utilities.ParseToken;
 import java.io.IOException;
 import javax.swing.filechooser.FileSystemView;
 

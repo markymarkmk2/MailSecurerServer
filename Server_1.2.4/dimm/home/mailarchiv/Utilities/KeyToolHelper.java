@@ -5,6 +5,7 @@
 
 package dimm.home.mailarchiv.Utilities;
 
+import dimm.home.mailarchiv.Main;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -19,7 +20,10 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  *
@@ -93,25 +97,40 @@ public class KeyToolHelper
                 }
             }
         }
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
+        TrustManager[] tmanagers = tmf.getTrustManagers();
+        for (int i = 0; i < tmanagers.length; i++)
+        {
+            TrustManager trustManager = tmanagers[i];
+            if (trustManager instanceof X509TrustManager)
+            {
+                X509TrustManager xk = (X509TrustManager)trustManager;
+                X509Certificate[] cert_array = xk.getAcceptedIssuers();
+                cert_list.add(cert_array);
+            }
+        }
+
+
         return cert_list;
     }
 
-    public static String import_cacert( String alias,  boolean system_store, boolean trustcert)
+    public static String import_cacert( String alias, File ca_cert_file, boolean system_store, boolean trustcert)
     {
         String ret;
-        String ca_cert_file;
+        String keystore;
         String keystore_pwd;
 
         String key_tool_cmd = get_keytool_cmd();
 
         if (system_store)
         {
-            ca_cert_file = get_system_keystore().getAbsolutePath();
+            keystore = get_system_keystore().getAbsolutePath();
             keystore_pwd = get_system_keystorepass();
         }
         else
         {
-            ca_cert_file = get_ms_keystore().getAbsolutePath();
+            keystore = get_ms_keystore().getAbsolutePath();
             keystore_pwd = get_ms_keystorepass();
         }
         ArrayList<String> cmd_list = new ArrayList<String>();
@@ -123,9 +142,9 @@ public class KeyToolHelper
         cmd_list.add( "-storepass" );
         cmd_list.add( keystore_pwd );
         cmd_list.add( "-file" );
-        cmd_list.add( ca_cert_file );
+        cmd_list.add( ca_cert_file.getAbsolutePath() );
         cmd_list.add( "-keystore" );
-        cmd_list.add( ca_cert_file );
+        cmd_list.add( keystore );
         if (trustcert)
         {
             cmd_list.add( "-trustcacerts" );
@@ -220,7 +239,7 @@ public class KeyToolHelper
 
 
 
-        String[] cert_import_cmd = { key_tool_cmd, "-certreq", "-noprompt", "-alias", alias, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
+        String[] cert_import_cmd = { key_tool_cmd, "-certreq", "-noprompt", "-keyalg", "RSA", "-alias", alias, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
                                      "-keystore", ca_cert_file};
 
         CmdExecutor exec = new CmdExecutor(cert_import_cmd);
@@ -306,45 +325,49 @@ public class KeyToolHelper
         return false;
     }
 
-    public static void init_keystore(String fqdn) throws IOException
+    public static String create_key(String dn_string, String alias, String keylength, boolean system_keystore)
     {
-        String ca_cert_file = get_ms_keystore().getAbsolutePath();
-        String keystore_pwd = get_ms_keystorepass();
+        String ca_cert_file;
+        String keystore_pwd;
 
-        // CHECK FOR EXISTENCE
-        File keystore = new File(ca_cert_file);
-        if ( keystore.exists() == true)
+        if (system_keystore)
         {
-            keystore.delete();
+            ca_cert_file = get_system_keystore().getAbsolutePath();
+            keystore_pwd = get_system_keystorepass();
+        }
+        else
+        {
+            ca_cert_file = get_ms_keystore().getAbsolutePath();
+            keystore_pwd = get_ms_keystorepass();
         }
 
         String key_tool_cmd = get_keytool_cmd();
-
-
-
-        String dn_string = "\"cn=" + fqdn + "\"";
-
        
-        String[] cert_genkey_cmd = { key_tool_cmd, "-genkey", "-noprompt", "-keyalg", "RSA", "-alias", MS_ALIAS, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
-                                     "-dname", dn_string, "-keystore", ca_cert_file, "-validity", "3650"};
+        String[] cert_genkey_cmd = { key_tool_cmd, "-genkey", "-noprompt", "-keyalg", "RSA", "-alias", alias, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
+                                     "-dname", dn_string, "-keystore", ca_cert_file, "-validity", "3650", "-keysize", keylength};
 
         CmdExecutor exec = new CmdExecutor(cert_genkey_cmd);
 
         int code = exec.exec();
         if (code != 0)
         {
-            throw new IOException( exec.get_out_text() + " " + exec.get_err_text() );
+            return "4: " + exec.get_out_text() + " " + exec.get_err_text();
         }
 
-        String[] cert_selcert_cmd = { key_tool_cmd, "-selfcert", "-noprompt", "-alias", MS_ALIAS, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
+        String[] cert_selcert_cmd = { key_tool_cmd, "-selfcert", "-noprompt", "-alias", alias, "-keypass", keystore_pwd, "-storepass", keystore_pwd,
                                       "-keystore", ca_cert_file};
 
         exec = new CmdExecutor(cert_selcert_cmd);
 
         code = exec.exec();
-        if (code != 0)
+        if (code == 0)
         {
-            throw new IOException( exec.get_out_text() + " " + exec.get_err_text() );
+            return "0: ok";
+        }
+        else
+        {
+            return "5: " + exec.get_out_text() + " " + exec.get_err_text();
         }
     }
+
 }

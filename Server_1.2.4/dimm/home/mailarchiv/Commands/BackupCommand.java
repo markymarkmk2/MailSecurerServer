@@ -14,9 +14,9 @@ import dimm.home.hiber_dao.BackupDAO;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.serverconnect.DimmCommand;
 import dimm.home.vault.BackupScript;
+import home.shared.Utilities.ParseToken;
 import home.shared.hibernate.Backup;
 
 /**

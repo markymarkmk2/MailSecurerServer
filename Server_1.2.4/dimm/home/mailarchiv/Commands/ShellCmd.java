@@ -12,7 +12,7 @@ package dimm.home.mailarchiv.Commands;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
-import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ParseToken;
 
 /**
  *

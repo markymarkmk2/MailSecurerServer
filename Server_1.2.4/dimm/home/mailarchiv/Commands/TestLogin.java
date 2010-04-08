@@ -8,7 +8,7 @@ package dimm.home.mailarchiv.Commands;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ParseToken;
 import home.shared.hibernate.AccountConnector;
 
 /**

@@ -14,7 +14,7 @@ import java.io.File;
 import java.io.FileWriter;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
-import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ParseToken;
 import java.io.FileReader;
 
 /**

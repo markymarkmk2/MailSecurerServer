@@ -9,15 +9,14 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.hibernate.HXStream;
+import dimm.home.hibernate.HParseToken;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.Utilities.CryptTools;
-import home.shared.Utilities.ZipUtilities;
+import home.shared.Utilities.ParseToken;
 import java.util.ArrayList;
 
 /**
@@ -118,9 +117,7 @@ public class AuthUser extends AbstractCommand
             {
                 String sso_token = pt.GetString("SSO:");
                 UserSSOEntry entry = Main.get_control().get_sso(sso_token);
-                HXStream xs = new HXStream();
-                String xml = xs.toXML(entry);
-                String cxml = ZipUtilities.compress(xml);
+                String cxml = HParseToken.BuildCompressedString(entry);
                 answer = "0: CSSO:" + cxml;
             }
 

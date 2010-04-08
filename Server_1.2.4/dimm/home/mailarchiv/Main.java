@@ -244,9 +244,7 @@ public class Main
 
         // SETTING JAVA MAIL PARAMS
         init_mail_settings();
-        
-        // SETUP KEYSTORE IF NOT EXISTANT
-        init_keystore();
+             
 
 
         info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
@@ -829,9 +827,5 @@ System.out.println("Core POI came from " + path);
     }
 
 
-    void init_keystore()
-    {
-        HandleCertificate.check_keystore(/*syskeystore*/ false );
-    }
 }
 

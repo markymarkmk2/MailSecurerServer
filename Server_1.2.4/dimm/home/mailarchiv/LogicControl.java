@@ -557,6 +557,14 @@ public class LogicControl
         if (mail_file.exists())
             mail_file.delete();
     }
+    public File create_temp_file(String prefix) throws IOException
+    {
+        String path = Main.get_prop(GeneralPreferences.TEMPFILEDIR, Main.TEMP_PATH);
+
+        File f = File.createTempFile(prefix, ".tmp", (path != null) ? new File(path) : null);
+
+        return f;
+    }
 
 
     public File create_temp_file( Mandant mandant ) throws ArchiveMsgException, IOException

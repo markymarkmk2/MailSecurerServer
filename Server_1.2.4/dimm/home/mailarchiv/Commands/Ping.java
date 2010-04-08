@@ -12,7 +12,7 @@ package dimm.home.mailarchiv.Commands;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
-import dimm.home.mailarchiv.Utilities.ParseToken;
+import home.shared.Utilities.ParseToken;
 
 /**
  *

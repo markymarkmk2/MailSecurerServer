@@ -8,18 +8,13 @@
  */
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.mailarchiv.LogicControl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants;
-import java.io.BufferedReader;
-import java.io.FileReader;
+import home.shared.Utilities.ParseToken;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Enumeration;

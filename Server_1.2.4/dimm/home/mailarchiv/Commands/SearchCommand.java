@@ -6,8 +6,8 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.index.SearchCall;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import home.shared.CS_Constants.USERMODE;
+import home.shared.Utilities.ParseToken;
 import java.util.ArrayList;
 
 /**

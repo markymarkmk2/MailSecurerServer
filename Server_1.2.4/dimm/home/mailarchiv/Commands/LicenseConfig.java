@@ -9,10 +9,9 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import com.thoughtworks.xstream.XStream;
+import dimm.home.hibernate.HParseToken;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Utilities.ParseToken;
-import home.shared.Utilities.ZipUtilities;
+import home.shared.Utilities.ParseToken;
 import home.shared.license.HWIDLicenseTicket;
 import home.shared.license.LicenseTicket;
 import java.io.IOException;
@@ -60,9 +59,7 @@ public class LicenseConfig extends AbstractCommand
         if ( command.compareTo("GET") == 0)
         {
             ArrayList list = Main.get_control().get_license_checker().get_ticket_list();
-            XStream xs = new XStream();
-            String ticket_str = xs.toXML(list);
-            ticket_str = ZipUtilities.compress(ticket_str);
+            String ticket_str = HParseToken.BuildCompressedString(list);            
 
             answer = "0: TK:\"" + ticket_str + "\"";
             return true;
@@ -96,11 +93,7 @@ public class LicenseConfig extends AbstractCommand
         if ( command.compareTo("SET") == 0)
         {
             String product = pt.GetString("PRD:");
-            String ticket_str = pt.GetString( "TK:" );
-            ticket_str = ZipUtilities.uncompress(ticket_str);
-
-            XStream xs = new XStream();
-            Object o = xs.fromXML( ticket_str);
+            Object o = pt.GetCompressedObject( "TK:" );
             if (o instanceof LicenseTicket)
             {
                 // WRITE NEW LIC

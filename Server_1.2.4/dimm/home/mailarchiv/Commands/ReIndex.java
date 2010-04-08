@@ -11,8 +11,8 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.Utilities.ParseToken;
 import dimm.home.vault.ReIndexContext;
+import home.shared.Utilities.ParseToken;
 
 /**
  *
