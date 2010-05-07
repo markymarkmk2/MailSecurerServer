@@ -157,7 +157,14 @@ public class MBoxImportServer extends WorkerParent
         {
             LogicControl.sleep(1000);
 
-            work_jobs();
+            try
+            {
+                work_jobs();
+            }
+            catch (Exception e)
+            {
+                LogManager.err_log_fatal("Work_jobs got exception", e);
+            }
          }
         finished = true;
     }
@@ -198,7 +205,10 @@ public class MBoxImportServer extends WorkerParent
         }
         try
         {
-            for (int i = 0; i < mbie.total_msg; i++)
+            LogManager.info_msg(Main.Txt("Starting_import") + " N=" + mbie.total_msg + " (" + Long.toString(mbie.size/(1000*1000)) + "MB)" );
+            long start_t = System.currentTimeMillis();
+            int i = 0;
+            for (i = 0; i < mbie.total_msg; i++)
             {
                 mbie.act_msg = i;
                 Message msg = mbi.get_message(i);
@@ -211,6 +221,13 @@ public class MBoxImportServer extends WorkerParent
                 if (isShutdown())
                     break;
             }
+            long end_t = System.currentTimeMillis();
+            int speed = 0;
+            if (end_t > start_t)
+            {
+                speed = (int)((1000*i) / (end_t - start_t));
+            }
+            LogManager.info_msg(Main.Txt("Messages_imported") + ": " + i + " (" + speed + "/s)" );
         }
         catch (Exception exception)
         {

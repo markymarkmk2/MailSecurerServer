@@ -100,6 +100,18 @@ public class MailKonto
             e.printStackTrace();
         }     
     }
+
+    public void close()
+    {
+        for (int i = 0; i < mail_folders.size(); i++)
+        {
+            MailFolder folder = mail_folders.get(i);
+            folder.close();
+        }
+        mail_folders.clear();
+        mail_alias_list.clear();
+    }
+
     public boolean isInitialized()
     {
         return _init;

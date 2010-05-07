@@ -74,6 +74,9 @@ public class MWImapServer extends Thread
     }
     void set_konto( MailKonto mailKonto )
     {
+        if (konto != null)
+            konto.close();
+        
         konto = mailKonto;
     }
 
@@ -230,9 +233,6 @@ public class MWImapServer extends Thread
                     techno(line);
                 }
             }
-            out.close();
-            in.close();
-            s.close();
         }
         catch (Exception e)
         {
@@ -240,33 +240,7 @@ public class MWImapServer extends Thread
         }
         finally
         {
-            if (out != null)
-            {
-                out.close();
-                out = null;
-            }
-            if (in != null)
-            {
-                try
-                {
-                    in.close();
-                }
-                catch (IOException iOException)
-                {
-                }
-                in = null;
-            }
-            if (s != null)
-            {
-                try
-                {
-                    s.close();
-                }
-                catch (IOException iOException)
-                {
-                }
-                s = null;
-            }
+            close();
         }
     }
 
@@ -289,10 +263,47 @@ public class MWImapServer extends Thread
         }
         return new String(org, 0, j);
     }
-    public void close() throws IOException
+    public void close()
     {
+        if (konto != null)
+        {
+            parent.clear_cache( konto.get_username() );
+            konto.close();
+            konto = null;
+        }
+        if (mailfolder != null)
+        {
+            mailfolder.close();
+            mailfolder = null;
+        }
+
+        if (out != null)
+        {
+            out.close();
+            out = null;
+        }
+        if (in != null)
+        {
+            try
+            {
+                in.close();
+            }
+            catch (IOException iOException)
+            {
+            }
+            in = null;
+        }
         if (s != null)
-            s.close();
+        {
+            try
+            {
+                s.close();
+            }
+            catch (IOException iOException)
+            {
+            }
+            s = null;
+        }
     }
 
 

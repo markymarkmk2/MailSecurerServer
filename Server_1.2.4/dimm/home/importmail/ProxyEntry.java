@@ -6,6 +6,7 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.CS_Constants;
 import home.shared.hibernate.Proxy;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -121,6 +122,21 @@ public class ProxyEntry extends WorkerParentChild
     public String get_name()
     {
         return "ProxyEntry";
+    }
+
+    public boolean isSSL()
+    {
+        try
+        {
+            if ((Integer.parseInt(proxy.getFlags()) & CS_Constants.PX_SSL) == CS_Constants.PX_SSL)
+            {
+                return true;
+            }
+        }
+        catch (Exception numberFormatException)
+        {
+        }
+        return false;
     }
 
 

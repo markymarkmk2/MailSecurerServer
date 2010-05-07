@@ -3,6 +3,7 @@ package dimm.home.importmail;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
+import home.shared.Utilities.DefaultSSLSocketFactory;
 import home.shared.mail.RFCGenericMail;
 import java.io.IOException;
 import java.net.Socket;
@@ -11,6 +12,7 @@ import java.net.UnknownHostException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import javax.net.SocketFactory;
 
 /**
  * POP3Connection - Handles the POP3 connections.
@@ -71,19 +73,29 @@ public class SMTPConnection extends ProxyConnection
         boolean do_quit = false;
         
         m_error = -1;
-        m_Command = -1;
+        int m_Command = -1;
 
         try
         {
-            clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(),
+/*            clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(),
                     clientSocket.getSendBufferSize());
 
             clientReader = new BufferedInputStream(clientSocket.getInputStream(),
                     clientSocket.getReceiveBufferSize());
-
+*/
+            clientWriter = clientSocket.getOutputStream();
+            clientReader = clientSocket.getInputStream();
             
             // CREATE SERVERSOCKET
-            serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            if (pe.isSSL())
+            {
+                SocketFactory sf = DefaultSSLSocketFactory.getDefault();
+                serverSocket = sf.createSocket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            }
+            else
+            {
+                serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            }
 
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
@@ -112,7 +124,7 @@ public class SMTPConnection extends ProxyConnection
                 // read the answer from the server
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
-                sData = getDataFromInputStream(serverReader, serverSocket,/*-wait*/ true).toString();
+                sData = getDataFromInputStream(serverReader, serverSocket, m_Command, /*-wait*/ true).toString();
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())

@@ -335,7 +335,9 @@ public class Main
         catch (IOException iOException)
         {
         }
-        
+
+        AuditLog.getInstance().stop();
+
         System.exit(0);
     }
     
@@ -363,25 +365,22 @@ public class Main
 
         Main m = new Main(args);
 
-        String key = "12345";
-        for ( int i = 0; i < 20; i++)
-        {
-            System.out.print("Key len: " + key.length());
+        String key = "1234567890123456789012345";
 
-            try
-            {
-                CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
-                String s = cos.toString();                
-                System.out.println( " OK" );
-            }
-            catch (Exception exc)
-            {
-                System.out.println( " NOK:" + exc.getMessage() );
-            }
-            key += Integer.toString(i%10);
+        try
+        {
+            CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
+            String s = cos.toString();
+            LogManager.debug("Testing key length " + key.length() + " OK");
+        }
+        catch (Exception exc)
+        {
+            LogManager.err_log("Testing key length " + key.length() + " NOK: " + exc.getMessage());
         }
 
-   
+        AuditLog.getInstance().start( args );
+
+
         
         m.work();
      

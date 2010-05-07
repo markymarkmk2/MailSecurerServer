@@ -770,7 +770,7 @@ public class MandantContext
 
             // NEUER CACHE ENTRY
             user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
-            UserSSOEntry usc = new UserSSOEntry(name, pwd, null, null, now, now, user_sso_id);
+            UserSSOEntry usc = new UserSSOEntry(name, pwd, null, null, now, now, user_sso_id, mandant.getId());
 
             // ALTE USERANGABEN RAUS
             remove_from_sso_cache(name);
@@ -903,7 +903,7 @@ public class MandantContext
                     {
                         // NEUER CACHE ENTRY
                         user_sso_id++;  // GENERATE UNIQOE SINGLE SIGN ON ID
-                        usc = new UserSSOEntry(user, pwd, role, acct, now, now, user_sso_id);
+                        usc = new UserSSOEntry(user, pwd, role, acct, now, now, user_sso_id, mandant.getId());
 
                         
                         remove_from_sso_cache(user);
@@ -1188,15 +1188,5 @@ public class MandantContext
 
     /* Auditor wie admin, nur lesen (auch logs, aber keine 4-Eyes Mails)*/
 
-    /* Audit-Log (sichtbar für Admin und Auditor)
-
-     * Start Stop
-     * Zyklische Standsmeldung
-     * Parametrierung
-     * Alle Clientcalls IP, Uhrzeit, Benutzer, Aktion,
-     * - Exportieren (ist auf Client, muss gemeldet werden)
-     *
-
-     */
-
+   
 }

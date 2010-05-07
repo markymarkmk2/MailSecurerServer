@@ -72,6 +72,7 @@ public class GeneralPreferences extends Preferences
     public static final String INDEX_MAIL_THREADS = "IndexMailThreads";
     public static final String FQDN = "FQDN";
     public static final String TRUSTSTORE = "TrustStore";
+    public static final String AUDIT_DB_CONNECT = "AuditDBConnect";
 
     
     /** Creates a new instance of Preferences */
@@ -130,6 +131,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( FQDN );
         prop_names.add( TRUSTSTORE );
         prop_names.add( INDEX_TIMEOUT );
+        prop_names.add( AUDIT_DB_CONNECT );
         
                 
         read_props();

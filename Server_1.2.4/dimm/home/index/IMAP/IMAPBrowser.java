@@ -7,6 +7,7 @@ package dimm.home.index.IMAP;
 import dimm.home.index.SearchCall;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
@@ -406,9 +407,23 @@ public class IMAPBrowser extends WorkerParentChild
             {
                 if (!do_finish)
                 {
-                    LogManager.err_log(Main.Txt("IMAP_connection_broken") + ": " + iOException.getMessage());
+                    
                     // WAIT FOR NEXT ACCEPT TO PREVENT DENIAL OF SERVICE
-                    sleep_seconds(1);
+
+                    if (iOException instanceof KeyStoreException ||
+                        iOException instanceof CertificateException ||
+                        iOException instanceof UnrecoverableKeyException ||
+                        iOException instanceof KeyManagementException)
+                    {
+                        LogManager.err_log(Main.Txt("SSL_certificate_is_missing_or_invalid") + ": " + iOException.getMessage());
+                        Notification.throw_notification_one_shot(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("SSL_certificate_is_missing_or_invalid"));
+                        sleep_seconds( 30 );
+                    }
+                    else
+                    {
+                        LogManager.err_log(Main.Txt("IMAP_connection_broken") + ": " + iOException.getMessage());
+                        sleep_seconds(1);
+                    }
                 }
             }
         }
@@ -427,13 +442,7 @@ public class IMAPBrowser extends WorkerParentChild
                 if (!sr.isAlive())
                 {
                     srv_list.remove(i);
-                    try
-                    {
-                        sr.close();
-                    }
-                    catch (IOException iOException)
-                    {
-                    }
+                    sr.close();
                     i = -1;
                     continue;
                 }
@@ -470,6 +479,25 @@ public class IMAPBrowser extends WorkerParentChild
     public String get_name()
     {
         return "IMAPBrowser";
+    }
+    void clear_cache( String user)
+    {
+        for (int i = 0; i < folder_cache.size(); i++)
+        {
+            MailFolderCache entry = folder_cache.get(i);
+            if (!entry.user.equals(user))
+                continue;
+
+            synchronized (entry.browse_mail_folders)
+            {
+                for (int j = 0; j < entry.browse_mail_folders.size(); j++)
+                {
+                    MailFolder folder = entry.browse_mail_folders.get(j);
+                    folder.close();
+                }
+                entry.browse_mail_folders.clear();
+            }
+        }
     }
 
     MailFolder get_cached_folder( String user, String key)

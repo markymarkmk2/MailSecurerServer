@@ -17,21 +17,40 @@ import dimm.home.importmail.ProxyConnection;
 import dimm.home.importmail.ProxyEntry;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
+import home.shared.Utilities.DefaultSSLServerSocketFactory;
 import home.shared.license.LicenseTicket;
 import home.shared.mail.EncodedMailOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 
 
@@ -64,6 +83,35 @@ public class MailProxyServer extends ListWorkerParent
     }
 
    
+    ServerSocket getServerSocket(int serverPort, String server_ip) throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, URISyntaxException
+    {
+	SSLContext      sslContext = SSLContext.getInstance("TLS");
+        char[] password = "mailsecurer".toCharArray();
+
+        /*
+         * Allocate and initialize a KeyStore object.
+         */
+        KeyStore ks = KeyToolHelper.load_keystore(/*syskeystore*/ false);
+
+        /*
+         * Allocate and initialize a KeyManagerFactory.
+         */
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+        /*
+         * Allocate and initialize a TrustManagerFactory.
+         */
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
+
+
+        sslContext.init(kmf.getKeyManagers(),tmf.getTrustManagers(), null);
+
+        SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) sslContext.getServerSocketFactory();
+
+        SSLServerSocket ssl_sock = (SSLServerSocket) sslserversocketfactory.createServerSocket(serverPort, 5, InetAddress.getByName(server_ip) );
+        return ssl_sock;
+    }
 
 
     
@@ -72,18 +120,28 @@ public class MailProxyServer extends ListWorkerParent
     {
         
         ServerSocket pop3_ss = null;
+        String local_host = pe.get_proxy().getLocalServer();
         String host = pe.get_proxy().getRemoteServer();
         int LocalPort = pe.get_proxy().getLocalPort();
         int RemotePort = pe.get_proxy().getRemotePort();
         try
         {
-            pop3_ss = new ServerSocket(LocalPort);
+            String protocol = "pop3";
+            if (pe.isSSL())
+            {
+                pop3_ss = getServerSocket( LocalPort, local_host );
+                protocol = "pop3s";
+            }
+            else
+            {
+                pop3_ss = new ServerSocket(LocalPort);
+            }
             // 1 second timeout
             pop3_ss.setSoTimeout(1000);
 
             pe.set_server_sock( pop3_ss );
 
-            Main.info_msg("MailProxy is running for the host 'pop3://" + host +
+            Main.info_msg("MailProxy is running for the host '" + protocol + "://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
            
 
@@ -126,7 +184,7 @@ public class MailProxyServer extends ListWorkerParent
             }
 
             Main.info_msg("stopping the pop3 proxy for host '" + host + "' on local port " + LocalPort);
-        } 
+        }
         catch (java.net.BindException be)
         {
             String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
@@ -136,10 +194,17 @@ public class MailProxyServer extends ListWorkerParent
             
             //Common.showError(errmsg);
         } 
-        catch (java.io.IOException ex)
+        catch (Exception ex)
         {
             if (!pe.is_finished())
+            {
+                String errmsg = "The System could not open the Socket on the local port " + LocalPort +". " + ex.getMessage();
+                Main.err_log(errmsg);
+                this.setStatusTxt("Not listening, cannot open port");
+                this.setGoodState(false);
+
                 Main.err_log(ex.getMessage());
+            }
         }
 
         // close the server connection
@@ -163,15 +228,25 @@ public class MailProxyServer extends ListWorkerParent
         ServerSocket smtp_ss = null;
         
         String host = pe.get_proxy().getRemoteServer();
+        String local_host = pe.get_proxy().getLocalServer();
         int LocalPort = pe.get_proxy().getLocalPort();
         int RemotePort = pe.get_proxy().getRemotePort();
 
         try
         {
-            smtp_ss = new ServerSocket(LocalPort);
+            String protocol = "smtp";
+            if (pe.isSSL())
+            {
+                smtp_ss = getServerSocket( LocalPort, local_host );
+                protocol = "smtps";
+            }
+            else
+            {
+                smtp_ss = new ServerSocket(LocalPort);
+            }
             // 1 second timeout
             smtp_ss.setSoTimeout(1000);
-            Main.info_msg("MailProxy is running for the host 'smtp://" + host +
+            Main.info_msg("MailProxy is running for the host '" + protocol + "://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
             pe.set_server_sock( smtp_ss );
 
@@ -224,9 +299,17 @@ public class MailProxyServer extends ListWorkerParent
             
             //Common.showError(errmsg);
         } 
-        catch (java.io.IOException ex)
+        catch (Exception ex)
         {
-            Main.err_log(ex.getMessage());
+            if (!pe.is_finished())
+            {
+                String errmsg = "The System could not open the Socket on the local port " + LocalPort +". " + ex.getMessage();
+                Main.err_log(errmsg);
+                this.setStatusTxt("Not listening, cannot open port");
+                this.setGoodState(false);
+
+                Main.err_log(ex.getMessage());
+            }
         }
 
         // close the server connection

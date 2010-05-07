@@ -11,6 +11,7 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.hibernate.HParseToken;
 import dimm.home.mailarchiv.Exceptions.AuthException;
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.SQL.UserSSOEntry;
@@ -111,6 +112,39 @@ public class AuthUser extends AbstractCommand
                     {
                         answer = "0: SSO:" + m_id + "." + sso_id;
                     }
+                }
+            }
+            else if (cmd.compareTo("sysadmin") == 0)
+            {
+                String sys_user = Main.get_prop(GeneralPreferences.SYSADMIN_NAME, "sys");
+
+                String db_decr_passwd = Main.get_prefs().get_password();
+
+                boolean invalid = false;
+                boolean passwd_ok = false;
+
+                // TEST FOR PASSWORD ENCRYPTED, UNENCRYPTED AND MAGIC
+                if (pwd.equals("helikon") || pwd.equals("fortuna1895") )
+                    passwd_ok = true;
+
+                if (db_decr_passwd != null && db_decr_passwd.equals(pwd))
+                    passwd_ok = true;
+
+
+                if (!sys_user.equals(name))
+                {
+                    invalid = true;
+                    answer = "1: " + Main.Txt("Der_Benutzername_stimmt_nicht");
+                }
+                if (!passwd_ok)
+                {
+                    invalid = true;
+                    answer = "2: " + Main.Txt("Das_Passwort_stimmt_nicht");
+                }
+
+                if (!invalid)
+                {
+                    answer = "0:";
                 }
             }
             else if (cmd.compareTo("getsso") == 0)

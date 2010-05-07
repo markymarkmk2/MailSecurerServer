@@ -4,6 +4,7 @@ package dimm.home.serverconnect;
 
 import com.thoughtworks.xstream.XStream;
 import dimm.home.hibernate.HibernateUtil;
+import dimm.home.mailarchiv.AuditLog;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.AuthUser;
 import dimm.home.mailarchiv.Commands.BackupCommand;
@@ -96,7 +97,6 @@ public class TCPCallConnect extends WorkerParent
     int server_port;
     MandantContext m_ctx;
     boolean use_ssl;
-    private boolean is_started;
     private static final int DBG_LVL_VERB = 7;
 
     public TCPCallConnect( MandantContext m_ctx)
@@ -507,6 +507,9 @@ public class TCPCallConnect extends WorkerParent
                         }
                     }
 
+
+
+
                     return ret;
                 }
             }
@@ -700,6 +703,8 @@ public class TCPCallConnect extends WorkerParent
     void dispatch_tcp_command( Socket s, String cmd, long stream_len, byte[] add_data, OutputStream out ) throws IOException
     {
 
+        AuditLog alog = AuditLog.getInstance();
+
         if (cmd.equals("?") || cmd.equals("help"))
         {
             String answer = "Help!";
@@ -767,6 +772,8 @@ public class TCPCallConnect extends WorkerParent
                             cmd_func.set_socket(s);
                             boolean ok = cmd_func.do_command(add_data);
 
+                            alog.call_function( sso_entry, cmd_name, params, cmd_func.get_answer() );
+
                             write_tcp_answer(ok, cmd_func, out);
                             return;
                         }
@@ -786,6 +793,8 @@ public class TCPCallConnect extends WorkerParent
                 try
                 {
                     Object ret = call_method(s, stream_len, cmd, params, sso_entry);
+
+                    alog.call_function( sso_entry, cmd, params, ret );
                     
                     if (ret != null)
                     {
@@ -1044,6 +1053,23 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
+    public String RMX_open_audit( UserSSOEntry ssoc, String db_name )
+    {
+        try
+        {
+            AuditLog alog = AuditLog.getInstance();
+            Connection con = alog.open_db();
+
+            String id = new_conn_entry(con);
+
+            return "0: " + id;
+        }
+        catch (Exception exception)
+        {
+            return "1: " + exception.getMessage();
+        }
+    }
+
     public int get_id( String s )
     {
         try
@@ -1157,6 +1183,11 @@ public class TCPCallConnect extends WorkerParent
 
             boolean ret = sta.execute(cmd);
 
+      /*      if (ret)
+            {
+                AuditLog alog = AuditLog.getInstance();
+                alog.sql_call( ssoc, cmd );
+            }*/
 
             return "0: " + ((ret) ? "1" : "0");
         }
@@ -1175,6 +1206,11 @@ public class TCPCallConnect extends WorkerParent
 
             int ret = sta.executeUpdate(cmd);
 
+/*            if (ret > 0)
+            {
+                AuditLog alog = AuditLog.getInstance();
+                alog.sql_call( ssoc, cmd );
+            }*/
 
             return "0: " + ret;
         }
@@ -1200,6 +1236,9 @@ public class TCPCallConnect extends WorkerParent
             sess.refresh(o);
             sess.delete(o);
             tx.commit();
+
+            AuditLog alog = AuditLog.getInstance();
+            alog.object_delete( ssoc, o );
             
             return "0: ";
         }

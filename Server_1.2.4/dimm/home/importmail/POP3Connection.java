@@ -3,6 +3,7 @@ package dimm.home.importmail;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
+import home.shared.Utilities.DefaultSSLSocketFactory;
 import home.shared.mail.RFCGenericMail;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -11,6 +12,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import javax.net.SocketFactory;
 
 public class POP3Connection extends ProxyConnection
 {
@@ -47,33 +49,47 @@ public class POP3Connection extends ProxyConnection
     {
         boolean do_quit = false;
         m_error = -1;
-        m_Command = -1;
+        int m_Command = POP_SINGLELINE;
                                     
 
         try
         {
             
-            clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(), clientSocket.getSendBufferSize());
-
+/*            clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(), clientSocket.getSendBufferSize());
             clientReader = new BufferedInputStream(clientSocket.getInputStream(), clientSocket.getReceiveBufferSize());
+*/
+            clientWriter = clientSocket.getOutputStream();
+            clientReader = clientSocket.getInputStream();
 
-            serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            if (pe.isSSL())
+            {
+                SocketFactory sf = DefaultSSLSocketFactory.getDefault();
+                serverSocket = sf.createSocket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            }
+            else
+            {
+                serverSocket = new Socket(pe.get_proxy().getRemoteServer(), pe.get_proxy().getRemotePort());
+            }
 
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
-            
+         /*
             Main.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
             Main.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
             Main.debug_msg(DBG_VERB, "getSoTimeout: " + serverSocket.getSoTimeout());
-
-            serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(), serverSocket.getSendBufferSize());
+*/
+/*            serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(), serverSocket.getSendBufferSize());
             serverReader = new BufferedInputStream(serverSocket.getInputStream(), serverSocket.getReceiveBufferSize());
+  */
+            serverWriter = serverSocket.getOutputStream();
+            serverReader = serverSocket.getInputStream();
 
             String sData = "";
 
             // THE FIRST RESPONSE FROM SERVER IS SINGLE LINE
             m_Command = POP_SINGLELINE;
             int dbg_level = (int)Main.get_debug_lvl();
+            boolean server_wait_input = pe.isSSL() ? false : true;
             
             
             while (true)
@@ -82,7 +98,7 @@ public class POP3Connection extends ProxyConnection
                 // read the answer from the server
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
-                sData = getDataFromInputStream(serverReader, serverSocket, /*wait*/ true).toString();
+                sData = getDataFromInputStream(serverReader, serverSocket, m_Command, /*wait*/ server_wait_input).toString();
 
                 // verify if the user stopped the thread
                 if (pe.is_finished())
@@ -126,7 +142,7 @@ public class POP3Connection extends ProxyConnection
                 }
 
                 // reset the command
-                m_Command = -1;
+                m_Command = POP_SINGLELINE;
 
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Client..."));

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +37,9 @@ public abstract class ProxyConnection implements Runnable
 
     static final int SOCKET_TIMEOUT[] = {30000, 60000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
+    final static String END_OF_MULTILINE_STR = "\r\n.\r\n";
     final static byte END_OF_LINE[] = {'\r','\n'};
+    final static String END_OF_LINE_STR = "\r\n";
 
 
     static final int ERROR_TIMEOUT_EXCEEDED = 1;
@@ -45,15 +48,15 @@ public abstract class ProxyConnection implements Runnable
 
     InputStream serverReader;			// server reader
     InputStream clientReader;
-    BufferedOutputStream clientWriter;
-    BufferedOutputStream serverWriter;
+    OutputStream clientWriter;
+    OutputStream serverWriter;
 
     int m_error;							// stores the last error
     Socket serverSocket;					// server socket
     Socket clientSocket;					// server socket
 
     static int m_retries;					// numbers of retries to read a message from the socket
-    int m_Command;							// actual POP command
+    						// actual POP command
 
     static final int POP_RETR = 1;
     static final int POP_MULTILINE = 2;
@@ -105,7 +108,6 @@ public abstract class ProxyConnection implements Runnable
     {
         pe = _pe;       
         m_error = -1;
-        m_Command = -1;
         clientSocket = _clientSocket;
         pe.set_connection( this );
         reset_timeout();
@@ -340,6 +342,70 @@ public abstract class ProxyConnection implements Runnable
 
         return false;
     }
+    private boolean has_multi_eol( StringBuffer output )
+    {
+        if (output.length() < END_OF_MULTILINE.length)
+            return false;
+
+        String s = output.substring(output.length() - END_OF_MULTILINE.length);
+        if (s.compareTo(END_OF_MULTILINE_STR) == 0)
+            return true;
+
+        return false;
+    }
+
+/*
+ *    123-First line
+      123-Second line
+      123-234 text beginning with numbers
+      123 The last line
+*/
+    private boolean has_smtp_eol( StringBuffer output )
+    {
+        if (output.length() < END_OF_LINE.length)
+            return false;
+        
+        // MUST HAVE EOL
+        if (!has_single_eol( output ))
+            return false;
+        
+        
+        // NOW FIND INDEX OF PREVIOUS LINE
+        String start_txt = output.substring(0, output.length() - 2);
+        int idx = start_txt.lastIndexOf(END_OF_LINE_STR);
+        if (idx == -1)
+            idx = 0;
+        else
+            idx += END_OF_LINE.length;
+
+        // CHECK IF THIS LINE HAS SPCAE SEPARATOR OR NOTHING AFTER 3-DIGIT CODE
+        if (idx + 3 > output.length())
+            return true; // NO SPACE AFTER 3-DIGIT
+
+        if (output.charAt(idx + 3) == ' ')
+            return true;
+
+        if (output.charAt(idx + 3) == '-')
+            return false;
+
+        System.out.println("Protocolerror on SMTP multiline: " + output.toString());
+
+
+        return false;
+    }
+
+    private boolean has_single_eol( StringBuffer output )
+    {
+        if (output.length() < END_OF_LINE.length)
+            return false;
+
+        String s = output.substring(output.length() - END_OF_LINE.length);
+        if (s.compareTo(END_OF_LINE_STR) == 0)
+            return true;
+
+        return false;
+    }
+
     boolean has_multi_eol( byte buffer[], int rlen )
     {
         if (rlen < END_OF_MULTILINE.length)
@@ -418,12 +484,12 @@ public abstract class ProxyConnection implements Runnable
         return false;
     }
 
-
+/*
     StringBuffer getDataFromInputStream(InputStream reader, Socket sock, boolean wait)
     {
         return getDataFromInputStream( reader, sock, m_Command, wait );
     }
-
+*/
     int wait_for_avail( InputStream reader, Socket sock, int s )
     {
         int maxwait = s * 10;
@@ -455,8 +521,8 @@ public abstract class ProxyConnection implements Runnable
     {
         String ret =  pe.get_proxy().getType() + " " + this.this_thread_id;
 
-        if (clientSocket != null && clientSocket.isConnected())
-            ret += ": " + clientSocket.getRemoteSocketAddress().toString();
+        if (serverSocket != null && serverSocket.isConnected())
+            ret += ": " + serverSocket.getRemoteSocketAddress().toString();
 
         return ret;
     }
@@ -470,7 +536,118 @@ public abstract class ProxyConnection implements Runnable
         boolean finished = false;
         int rlen = 0;
 
-        int avail = 0;
+
+        int orig_to = 0;
+        try
+        {
+            orig_to = sock.getSoTimeout();
+            sock.setSoTimeout((ACTIVITY_TIMEOUT / 2) * 1000);
+        }
+        catch (SocketException socketException)
+        {
+        }
+
+        while ( !finished && m_error < 0)
+        {
+            try
+            {
+                rlen = reader.read(buffer);
+                reset_timeout();
+                
+                for (int i = 0; i < rlen; i++)
+                {
+                    output.append( (char) buffer[i]);
+                }
+
+            }
+            catch (SocketTimeoutException ste)
+            {
+                // COMMAND ENDED BY TIMEOUT, PROBABLY UNKNOWN, CHECK FOR EOL
+                if (has_single_eol( output ))
+                {
+                    finished = true;
+                    break;
+                }
+                if (output.length() == 0)
+                {
+                    m_error = ERROR_TIMEOUT_EXCEEDED;
+                }
+
+            }
+            catch (IOException e)
+            {
+                // reader failed
+                m_error = ERROR_UNKNOWN;
+                if (!finished)
+                {
+                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                }
+            }
+            if (command_type == POP_MULTILINE)
+            {
+                if (rlen > 2 && buffer[0] == '-' && buffer[1] == 'E')
+                    command_type = POP_SINGLELINE;
+            }
+
+
+            if (command_type == POP_MULTILINE)
+            {
+                if (has_multi_eol( output))
+                {
+                    finished = true;
+                    break;
+                }
+            }
+            else if (command_type == SMTP_MULTILINE || command_type == SMTP_SINGLELINE )
+            {
+                if (has_smtp_eol( output))
+                {
+                    finished = true;
+                    break;
+                }
+            }
+            else if (command_type == POP_SINGLELINE || command_type == SMTP_CLIENTREQUEST || command_type == SMTP_DATA)
+            {
+                if (has_single_eol( output))
+                {
+                    finished = true;
+                    break;
+                }
+            }
+            else
+            {
+                if (has_single_eol( output))
+                {
+                    finished = true;
+                    break;
+                }
+            }
+        }
+
+        try
+        {
+            if (orig_to > 0)
+            {
+                sock.setSoTimeout(orig_to);
+            }
+        }
+        catch (SocketException socketException)
+        {
+        }
+        return output;
+    }
+
+
+    StringBuffer getDataFromInputStreamNoBlock(InputStream reader, Socket sock, int command_type, boolean wait)
+    {
+        final int MAX_BUF = 8192;  						// buffer 8 Kb
+        byte buffer[] = new byte[MAX_BUF];			// buffer array
+        StringBuffer output = new StringBuffer("");		// output string
+
+        boolean finished = false;
+        int rlen = 0;
+
+        int avail = MAX_BUF;
 
 
 
@@ -577,7 +754,11 @@ public abstract class ProxyConnection implements Runnable
                 {
                     output.append( (char) buffer[i]);
                 }
-
+                
+                // IN CASE WE CANNOT DETECT AVAILABLE, WE BLOCK
+/*                if (avail == 0)
+                    avail = MAX_BUF;
+*/
                 if ( command_type == SMTP_MULTILINE || command_type == SMTP_SINGLELINE)
                 {
                     // CHECK IF WE HAVE LAST LINE OF MULTILINE SMTP
@@ -677,6 +858,152 @@ public abstract class ProxyConnection implements Runnable
         final int MAX_BUF = 2048;  						// buffer 8 Kb
         byte buffer[] = new byte[MAX_BUF];			// buffer array
 
+
+        long dgb_level = Main.get_debug_lvl();
+        byte[] last_4 = new byte[4];
+
+
+        int rlen = 0;
+        while (!finished && m_error <= 0)
+        {
+            try
+            {
+                // verify if the user stopped the thread
+                if (pe.is_finished())
+                {
+                    return 1;
+                }
+
+                rlen = Reader.read(buffer);
+
+
+                if (rlen > 0)
+                {
+
+                    // DETECT EOM
+                    if (rlen < END_OF_MULTILINE.length)
+                    {
+                        String str = new String( last_4 );
+                        str += new String( buffer, 0, rlen );
+                        if (has_multi_eol(str.getBytes(), str.length()))
+                        {
+                            finished = true;
+                        }
+                    }
+                    else
+                    {
+                        if (has_multi_eol(buffer, rlen))
+                        {
+                            finished = true;
+                        }
+                    }
+
+
+
+                    // SAVE LAST 4 BYTE
+                    int start_idx = 0;
+                    if (rlen > 4)
+                    {
+                        start_idx = rlen - 4;
+                    }
+
+                    for (int i = start_idx; i < rlen; i++)
+                    {
+                        last_4[i - start_idx] = buffer[i];
+                    }
+
+
+                    Writer.write(buffer, 0, rlen);
+                    reset_timeout();
+
+
+                    if (finished)
+                    {
+                        Writer.flush();
+                    }
+
+                    if (bos != null)
+                    {
+                        disable_timeout();
+                        try
+                        {
+                            bos.write(buffer, 0, rlen);
+                        }
+                        catch (Exception exc)
+                        {
+                            long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
+                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+
+                            // CLOSE AND INVALIDATE STREAM
+                            try
+                            {
+                                bos.close();
+
+                            }
+                            catch (Exception exce)
+                            {
+                            }
+                            finally
+                            {
+                                if (rfc_dump.exists())
+                                    rfc_dump.delete();
+                            }
+
+                            bos = null;
+
+
+                            if (Main.get_bool_prop(MandantPreferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
+                            {
+                                m_error = ERROR_UNKNOWN;
+                                return m_error;
+                            }
+                        }
+                        reset_timeout();
+                    }
+                }
+                else
+                {
+                     m_error = ERROR_NO_ANSWER;                     
+                }
+            }
+            catch (SocketTimeoutException ste)
+            {
+                if (rlen == 0)
+                {
+                    m_error = ERROR_TIMEOUT_EXCEEDED;
+                    LogManager.err_log("Timeout get_multiline_proxy_data: " + get_description() + ": " + ste.getMessage());
+                }
+            }
+            catch (Exception e)
+            {
+                // reader failed
+                m_error = ERROR_UNKNOWN;
+                LogManager.err_log("Exception get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+            }
+        }
+
+        if (finished)
+        {
+            return 0;
+        }
+
+        if (m_error > 0)
+            return m_error;
+
+        return -1;
+    }
+
+
+    protected int get_multiline_proxy_data_no_block(InputStream Reader, OutputStream Writer, File rfc_dump, BufferedOutputStream bos)
+    {
+        // NOW MOVE DATA FROM READER TO WRITERCLIENT TO SERVER
+        boolean finished = false;
+
+
+
+        final int MAX_BUF = 2048;  						// buffer 8 Kb
+        byte buffer[] = new byte[MAX_BUF];			// buffer array
+
         int avail = 0;
 
         // WAIT TEN SECONDS (100*100ms) FOR DATA
@@ -723,7 +1050,7 @@ public abstract class ProxyConnection implements Runnable
                 }
 
                 // WAIT FOR DATA, WE ARE TOO FAST
-                maxwait = 10;
+                maxwait = 2;
                 while (avail == 0 && maxwait > 0)
                 {
                     try
@@ -828,6 +1155,11 @@ public abstract class ProxyConnection implements Runnable
                 }
 
                 avail = Reader.available();
+                
+                // IN CASE WE CANNOT DETECT AVAILABLE, WE BLOCK
+                /*if (avail == 0)
+                    avail = MAX_BUF;
+*/
 
                 if (rlen == END_OF_MULTILINE.length)
                 {
@@ -994,7 +1326,7 @@ public abstract class ProxyConnection implements Runnable
             }
 
             b = first_line[i];
-            if (b == '\n')
+            if (i >= 2 && first_line[i-1] == '\r' && first_line[1] == '\n')
             {
                 break;
             }
@@ -1010,6 +1342,7 @@ public abstract class ProxyConnection implements Runnable
     {
         closeConnections();
     }
+
 
 
 

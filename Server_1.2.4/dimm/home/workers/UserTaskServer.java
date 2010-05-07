@@ -197,7 +197,6 @@ public class UserTaskServer extends WorkerParent
 
             }
         }
-        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     private void call_method( UserTask userTask, Method method )
