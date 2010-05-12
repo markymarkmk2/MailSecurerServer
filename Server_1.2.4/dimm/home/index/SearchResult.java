@@ -5,6 +5,7 @@
 
 package dimm.home.index;
 
+import home.shared.hibernate.Role;
 import java.io.IOException;
 import org.apache.lucene.search.Searcher;
 
@@ -24,9 +25,10 @@ public class SearchResult
     private long size;
     private String subject;
     private boolean has_attachment;
+    private Role role_4eyes;
 
 
-    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment )
+    public SearchResult( Searcher searcher, int doc_index, float score, int da_id, int ds_id, String uuid, long time, long size, String s, boolean has_attachment, Role role_4eyes )
     {
         this.searcher = searcher;
         this.doc_index = doc_index;
@@ -38,6 +40,7 @@ public class SearchResult
         this.size = size;
         subject = s;
         this.has_attachment = has_attachment;
+        this.role_4eyes = role_4eyes;
     }
 
     /**
@@ -131,4 +134,10 @@ public class SearchResult
             iOException.printStackTrace();
         }
     }
+
+    public Role get_role_4eyes()
+    {
+        return role_4eyes;
+    }
+
 }

@@ -45,7 +45,7 @@ public class MWMailMessage implements MailInfo
     int bodysize = 0;
     int mesgsize = 0;
     boolean ishead = true;
-    int uid = 0;
+    long uid = 0;
     //String messageid = null;
     MailKonto parent = null;
     MailFolder mailfile = null;
@@ -160,7 +160,7 @@ public class MWMailMessage implements MailInfo
 
     }
 
-    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCGenericMail rfc,  int uid, SearchResult sc  )
+    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCGenericMail rfc,  long uid, SearchResult sc  )
     {
         this.parent = parent;
         this.mailfile = mailfile;
@@ -168,7 +168,7 @@ public class MWMailMessage implements MailInfo
         if (sc != null)
             this.uuid = sc.getUuid();
         else
-            this.uuid = Integer.toString(uid);
+            this.uuid = Long.toString(uid);
         
         this.uid = uid;
         this.rfc = rfc;
@@ -183,7 +183,7 @@ public class MWMailMessage implements MailInfo
 
 
     @Override
-    public int getUID()
+    public long getUID()
     {
         return uid;
     }

@@ -152,6 +152,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         esmtp_from_args = new ArrayList<String>();
         esmtp_rcpt_args = new ArrayList<String>();
         rcpt_list = new ArrayList<String>();
+        header_list = new ArrayList<String>();
         header_sb = new StringBuffer();
         
         sender = null;
@@ -231,7 +232,8 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
 
             File tmp_file = m_ctx.getTempFileHandler().create_temp_file(/*SUBDIR*/"", "dump", "tmp");
-            file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
+            file_mail = new  RFCFileMail(tmp_file, false);
+//            file_mail = new  RFCFileMail(tmp_file, RFCFileMail.dflt_encoded);
             os = file_mail.open_outputstream();
 
         }
@@ -292,17 +294,15 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             }
             os.close();
             os = null;
-                        
+
+            // TODO: BCC
             RFCMimeMail mime_mail = new RFCMimeMail();
             mime_mail.parse(file_mail);
 
             add_bcc_recpients( mime_mail.getMsg() );
 
             // CHECK FOR SPACE AND ARCHIVE
-            Milter milter = handler.get_milter();
-            MandantContext m_ctx = Main.get_control().get_m_context(milter.getMandant());
-            Vault vault = m_ctx.get_vault_by_da_id(milter.getDiskArchive().getId());
-            
+            Milter milter = handler.get_milter();                        
 
             Main.get_control().add_rfc_file_mail(file_mail, milter.getMandant(), milter.getDiskArchive(), /*bg*/true, /*del_after*/ true);
         }
@@ -318,8 +318,13 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     @Override
     public JilterStatus body( ByteBuffer bodyp )
     {
+
+
         try
         {
+            // Leading emty line
+
+            os.write("\r\n".getBytes());
             if (bodyp.hasArray())
             {
                 os.write(bodyp.array());
@@ -353,6 +358,16 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         header_sb.append(headerv);
         header_list.add(header_sb.toString());
 
+        try
+        {
+            os.write(header_sb.toString().getBytes());
+            os.write("\r\n".getBytes());
+        }
+        catch (IOException iOException)
+        {
+            LogManager.log(Level.SEVERE, Main.Txt("Could_not_write_milter_body"), iOException);
+            return JilterStatus.SMFIS_TEMPFAIL;
+        }
         return JilterStatus.SMFIS_CONTINUE;
     }
 

@@ -21,7 +21,7 @@ import java.io.IOException;
 
 public interface MailInfo
 {
-    public int getUID();
+    public long getUID();
     public String getMID() throws IOException;
     public String getFlags();
     public long getRFC822size();

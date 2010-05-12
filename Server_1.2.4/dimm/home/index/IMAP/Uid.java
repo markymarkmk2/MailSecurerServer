@@ -17,8 +17,8 @@ import java.util.ArrayList;
 
 class IRange
 {
-    int min;
-    int max;
+    long min;
+    long max;
 
     public IRange()
     {
@@ -35,7 +35,7 @@ class IRange
         {
             try
             {
-                min = max = Integer.parseInt(bereich);
+                min = max = Long.parseLong(bereich);
             }
             catch (Exception e)
             {
@@ -45,7 +45,7 @@ class IRange
         {
             try
             {
-                min = Integer.parseInt(bereich.substring(0, i));
+                min = Long.parseLong(bereich.substring(0, i));
             }
             catch (Exception e)
             {
@@ -53,16 +53,12 @@ class IRange
 
             try
             {
-                max = Integer.parseInt(bereich.substring(i + 1));
+                max = Long.parseLong(bereich.substring(i + 1));
             }
             catch (Exception e)
             {
             }
 
-            if (min > 100000)
-            {
-                min = 0; //Mop: ob das wohl richtig ist
-            }
             if (max == 0)
             {
                 max = -1;
@@ -70,12 +66,12 @@ class IRange
         }
     }
 
-    public int getMin()
+    public long getMin()
     {
         return min;
     }
 
-    public int getMax()
+    public long getMax()
     {
         return max;
     }
@@ -179,7 +175,7 @@ public class Uid extends ImapCmd
         return success ? 0 : 1;
     }
 
-    boolean search( MWImapServer is, int min, int max, int offset, String part[] )
+    boolean search( MWImapServer is, long min, long max, int offset, String part[] )
     {
         String result = "SEARCH";
         MailFolder folder = is.get_selected_folder();
@@ -193,7 +189,7 @@ public class Uid extends ImapCmd
             for ( int i = 0; i < messages; i++)
             {
                 MailInfo msginfo = folder.get_mail_message(i);
-                int uid = msginfo.getUID();
+                long uid = msginfo.getUID();
 
                 boolean is_in_range = false;
 

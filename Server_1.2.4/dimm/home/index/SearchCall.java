@@ -21,13 +21,18 @@ import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.CS_Constants.USERMODE;
+import home.shared.SQL.OptCBEntry;
 import home.shared.filter.ExprEntry;
 import home.shared.filter.FilterMatcher;
+import home.shared.filter.FilterValProvider;
 import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
+import home.shared.hibernate.Role;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Properties;
 import javax.mail.Address;
 import javax.mail.Message;
@@ -261,8 +266,26 @@ public class SearchCall
             for (int j = 0; j < field_list.size(); j++)
             {
                 String field = field_list.get(j);
-                String val = doc.get(field);
-                row_list.add(val);
+
+                // HANDLE SPECIAL CASE 4EYES-COL: WE SET Role-ID IF WE HAVE A 4-EYES ROLE MATCHING THIS MAIL
+                if (field.compareTo( CS_Constants.VFLD_4EYES) == 0)
+                {
+                    SearchResult sr = sce.call.result.get(row);
+                    Role r = sr.get_role_4eyes();
+                    if (r != null)
+                    {
+                        row_list.add(Integer.toString(r.getId()));
+                    }
+                    else
+                    {
+                        row_list.add("");
+                    }
+                }
+                else
+                {
+                    String val = doc.get(field);
+                    row_list.add(val);
+                }
             }
             return row_list;
         }
@@ -442,6 +465,24 @@ public class SearchCall
         search_lucene(user, pwd, logic_list, n, level);
     }
 
+    private boolean can_view_all_mails( String user, String pwd, USERMODE level)
+    {
+        if (level == USERMODE.UL_ADMIN)
+            return true;
+        if (level == USERMODE.UL_SYSADMIN)
+            return true;
+
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
+
+        if ( ssoc.is_auditor())
+            return true;
+
+        if ( ssoc.is_admin())
+            return true;
+            
+        return false;
+    }
+
     public void search_lucene( String user, String pwd, ArrayList<LogicEntry> logic_list, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
     {
 
@@ -455,14 +496,16 @@ public class SearchCall
 
         // BUILD USER FILTER
         TermsFilter filter = null;
-        if (level != USERMODE.UL_ADMIN && level != USERMODE.UL_SYSADMIN)
+
+        boolean view_all = can_view_all_mails(user, pwd, level);
+
+        if (!view_all)
         {
             ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
             if (mail_aliases == null || mail_aliases.size() == 0)
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
-            }
-            //           filter = null;
+            }            
 
             filter = build_lucene_filter(mail_aliases);
         }
@@ -470,8 +513,9 @@ public class SearchCall
         Query qry = build_lucene_qry(logic_list, ana);
         LogManager.debug_msg(2, "Qry is: " + qry.toString());
 
-        run_lucene_searcher(dsh_list, qry, filter, n);
+        run_lucene_searcher(dsh_list, qry, filter, n, level, view_all);
     }
+
     public void search_lucene_qry_str( String user, String pwd, String lucene_qry, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
     {
 
@@ -485,7 +529,10 @@ public class SearchCall
 
         // BUILD USER FILTER
         TermsFilter filter = null;
-        if (level != USERMODE.UL_ADMIN && level != USERMODE.UL_SYSADMIN)
+        
+        boolean view_all = can_view_all_mails(user, pwd, level);
+
+        if (view_all)
         {
             ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
             if (mail_aliases == null || mail_aliases.size() == 0)
@@ -500,7 +547,7 @@ public class SearchCall
         Query qry = build_lucene_qry(lucene_qry, ana);
         LogManager.debug_msg(2, "Qry is: " + lucene_qry);
 
-        run_lucene_searcher(dsh_list, qry, filter, n);
+        run_lucene_searcher(dsh_list, qry, filter, n, level, view_all);
     }
 
     ArrayList<DiskSpaceHandler> create_dsh_list()
@@ -708,8 +755,25 @@ public class SearchCall
         return qry;
     }
 
+    ArrayList<String> get_mail_addresses( Document doc )
+    {
+            // BUILD MAILADRESSLIST
+        ArrayList<String> mail_fields = m_ctx.get_index_manager().get_email_headers();
+        ArrayList<String> mail_addr_list = new ArrayList<String>();
+        for (int m = 0; m < mail_fields.size(); m++)
+        {
+            String field_name = mail_fields.get(m);
+            String mail_address = doc.get(field_name);
+            if (mail_address != null && mail_address.trim().length() > 0)
+            {
+                mail_addr_list.add( mail_address);
+            }
+        }
+        return mail_addr_list;
+    }
 
-    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n ) throws IOException
+
+    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, boolean view_all  ) throws IOException
     {
         // RESET LISTS
         result = new ArrayList<SearchResult>();
@@ -788,7 +852,18 @@ public class SearchCall
                 has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
             }
 
-            SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
+            // IF WE ARE LOOKING INTO OTHER USERS MAIL, WE HAVE TO CHECK FOR 4-EYES-ROLE
+            Role role = null;
+            if (view_all)
+            {
+                // GET MAILADRESSLIST
+                ArrayList<String> mail_addr_list = get_mail_addresses( doc );
+
+                // DETECT ROLE WITH 4 EYES
+                role = check_for_4eyes( mail_addr_list );
+            }
+
+            SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment, role);
             result.add(rs);
 
             // STOP AFTER N RESULTS
@@ -799,7 +874,7 @@ public class SearchCall
         }
     }
 
-    void search( String mail_adress, String fld, String val, int n )
+    private void search( String mail_adress, String fld, String val, int n, boolean view_all )
     {
         // GO THROUGH ALL VAULTS
         for (int v_idx = m_ctx.getVaultArray().size() - 1; v_idx >= 0; v_idx--)
@@ -890,7 +965,17 @@ public class SearchCall
                                         has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
                                     }
 
-                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment);
+                                    // GET MAILADRESSLIST
+                                    ArrayList<String> mail_addr_list = get_mail_addresses( doc );
+
+                                    // DETECT ROLE WITH 4 EYES
+                                    Role role = null;
+                                    if (view_all)
+                                    {
+                                        role = check_for_4eyes( mail_addr_list );
+                                    }
+
+                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment, role);
                                     result.add(rs);
 
                                     // STOP AFTER N INDEX
@@ -1007,4 +1092,121 @@ public class SearchCall
     {
         return result.size();
     }
+
+    class _4EyesCacheEntry
+    {
+        public Role role;
+        public Boolean _4_eyes;
+
+        _4EyesCacheEntry()
+        {
+            _4_eyes = new Boolean(false);
+        }
+    }
+    HashMap<String,_4EyesCacheEntry> _4eyes_cache = new HashMap<String, _4EyesCacheEntry>();
+    private static boolean  use_4e_cache = false;
+
+    private Role check_for_4eyes( ArrayList<String> mail_addr_list )
+    {
+        for (int i = 0; i < mail_addr_list.size(); i++)
+        {
+            String addr = mail_addr_list.get(i);
+
+            _4EyesCacheEntry entry;
+            // LOOK IN CACHE FIRST
+            if (use_4e_cache)
+            {
+                entry = _4eyes_cache.get(addr);
+                if (entry != null)
+                {
+                    if (entry._4_eyes.booleanValue())
+                        return entry.role;
+
+                    return null;
+                }
+            }
+
+            entry = new _4EyesCacheEntry();
+
+            // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
+            for (Iterator<Role> it = m_ctx.getMandant().getRoles().iterator(); it.hasNext();)
+            {
+                Role role = it.next();
+
+                if (is_member_of( role, mail_addr_list ))
+                {
+                    entry.role = role;
+                    if (m_ctx.role_has_option(role, OptCBEntry._4EYES))
+                    {
+                        // STOP ON FIRST 4E-Role
+                        entry._4_eyes = new Boolean( true );
+                        break;
+                    }
+
+                }
+            }
+            if (use_4e_cache)
+            {
+                _4eyes_cache.put(addr, entry);
+            }
+            if (entry._4_eyes.booleanValue())
+                return entry.role;
+        }
+        
+        return null;
+    }
+
+    private boolean is_member_of( Role role, ArrayList<String> mail_list )
+    {
+        // CREATE FILTER VALUE PROVIDER
+        SCFilterProvider f_provider = new SCFilterProvider(mail_list );
+
+        // GET FILTER STR AND PARSE TO ARRAYLIST
+        String compressed_list_str = role.getAccountmatch();
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, true );
+        if (logic_list == null)
+        {
+            LogManager.err_log(Main.Txt("Invalid_role_filter"));
+            return false;
+        }
+
+        // CREATE FILTER AND EVAL FINALLY
+        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
+        boolean ret = matcher.eval();
+
+        return ret;
+    }
+
+}
+class SCFilterProvider implements FilterValProvider
+{
+    ArrayList<String> mail_list;
+
+    SCFilterProvider( ArrayList<String> mail_list )
+    {
+        this.mail_list = mail_list;
+    }
+
+    @Override
+    public ArrayList<String> get_val_vor_name( String name )
+    {
+        ArrayList<String> list = null;
+        if (name.toLowerCase().compareTo("email") == 0)
+        {
+            list = mail_list;
+        }
+        if (name.toLowerCase().compareTo("domain") == 0)
+        {
+            list = new ArrayList<String>();
+            for (int i = 0; i < mail_list.size(); i++)
+            {
+                String mail = mail_list.get(i);
+                int idx = mail.indexOf('@');
+                if (idx > 0 && idx < mail.length() - 1)
+                    list.add(mail.substring(idx + 1));
+            }
+        }
+        return list;
+    }
+
 }

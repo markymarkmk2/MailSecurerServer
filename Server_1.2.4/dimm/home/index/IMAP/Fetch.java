@@ -365,8 +365,8 @@ public class Fetch extends ImapCmd
                 bereich = range.substring(0, i);
                 range = range.substring(i + 1);
             }
-            int min = -1;
-            int max = -1;
+            long min = -1;
+            long max = -1;
             i = bereich.indexOf(":");
             if (i < 0)
             {
@@ -382,8 +382,7 @@ public class Fetch extends ImapCmd
             {
                 try
                 {
-                    long l = Long.parseLong(bereich.substring(0, i));
-                    min = (int) l;
+                    min = Long.parseLong(bereich.substring(0, i));
                 }
                 catch (Exception e)
                 {
@@ -391,17 +390,12 @@ public class Fetch extends ImapCmd
 
                 try
                 {
-                    long l = Long.parseLong(bereich.substring(i + 1));
-                    max = (int) l;
+                    max = Long.parseLong(bereich.substring(i + 1));
                 }
                 catch (Exception e)
                 {
                 }
 
-                if (min > 100000)
-                {
-                    min = 0; //Mop: ob das wohl richtig ist
-                }
                 if (max == 0)
                 {
                     max = -1;
@@ -430,7 +424,7 @@ public class Fetch extends ImapCmd
     }
 
 
-    static boolean fetch( ImapCmd cmd, MWImapServer is, int min, int max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
+    static boolean fetch( ImapCmd cmd, MWImapServer is, long min, long max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
         
         MailFolder mailfolder = is.get_selected_folder();
@@ -445,7 +439,7 @@ public class Fetch extends ImapCmd
             {
                 continue;
             }
-            int uid = msginfo.getUID();
+            long uid = msginfo.getUID();
             MWMailMessage msg = mailfolder.getMesg(i);
 
             if (is_uid)
@@ -486,13 +480,10 @@ public class Fetch extends ImapCmd
                 String tags[] = imapsplit(part[p]);
                 for (int x = 0; x < tags.length; x++)
                 {
-
-
                     String orig_tag = tags[x].trim();
                     String tag = orig_tag.toLowerCase();
 
                    // System.out.print("<<got tag " + tag + ">>");
-
 
                     if (tag.equals("envelope"))
                     {
@@ -660,7 +651,11 @@ public class Fetch extends ImapCmd
             }
             if (!had_uid)
             {
-                is.rawwrite(" UID " + uid);
+                if (needs_space)
+                {
+                    is.rawwrite(" ");
+                }
+                is.rawwrite("UID " + uid);
                 had_uid = true;
             }
             

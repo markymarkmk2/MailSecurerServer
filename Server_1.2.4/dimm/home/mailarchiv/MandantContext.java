@@ -1179,7 +1179,7 @@ public class MandantContext
      *
      * 4-Augen Prinzip muss in allen CLients sichtbar sein (Plugins und Client)
      *
-     * Alle Änderungen bei Rolle dürfen nur Admin  + DSB durchführen
+     * Alle Änderungen bei Rolle dürfen nur Admin  + DSB durchführen            + OK
      * *
      * Mail von 4-Augen Mitgliedern darf nicht vom Admin gelesen wedren (auch Subject nicht) Ersatztext (z.B. not for your Eyes)
      *  Beim Öffnen, Verschicken und Exportieren geht Authehtifitierung 4-Augen auf -> DSB oder user selbst)

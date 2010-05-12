@@ -107,7 +107,7 @@ public class MailFolder
 
         uid_map_list = new ArrayList<MWMailMessage>();
 
-        uid_validity = Integer.toString(year*365 + month*31 + day);
+        uid_validity = Integer.toString(year*12*31 + month*31 + day);
     }
     // CREATE DATAFOLDER
     public MailFolder(MailKonto konto, int year, int month, int day, String key)
@@ -396,7 +396,7 @@ public class MailFolder
     }
 
 
-    boolean search( int min, int max, int offset, String[] part )
+    boolean search( long min, long max, int offset, String[] part )
     {
         String arg1 = null;
         String arg2 = null;
@@ -592,7 +592,14 @@ public class MailFolder
                 
                 RFCGenericMail rfc = dsh.get_mail_from_time(time, dsh.get_enc_mode(), dsh.get_fmode());
 
-                MWMailMessage mail = new MWMailMessage( this, konto, rfc, last_msg_id++, result );
+                long date_id = 0;
+                if (year > 0)
+                {
+                    date_id = (year-2009) * 12*31 + month*31 + day;
+                    date_id *= 1000;
+                }
+                
+                MWMailMessage mail = new MWMailMessage( this, konto, rfc, date_id + last_msg_id++, result );
 
                 uid_map_list.add( mail );
 
