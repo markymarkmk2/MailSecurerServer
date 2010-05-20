@@ -372,11 +372,12 @@ public class BackupScript extends WorkerParentChild
         if (test_flag(CS_Constants.BACK_SYS))
         {
             backup_dir_list.add( new DBSourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System auditdb", new File( Main.work_dir + "/AuditDB"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System prefs", new File( Main.work_dir + "/preferences"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lib", new File( Main.work_dir + "/lib"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lic", new File( Main.work_dir + "/license"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System Server", new File( Main.work_dir + "/MailArchiv.jar"), get_system_subpath(m_ctx), true) );
-
+            backup_dir_list.add( new SourceTargetEntry( "System logs", new File( Main.work_dir + "/logs"), get_system_subpath(m_ctx), false) );
         }
 
         for (int i = 0; i < dv.get_dsh_list().size(); i++)

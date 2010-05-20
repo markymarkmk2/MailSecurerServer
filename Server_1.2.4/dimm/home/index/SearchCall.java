@@ -8,6 +8,7 @@ import com.sun.mail.smtp.SMTPTransport;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.auth.SMTPAuth;
 import dimm.home.auth.SMTPUserContext;
+import dimm.home.mailarchiv.AuditLog;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCGenericMail;
@@ -43,7 +44,6 @@ import javax.mail.internet.MimeMessage;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.FilterIndexReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
@@ -333,6 +333,7 @@ public class SearchCall
         return "0: " + res;
     }
 
+
     public static String retrieve_mail(  String id, int row )
     {
         String ret = null;
@@ -355,8 +356,20 @@ public class SearchCall
             return "3: cannot open mail for result";
         }
 
+        AuditLog al = AuditLog.getInstance();
+        ArrayList<String> args = new ArrayList<String>();
+        args.add( "SUB:" );
+        args.add(result.getSubject());
+        args.add( "UUID:" );
+        args.add(result.getUuid());
+
+        al.call_function(sce.getSsoc(), "retrieve_mail", args, ret);
+
+
+
         return ret;
     }
+
 
     public static String send_mail( String id, int[] rowi, String send_to )
     {
@@ -424,6 +437,17 @@ public class SearchCall
 
                     is.close();
 
+                    // AUDIT LOG
+                    AuditLog al = AuditLog.getInstance();
+                    ArrayList<String> args = new ArrayList<String>();
+                    args.add( "SUB:" );
+                    args.add(result.getSubject());
+                    args.add( "UUID:" );
+                    args.add(result.getUuid());
+                    args.add( "TO:" );
+                    args.add(send_to);
+
+                    al.call_function(sce.getSsoc(), "send_mail", args, "");
                 }
                 catch (VaultException vaultException)
                 {
@@ -434,6 +458,8 @@ public class SearchCall
                     return "6: " + Main.Txt("Error_while_sending_message") + ":" + messagingException.getMessage();
                 }
             }
+
+
         }
         finally
         {
@@ -465,14 +491,12 @@ public class SearchCall
         search_lucene(user, pwd, logic_list, n, level);
     }
 
-    private boolean can_view_all_mails( String user, String pwd, USERMODE level)
+    private boolean can_view_all_mails( UserSSOEntry ssoc, USERMODE level)
     {
         if (level == USERMODE.UL_ADMIN)
             return true;
         if (level == USERMODE.UL_SYSADMIN)
             return true;
-
-        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
 
         if ( ssoc.is_auditor())
             return true;
@@ -496,8 +520,9 @@ public class SearchCall
 
         // BUILD USER FILTER
         TermsFilter filter = null;
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
 
-        boolean view_all = can_view_all_mails(user, pwd, level);
+        boolean view_all = can_view_all_mails(ssoc, level);
 
         if (!view_all)
         {
@@ -510,10 +535,12 @@ public class SearchCall
             filter = build_lucene_filter(mail_aliases);
         }
 
+        
+
         Query qry = build_lucene_qry(logic_list, ana);
         LogManager.debug_msg(2, "Qry is: " + qry.toString());
 
-        run_lucene_searcher(dsh_list, qry, filter, n, level, view_all);
+        run_lucene_searcher(dsh_list, qry, filter, n, level, ssoc);
     }
 
     public void search_lucene_qry_str( String user, String pwd, String lucene_qry, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
@@ -529,8 +556,9 @@ public class SearchCall
 
         // BUILD USER FILTER
         TermsFilter filter = null;
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache(user, pwd);
         
-        boolean view_all = can_view_all_mails(user, pwd, level);
+        boolean view_all = can_view_all_mails(ssoc, level);
 
         if (view_all)
         {
@@ -544,10 +572,12 @@ public class SearchCall
             filter = build_lucene_filter(mail_aliases);
         }
 
+        
+
         Query qry = build_lucene_qry(lucene_qry, ana);
         LogManager.debug_msg(2, "Qry is: " + lucene_qry);
 
-        run_lucene_searcher(dsh_list, qry, filter, n, level, view_all);
+        run_lucene_searcher(dsh_list, qry, filter, n, level, ssoc);
     }
 
     ArrayList<DiskSpaceHandler> create_dsh_list()
@@ -773,11 +803,14 @@ public class SearchCall
     }
 
 
-    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, boolean view_all  ) throws IOException
+    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, UserSSOEntry ssoc  ) throws IOException
     {
         // RESET LISTS
         result = new ArrayList<SearchResult>();
         searcher_list = new ArrayList<IndexSearcher>();
+
+        boolean view_all = can_view_all_mails(ssoc, level);
+        
 
         // FIRST PASS, OPEN INDEX READERS
         for (int i = 0; i < dsh_list.size(); i++)
@@ -860,7 +893,7 @@ public class SearchCall
                 ArrayList<String> mail_addr_list = get_mail_addresses( doc );
 
                 // DETECT ROLE WITH 4 EYES
-                role = check_for_4eyes( mail_addr_list );
+                role = check_for_4eyes( mail_addr_list, ssoc );
             }
 
             SearchResult rs = new SearchResult(pms, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment, role);
@@ -870,140 +903,6 @@ public class SearchCall
             if (result.size() >= n)
             {
                 break;
-            }
-        }
-    }
-
-    private void search( String mail_adress, String fld, String val, int n, boolean view_all )
-    {
-        // GO THROUGH ALL VAULTS
-        for (int v_idx = m_ctx.getVaultArray().size() - 1; v_idx >= 0; v_idx--)
-        {
-            Vault vault = m_ctx.getVaultArray().get(v_idx);
-            if (vault instanceof DiskVault)
-            {
-                // GO THROUGH ALL DISKSPACES OF EACH VAULT
-                DiskVault dv = (DiskVault) vault;
-
-                for (int ds_idx = dv.get_dsh_list().size() - 1; ds_idx >= 0; ds_idx--)
-                {
-                    DiskSpaceHandler dsh = dv.get_dsh_list().get(ds_idx);
-                    if (dsh.is_index())
-                    {
-                        if (dsh.is_disabled())
-                        {
-                            continue;
-                        }
-
-                        // START A SEARCH TODO: DO THIS IN BACKGROUND
-                        try
-                        {
-                            if (dsh.islock_for_rebuild())
-                            {
-                                LogManager.debug("Skipping index " + dsh.getDs().getPath() + " during rebuild");
-                                continue;
-                            }
-
-                            IndexReader reader = dsh.create_read_index();
-                            IndexSearcher searcher = new IndexSearcher(reader);
-
-                            FilterIndexReader fir = new FilterIndexReader(reader);
-
-                            try
-                            {
-                                Query qry = null;
-                                if (val.length() > 0)
-                                {
-                                    Analyzer anal = dsh.create_read_analyzer();
-                                    QueryParser qp = new QueryParser(fld, anal);
-                                    qry = qp.parse(val);
-                                }
-                                else
-                                {
-                                    qry = new MatchAllDocsQuery();
-                                }
-
-                                TermsFilter filter = null;
-
-                                if (mail_adress != null && mail_adress.length() > 0)
-                                {
-                                    filter = new TermsFilter();
-                                    ArrayList<String> mail_headers = m_ctx.get_index_manager().get_email_headers();
-                                    for (int i = 0; i < mail_headers.size(); i++)
-                                    {
-                                        String field_name = mail_headers.get(i);
-                                        filter.addTerm(new Term(field_name, mail_adress));
-                                    }
-                                }
-
-                                Sort sort = new Sort(CS_Constants.FLD_TM);
-
-                                // SSSSEEEEAAAARRRRCHHHHHHH
-                                TopDocs tdocs = searcher.search(qry, filter, n);
-
-                                ScoreDoc[] sdocs = tdocs.scoreDocs;
-                                for (int k = 0; k < sdocs.length; k++)
-                                {
-                                    ScoreDoc scoreDoc = sdocs[k];
-
-                                    int doc_idx = scoreDoc.doc;
-                                    float score = scoreDoc.score;
-
-                                    Document doc = fir.document(doc_idx);
-
-                                    int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
-                                    int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
-                                    long size = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_SIZE);
-
-                                    String uuid = doc.get(CS_Constants.FLD_UID_NAME);
-                                    long time = IndexManager.doc_get_hex_long(doc, CS_Constants.FLD_DATE); // HEX!!!!!
-                                    String subject = doc.get(CS_Constants.FLD_SUBJECT);
-
-                                    boolean has_attachment = false;
-                                    if (IndexManager.doc_field_exists(doc, CS_Constants.FLD_HAS_ATTACHMENT))
-                                    {
-                                        has_attachment = IndexManager.doc_get_bool(doc, CS_Constants.FLD_HAS_ATTACHMENT);
-                                    }
-
-                                    // GET MAILADRESSLIST
-                                    ArrayList<String> mail_addr_list = get_mail_addresses( doc );
-
-                                    // DETECT ROLE WITH 4 EYES
-                                    Role role = null;
-                                    if (view_all)
-                                    {
-                                        role = check_for_4eyes( mail_addr_list );
-                                    }
-
-                                    SearchResult rs = new SearchResult(searcher, doc_idx, score, da_id, ds_id, uuid, time, size, subject, has_attachment, role);
-                                    result.add(rs);
-
-                                    // STOP AFTER N INDEX
-                                    if (result.size() >= n)
-                                    {
-                                        break;
-                                    }
-                                }
-                            }
-                            catch (ParseException ex)
-                            {
-                                LogManager.err_log("Cannot parse query", ex);
-                            }
-                            catch (IOException exception)
-                            {
-                                LogManager.err_log("Cannot read term doc list from index", exception);
-                            }
-                        }
-                        catch (VaultException vaultException)
-                        {
-                            LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
-                        }
-                        catch (IndexException exc)
-                        {
-                            LogManager.err_log("Cannot read index " + dsh.getDs().getPath(), exc);
-                        }
-                    }
-                }
             }
         }
     }
@@ -1106,8 +1005,29 @@ public class SearchCall
     HashMap<String,_4EyesCacheEntry> _4eyes_cache = new HashMap<String, _4EyesCacheEntry>();
     private static boolean  use_4e_cache = false;
 
-    private Role check_for_4eyes( ArrayList<String> mail_addr_list )
+    private Role check_for_4eyes( ArrayList<String> mail_addr_list, UserSSOEntry ssoc )
     {
+        // IF WE FIND AN EMAIL FROM THE CURRENT USER IN THE MAIL, WE ARE ALLOWED TO SEE IT ALWAYS
+        ArrayList<String> user_mail_addr_list = ssoc.getMail_list();
+        if (user_mail_addr_list != null)
+        {
+            for (int i = 0; i < mail_addr_list.size(); i++)
+            {
+                String addr = mail_addr_list.get(i);
+
+                for (int j = 0; j < user_mail_addr_list.size(); j++)
+                {
+                    // FOUND MAIL ADDRESS IN USER ADRESSLIST -> WE ARE ALLOWED TO VIEW W/O 4-E-ROLE-LOGIN
+                    String user_addr = user_mail_addr_list.get(j);
+                    if (user_addr.compareToIgnoreCase(addr) == 0)
+                    {
+                        return null;
+                    }
+                }
+            }
+        }
+
+        // NOW CHECK THE ROLES FOR A 4-EYES ROLE
         for (int i = 0; i < mail_addr_list.size(); i++)
         {
             String addr = mail_addr_list.get(i);
@@ -1127,6 +1047,7 @@ public class SearchCall
             }
 
             entry = new _4EyesCacheEntry();
+
 
             // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
             for (Iterator<Role> it = m_ctx.getMandant().getRoles().iterator(); it.hasNext();)

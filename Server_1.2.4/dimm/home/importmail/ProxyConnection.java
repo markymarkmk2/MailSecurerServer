@@ -549,10 +549,14 @@ public abstract class ProxyConnection implements Runnable
 
         while ( !finished && m_error < 0)
         {
+            if (pe.is_finished())
+                break;
+            
             try
             {
                 rlen = reader.read(buffer);
-                reset_timeout();
+                if (rlen > 0)
+                    reset_timeout();
                 
                 for (int i = 0; i < rlen; i++)
                 {

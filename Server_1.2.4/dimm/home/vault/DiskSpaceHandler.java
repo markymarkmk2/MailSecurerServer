@@ -6,6 +6,7 @@
 package dimm.home.vault;
 
 import dimm.home.hiber_dao.DiskSpaceDAO;
+import dimm.home.hibernate.HXStream;
 import dimm.home.index.AsyncIndexWriter;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.IndexException;
@@ -23,6 +24,7 @@ import home.shared.CS_Constants;
 import home.shared.SQL.SQLArrayResult;
 import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.DiskSpace;
+import home.shared.hibernate.Mandant;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.beans.XMLDecoder;
@@ -468,9 +470,9 @@ public class DiskSpaceHandler
 
         try
         {
-            write_info_object( ds, "ds.xml" );
-            write_info_object( ds.getDiskArchive(), "da.xml" );
-            write_info_object( ds.getDiskArchive().getMandant(), "ma.xml" );
+            write_info_enc_object( ds, "ds.xml" );
+            write_info_enc_object( ds.getDiskArchive(), "da.xml" );
+            write_info_enc_object( ds.getDiskArchive().getMandant(), "ma.xml" );
         }
         catch (Exception ex)
         {
@@ -478,7 +480,74 @@ public class DiskSpaceHandler
         }
     }
 
-    private void write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
+    boolean exists_info_enc_object( String filename )
+    {
+        File file = new File(ds.getPath() + "/" + filename + ".enc");
+        return file.exists();
+    }
+    private void write_info_enc_object( Object o, String filename ) throws FileNotFoundException, IOException
+    {
+        File save_file = new File(ds.getPath() + "/" + filename + ".enc.sav");
+        if (save_file.exists())
+            save_file.delete();
+        File file = new File(ds.getPath() + "/" + filename + ".enc");
+        if (file.exists())
+            file.renameTo(save_file);
+
+        OutputStream bos = new FileOutputStream(file);
+        try
+        {
+            CryptAESOutputStream cos = new CryptAESOutputStream( bos, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), CS_Constants.get_InternalPassPhrase() );
+            bos = cos;
+        }
+        catch (Exception exc)
+        {
+            fall_back_write_info_object( o, filename );
+            return;
+        }
+
+        HXStream xs = new HXStream();
+        xs.toXML(o, bos);
+        bos.flush();
+        bos.close();
+
+        // GET RID OF OLD XML DATA
+        File old_file = new File(ds.getPath() + "/" + filename + ".sav");
+        if (old_file.exists())
+            old_file.delete();
+        old_file = new File(ds.getPath() + "/" + filename );
+        if (old_file.exists())
+            old_file.delete();
+
+    }
+
+    private Object read_info_enc_object( String filename ) throws FileNotFoundException, IOException
+    {
+        if (!exists_info_enc_object( filename ))
+        {
+            return fall_back_read_info_object(  filename );
+        }
+
+        
+        InputStream bis = new FileInputStream(ds.getPath() + "/" + filename + ".enc");
+        try
+        {
+            CryptAESInputStream cis = new CryptAESInputStream( bis, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), CS_Constants.get_InternalPassPhrase() );
+            bis = cis;
+        }
+        catch (Exception exc)
+        {
+            return fall_back_read_info_object(  filename );
+        }
+
+        HXStream xs = new HXStream();
+        Object o = xs.fromXML(bis);
+        bis.close();
+        return o;
+    }
+
+
+    private void fall_back_write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
     {
         File save_file = new File(ds.getPath() + "/" + filename + ".sav");
         if (save_file.exists())
@@ -494,7 +563,7 @@ public class DiskSpaceHandler
         bos.close();
     }
 
-    private Object read_info_object( String filename ) throws FileNotFoundException, IOException
+    private Object fall_back_read_info_object( String filename ) throws FileNotFoundException, IOException
     {
         InputStream bis = new FileInputStream(ds.getPath() + "/" + filename);
         XMLDecoder e = new XMLDecoder(bis);
@@ -526,7 +595,7 @@ public class DiskSpaceHandler
         {
             synchronized( data_lock )
             {
-                Object o = read_info_object( "dsinfo.xml" );
+                Object o = read_info_enc_object( "dsinfo.xml" );
 
                 if (o instanceof DiskSpaceInfo)
                 {
@@ -535,13 +604,32 @@ public class DiskSpaceHandler
                 }
                 else
                     throw new VaultException( ds, "Invalid info file" );
+
+                Object m = read_info_enc_object( "ma.xml" );
+                if ( m != null && m  instanceof Mandant)
+                {
+                    Mandant ma = (Mandant)m;
+                    System.out.println("Found Mandant " + ma.getName() + " on DS " + ds.getPath());
+                    
+                    // CHEKC IF WE HAVE NEW ENCODED SAVE FILE (WITH COMPLETE STRUCTS)
+                    if (ma.getDiskArchives().size() > 0)
+                    {
+                        // DELETE UNENCODED FILES
+                        File f = new File( ds.getPath() + "/" + "ds.xml" );
+                        if (f.exists())
+                            f.delete();
+                        f = new File( ds.getPath() + "/" + "da.xml" );
+                        if (f.exists())
+                            f.delete();
+                    }
+                }
             }
         }
         catch (Exception ex)
         {
             try
             {
-                Object o = read_info_object("dsinfo.xml.sav");
+                Object o = read_info_enc_object("dsinfo.xml.sav");
                 if (o instanceof DiskSpaceInfo)
                 {
                     LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
@@ -614,7 +702,8 @@ public class DiskSpaceHandler
         {
             synchronized( data_lock )
             {
-                write_info_object( dsi, "dsinfo.xml" );
+                write_info_enc_object( dsi, "dsinfo.xml" );
+                write_info_enc_object( ds.getDiskArchive().getMandant(), "ma.xml" );
                 info_touched = false;
             }
         }
@@ -634,6 +723,10 @@ public class DiskSpaceHandler
     public DiskSpace getDs()
     {
         return ds;
+    }
+    public DiskSpaceInfo getDsi()
+    {
+        return dsi;
     }
 
 
@@ -1170,6 +1263,7 @@ public class DiskSpaceHandler
                     {
                         LogManager.log(Level.INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
                         write_index.optimize(LUC_OPTIMIZE_FILES);
+                        LogManager.log(Level.INFO, Main.Txt("Optimizing_finished_on_diskspace") + " " + ds.getPath());
                     }
                 }
                 if (hash_checker != null)

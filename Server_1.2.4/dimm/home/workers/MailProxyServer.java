@@ -474,7 +474,8 @@ public class MailProxyServer extends ListWorkerParent
                     if (m.is_timeout())
                     {
                         LogManager.err_log("Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());
-                        m.closeConnections();
+                        m.get_proxy().finish();
+//                        m.closeConnections();
                     }
 
                     if (!m.is_connected())

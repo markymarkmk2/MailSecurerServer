@@ -869,7 +869,7 @@ public class MandantContext
             }
             acct_connected = true;
 
-            if (!auth_realm.user_is_member_of(role, user, mail_list))
+            if (!GenericRealmAuth.user_is_member_of(role, user, mail_list))
             {
                 auth_realm.disconnect();
                 continue;
@@ -1170,6 +1170,7 @@ public class MandantContext
         return null;
     }
 
+    
     /*
      * So geht rollen 4 augen
      *

@@ -77,6 +77,8 @@ public class SearchCommand extends AbstractCommand
             answer = SearchCall.retrieve_mail(id, row);
             System.out.println("sco: " + answer);
 
+
+
             return true;
         }
         else if (command.compareTo("open_filter") == 0)

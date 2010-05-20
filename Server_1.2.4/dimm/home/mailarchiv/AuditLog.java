@@ -79,7 +79,8 @@ public class AuditLog
         "RMX_CloseInStream",
         "RMX_ReadInStream",
         "RMX_ReadIn",
-        "SearchMail CMD:open_filter CMD:get",
+        "SearchMail CMD:open_filter CMD:get CMD:close CMD:open",
+        "ListVaultData"
     };
 
     static AuditLog self;
@@ -166,14 +167,14 @@ public class AuditLog
                         String arg = list[j];
                         if (args.indexOf( arg ) >= 0)
                         {
-                            System.out.println("AUDIT Ignore : " + cmd + " "+ args);
+                            //System.out.println("AUDIT Ignore : " + cmd + " "+ args);
                             return true;
                         }
                     }
                 }
                 else
                 {
-                    System.out.println("AUDIT Ignore : " + cmd + " "+ args);
+                   // System.out.println("AUDIT Ignore : " + cmd + " "+ args);
                     return true;
                 }
             }
@@ -223,12 +224,12 @@ public class AuditLog
         }
         if (answer.length() >= 1024)
         {
-            answer = answer.substring(0, 2048);
+            answer = answer.substring(0, 1023);
         }
         answer = filter_pwd( answer );
         args = filter_pwd( args );
 
-        System.out.println("AUDIT: " + ma_id + " UT:" + usertype + " US:" + user + " RO:" + role_name + " CM:" + cmd + " AR:" + args + " AN:" + answer);
+//        System.out.println("AUDIT: " + ma_id + " UT:" + usertype + " US:" + user + " RO:" + role_name + " CM:" + cmd + " AR:" + args + " AN:" + answer);
         long ts = System.currentTimeMillis();
 
         String sql_cmd = "insert into audit_log ( ma_id, ts, usertype, username, role_name, cmd, args, answer ) values (?,?,?,?,?,?,?,?)";
@@ -327,7 +328,7 @@ public class AuditLog
         if (no_log(cmd, args_array))
             return;
 
-        log( ssoc, cmd, args_array, null);
+        log( ssoc, cmd, args_array, "");
     }
 
 

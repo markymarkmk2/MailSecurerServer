@@ -100,15 +100,12 @@ public class SMTPConnection extends ProxyConnection
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             
-            LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
+      /*      LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
             LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            LogManager.debug_msg(DBG_VERB, "getSoTimeout: " + serverSocket.getSoTimeout());
+            LogManager.debug_msg(DBG_VERB, "getSoTimeout: " + serverSocket.getSoTimeout());*/
 
-            serverWriter = new BufferedOutputStream(serverSocket.getOutputStream(),
-                    serverSocket.getSendBufferSize());
-
-            serverReader = new BufferedInputStream(serverSocket.getInputStream(),
-                    serverSocket.getReceiveBufferSize());
+            serverWriter = serverSocket.getOutputStream();
+            serverReader = serverSocket.getInputStream();
  
  
             
@@ -181,7 +178,7 @@ public class SMTPConnection extends ProxyConnection
                 }
 
                 // reset the command
-                m_Command = -1;
+                m_Command = SMTP_SINGLELINE;
 
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Client..."));

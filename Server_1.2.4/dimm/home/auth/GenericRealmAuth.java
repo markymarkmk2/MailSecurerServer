@@ -252,9 +252,10 @@ public abstract class GenericRealmAuth
         ArrayList<String> mail_list = list_mailaliases_for_userlist(  user_list );
         if ((act.getFlags() & CS_Constants.ACCT_USER_IS_MAIL) == CS_Constants.ACCT_USER_IS_MAIL)
         {
-            if (!mail_list.contains(user))
+            String user_mail = get_mail_from_user( user );
+            if (!mail_list.contains(user_mail))
             {
-                mail_list.add(user);
+                mail_list.add(user_mail);
             }
         }
         return mail_list;

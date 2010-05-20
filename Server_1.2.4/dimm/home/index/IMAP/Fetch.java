@@ -612,7 +612,7 @@ public class Fetch extends ImapCmd
                         msg.getRFC822body(byas);
                         byte[] mdata = byas.toByteArray();
                         tsize = mdata.length;*/
-                        String return_tag = tag.toUpperCase().replace(".PEEK[", "[");
+                        String return_tag = tag.toUpperCase().replace(".PEEK", "");
                         is.rawwrite("" + return_tag + " {" + tsize + "}\r\n");
 
                         LengthOutputStream los = new LengthOutputStream(tsize, is.s.getOutputStream());
