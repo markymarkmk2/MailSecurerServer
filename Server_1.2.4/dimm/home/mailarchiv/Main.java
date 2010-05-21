@@ -38,7 +38,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.2.11";
+    private static final String VERSION = "1.3.0";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";

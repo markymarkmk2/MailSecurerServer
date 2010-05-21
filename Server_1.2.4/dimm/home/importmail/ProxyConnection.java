@@ -5,6 +5,7 @@
 
 package dimm.home.importmail;
 
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -17,8 +18,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -33,7 +32,7 @@ public abstract class ProxyConnection implements Runnable
  */
 
     // OVERALL WATCHDOG
-    private static final int ACTIVITY_TIMEOUT = 25;
+    protected static int ACTIVITY_TIMEOUT = 120;
 
     static final int SOCKET_TIMEOUT[] = {30000, 60000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
@@ -261,7 +260,7 @@ public abstract class ProxyConnection implements Runnable
     public void closeConnections()
     {
         // close the connections
-        log(DBG_VERB - 2, Main.Txt("Closing_Connection"));
+        log(DBG_VERB - 2, get_description() + ": " + Main.Txt("Closing_Connection"));
         try
         {
             if (serverWriter != null)
@@ -283,11 +282,11 @@ public abstract class ProxyConnection implements Runnable
             {
                 clientWriter.close();
             }
-            if (clientSocket != null&& clientSocket.isConnected())
+            if (clientSocket != null)
             {
                 clientSocket.close();
             }
-            if (serverSocket != null&& serverSocket.isConnected())
+            if (serverSocket != null)
             {
                 serverSocket.close();
             }
@@ -449,7 +448,7 @@ public abstract class ProxyConnection implements Runnable
 
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(DBG_VERB, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(DBG_VERB, get_description() + ": " + txt);
     }
     void log( int dbg, String txt )
     {
@@ -459,7 +458,7 @@ public abstract class ProxyConnection implements Runnable
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
 
-        Main.debug_msg(dbg, pe.get_proxy().getType() + " " + this.this_thread_id + ": " + txt);
+        Main.debug_msg(dbg, get_description() + ": " + txt);
     }
 
     protected void reset_timeout()
@@ -521,8 +520,8 @@ public abstract class ProxyConnection implements Runnable
     {
         String ret =  pe.get_proxy().getType() + " " + this.this_thread_id;
 
-        if (serverSocket != null && serverSocket.isConnected())
-            ret += ": " + serverSocket.getRemoteSocketAddress().toString();
+        if (clientSocket != null && clientSocket.isConnected())
+            ret += ": " + clientSocket.getRemoteSocketAddress().toString();
 
         return ret;
     }
@@ -541,11 +540,12 @@ public abstract class ProxyConnection implements Runnable
         try
         {
             orig_to = sock.getSoTimeout();
-            sock.setSoTimeout((ACTIVITY_TIMEOUT / 2) * 1000);
+            sock.setSoTimeout((ACTIVITY_TIMEOUT - 5) * 1000);
         }
         catch (SocketException socketException)
         {
         }
+        int empty_cnt = 0;
 
         while ( !finished && m_error < 0)
         {
@@ -557,10 +557,34 @@ public abstract class ProxyConnection implements Runnable
                 rlen = reader.read(buffer);
                 if (rlen > 0)
                     reset_timeout();
+
+                // DETECT BROKEN CONNECTION
+                if (rlen <= 0)
+                {
+                    empty_cnt++;
+                    LogicControl.sleep(500);
+                }
+                else
+                {
+                    empty_cnt = 0;
+                }
                 
                 for (int i = 0; i < rlen; i++)
                 {
                     output.append( (char) buffer[i]);
+                }
+
+                if (empty_cnt == 10)
+                {
+                    if (has_single_eol( output ))
+                    {
+                        finished = true;
+                        break;
+                    }
+                    // 5 Seconds empty data
+                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + "no more data from connection, last command:" + last_command);
+                    m_error = ERROR_UNKNOWN;
+                    break;
                 }
 
             }
@@ -572,10 +596,11 @@ public abstract class ProxyConnection implements Runnable
                     finished = true;
                     break;
                 }
-                if (output.length() == 0)
-                {
+                LogManager.err_log("DataFromInputStream: " + get_description() + ": " + ste.getMessage() + " last command:" + last_command + " last_recv:" + output.toString());
+//                if (output.length() == 0)
+//                {
                     m_error = ERROR_TIMEOUT_EXCEEDED;
-                }
+//                }
 
             }
             catch (IOException e)

@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import javax.net.SocketFactory;
@@ -121,6 +120,7 @@ public class SMTPConnection extends ProxyConnection
                 // read the answer from the server
                 if (dbg_level >= DBG_VERB)
                     log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
+                reset_timeout();
                 sData = getDataFromInputStream(serverReader, serverSocket, m_Command, /*-wait*/ true).toString();
 
                 // verify if the user stopped the thread
@@ -187,7 +187,7 @@ public class SMTPConnection extends ProxyConnection
                 if (last_command != null && last_command.equals("DATA"))
                 {
                     // WE LOG AFTER OUT 120 s
-                    disable_timeout();
+                    
                     int avail = wait_for_avail( clientReader, clientSocket, 120 );
                     if (avail == 0)
                     {
@@ -197,9 +197,13 @@ public class SMTPConnection extends ProxyConnection
                     }
                 }
 
+                int sa = ACTIVITY_TIMEOUT;
+                ACTIVITY_TIMEOUT = 180;
+                reset_timeout();
                 // read the SMTP command from the client
                 sData = getDataFromInputStream(clientReader, clientSocket,  SMTP_CLIENTREQUEST, /*wait*/false).toString();
                 last_command = sData.toUpperCase().trim();
+                ACTIVITY_TIMEOUT = sa;
 
                
 
