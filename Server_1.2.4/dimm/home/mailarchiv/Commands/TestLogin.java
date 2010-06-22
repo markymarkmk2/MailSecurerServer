@@ -44,12 +44,13 @@ public class TestLogin extends AbstractCommand
             String mail_field_list =  pt.GetString("ML:");
             String domain_list =  pt.GetString("DO:");
             String exclude_list =  pt.GetString("EX:");
+            String ldap_domain =  pt.GetString("LD:");
 
             MandantContext m_ctx = Main.get_control().get_mandant_by_id(m_id);
 
             // CREATE NEW ACT WITH NO MANDANT; NO ROLES AND ID == -1)
             AccountConnector act = new AccountConnector(-1, m_ctx.getMandant(), type, auth_host, auth_port, admin_name, admin_pwd, 
-                            search_base, acct_flags, null, search_attribute, mail_field_list, domain_list, exclude_list);
+                            search_base, acct_flags, null, search_attribute, mail_field_list, domain_list, exclude_list,ldap_domain);
 
             GenericRealmAuth auth_realm = GenericRealmAuth.factory_create_realm( act);
 
