@@ -53,9 +53,9 @@ public class HXStream extends XStream
     {
 
 
-        addDefaultImplementation(java.util.ArrayList.class, org.hibernate.collection.PersistentList.class);
-        addDefaultImplementation(java.util.HashMap.class, org.hibernate.collection.PersistentMap.class);
-        addDefaultImplementation(java.util.HashSet.class, org.hibernate.collection.PersistentSet.class);
+        addDefaultImplementation(org.hibernate.collection.PersistentList.class, java.util.ArrayList.class);
+        addDefaultImplementation(org.hibernate.collection.PersistentMap.class, java.util.HashMap.class);
+        addDefaultImplementation(org.hibernate.collection.PersistentSet.class, java.util.HashSet.class);
 
         Mapper mapper = getMapper();
         registerConverter(new HibernateCollectionConverter(mapper));
