@@ -116,15 +116,15 @@ public class DirectoryEntry
 
     public Iterator<File> get_iterator()
     {
-        return DirectoryEntryIterator.create_all_iterator( this );
+        return (Iterator<File>)DirectoryEntryIterator.create_all_iterator( this );
     }
     public Iterator<File> get_file_iterator()
     {
-        return DirectoryEntryIterator.create_file_iterator( this );
+        return (Iterator<File>)DirectoryEntryIterator.create_file_iterator( this );
     }
     public Iterator<File> get_dir_iterator()
     {
-        return DirectoryEntryIterator.create_dir_iterator( this );
+        return (Iterator<File>)DirectoryEntryIterator.create_dir_iterator( this );
     }
     public DirectoryEntry( File f )
     {
