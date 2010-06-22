@@ -794,8 +794,16 @@ public class SearchCall
         {
             String field_name = mail_fields.get(m);
             String mail_address = doc.get(field_name);
+
             if (mail_address != null && mail_address.trim().length() > 0)
             {
+                int br1 = mail_address.indexOf('<');
+                int br2 = mail_address.indexOf('>');
+                if (br1 >= 0 && br2 > br1)
+                {
+                    mail_address = mail_address.substring(br1 + 1, br2);
+                }
+
                 mail_addr_list.add( mail_address);
             }
         }
@@ -810,7 +818,8 @@ public class SearchCall
         searcher_list = new ArrayList<IndexSearcher>();
 
         boolean view_all = can_view_all_mails(ssoc, level);
-        
+
+        long start_time = System.currentTimeMillis();
 
         // FIRST PASS, OPEN INDEX READERS
         for (int i = 0; i < dsh_list.size(); i++)
@@ -861,6 +870,10 @@ public class SearchCall
         TopDocs tdocs = pms.search(qry, filter, n, sort);
 
 
+        long diff = System.currentTimeMillis() - start_time;
+
+        System.out.println("Search too " + diff + "ms");
+        
         ScoreDoc[] sdocs = tdocs.scoreDocs;
         for (int k = sdocs.length - 1; k >= 0; k--)
         {
