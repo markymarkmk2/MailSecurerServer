@@ -328,7 +328,7 @@ public class LicenseChecker
                     Object o = xs.fromXML(fis);
                     if (o instanceof HashMap)
                     {
-                        license_user_map = (HashMap) o;
+                        license_user_map = (HashMap<String, StatMailAddress>) o;
                     }
                 }
                 catch (Exception exc)
