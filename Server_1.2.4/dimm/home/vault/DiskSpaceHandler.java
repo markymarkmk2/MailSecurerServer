@@ -5,6 +5,7 @@
 
 package dimm.home.vault;
 
+import com.thoughtworks.xstream.XStream;
 import dimm.home.hiber_dao.DiskSpaceDAO;
 import dimm.home.hibernate.HXStream;
 import dimm.home.index.AsyncIndexWriter;
@@ -506,7 +507,7 @@ public class DiskSpaceHandler
             return;
         }
 
-        HXStream xs = new HXStream();
+        HXStream xs = new HXStream();       
         xs.toXML(o, bos);
         bos.flush();
         bos.close();
@@ -540,7 +541,7 @@ public class DiskSpaceHandler
             return fall_back_read_info_object(  filename );
         }
 
-        HXStream xs = new HXStream();
+        XStream xs = new XStream();
         Object o = xs.fromXML(bis);
         bis.close();
         return o;
@@ -605,7 +606,17 @@ public class DiskSpaceHandler
                 else
                     throw new VaultException( ds, "Invalid info file" );
 
-                Object m = read_info_enc_object( "ma.xml" );
+                Object m = null;
+                try
+                {
+                    m = read_info_enc_object("ma.xml");
+                }
+                catch (Exception iOException)
+                {
+                    write_info_enc_object( ds.getDiskArchive().getMandant(), "ma.xml" );
+                    m = read_info_enc_object("ma.xml");
+                }                
+
                 if ( m != null && m  instanceof Mandant)
                 {
                     Mandant ma = (Mandant)m;
