@@ -8,6 +8,7 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
+import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -48,6 +49,90 @@ public class LDAPAuth extends GenericRealmAuth
 
     LDAPUserContext user_context;
 
+    public static final Hashtable<Integer,String> ldap_error_map = new Hashtable<Integer, String>();
+
+    void init_ldap_error_list()
+    {
+        ldap_error_map.put( 0, "successful");
+        ldap_error_map.put( 1, "operations error");
+        ldap_error_map.put( 2, "protocol error");
+        ldap_error_map.put( 3, "timelimit exceed");
+        ldap_error_map.put( 4, "sizelimit exceeded");
+        ldap_error_map.put( 5, "compare false");
+        ldap_error_map.put( 6, "compare true");
+        ldap_error_map.put( 7, "strong auth not supported");
+        ldap_error_map.put( 8, "strong auth required");
+        ldap_error_map.put( 9, "partial results");
+        ldap_error_map.put( 10,"referral");
+        ldap_error_map.put( 11,"admin limit exceeded");
+        ldap_error_map.put( 16,"no such attribute");
+        ldap_error_map.put( 17,"undefined type");
+        ldap_error_map.put( 18,"inappropriate matching");
+        ldap_error_map.put( 19,"constraint violation");
+        ldap_error_map.put( 20,"type or value exists");
+        ldap_error_map.put( 21,"invalid syntax");
+        ldap_error_map.put( 32,"no such object");
+        ldap_error_map.put( 33,"alias problem");
+        ldap_error_map.put( 34,"invalid DN syntax");
+        ldap_error_map.put( 35,"is leaf");
+        ldap_error_map.put( 36,"alias deref problem");
+        ldap_error_map.put( 48,"inappropriate auth");
+        ldap_error_map.put( 49,"invalid credentials");
+        ldap_error_map.put( 50,"insufficient access");
+        ldap_error_map.put( 51,"busy");
+        ldap_error_map.put( 52,"unavailable");
+        ldap_error_map.put( 53,"unwilling to perform");
+        ldap_error_map.put( 54,"loop detect");
+        ldap_error_map.put( 64,"naming violation");
+        ldap_error_map.put( 65,"object class violation");
+        ldap_error_map.put( 66,"not allowed on nonleaf");
+        ldap_error_map.put( 67,"not allowed on RDN");
+        ldap_error_map.put( 68,"already exists");
+        ldap_error_map.put( 69,"no object class mods");
+        ldap_error_map.put( 70,"results too large");
+        ldap_error_map.put( 80,"other");
+        ldap_error_map.put( 81,"server down");
+        ldap_error_map.put( 82,"local error");
+        ldap_error_map.put( 83,"encoding error");
+        ldap_error_map.put( 84,"decoding error");
+        ldap_error_map.put( 85,"timeout");
+        ldap_error_map.put( 86,"auth unknown");
+        ldap_error_map.put( 87,"filter error");
+        ldap_error_map.put( 88,"user cancelled");
+        ldap_error_map.put( 89,"param error");
+        ldap_error_map.put( 90,"no memory");
+        ldap_error_map.put( 91,"connect error");
+    }
+    int get_ldap_err_from_exc( Exception exc )
+    {
+        int idx = exc.getMessage().indexOf("error code");
+        if (idx >= 0)
+        {
+            StringTokenizer str = new StringTokenizer(exc.getMessage().substring(idx + 11), " " );
+            if (str.hasMoreTokens())
+            {
+                try
+                {
+                    int err_code = Integer.parseInt(str.nextToken());
+                    return err_code;
+                }
+                catch (NumberFormatException numberFormatException)
+                {
+                }
+            }
+        }
+        return -1;
+    }
+    String get_ldap_err_text( Exception exc )
+    {
+        int ldap_err = get_ldap_err_from_exc(exc);
+        String ret = ldap_error_map.get(ldap_err);
+        if (ret == null)
+            ret = exc.getMessage();
+
+        return ret;
+    }
+
     LDAPAuth( String admin_name, String admin_pwd, String ldap_host, String user_search_base, int ldap_port, int  flags, String search_attribute, String mfl )
     {
         super(flags, ldap_host, ldap_port);
@@ -71,13 +156,17 @@ public class LDAPAuth extends GenericRealmAuth
     {
         if (user_search_base != null && user_search_base.length() > 0)
             return user_search_base;
-        
-        Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
-        String ret = "CN=Users";
-        Attribute attribute = attributes.get("defaultNamingContext");
-        if (attribute != null && attribute.get() != null)
-            ret += "," + attribute.get().toString();
-        return ret;
+
+        if (ctx != null)
+        {
+            Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
+            String ret = "CN=Users";
+            Attribute attribute = attributes.get("defaultNamingContext");
+            if (attribute != null && attribute.get() != null)
+                ret += "," + attribute.get().toString();
+            return ret;
+        }
+        return "CN=Users";
     }
 
 
@@ -124,7 +213,7 @@ public class LDAPAuth extends GenericRealmAuth
             Hashtable<String,String> connect_env = create_sec_env();
             String rootSearchBase = get_user_search_base();
             String admin_dn =  search_attribute + "=" + admin_name + "," + rootSearchBase;
-
+           
             LogManager.debug_msg(4, "connect: " + admin_dn);
             connect_env.put(Context.SECURITY_PRINCIPAL, admin_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);

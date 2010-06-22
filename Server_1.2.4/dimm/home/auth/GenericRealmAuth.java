@@ -116,9 +116,9 @@ public abstract class GenericRealmAuth
     {
         return error_txt;
     }
+   
 
   
-
     public ArrayList<String> list_groups() throws NamingException
     {
         return new ArrayList<String>();

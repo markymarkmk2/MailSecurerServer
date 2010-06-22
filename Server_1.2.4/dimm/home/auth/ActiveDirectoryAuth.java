@@ -114,8 +114,13 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         {            
 
             Hashtable<String,String> connect_env = create_sec_env();
+            String login_name = admin_name;
+            if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0 && admin_name.indexOf('@') == -1)
+            {
+                login_name += "@" + act.getLdapdomain();
+            }
 
-            connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
+            connect_env.put(Context.SECURITY_PRINCIPAL, login_name);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
            // connect_env.put("java.naming.ldap.version", "2");
             
@@ -175,18 +180,28 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         // RETURN VALS
         SearchControls ctrl = new SearchControls();
         ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses", "otherMailbox"});
+        ctrl.setReturningAttributes(new String[]{"mail"});
+        //ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses", "otherMailbox"});
         // USER ROOT
         String rootSearchBase = get_user_search_base();
         // BUILD ORED LIST OF DNs
         StringBuffer ldap_qry = new StringBuffer();
-        ldap_qry.append("(&(objectClass=user)(|");
+        ldap_qry.append("(&(objectClass=user)");
+        if (users.size() > 1)
+            ldap_qry.append( "(|" );
+
         for (int i = 0; i < users.size(); i++)
         {
             String string = users.get(i);
-            ldap_qry.append("(name=" + string + ")");
+            if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0)
+            {
+                string += "@" + act.getLdapdomain();
+            }
+            ldap_qry.append("(userPrincipalName=" + string + ")");
         }
-        ldap_qry.append("))");
+        if (users.size() > 1)
+            ldap_qry.append( ")" );
+        ldap_qry.append(")");
 
         LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
@@ -292,7 +307,13 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             }
             if (!enumeration.hasMore())
             {
-                searchFilter = "(&(objectCategory=person)(objectClass=user)(userPrincipalName=" + user_principal + "))";
+                String login_name = user_principal;
+                if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0 && login_name.indexOf('@') == -1)
+                {
+                    login_name += "@" + act.getLdapdomain();
+                }
+
+                searchFilter = "(&(objectCategory=person)(objectClass=user)(userPrincipalName=" + login_name + "))";
                 LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
@@ -302,7 +323,12 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             }
             if (!enumeration.hasMore())
             {
-                searchFilter = "(&(objectCategory=person)(objectClass=user)(mail=" + user_principal + "))";
+                String login_name = user_principal;
+                if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0 && login_name.indexOf('@') == -1)
+                {
+                    login_name += "@" + act.getLdapdomain();
+                }
+                searchFilter = "(&(objectCategory=person)(objectClass=user)(mail=" + login_name + "))";
                 LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
@@ -322,7 +348,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             Attributes res_attr = sr.getAttributes();
             Attribute adn = res_attr.get(DN);
             String user_dn = adn.get().toString();
-            
+                      
 
             // NOW GO FOR LOGIN USER WITH DN
             LdapContext user_ctx;
