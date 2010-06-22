@@ -59,7 +59,7 @@ public class LicenseConfig extends AbstractCommand
         if ( command.compareTo("GET") == 0)
         {
             ArrayList list = Main.get_control().get_license_checker().get_ticket_list();
-            String ticket_str = HParseToken.BuildCompressedString(list);            
+            String ticket_str = HParseToken.BuildCompressedObjectString(list);
 
             answer = "0: TK:\"" + ticket_str + "\"";
             return true;
