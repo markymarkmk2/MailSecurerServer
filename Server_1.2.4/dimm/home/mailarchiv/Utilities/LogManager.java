@@ -245,6 +245,7 @@ public class LogManager implements  LogListener
             PatternLayout layout = new PatternLayout("%-5p: %d{dd.MM.yyyy HH:mm:ss,SSS}: %m%n");
             CompressingDailyRollingFileAppender fileAppender = new CompressingDailyRollingFileAppender(layout, LOG_PATH + LOG_L4J, WEEKLY_ROLL);
             fileAppender.setMaxNumberOfDays("365");
+            fileAppender.setKeepClosed(true);
 
 
             main_logger.addAppender(fileAppender);

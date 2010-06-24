@@ -92,6 +92,7 @@ public class CompressingDailyRollingFileAppender extends FileAppender
     SimpleDateFormat datePatternFormat = new SimpleDateFormat(datePattern);
     RollingCalendar rollingCalendar = new RollingCalendar();
     int checkPeriod = TOP_OF_TROUBLE;
+    boolean  keepClosed = false;
 
     /**
      * The default constructor does nothing.
@@ -112,6 +113,17 @@ public class CompressingDailyRollingFileAppender extends FileAppender
         this.datePattern = datePattern;
         activateOptions();
     }
+
+    public void setKeepClosed( boolean keepClosed )
+    {
+        this.keepClosed = keepClosed;
+    }
+
+    public boolean isKeepClosed()
+    {
+        return keepClosed;
+    }
+
 
     /**
      * Make sure the directory structure for the file exists
@@ -342,7 +354,7 @@ public class CompressingDailyRollingFileAppender extends FileAppender
      * the next rollover time and then rollover.
      */
     @Override
-    protected void subAppend( LoggingEvent event )
+    protected synchronized void subAppend( LoggingEvent event )
     {
         long n = System.currentTimeMillis();
 
@@ -361,7 +373,25 @@ public class CompressingDailyRollingFileAppender extends FileAppender
             }
         }
 
+        // KEEP LOG FILES CLOSED
+        if (isKeepClosed())
+        {
+            try
+            {
+                this.setFile(fileName, true, this.bufferedIO, this.bufferSize);
+            }
+            catch (IOException iOException)
+            {
+            }
+        }
+
         super.subAppend(event);
+
+
+        if (isKeepClosed())
+        {
+            this.closeFile();
+        }
     }
 
     /**

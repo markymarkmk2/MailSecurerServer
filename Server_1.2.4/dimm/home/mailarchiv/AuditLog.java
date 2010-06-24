@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *
@@ -85,6 +86,8 @@ public class AuditLog
 
     static AuditLog self;
     String db_connect_string;
+    final ReentrantLock lock;
+
     
     public static AuditLog getInstance()
     {
@@ -98,8 +101,21 @@ public class AuditLog
     private AuditLog()
     {
         db_connect_string = Main.get_prop(GeneralPreferences.AUDIT_DB_CONNECT, DEFAULT_DERBY_CONNECT );
+        lock = new ReentrantLock();
+        
         init_db();
     }
+    void Take()
+    {
+        lock.lock();
+
+
+    }
+    void Release()
+    {
+        lock.unlock();
+    }
+
 
 
     void init_db()
@@ -234,6 +250,8 @@ public class AuditLog
 
         String sql_cmd = "insert into audit_log ( ma_id, ts, usertype, username, role_name, cmd, args, answer ) values (?,?,?,?,?,?,?,?)";
 
+        Take();
+
 
         Connection conn = null;
         PreparedStatement pst = null;
@@ -275,6 +293,7 @@ public class AuditLog
             catch (SQLException sQLException)
             {
             }
+            Release();
         }
     }
     
@@ -382,6 +401,7 @@ public class AuditLog
         Statement st = null;
         ResultSet rs = null;
 
+
         try
         {
             conn = open_db();
@@ -464,6 +484,7 @@ public class AuditLog
         {
         }
 
+
         return changed;
     }
     public static void main( String[] args)
@@ -478,6 +499,8 @@ public class AuditLog
 
     private void create_indices()
     {
+        Take();
+
         Connection conn = null;
         Statement st = null;
         try
@@ -512,6 +535,7 @@ public class AuditLog
             catch (SQLException sQLException)
             {
             }
+            Release();
         }
     }
 
@@ -546,6 +570,27 @@ public class AuditLog
 
         return sb.toString();
 
+    }
+
+    public void close_db()
+    {
+        
+        Take();
+
+        // IS CLOSED LOGICALLY, NOW WE CLOSE PHYSICALLY
+        try
+        {
+            DriverManager.getConnection(DEFAULT_DERBY_CONNECT + ";shutdown=true");
+        }
+        catch (SQLException sQLException)
+        {
+        }
+
+    }
+
+    public void reopen_db()
+    {
+        Release();
     }
 
 

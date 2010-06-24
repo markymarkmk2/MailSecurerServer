@@ -220,10 +220,10 @@ public class MailFolder
         }
         return null;
     }
-    public MWMailMessage getMesg(int index)
+    /*public MWMailMessage getMesg(int index)
     {
         return uid_map_list.get(index);
-    }
+    }*/
     public MailInfo getInfo(String uuid)
     {
         //Getting information without reading mf-file

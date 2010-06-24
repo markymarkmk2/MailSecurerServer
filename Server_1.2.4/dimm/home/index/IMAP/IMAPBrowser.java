@@ -324,9 +324,9 @@ public class IMAPBrowser extends WorkerParentChild
 
     void log_debug( String s )
     {
-        System.out.println(s);
+//        System.out.println(s);
 //        LogManager.err_log(s);
-//        LogManager.debug_msg(s);
+        LogManager.debug_msg(s);
     }
 
     void log_debug( String s, Exception e )
@@ -388,6 +388,7 @@ public class IMAPBrowser extends WorkerParentChild
                 if (cl instanceof SSLSocket)
                     ((SSLSocket)cl).startHandshake();
 
+                log_debug("IMAP Server connected to <" + cl.getRemoteSocketAddress() + ">");
                 boolean trace = false;
                 if (Main.get_debug_lvl() > 6)
                     trace = true;

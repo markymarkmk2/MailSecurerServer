@@ -4,6 +4,7 @@
  */
 package dimm.home.index.IMAP;
 
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -185,7 +186,7 @@ public class Fetch extends ImapCmd
             OutputStream os = is.s.getOutputStream();
 
             is.rawwrite( return_tag + " {" + rlen + "}\r\n");
-            os.write(data, 0, rlen);
+            is.rawwrite(data, 0, rlen);
         }
         else
         {
@@ -196,7 +197,8 @@ public class Fetch extends ImapCmd
                charset = "UTF-8";
             byte[] data = txt.getBytes( charset );
 
-            String return_tag = orig_tag;
+            String return_tag = orig_tag.toUpperCase();
+            return_tag = return_tag.replace(".PEEK[", "[");
             is.rawwrite( return_tag + " {" + data.length + "}\r\n");            
             is.rawwrite(data, 0, data.length);
         }
@@ -424,23 +426,23 @@ public class Fetch extends ImapCmd
     }
 
 
-    static boolean fetch( ImapCmd cmd, MWImapServer is, long min, long max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
+    static boolean fetch( ImapCmd cmd, MWImapServer server, long min, long max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
+        boolean ret = false;
         
-        MailFolder mailfolder = is.get_selected_folder();
+        MailFolder mailfolder = server.get_selected_folder();
         // EMPTY FOLDER
         if (mailfolder == null)
-            return true;
+            return ret;
 
         for (int i = 0; i < mailfolder.anzMessages(); i++)
         {
-            MailInfo msginfo = mailfolder.get_mail_message(i);
-            if (msginfo == null)
+            MWMailMessage msg = mailfolder.get_mail_message(i);
+            if (msg == null)
             {
                 continue;
             }
-            long uid = msginfo.getUID();
-            MWMailMessage msg = mailfolder.getMesg(i);
+            long uid = msg.getUID();
 
             if (is_uid)
             {
@@ -464,13 +466,16 @@ public class Fetch extends ImapCmd
                 }
             }
 
+            // FOUND ONE, RETURN IS OK
+            ret = true;
+
             int id = i +1;
 
             // MESSAGE SEQUENCE NUMBER IS INDEX + 1
-            is.rawwrite(RESTAG + id + " FETCH (");
+            server.rawwrite(RESTAG + id + " FETCH (");
 
-            long size = msginfo.getRFC822size();
-            String sflags = "(" + msginfo.getFlags() + ")"; //(\\Seen)
+            long size = msg.getRFC822size();
+            String sflags = "(" + msg.getFlags() + ")"; //(\\Seen)
 
             boolean had_uid = false;
             boolean needs_space = false;
@@ -489,39 +494,40 @@ public class Fetch extends ImapCmd
                     {
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
 
-                        String envelope = msginfo.getEnvelope();
+                        String envelope = msg.getEnvelope();
 
-                        is.rawwrite("ENVELOPE (" + envelope + ")");
+                        server.rawwrite("ENVELOPE (" + envelope + ")");
                     }
                     if (tag.equals("flags"))
                     {
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
-                        is.rawwrite("FLAGS " + sflags);
+                        server.rawwrite("FLAGS " + sflags);
                     }
                     else if (tag.equals("rfc822.header"))
                     {
                         //header
-                        String theader = msginfo.getRFC822header();
+                        String theader = msg.getRFC822header();
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
                         byte[] hdata = theader.getBytes();
-                        is.rawwrite("RFC822.HEADER {" + hdata.length + "}\r\n");
+                        server.rawwrite("RFC822.HEADER {" + hdata.length + "}\r\n");
                         //System.out.println("Writing Message header...");
                         try
                         {
-                            is.s.getOutputStream().write( hdata );
-                          //  System.out.print(theader);
+                            server.s.getOutputStream().write( hdata );
+                            if (server.trace)
+                                System.out.print(theader);
                         }
                         catch (IOException iOException)
                         {
@@ -532,19 +538,19 @@ public class Fetch extends ImapCmd
                     {
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
-                        is.rawwrite("RFC822.SIZE " + size);
+                        server.rawwrite("RFC822.SIZE " + size);
                     }
                     else if (tag.equals("uid"))
                     {
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
-                        is.rawwrite("UID " + uid);
+                        server.rawwrite("UID " + uid);
                         had_uid = true;
                     }
                     else if (tag.startsWith("body.peek[") && !tag.equals("body.peek[]") ||
@@ -557,40 +563,40 @@ public class Fetch extends ImapCmd
                         {
                             if (needs_space)
                             {
-                                is.rawwrite(" ");
+                                server.rawwrite(" ");
                             }
                             needs_space = true;
-                            write_header_fields(is, msg, orig_tag, tag);
+                            write_header_fields(server, msg, orig_tag, tag);
                         }
                         else if (peek_content.startsWith("header"))
                         {
                             if (needs_space)
                             {
-                                is.rawwrite(" ");
+                                server.rawwrite(" ");
                             }
                             needs_space = true;
-                            write_header_fields(is, msg, orig_tag, null);
+                            write_header_fields(server, msg, orig_tag, null);
                         }
                         else if (peek_content.startsWith("text"))
                         {
 
                             if (needs_space)
                             {
-                                is.rawwrite(" ");
+                                server.rawwrite(" ");
                             }
                             needs_space = true;
 
-                            write_text(is, msg, orig_tag, tag);
+                            write_text(server, msg, orig_tag, tag);
                         }
                         else if (Character.isDigit( peek_content.charAt(0) ))
                         {
                             if (needs_space)
                             {
-                                is.rawwrite(" ");
+                                server.rawwrite(" ");
                             }
                             needs_space = true;
 
-                            write_body_part( is, msg, orig_tag, tag );
+                            write_body_part( server, msg, orig_tag, tag );
                         }
                     }
                     else if (tag.equals("rfc822") || tag.equals("rfc822.peek") || tag.equals("body.peek[]"))
@@ -600,7 +606,7 @@ public class Fetch extends ImapCmd
                         long tsize = msg.getRFC822size();
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
 
@@ -613,9 +619,9 @@ public class Fetch extends ImapCmd
                         byte[] mdata = byas.toByteArray();
                         tsize = mdata.length;*/
                         String return_tag = tag.toUpperCase().replace(".PEEK", "");
-                        is.rawwrite("" + return_tag + " {" + tsize + "}\r\n");
+                        server.rawwrite("" + return_tag + " {" + tsize + "}\r\n");
 
-                        LengthOutputStream los = new LengthOutputStream(tsize, is.s.getOutputStream());
+                        LengthOutputStream los = new LengthOutputStream(tsize, server.s.getOutputStream());
                         msg.getRFC822body( los );
                         los.flush();
 /*                        is.s.getOutputStream().write(mdata);*/
@@ -629,23 +635,23 @@ public class Fetch extends ImapCmd
 
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
-                        is.rawwrite("INTERNALDATE \"" + msg.get_internaldate() + "\"");
+                        server.rawwrite("INTERNALDATE \"" + msg.get_internaldate() + "\"");
                     }
                     
                     else if (tag.equals("bodystructure"))
                     {
                         if (needs_space)
                         {
-                            is.rawwrite(" ");
+                            server.rawwrite(" ");
                         }
                         needs_space = true;
 
-                        String structure = msginfo.getBodystructure();
+                        String structure = msg.getBodystructure();
 
-                        is.rawwrite("BODYSTRUCTURE " + structure);
+                        server.rawwrite("BODYSTRUCTURE " + structure);
                     }
                 }
             }
@@ -653,18 +659,28 @@ public class Fetch extends ImapCmd
             {
                 if (needs_space)
                 {
-                    is.rawwrite(" ");
+                    server.rawwrite(" ");
                 }
-                is.rawwrite("UID " + uid);
+                server.rawwrite("UID " + uid);
                 had_uid = true;
             }
             
             // KEEP MEM FOOTPRINT LOW
             msg.unload_rfc_mail();
 
-            is.rawwrite(")\r\n");
+            server.rawwrite(")\r\n");
+
+            // ONLY ONE ?
+            if (max == min)
+                break;
         }
 
-        return true;
+        if (!ret)
+        {
+            // WORKAROUND FOR HIGHSPEED CALL FROM HUNG CLIENT????
+            LogicControl.sleep(100);
+            ret = true;
+        }
+        return ret;
     }
 }

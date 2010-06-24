@@ -1355,10 +1355,14 @@ public abstract class ProxyConnection implements Runnable
             }
 
             b = first_line[i];
-            if (i >= 2 && first_line[i-1] == '\r' && first_line[1] == '\n')
+            if (i >= 2)
             {
-                break;
+                if ( first_line[i-1] == '\r' && first_line[i] == '\n')
+                    break;
+                if ( first_line[i-1] == '\n' && first_line[i] == '\r')
+                    break;
             }
+            
         }
         // I IS INDEX, WE NEDD LENGTH
         if (i < first_line.length)

@@ -8,7 +8,6 @@ import home.shared.mail.RFCGenericMail;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;

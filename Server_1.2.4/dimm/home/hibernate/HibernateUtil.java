@@ -5,14 +5,14 @@
 package dimm.home.hibernate;
 
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.CompressingDailyRollingFileAppender;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.hibernate.EntityMode;
@@ -61,7 +61,9 @@ public class HibernateUtil
             logger.removeAllAppenders();
 
             PatternLayout layout = new PatternLayout("%-5p: %d{dd.MM.yyyy HH:mm:ss,SSS}: %m%n");
-            FileAppender fileAppender = new FileAppender(layout, Main.LOG_PATH + Main.LOG_SQL, true);
+            CompressingDailyRollingFileAppender fileAppender = new CompressingDailyRollingFileAppender(layout, LogManager.LOG_PATH + "sql.log", LogManager.WEEKLY_ROLL);
+            fileAppender.setMaxNumberOfDays("365");
+            fileAppender.setKeepClosed(true);
             logger.addAppender(fileAppender);
 
             logger = Logger.getLogger("org.hibernate.cfg.annotations.Version");

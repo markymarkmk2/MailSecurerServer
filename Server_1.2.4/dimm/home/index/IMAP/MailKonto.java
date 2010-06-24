@@ -193,7 +193,10 @@ public class MailKonto
         if(o instanceof Exception)
             ((Exception)o).printStackTrace();
         else
-            System.out.println(o);                    
+        {
+            if (is.trace)
+                System.out.println(o);
+        }
     }
 
 
@@ -215,7 +218,8 @@ public class MailKonto
 
     public MailFolder select(String key)
     {
-        System.out.println("select " + key);
+        if (is.trace)
+            System.out.println("select " + key);
 
         for (int i = 0; i < mail_folders.size(); i++)
         {

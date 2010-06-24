@@ -108,6 +108,15 @@ public class MWMailMessage implements MailInfo
                 try
                 {
                     InputStream is = rfc.open_inputstream();
+                  /*  while (true)
+                    {
+                        int i = is.read();
+                        if (i == -1)
+                            break;
+                        System.out.append((char)i);
+                    }
+                    is.close();
+                    is = rfc.open_inputstream();*/
                     mmail.parse(is);
                     is.close();
                 }

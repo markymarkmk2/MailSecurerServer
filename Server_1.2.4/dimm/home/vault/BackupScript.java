@@ -6,6 +6,7 @@
 package dimm.home.vault;
 
 import dimm.home.hibernate.HibernateUtil;
+import dimm.home.mailarchiv.AuditLog;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
@@ -22,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
+
 
 
 class SourceTargetEntry
@@ -59,14 +61,60 @@ class SourceTargetEntry
     {
         return is_file;
     }
-}
+    boolean post_action()
+    {
+        return true;
+    }
 
-class DBSourceTargetEntry extends SourceTargetEntry
+    boolean pre_action()
+    {
+        return true;
+    }
+}
+class ParamDBSourceTargetEntry extends SourceTargetEntry
 {
-    public DBSourceTargetEntry( String name, File source, String target, boolean is_file )
+    public ParamDBSourceTargetEntry( String name, File source, String target, boolean is_file )
     {
         super( name, source, target, is_file );
     }
+
+    @Override
+    boolean post_action()
+    {
+         HibernateUtil.reopen_db();
+         return true;
+    }
+
+    @Override
+    boolean pre_action()
+    {
+       // SHUTDOWN DB DURING SYNC
+        HibernateUtil.shutdown_db();
+        return true;
+    }
+
+
+}
+class AuditDBSourceTargetEntry extends SourceTargetEntry
+{
+    public AuditDBSourceTargetEntry( String name, File source, String target, boolean is_file )
+    {
+        super( name, source, target, is_file );
+    }
+    @Override
+    boolean post_action()
+    {
+         AuditLog.getInstance().reopen_db();
+         return true;
+    }
+
+    @Override
+    boolean pre_action()
+    {
+         AuditLog.getInstance().close_db();
+         return true;
+    }
+
 }
 /**
  *
@@ -163,7 +211,7 @@ public class BackupScript extends WorkerParentChild
     @Override
     public void idle_check()
     {
-        synchronized (backup)
+        synchronized (this)
         {
         }
     }
@@ -371,8 +419,8 @@ public class BackupScript extends WorkerParentChild
 
         if (test_flag(CS_Constants.BACK_SYS))
         {
-            backup_dir_list.add( new DBSourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
-            backup_dir_list.add( new SourceTargetEntry( "System auditdb", new File( Main.work_dir + "/AuditDB"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new ParamDBSourceTargetEntry( "System db", new File( Main.work_dir + "/MailArchiv"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new AuditDBSourceTargetEntry( "System auditdb", new File( Main.work_dir + "/AuditDB"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System prefs", new File( Main.work_dir + "/preferences"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lib", new File( Main.work_dir + "/lib"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lic", new File( Main.work_dir + "/license"), get_system_subpath(m_ctx), false) );
@@ -457,7 +505,7 @@ public class BackupScript extends WorkerParentChild
             for (int i = 0; i < backup_dir_list.size(); i++)
             {
                 SourceTargetEntry ste = backup_dir_list.get(i);
-                boolean close_db = (ste instanceof DBSourceTargetEntry);
+                
 
                 String targetpath =  ag_path + "/" + ste.getTarget();
                 String src_path = ste.getSource().getAbsolutePath();
@@ -475,9 +523,7 @@ public class BackupScript extends WorkerParentChild
                 String ret = null;
                 try
                 {
-                    // SHUTDOWN DB DURING SYNC
-                    if (close_db)
-                        HibernateUtil.shutdown_db();
+                    ste.pre_action();
 
                     ret = sync_cmd.send_cmd(cmd, 60 * 60);
                 }
@@ -488,8 +534,7 @@ public class BackupScript extends WorkerParentChild
                
                 if (ret == null)
                 {
-                    if (close_db)
-                        HibernateUtil.reopen_db();
+                    ste.post_action();
 
                     ok = false;
                     LogManager.err_log("Error while contacting backup server");
@@ -497,8 +542,7 @@ public class BackupScript extends WorkerParentChild
                 }
                 if (ret.charAt(0) != '0')
                 {
-                    if (close_db)
-                        HibernateUtil.reopen_db();
+                    ste.post_action();
 
                     LogManager.err_log(Main.Txt("Error_during_start_backup_of") + " " + ste.getName() + ": " + ret);
                     ok = false;
@@ -509,8 +553,7 @@ public class BackupScript extends WorkerParentChild
                 {
                     ok = false;
                 }
-                if (close_db)
-                    HibernateUtil.reopen_db();
+                ste.post_action();
 
 
                 if (do_abort)

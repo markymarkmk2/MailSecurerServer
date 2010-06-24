@@ -1017,6 +1017,24 @@ public class LogicControl
         }
 
     }
+    static boolean service_shutdown = false;
+    // EXTERN ENTRY POINT FOR WINDOWS SERVICE
+    static public void set_service_shutdown()
+    {
+        service_shutdown = true;
+    }
+
+
+    void handle_shutdown()
+    {
+        LogManager.info_msg("Detected shut down");
+        for (int i = 0; i < mandanten_list.size(); i++)
+        {
+            MandantContext ctx = mandanten_list.get(i);
+            ctx.teardown_mandant();
+        }
+        set_shutdown(true);
+    }
 
     // MAIN WORK LOOP
     private static final int LIC_UMAP_UPDATE_CYCLE = 5*60*1000;
@@ -1068,19 +1086,15 @@ public class LogicControl
                 sleep(1000);
 
                 File sf = new File("shutdown.txt");
-                if (sf.exists())
+                if (sf.exists() || service_shutdown)
                 {
-                    LogManager.info_msg("Detected shut down");
-                    sf.delete();
-                    if (!sf.exists())
+                    if (sf.exists())
+                        sf.delete();
+                    if (!sf.exists() || service_shutdown)
                     {
-                        for (int i = 0; i < mandanten_list.size(); i++)
-                        {
-                            MandantContext ctx = mandanten_list.get(i);
-                            ctx.teardown_mandant();
-                        }
-                        set_shutdown(true);
+                        handle_shutdown();
                     }
+                    break;
                 }
 
                 long now = System.currentTimeMillis();
