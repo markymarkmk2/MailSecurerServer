@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.swing.SwingWorker;
 import org.apache.commons.codec.binary.Base64;
@@ -41,7 +39,7 @@ public class IndexJobEntry  implements Runnable
     RFCGenericMail msg;
     boolean delete_after_index;
     boolean skip_account_match;
-    IndexManager ixm;
+    final IndexManager ixm;
     Document doc;
     IndexWriter writer;
     RFCMimeMail mime_msg;
@@ -86,9 +84,9 @@ public class IndexJobEntry  implements Runnable
 
             if (ret)
             {
-                if (LogManager.get_debug_lvl() >= 8)
+                if (LogManager.has_lvl(LogManager.TYP_INDEX, LogManager.LVL_VERBOSE))
                 {
-                    LogManager.debug_msg(8, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
+                    LogManager.msg_index(LogManager.LVL_VERBOSE, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
                 }
                 index_dsh.get_async_index_writer().add_to_write_queue(this);                
                 return;
@@ -97,7 +95,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            Logger.getLogger(IndexJobEntry.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_index(LogManager.LVL_ERR, "IndexJobEntry::run fails", ex);
         }
         close();
     }
@@ -117,7 +115,7 @@ public class IndexJobEntry  implements Runnable
                     }
                     catch (Exception ex)
                     {
-                        LogManager.log(Level.SEVERE, "Error occured while loading message " + unique_id + ": ", ex);
+                        LogManager.msg_index(LogManager.LVL_ERR, "Error occured while loading message " + unique_id + ": ", ex);
                         mime_msg = null;
                     }
                     return null;
@@ -160,7 +158,7 @@ public class IndexJobEntry  implements Runnable
 
         if (mime_msg == null)
         {
-            LogManager.err_log("Error occured while loading message " + unique_id + ": ");
+            LogManager.msg_index(LogManager.LVL_ERR, "Error occured while loading message " + unique_id + ": ");
             return false;
         }
 
@@ -192,7 +190,7 @@ public class IndexJobEntry  implements Runnable
             }
             if (max_load_tries <= 0)
             {
-                LogManager.log(Level.SEVERE, "Could not load message " + unique_id );
+                LogManager.msg_index(LogManager.LVL_ERR,  "Could not load message " + unique_id );
                 close();
                 return false;
             }
@@ -216,7 +214,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            Logger.getLogger(IndexJobEntry.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_index(LogManager.LVL_ERR,  "handle_index failed", ex);
             close();
             return false;
         }
@@ -261,7 +259,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.WARNING, "Error occured while indexing message " + unique_id + ": ", ex);
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error occured while indexing message " + unique_id + ": ", ex);
             //ex.getStackTrace()[0];
         }
         return false;
@@ -303,7 +301,7 @@ public class IndexJobEntry  implements Runnable
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.WARNING, "Error occured while indexing message " + unique_id + ": ", ex);
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error occured while indexing message " + unique_id + ": ", ex);
         }
         close();
         return false;

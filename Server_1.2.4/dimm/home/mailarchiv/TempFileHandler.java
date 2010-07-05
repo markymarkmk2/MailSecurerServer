@@ -9,7 +9,6 @@ import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,7 +17,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
 
 /**
  *
@@ -122,7 +120,7 @@ public class TempFileHandler
         }
         catch (Exception numberFormatException)
         {
-            LogManager.err_log("Invalid import filename " + filename, numberFormatException);
+            LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_IMPORT, "Invalid import filename " + filename, numberFormatException);
             return -1;
         }
     }
@@ -227,7 +225,7 @@ public class TempFileHandler
         }
         catch (IOException ex)
         {
-            LogManager.log(Level.SEVERE, null, ex);
+            LogManager.msg_system(LogManager.LVL_DEBUG,  "create_temp_file failed", ex);
         }
 
         // IF THIS FAILS WE TRY TO USE DEFAULT TEMP DIR, THIS IS ACCEPTABLE FOR TMP FILES
@@ -269,8 +267,7 @@ public class TempFileHandler
             }
         }
         catch (IOException ex)
-        {
-            LogManager.log(Level.SEVERE, null, ex);
+        {            
             throw new ArchiveMsgException("Cannot write to temp file: " + ex.getMessage());
         }
         finally

@@ -9,6 +9,7 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.SQL.UserSSOEntry;
 import java.io.InputStream;
 import java.net.Socket;
@@ -106,5 +107,13 @@ public abstract class AbstractCommand
     public long get_data_len()
     {
         return 0;
+    }
+    public void log( int lvl, String txt )
+    {
+        log(lvl, txt, null);
+    }
+    public void log( int lvl, String txt, Exception exc )
+    {
+        LogManager.msg_cmd(lvl, "Command " + token + ": " + txt, exc );
     }
 }

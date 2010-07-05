@@ -20,8 +20,6 @@ import home.shared.mail.RFCFileMail;
 import java.io.*;
 import java.util.*;
 import java.net.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.auth.LoginFailedException;
 import org.subethamail.smtp.auth.PlainAuthenticationHandlerFactory;
@@ -113,7 +111,7 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
                         server.setBindAddress(bindAddress);
                 } catch (Exception uhe)
                 {
-                        LogManager.log(Level.SEVERE, Main.Txt("Cannot_bind_smtp_server_to_address") + " " + smtp_db_entry.getServer(), uhe);
+                        LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,  Main.Txt("Cannot_bind_smtp_server_to_address") + " " + smtp_db_entry.getServer(), uhe);
                 }
             }
             server.setPort(smtp_db_entry.getPort());
@@ -127,7 +125,7 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
              }
              catch (Exception e)
              {
-                  LogManager.log(Level.SEVERE, Main.Txt("Cannot_start_smtp_server_on_port") + " " + smtp_db_entry.getPort(), e);
+                  LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, Main.Txt("Cannot_start_smtp_server_on_port") + " " + smtp_db_entry.getPort(), e);
                   return false;
              }
             
@@ -176,29 +174,33 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
 
             Main.get_control().add_rfc_file_mail(mail, smtp_db_entry.getMandant(), smtp_db_entry.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
 
+            return; /// OK
+
         }
         catch (VaultException ex)
         {
-            Logger.getLogger(SMTPImporter.class.getName()).log(Level.SEVERE, null, ex);
+           LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Vault Exception in archive_message", ex);
         }
         catch (IndexException ex)
         {
-            Logger.getLogger(SMTPImporter.class.getName()).log(Level.SEVERE, null, ex);
+           LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Index Exception in archive_message", ex);
         }
         catch (ArchiveMsgException ex)
         {
             status.set_status(StatusEntry.ERROR, "Cannot archive message from <" + smtp_db_entry.getServer() + ">");
-            LogManager.err_log(status.get_status_txt(), ex);
-            if (mail != null)
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,status.get_status_txt(), ex);
+        }
+
+        // ONLY ON ERROR
+        if (mail != null)
+        {
+            try
             {
-                try
-                {
-                    Main.get_control().move_to_quarantine(mail, smtp_db_entry.getMandant());
-                }
-                catch (IOException iOException)
-                {
-                    LogManager.err_log("Cannot move mail to quarantine", iOException);
-                }
+                Main.get_control().move_to_quarantine(mail, smtp_db_entry.getMandant());
+            }
+            catch (IOException iOException)
+            {
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,"Cannot move mail to quarantine", iOException);
             }
         }
     }

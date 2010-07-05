@@ -16,8 +16,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class MailFolder
 {
@@ -167,15 +165,15 @@ public class MailFolder
         }
         catch (IOException ex)
         {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+             LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
         }
         catch (IllegalArgumentException ex)
         {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+             LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
         }
         catch (org.apache.lucene.queryParser.ParseException ex)
         {
-            Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+             LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
         }
 
 
@@ -465,7 +463,7 @@ public class MailFolder
                 }
                 catch (ParseException ex)
                 {
-                    Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid date: " + arg1, ex);
+                    LogManager.msg_imaps(LogManager.LVL_ERR, "Invalid date: " + arg1, ex);
                     continue;
                 }
             }
@@ -498,7 +496,7 @@ public class MailFolder
                 ge.getChildren().add(new ExprEntry(ge.getChildren(), CS_Constants.FLD_TM, "= " + date.getTime(), ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.TIMESTAMP, next_is_not, next_is_or));
             else
             {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, "Invalid search token: " + token );
+                LogManager.msg_imaps(LogManager.LVL_ERR, "Invalid search token: " + token );
             }
            
        
@@ -516,15 +514,15 @@ public class MailFolder
             }
             catch (IOException ex)
             {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
             }
             catch (IllegalArgumentException ex)
             {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
             }
             catch (org.apache.lucene.queryParser.ParseException ex)
             {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
             }
         }
         else
@@ -575,7 +573,7 @@ public class MailFolder
         int results = sc.get_result_cnt();
 
 
-        LogManager.debug_msg(2, "Results found: " + results);
+        LogManager.msg_imaps(LogManager.LVL_DEBUG, "Results found: " + results);
         for (int i = 0; i < results; i++)
         {
             SearchResult result = sc.get_res(i);
@@ -583,7 +581,7 @@ public class MailFolder
             DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
             if (dsh == null)
             {
-                LogManager.err_log_fatal("Found ds " +result.getDs_id() + " in index, but index is gone" );
+                LogManager.msg_imaps(LogManager.LVL_ERR,"Found ds " +result.getDs_id() + " in index, but index is gone" );
                 continue;
             }
             try
@@ -607,7 +605,7 @@ public class MailFolder
             }
             catch (VaultException ex)
             {
-                Logger.getLogger(MailFolder.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "add mail failed", ex);
             }
         }
 

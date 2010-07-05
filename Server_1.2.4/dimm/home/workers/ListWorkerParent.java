@@ -7,6 +7,7 @@ package dimm.home.workers;
 
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.mailarchiv.WorkerParentChild;
@@ -101,7 +102,7 @@ public class ListWorkerParent extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, getName() + " has " + child_list.size() + " task(s)");
+        LogManager.msg_system( LogManager.LVL_DEBUG, getName() + " has " + child_list.size() + " task(s)");
         if (!Main.get_control().is_licensed(LicenseTicket.PRODUCT_BASE))
         {
             this.setStatusTxt("Not licensed");

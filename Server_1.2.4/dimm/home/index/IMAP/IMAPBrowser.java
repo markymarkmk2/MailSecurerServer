@@ -310,7 +310,7 @@ public class IMAPBrowser extends WorkerParentChild
             }
             catch (Exception iOException)
             {
-                LogManager.err_log("Cannot create SSL IMAP Server", iOException);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "Cannot create SSL IMAP Server", iOException);
             }
         }
         else
@@ -324,15 +324,12 @@ public class IMAPBrowser extends WorkerParentChild
 
     void log_debug( String s )
     {
-//        System.out.println(s);
-//        LogManager.err_log(s);
-        LogManager.debug_msg(s);
+        LogManager.msg_imaps(LogManager.LVL_DEBUG, s);
     }
 
     void log_debug( String s, Exception e )
     {
-        LogManager.err_log(s, e);
-//        LogManager.debug_msg(s, e);
+        LogManager.msg_imaps(LogManager.LVL_DEBUG, s, e);
     }
     
     @Override
@@ -390,7 +387,7 @@ public class IMAPBrowser extends WorkerParentChild
 
                 log_debug("IMAP Server connected to <" + cl.getRemoteSocketAddress() + ">");
                 boolean trace = false;
-                if (Main.get_debug_lvl() > 6)
+                if (LogManager.has_lvl(LogManager.TYP_IMAPS, LogManager.LVL_VERBOSE ))
                     trace = true;
 
                 MWImapServer mwimap = new MWImapServer(this, m_ctx, cl, trace);
@@ -416,13 +413,13 @@ public class IMAPBrowser extends WorkerParentChild
                         iOException instanceof UnrecoverableKeyException ||
                         iOException instanceof KeyManagementException)
                     {
-                        LogManager.err_log(Main.Txt("SSL_certificate_is_missing_or_invalid") + ": " + iOException.getMessage());
+                        LogManager.msg_imaps(LogManager.LVL_ERR, Main.Txt("SSL_certificate_is_missing_or_invalid") + ": " + iOException.getMessage());
                         Notification.throw_notification_one_shot(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("SSL_certificate_is_missing_or_invalid"));
                         sleep_seconds( 30 );
                     }
                     else
                     {
-                        LogManager.err_log(Main.Txt("IMAP_connection_broken") + ": " + iOException.getMessage());
+                        LogManager.msg_imaps(LogManager.LVL_ERR, Main.Txt("IMAP_connection_broken") + ": " + iOException.getMessage());
                         sleep_seconds(1);
                     }
                 }

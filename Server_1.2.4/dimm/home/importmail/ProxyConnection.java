@@ -217,7 +217,7 @@ public abstract class ProxyConnection implements Runnable
             pe.incInstanceCnt();
         }
 
-        log(DBG_VERB - 2, Main.Txt("Opening_Connection"));
+        log( Main.Txt("Opening_Connection"));
 
         connect_thread_pool.execute(this);
         
@@ -260,7 +260,7 @@ public abstract class ProxyConnection implements Runnable
     public void closeConnections()
     {
         // close the connections
-        log(DBG_VERB - 2, get_description() + ": " + Main.Txt("Closing_Connection"));
+        log( get_description() + ": " + Main.Txt("Closing_Connection"));
         try
         {
             if (serverWriter != null)
@@ -293,7 +293,7 @@ public abstract class ProxyConnection implements Runnable
 
         } catch (IOException iex)
         {
-            LogManager.err_log(Main.Txt("Error_while_closing_ProxyConnection"), iex);
+            LogManager.msg_proxy(LogManager.LVL_ERR, Main.Txt("Error_while_closing_ProxyConnection"), iex);
         }
 
     }
@@ -312,8 +312,8 @@ public abstract class ProxyConnection implements Runnable
         }
         if ( i == END_OF_LINE.length)
         {
-            if (Main.get_debug_lvl() >= DBG_VERB)
-                log( DBG_VERB, Main.Txt("Detected_EOL") );
+            if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                log( Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -334,8 +334,8 @@ public abstract class ProxyConnection implements Runnable
 
         if ( i == END_OF_LINE.length)
         {
-            if (Main.get_debug_lvl() >= DBG_VERB)
-                log( DBG_VERB, Main.Txt("Detected_EOL") );
+            if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                log( Main.Txt("Detected_EOL") );
             return true;
         }
 
@@ -387,7 +387,7 @@ public abstract class ProxyConnection implements Runnable
         if (output.charAt(idx + 3) == '-')
             return false;
 
-        System.out.println("Protocolerror on SMTP multiline: " + output.toString());
+        LogManager.msg_proxy(LogManager.LVL_ERR, "Protocolerror on SMTP multiline: " + output.toString());
 
 
         return false;
@@ -420,8 +420,8 @@ public abstract class ProxyConnection implements Runnable
 
         if ( i == END_OF_MULTILINE.length)
         {
-            if (Main.get_debug_lvl() >= DBG_VERB)
-                log( DBG_VERB, Main.Txt("Detected_MEOL") );
+            if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                log( Main.Txt("Detected_MEOL") );
             return true;
         }
 
@@ -433,8 +433,8 @@ public abstract class ProxyConnection implements Runnable
         {
             if (sData.substring(0,4).toUpperCase().compareTo("QUIT") == 0)
             {
-                if (Main.get_debug_lvl() >= DBG_VERB)
-                    log( DBG_VERB, Main.Txt("Detected_QUIT") );
+                if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                    log(  Main.Txt("Detected_QUIT") );
                 return true;
             }
         }
@@ -443,24 +443,14 @@ public abstract class ProxyConnection implements Runnable
 
     void log( String txt )
     {
-        if (Main.get_debug_lvl() < DBG_VERB)
+        if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_DEBUG))
             return;
 
         if (txt.endsWith("\r\n"))
             txt = txt.substring(0, txt.length() - 2);
-        Main.debug_msg(DBG_VERB, get_description() + ": " + txt);
+        LogManager.msg_proxy(LogManager.LVL_DEBUG, get_description() + ": " + txt);
     }
-    void log( int dbg, String txt )
-    {
-        if (Main.get_debug_lvl() < dbg)
-            return;
-
-        if (txt.endsWith("\r\n"))
-            txt = txt.substring(0, txt.length() - 2);
-
-        Main.debug_msg(dbg, get_description() + ": " + txt);
-    }
-
+    
     protected void reset_timeout()
     {
         last_activity = System.currentTimeMillis();
@@ -477,7 +467,7 @@ public abstract class ProxyConnection implements Runnable
         
         if ((System.currentTimeMillis()- last_activity)/1000 > ACTIVITY_TIMEOUT)
         {
-            Main.err_log( "No activity for " + ACTIVITY_TIMEOUT + "s: " + get_description() + " last command:" + last_command );
+            LogManager.msg_proxy(LogManager.LVL_ERR, "No activity for " + ACTIVITY_TIMEOUT + "s: " + get_description() + " last command:" + last_command );
             return true;
         }
         return false;
@@ -582,7 +572,7 @@ public abstract class ProxyConnection implements Runnable
                         break;
                     }
                     // 5 Seconds empty data
-                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + "no more data from connection, last command:" + last_command);
+                    LogManager.msg_proxy(LogManager.LVL_ERR, "DataFromInputStream: " + get_description() + ": " + "no more data from connection, last command:" + last_command);
                     m_error = ERROR_UNKNOWN;
                     break;
                 }
@@ -596,7 +586,7 @@ public abstract class ProxyConnection implements Runnable
                     finished = true;
                     break;
                 }
-                LogManager.err_log("DataFromInputStream: " + get_description() + ": " + ste.getMessage() + " last command:" + last_command + " last_recv:" + output.toString());
+                LogManager.msg_proxy(LogManager.LVL_ERR, "DataFromInputStream: " + get_description() + ": " + ste.getMessage() + " last command:" + last_command + " last_recv:" + output.toString());
 //                if (output.length() == 0)
 //                {
                     m_error = ERROR_TIMEOUT_EXCEEDED;
@@ -609,7 +599,7 @@ public abstract class ProxyConnection implements Runnable
                 m_error = ERROR_UNKNOWN;
                 if (!finished)
                 {
-                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                    LogManager.msg_proxy(LogManager.LVL_ERR, "DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
                 }
             }
             if (command_type == POP_MULTILINE)
@@ -685,7 +675,7 @@ public abstract class ProxyConnection implements Runnable
         {
              avail = wait_for_avail( reader, sock, 10 );
              if (avail == 0)
-                Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " getDataFromInputStream " + get_description() + " last command:" + last_command);
+                LogManager.msg_proxy(LogManager.LVL_ERR, Main.Txt("Timeout_while_waiting_for_Server") + " getDataFromInputStream " + get_description() + " last command:" + last_command);
         }
 
         
@@ -826,7 +816,7 @@ public abstract class ProxyConnection implements Runnable
                     {
                         // we try again to read a message recursively
                         m_retries++;
-                        log(1, Main.Txt("Mail_timeout._Trying_again_[") + m_retries + "]");
+                        log( Main.Txt("Mail_timeout._Trying_again_[") + m_retries + "]");
                     }
                 }
                 else
@@ -844,7 +834,7 @@ public abstract class ProxyConnection implements Runnable
                 m_error = ERROR_UNKNOWN;
                 if (!finished)
                 {
-                    LogManager.err_log("DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                    LogManager.msg_proxy(LogManager.LVL_ERR, "DataFromInputStream: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
                 }
             }
         }
@@ -852,7 +842,7 @@ public abstract class ProxyConnection implements Runnable
         if (!finished)
         {
             m_error = ERROR_NO_ANSWER;
-            Main.err_log(Main.Txt("Aborted_answer:_") + output.toString());
+            LogManager.msg_proxy(LogManager.LVL_ERR, Main.Txt("Aborted_answer:_") + output.toString());
         }
 
         return output;
@@ -888,7 +878,7 @@ public abstract class ProxyConnection implements Runnable
         byte buffer[] = new byte[MAX_BUF];			// buffer array
 
 
-        long dgb_level = Main.get_debug_lvl();
+        
         byte[] last_4 = new byte[4];
 
 
@@ -961,7 +951,7 @@ public abstract class ProxyConnection implements Runnable
                         catch (Exception exc)
                         {
                             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+                            LogManager.msg_proxy(LogManager.LVL_ERR, "Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
                             // CLOSE AND INVALIDATE STREAM
                             try
@@ -1000,14 +990,14 @@ public abstract class ProxyConnection implements Runnable
                 if (rlen == 0)
                 {
                     m_error = ERROR_TIMEOUT_EXCEEDED;
-                    LogManager.err_log("Timeout get_multiline_proxy_data: " + get_description() + ": " + ste.getMessage());
+                    LogManager.msg_proxy(LogManager.LVL_ERR, "Timeout get_multiline_proxy_data: " + get_description() + ": " + ste.getMessage());
                 }
             }
             catch (Exception e)
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                LogManager.err_log("Exception get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                LogManager.msg_proxy(LogManager.LVL_ERR, "Exception get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
             }
         }
 
@@ -1057,12 +1047,12 @@ public abstract class ProxyConnection implements Runnable
 
         if (avail <= 0)
         {
-            Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " start get_multiline_proxy_data " + get_description() + " last command:" + last_command );
+            LogManager.msg_proxy(LogManager.LVL_ERR, Main.Txt("Timeout_while_waiting_for_Server") + " start get_multiline_proxy_data " + get_description() + " last command:" + last_command );
             m_error = ERROR_UNKNOWN;
             return m_error;            
         }
 
-        long dgb_level = Main.get_debug_lvl();
+     
         byte[] last_4 = new byte[4];
 
 
@@ -1099,7 +1089,7 @@ public abstract class ProxyConnection implements Runnable
                 }
                 if (avail <= 0)
                 {
-                    Main.err_log(Main.Txt("Timeout_while_waiting_for_Server") + " get_multiline_proxy_data " + get_description() + " last command:" + last_command );
+                    LogManager.msg_proxy(LogManager.LVL_ERR, Main.Txt("Timeout_while_waiting_for_Server") + " get_multiline_proxy_data " + get_description() + " last command:" + last_command );
                     m_error = ERROR_UNKNOWN;
                     return m_error;
                 }
@@ -1108,9 +1098,9 @@ public abstract class ProxyConnection implements Runnable
                 if (avail > buffer.length + END_OF_MULTILINE.length)
                 {
                     rlen = Reader.read(buffer);
-                    if (dgb_level >= DBG_DATA_VERB)
+                    if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
                     {
-                        log(DBG_DATA_VERB, new String(buffer, 0, rlen));
+                        log( new String(buffer, 0, rlen));
                     }
                     reset_timeout();
                 }
@@ -1119,17 +1109,17 @@ public abstract class ProxyConnection implements Runnable
                     if (avail > END_OF_MULTILINE.length)
                     {
                         rlen = Reader.read(buffer, 0, avail - END_OF_MULTILINE.length);
-                        if (dgb_level >= DBG_DATA_VERB)
+                        if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
                         {
-                            log(DBG_DATA_VERB, new String(buffer, 0, rlen));
+                            log( new String(buffer, 0, rlen));
                         }
                         reset_timeout();
                     }
                     else
                     {
                         rlen = Reader.read(buffer, 0, avail);
-                        if (dgb_level >= DBG_DATA_VERB)
-                            log( DBG_DATA_VERB, new String( buffer, 0, rlen ) );
+                        if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                            log(  new String( buffer, 0, rlen ) );
 
                         if (rlen < END_OF_MULTILINE.length)
                         {
@@ -1144,7 +1134,7 @@ public abstract class ProxyConnection implements Runnable
 
                         if (!finished && rlen < END_OF_MULTILINE.length)
                         {
-                            log(1, Main.Txt("Gathering_slow_data"));
+                            log( Main.Txt("Gathering_slow_data"));
                             // WAIT FOR ANY REMAINING DATA
                             Main.sleep(5000);
                             avail = Reader.available();
@@ -1153,8 +1143,8 @@ public abstract class ProxyConnection implements Runnable
                             {
                                 reset_timeout();
                                 rlen += Reader.read(buffer, rlen, avail);
-                                if (dgb_level >= DBG_DATA_VERB)
-                                    log( DBG_DATA_VERB, new String( buffer, 0, rlen ) );
+                                if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                                    log(  new String( buffer, 0, rlen ) );
 
                                 Main.sleep(2000);
                                 avail = Reader.available();
@@ -1166,13 +1156,13 @@ public abstract class ProxyConnection implements Runnable
                                 String str = new String( last_4 ).substring(1);
                                 if (str.compareTo("\r\n.") == 0)
                                 {
-                                    log(1, Main.Txt("Detected_short_end_of_message,_ignoring_error"));
+                                    log( Main.Txt("Detected_short_end_of_message,_ignoring_error"));
                                     finished = true;
                                 }
                                 else
                                 {
-                                    log(1,"Protokoll Error in get_multiline_proxy_data, rlen:" + rlen + " avail:" + avail + " stillalavail:" + Reader.available() );
-                                    log(1, "Detected short end of message, ignoring error");
+                                    LogManager.msg_proxy(LogManager.LVL_WARN, "Protokoll Error in get_multiline_proxy_data, rlen:" + rlen + " avail:" + avail + " stillalavail:" + Reader.available() );
+                                    LogManager.msg_proxy(LogManager.LVL_WARN,  "Detected short end of message, ignoring error");
                                     finished = true;
 /*                                    m_error = ERROR_UNKNOWN;
                                     return m_error;
@@ -1238,7 +1228,7 @@ public abstract class ProxyConnection implements Runnable
                         catch (Exception exc)
                         {
                             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-                            Main.err_log_fatal("Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+                            LogManager.msg_proxy(LogManager.LVL_ERR, "Cannot write to rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
                             // CLOSE AND INVALIDATE STREAM
                             try
@@ -1285,7 +1275,7 @@ public abstract class ProxyConnection implements Runnable
                 }
                 catch (Exception ex)
                 {
-                    Main.err_log(ex.getMessage());
+                    LogManager.msg_proxy(LogManager.LVL_ERR, ex.getMessage());
                 }
 
             }
@@ -1315,7 +1305,7 @@ public abstract class ProxyConnection implements Runnable
                         catch (Exception exc)
                         {
                         }
-                        log(1, "Timeout. Trying again [" + m_retries + "]");
+                        LogManager.msg_proxy(LogManager.LVL_WARN, "Timeout. Trying again [" + m_retries + "]");
                     }
                 }
             }
@@ -1323,7 +1313,7 @@ public abstract class ProxyConnection implements Runnable
             {
                 // reader failed
                 m_error = ERROR_UNKNOWN;
-                LogManager.err_log("get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                LogManager.msg_proxy(LogManager.LVL_ERR, "get_multiline_proxy_data: " + get_description() + ": " + e.getMessage() + " last command:" + last_command);
             }
         }
 

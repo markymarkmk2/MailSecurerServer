@@ -50,8 +50,6 @@ import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import org.hibernate.HibernateException;
@@ -82,7 +80,7 @@ class MailBGEntry
         }
         catch (ArchiveMsgException ex)
         {
-            LogManager.err_log("Cannot archive mail", ex);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Cannot archive mail", ex);
         }
         catch (VaultException ex)
         {
@@ -94,14 +92,14 @@ class MailBGEntry
                 }
                 catch (IOException iOException)
                 {
-                    LogManager.err_log("Cannot move mail to holdbuffer", iOException);
+                    LogManager.msg_archive( LogManager.LVL_ERR, "Cannot move mail to holdbuffer", iOException);
                 }
             }
         }
         catch (Exception ex)
         {
-            LogManager.err_log("Unknown error during archive", ex);
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Unknown error during archive", ex);
+            
         }
         finally
         {
@@ -275,7 +273,7 @@ public class LogicControl
         }
         catch (Exception ex)
         {
-            LogManager.err_log_fatal("Constructor failed", ex);
+            LogManager.msg_system( LogManager.LVL_ERR, "LC Constructor failed", ex);
         }
     }
 
@@ -313,7 +311,7 @@ public class LogicControl
         catch (Exception ex )
         {
             ex.printStackTrace();
-            LogManager.err_log_fatal("Cannot read preferences for Mandant " +  m.getName(), ex);
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot read preferences for Mandant " +  m.getName(), ex);
         }
     }
 
@@ -356,7 +354,7 @@ public class LogicControl
         boolean licensed = lic_checker.is_licensed(LicenseTicket.PRODUCT_BASE);
         if (!licensed)
         {
-             LogManager.err_log(Main.Txt("No_valid_license_found!!!"));
+             LogManager.msg_license( LogManager.LVL_ERR, Main.Txt("No_valid_license_found!!!"));
         }
         return licensed;
     }
@@ -443,7 +441,7 @@ public class LogicControl
             if ( handler != null)
                 source = handler.get_name();
 
-            LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail") + ": " + source );
+            LogManager.msg_archive( LogManager.LVL_ERR,  Main.Txt("No_space_left_for_mail") + ": " + source );
 
             if (m_ctx.wait_on_no_space())
             {
@@ -476,7 +474,7 @@ public class LogicControl
         if (!vault.has_sufficient_space() && m_ctx.no_tmp_space_left())
         {
             // THIS IS REALLY BAD: SKIPPING INCOMING MAIL, WE HAVE NO SPACE TO SAVE IT TO
-            LogManager.log(Level.SEVERE, Main.Txt("No_space_left_for_mail_skipping_mail" ));
+            LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("No_space_left_for_mail_skipping_mail" ));
             Notification.throw_notification_one_shot(mandant, Notification.NF_ERROR, Main.Txt("No_space_left_for_mail_skipping_mail" ) );
             return;
         }
@@ -496,7 +494,7 @@ public class LogicControl
         }
         else
         {
-            LogManager.log(Level.SEVERE, "No parallel archive");
+            LogManager.msg_archive( LogManager.LVL_WARN, "No parallel archive");
             master_add_mail_file(mf, mandant, da, background);
         }
     }
@@ -605,12 +603,12 @@ public class LogicControl
         }
         catch (MessagingException ex)
         {
-            LogManager.log(Level.SEVERE, "Cannot extract message file", ex);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Cannot extract message file", ex);
             throw new ArchiveMsgException("Cannot extract message file: " + ex.getMessage());
         }
         catch (IOException ex)
         {
-            LogManager.log(Level.SEVERE, "Cannot create duplicate temp file", ex);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Cannot create duplicate temp file", ex);
             throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
         }
         finally
@@ -662,7 +660,7 @@ public class LogicControl
         }
         catch (IOException ex)
         {
-            Logger.getLogger(LogicControl.class.getName()).log(Level.SEVERE, null, ex);
+            
             throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
         }
         finally
@@ -706,7 +704,7 @@ public class LogicControl
         }
         catch (Exception exc)
         {
-            LogManager.err_log("Found invalid import mail entry " + name);
+            LogManager.msg_system( LogManager.LVL_ERR,"Found invalid import mail entry " + name);
             return -1;
         }
     }
@@ -733,20 +731,20 @@ public class LogicControl
         {
             if (ctx != null)
             {
-                LogManager.info_msg("Tearing down old mandant");
+                LogManager.msg_system( LogManager.LVL_INFO,"Tearing down old mandant");
                 ctx.teardown_mandant();
             }
         }
         catch (Exception e)
         {
-            LogManager.err_log("Tearing down old mandant failed", e);
+            LogManager.msg_system( LogManager.LVL_ERR, "Tearing down old mandant failed", e);
         }
 
         try
         {
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
-                LogManager.info_msg("Loading new mandant");
+                LogManager.msg_system( LogManager.LVL_INFO, "Loading new mandant");
 
                 Mandant new_m = (Mandant) l.get(0);
                 HibernateUtil.forceLoad(new_m);
@@ -768,7 +766,7 @@ public class LogicControl
         }
         catch (Exception e)
         {
-            LogManager.err_log("Loading new mandant failed", e);
+            LogManager.msg_system( LogManager.LVL_ERR, "Loading new mandant failed", e);
 
             if (ctx != null && old_m != null)
             {
@@ -793,7 +791,7 @@ public class LogicControl
             {
                 if (!worker_list.get(i).start_run_loop())
                 {
-                    LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+                    LogManager.msg_system( LogManager.LVL_ERR,Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
                 }
             }
         }
@@ -833,7 +831,7 @@ public class LogicControl
             {
                 tcc.setStatusTxt(Main.Txt("Internet_not_reachable"));
                 tcc.setGoodState(false);
-                LogManager.err_log_fatal(Main.Txt("Cannot_connect_internet_at_startup"));
+                LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_connect_internet_at_startup"));
 
             }
             else
@@ -854,13 +852,13 @@ public class LogicControl
                 boolean ok = worker_list.get(i).initialize();
                 if (!ok)
                 {
-                    LogManager.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed");
+                    LogManager.msg_system( LogManager.LVL_ERR, "Initialize of " + worker_list.get(i).getName() + " failed");
                 }
             }
             catch (Exception ex)
             {
                 // SHOULD NEVER BE RECHED
-                LogManager.err_log_fatal("Initialize of " + worker_list.get(i).getName() + " failed : " + ex.getMessage());
+                LogManager.msg_system( LogManager.LVL_ERR, "Initialize of " + worker_list.get(i).getName() + " failed : " + ex.getMessage());
             }
         }
      }
@@ -908,13 +906,13 @@ public class LogicControl
                         err_txt += exec.get_err_text();
                     }
 
-                    LogManager.err_log_warn(Main.Txt("System_time_cannot_be_retrieved") + ": " + err_txt);
+                    LogManager.msg_system( LogManager.LVL_WARN ,Main.Txt("System_time_cannot_be_retrieved") + ": " + err_txt);
 
                     sleep(1000);
                 }
                 else
                 {
-                    LogManager.debug_msg(1, Main.Txt("Systemtime_was_synchronized"));
+                    LogManager.msg_system( LogManager.LVL_DEBUG, Main.Txt("Systemtime_was_synchronized"));
                     return true;
                 }
             }
@@ -1027,7 +1025,7 @@ public class LogicControl
 
     void handle_shutdown()
     {
-        LogManager.info_msg("Detected shut down");
+        LogManager.msg_system( LogManager.LVL_INFO,"Detected shut down");
         for (int i = 0; i < mandanten_list.size(); i++)
         {
             MandantContext ctx = mandanten_list.get(i);
@@ -1064,7 +1062,7 @@ public class LogicControl
             {
                 if (!worker_list.get(i).start_run_loop())
                 {
-                    LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+                    LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
                 }
             }
 
@@ -1171,12 +1169,12 @@ public class LogicControl
         // WRITE USERMAP
         lic_checker.do_idle();
 
-        LogManager.info_msg("Waiting for workers...");
+        LogManager.msg_system( LogManager.LVL_INFO, "Waiting for workers...");
 
         wait_for_shutdown(10);
 
 
-        LogManager.info_msg("Closing down " + Main.APPNAME);
+        LogManager.msg_system( LogManager.LVL_INFO, "Closing down " + Main.APPNAME);
         //System.exit(0);
     }
 
@@ -1321,7 +1319,7 @@ public class LogicControl
 
         if ((failed && on_fail) || (!failed && !on_fail))
         {
-            LogManager.info_msg("Performing database update: " + alter_cmd);
+            LogManager.msg_system( LogManager.LVL_INFO, "Performing database update: " + alter_cmd);
             try
             {
                 SQLQuery sql_res = change_session.createSQLQuery(alter_cmd);
@@ -1330,7 +1328,7 @@ public class LogicControl
             }
             catch (Exception hibernateException1)
             {
-                LogManager.err_log_fatal("Cannot change table struct " +  alter_cmd, hibernateException1);
+                LogManager.msg_system( LogManager.LVL_ERR, "Cannot change table struct " +  alter_cmd, hibernateException1);
                 return false;
             }
             if (fill_cmd != null)
@@ -1342,7 +1340,7 @@ public class LogicControl
                 }
                 catch (HibernateException hibernateException)
                 {
-                    LogManager.err_log_fatal("Cannot fill changed table struct " +  fill_cmd, hibernateException);
+                    LogManager.msg_system( LogManager.LVL_ERR, "Cannot fill changed table struct " +  fill_cmd, hibernateException);
                     return changed;
                 }
             }
@@ -1361,7 +1359,7 @@ public class LogicControl
         
         catch (Exception ex)
         {
-            LogManager.err_log_fatal("Error while checking database struct:", ex);
+            LogManager.msg_system( LogManager.LVL_ERR, "Error while checking database struct:", ex);
         }
         org.hibernate.Session param_session = null;
         org.hibernate.Transaction tx = null;
@@ -1452,39 +1450,38 @@ public class LogicControl
                 }
                 catch (ArchiveMsgException ex)
                 {
-                    LogManager.log(Level.SEVERE, null, ex);
+                    LogManager.msg_archive( LogManager.LVL_WARN, "Adding mail failed", ex);
                     try
                     {
                         move_mail_to_quarantine(m_ctx, path);
                     }
                     catch (IOException ex1)
                     {
-                        Main.err_log_fatal(Main.Txt("Cannot_store_mail_file_to_quarantine"));
-                        LogManager.log(Level.SEVERE, null, ex1);
+                        LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("Cannot_store_mail_file_to_quarantine"), ex1);
                     }
                 }
                 catch (VaultException ex)
                 {
-                    LogManager.log(Level.SEVERE, null, ex);
+                    LogManager.msg_archive( LogManager.LVL_WARN, "Adding mail failed", ex);
+                    
                     try
                     {
                         move_mail_to_hold_buffer(m_ctx, rfc, da);
                     }
                     catch (IOException ex1)
                     {
-                        Main.err_log_fatal(Main.Txt("Cannot_store_mail_file_to_holdbuffer"));
-                        LogManager.log(Level.SEVERE, null, ex1);
+                        LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("Cannot_store_mail_file_to_holdbuffer"), ex1);
                     }
                 }
                 catch (IndexException ex)
                 {
-                    LogManager.log(Level.SEVERE, Main.Txt("Index_generation_failed"), ex);
+                    LogManager.msg_index( LogManager.LVL_ERR,  Main.Txt("Index_generation_failed"), ex);
                 }
                 break;
             }
             default:
             {
-                Main.err_log_fatal(Main.Txt("Invalid_mailbox_type") + ": " + path);
+                LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("Invalid_mailbox_type") + ": " + path);
                 throw new ArchiveMsgException(Main.Txt("Invalid_mailbox_type"));
             }
         }
@@ -1668,7 +1665,7 @@ public class LogicControl
         }
         catch (Exception e)
         {
-            LogManager.err_log_fatal("Invalid SSO token " + sso_token , e);
+            LogManager.msg_system( LogManager.LVL_ERR, "Invalid SSO token " + sso_token , e);
         }
         return false;
     }
@@ -1684,7 +1681,7 @@ public class LogicControl
         }
         catch (Exception e)
         {
-            LogManager.err_log_fatal("Invalid SSO token " + sso_token , e);
+            LogManager.msg_system( LogManager.LVL_ERR, "Invalid SSO token " + sso_token , e);
         }
         return null;
     }

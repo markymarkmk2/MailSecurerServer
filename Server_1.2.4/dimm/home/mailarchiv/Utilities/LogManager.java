@@ -11,14 +11,24 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.logging.Level;
 import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.DailyRollingFileAppender;
-import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.SimpleLayout;
 
+
+class LogTypeEntry
+{
+    String typ;
+    int lvl;
+
+    public LogTypeEntry( String typ )
+    {
+        this.typ = typ;
+        this.lvl = LogManager.LVL_ERR;
+    }
+
+}
 /**
  *
  * @author mw
@@ -34,171 +44,264 @@ public class LogManager implements  LogListener
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
 
-    static long dbg_level = 1;
+   
+
+    static long dbg_level = LVL_WARN;
     private static String LOG_L4J = "logfj.log";
+
+    static LogTypeEntry[] lte_array =
+    {
+        new LogTypeEntry(TYP_AUTH),
+        new LogTypeEntry(TYP_EXTRACT),
+        new LogTypeEntry(TYP_PROXY),
+        new LogTypeEntry(TYP_CONNECTOR),
+        new LogTypeEntry(TYP_HOTFOLDER),
+        new LogTypeEntry(TYP_IMPORT),
+        new LogTypeEntry(TYP_FETCHER),
+        new LogTypeEntry(TYP_MILTER),
+        new LogTypeEntry(TYP_IMAPS),
+        new LogTypeEntry(TYP_CMD),
+        new LogTypeEntry(TYP_VAULT),
+        new LogTypeEntry(TYP_NOTIFICATION),
+        new LogTypeEntry(TYP_SECURITY),
+        new LogTypeEntry(TYP_SYSTEM),
+        new LogTypeEntry(TYP_LICENSE),
+        new LogTypeEntry(TYP_COMM),
+        new LogTypeEntry(TYP_ARCHIVE),
+        new LogTypeEntry(TYP_BACKUP),
+        new LogTypeEntry(TYP_INDEX)
+    };
+
+    public static final String get_lvl_name( int lvl)
+    {
+        switch (lvl )
+        {
+            case LVL_INFO:    return "Info   ";
+            case LVL_VERBOSE: return "Verbose";
+            case LVL_DEBUG:   return "Debug  ";
+            case LVL_WARN:    return "Warning";
+            case LVL_ERR:     return "Error  ";
+        }
+        return "Unknown";
+
+    }
+
+    public static final String get_logfile( int lvl)
+    {
+        switch (lvl )
+        {
+            case LVL_INFO:    return LOG_INFO;
+            case LVL_VERBOSE: return null;  // ONLY STDOUT
+            case LVL_DEBUG:   return LOG_DEBUG;
+            case LVL_WARN:    return LOG_WARN;
+            case LVL_ERR:     return LOG_ERR;
+        }
+        return null;
+
+    }
+
+
+    public static void msg_auth( int lvl, String string, Exception exc )
+    {
+        msg( lvl, TYP_AUTH, string, exc);
+    }
+    public static void msg_auth( int lvl, String string )
+    {
+        msg_auth(lvl, string, null);
+    }
+
+    public static void msg_extract( int lvl, String string, Exception exc )
+    {
+        msg( lvl,  TYP_EXTRACT, string, exc);
+    }
+    public static void msg_extract( int lvl, String string )
+    {
+        msg_extract(lvl, string, null);
+    }
+    public static void msg_fetcher( int lvl, String string, Exception exc )
+    {
+        msg( lvl,  TYP_FETCHER, string, exc);
+    }
+    public static void msg_fetcher( int lvl, String string )
+    {
+        msg_fetcher(lvl, string, null);
+    }
+    public static void msg_milter( int lvl, String string, Exception exc )
+    {
+        msg( lvl,  TYP_MILTER, string, exc);
+    }
+    public static void msg_milter( int lvl, String string )
+    {
+        msg_milter(lvl, string, null);
+    }
+    public static void msg_proxy( int lvl, String string, Exception exc )
+    {
+        msg( lvl,  TYP_PROXY, string, exc);
+    }
+    public static void msg_proxy( int lvl, String string )
+    {
+        msg_proxy(lvl, string, null);
+    }
+    public static void msg_imaps( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_IMAPS, string, exc);
+    }
+    public static void msg_imaps( int lvl, String string )
+    {
+        msg_imaps(lvl, string, null);
+    }
+    public static void msg_index( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_INDEX, string, exc);
+    }
+    public static void msg_index( int lvl, String string )
+    {
+        msg_index(lvl, string, null);
+    }
+    public static void msg_cmd( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_CMD, string, exc);
+    }
+    public static void msg_cmd( int lvl, String string )
+    {
+        msg_cmd(lvl, string, null);
+    }
+    public static void msg_comm( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_COMM, string, exc);
+    }
+    public static void msg_comm( int lvl, String string )
+    {
+        msg_comm(lvl, string, null);
+    }
+    public static void msg_vault( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_VAULT, string, exc);
+    }
+    public static void msg_vault( int lvl, String string )
+    {
+        msg_cmd(lvl, string, null);
+    }
+    public static void msg_system( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_SYSTEM, string, exc);
+    }
+    public static void msg_system( int lvl, String string )
+    {
+        msg_system(lvl, string, null);
+    }
+    public static void msg_license( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_LICENSE, string, exc);
+    }
+    public static void msg_license( int lvl, String string )
+    {
+        msg_license(lvl, string, null);
+    }
+    public static void msg_archive( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_ARCHIVE, string, exc);
+    }
+    public static void msg_archive( int lvl, String string )
+    {
+        msg_archive(lvl, string, null);
+    }
+    public static void msg_backup( int lvl, String string, Exception exc )
+    {
+            msg( lvl,  TYP_BACKUP, string, exc);
+    }
+    public static void msg_backup( int lvl, String string )
+    {
+        msg_backup(lvl, string, null);
+    }
+    static LogTypeEntry get_lte( String s )
+    {
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            LogTypeEntry logTypeEntry = lte_array[i];
+            if (logTypeEntry.typ.compareTo(s) == 0)
+                return logTypeEntry;
+        }
+
+        return null;
+    }
+    public static int get_lvl( String type )
+    {
+        LogTypeEntry logTypeEntry = get_lte( type );
+        if (logTypeEntry != null)
+            return logTypeEntry.lvl;
+
+        return LVL_ERR;
+    }
+    public static boolean has_lvl( String type, int lvl )
+    {
+        return (lvl >= get_lvl(type));
+    }
+
+    public static int get_auth_lvl()
+    {
+        return get_lvl(TYP_AUTH);
+    }
+
+    public static boolean has_auth_lvl( int lvl )
+    {
+        return (lvl >= get_lvl(TYP_AUTH));
+    }
+
+    
+    public static void msg( int lvl, String type, String msg )
+    {
+        msg(lvl, type, msg, null);
+    }
+    public static void msg( int lvl, String type, String msg, Exception exc )
+    {
+        if (lvl == LVL_INFO)
+        {
+            _msg( lvl,  type, msg, exc);
+        }
+        else
+        {
+            if (lvl >= get_lvl(type))
+            {
+                _msg(lvl, type, msg, exc);
+            }
+        }
+    }
+    private static void _msg( int lvl, String type, String msg, Exception exc )
+    {
+        String s = get_lvl_name( lvl) + ": " + type + ": " + msg;
+        if (exc != null)
+        {
+            s += exc.getLocalizedMessage();
+        }
+        String file = get_logfile(lvl);
+        file_log( file, s );
+    }
 
     private LogManager()
     {
     }
 
-    public static void debug( String string )
-    {
-        debug_msg( 0, string );
-    }
+   
 
-    public static void debug( String string, Exception e )
-    {
-        debug_msg(  string, e );
-    }
-
-    public static void debug_msg( String s, Exception e )
-    {
-        debug_msg( s + ": " + e.getMessage() );
-    }
-
-    @Override
-    public void error_log( String s, Exception e )
-    {
-        e.printStackTrace();
-        error_log( s + ": " + e.getMessage() );
-    }
-    public static void err_log( String s, Exception e )
-    {
-        e.printStackTrace();
-        err_log( s + ": " + e.getMessage() );
-    }
-
-    public static void err_log_fatal( String s, Exception e )
-    {
-        e.printStackTrace();
-        err_log_fatal( s + ": " + e.getMessage() );
-    }
-
-
-    public static long get_debug_lvl()
-    {
-        return dbg_level;
-    }
+   
     public static void set_debug_lvl( long l)
     {
         dbg_level = l;
         
-        if (l >24)
+        if (l  == LVL_VERBOSE)
             main_logger.setLevel(org.apache.log4j.Level.ALL);
-        else if (l >14)
-            main_logger.setLevel(org.apache.log4j.Level.TRACE);
-        else if (l >0)
+        else if (l == LVL_DEBUG)
             main_logger.setLevel(org.apache.log4j.Level.DEBUG);
-        else
+        else if (l == LVL_WARN)
             main_logger.setLevel(org.apache.log4j.Level.WARN);
+        else
+            main_logger.setLevel(org.apache.log4j.Level.ERROR);
     }
 
 
-    // CAN BE CALLED FROM INSIDE SQL-WORKER
-    static void err_log_no_lock_fatal(String string)
-    {
-        main_logger.fatal(string);
-        //log( "error.log", string );
-    }
 
-    public static void err_log_fatal(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-
-        main_logger.fatal(string);
-//        log( "error.log", string );
-
-    }
-
-    public static void err_log_warn(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-
-        main_logger.warn(string);
-//      log( "warn.log", string );
-    }
-
-    public static void info_msg(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-
-        main_logger.info(string);
-        //log( "info.log", string );
-    }
-    public static void debug_msg(long level,  String string)
-    {
-        long debug_level= get_debug_lvl();
-
-        if (debug_level >= level)
-        {
-            main_logger.debug(string);
-//            file_log( "debug.log", string );
-        }
-    }
-    public static void debug_msg( String string )
-    {
-          main_logger.debug(string);
-          //debug_msg( 0, string );
-    }
-
-    public static void err_log(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-
-          main_logger.error(string);
-
-    }
-
-    @Override
-    public void error_log(String string)
-    {
-        if (string == null || string.length() == 0)
-            return;
-
-          main_logger.error(string);
-
-    }
-    public static void log( Level level, String msg)
-    {
-         main_logger.log(org.apache.log4j.Level.toLevel(level.intValue()), msg);
-        //log(level, msg, null);
-    }
-
-    public static void log( Level level, String msg, Throwable ex )
-    {
-        String text = "";
-        if ( msg != null)
-            text += msg;
-
-        if (ex != null)
-        {
-            text += ": " + ex.getMessage();
-        }
-        if (level == Level.SEVERE)
-        {
-            if (ex != null)
-                ex.printStackTrace();
-            err_log( text );
-        }
-        else if (level == Level.WARNING)
-        {
-            err_log_warn( text );
-        }
-        else if (level == Level.INFO)
-        {
-            info_msg( text );
-        }
-        else if (dbg_level >= 10)
-        {
-            debug_msg( text );
-        }
-    }
-
-
+   
     static SimpleDateFormat sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
 
 
@@ -207,21 +310,24 @@ public class LogManager implements  LogListener
     {
         System.out.println( s );
 
-        File log = new File( LOG_PATH + file );
-        try
+        if (file != null)
         {
-            FileWriter fw = new FileWriter( log,  true );
-            java.util.Date now = new java.util.Date();
+            File log = new File( LOG_PATH + file );
+            try
+            {
+                FileWriter fw = new FileWriter( log,  true );
+                java.util.Date now = new java.util.Date();
 
-            fw.write( sdf.format( now ) );
-            fw.write( ": " );
-            fw.write( s );
-            fw.write( "\n" );
-            fw.close();
-        }
-        catch ( Exception exc)
-        {
-            exc.printStackTrace();
+                fw.write( sdf.format( now ) );
+                fw.write( ": " );
+                fw.write( s );
+                fw.write( "\n" );
+                fw.close();
+            }
+            catch ( Exception exc)
+            {
+                exc.printStackTrace();
+            }
         }
     }
 
@@ -263,13 +369,8 @@ public class LogManager implements  LogListener
 
     }
 
-    public static final String L4J = "L4J";
-    public static final String ERR = "ERR";
-    public static final String INFO = "INFO";
-    public static final String WRN = "WRN";
-    public static final String DBG = "DBG";
-    public static final String SYS = "SYS";
-    public static final String SYNC = "SYNC";
+
+
     public static File get_file_by_type( String log_type )
     {
         if (log_type.compareTo(L4J) == 0)
@@ -291,28 +392,23 @@ public class LogManager implements  LogListener
     }
 
     @Override
-    public void warn_log( String txt )
+    public void log_msg( int lvl, String typ, String txt )
     {
-        err_log_warn(txt);
+        msg( lvl, typ, txt);
     }
 
     @Override
-    public void info_log( String txt )
+    public void log_msg( int lvl, String typ, String txt, Exception ex )
     {
-        info_msg(txt);
+        msg( lvl, typ, txt, ex);
     }
 
     @Override
-    public void debug_log( String txt )
+    public boolean log_has_lvl( String typ, int lvl )
     {
-        debug(txt);
+        return has_lvl(typ, lvl);
     }
 
-    @Override
-    public boolean is_debug()
-    {
-        return (get_debug_lvl() > 0);
-    }
-
+   
 
 }

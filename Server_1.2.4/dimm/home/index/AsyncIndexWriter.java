@@ -83,7 +83,7 @@ class WriteRunner implements Runnable
             }
             catch (Exception e)
             {
-                LogManager.err_log("Error in index write runner", e );
+                LogManager.msg_index(LogManager.LVL_ERR, "Error in index write runner", e );
                 e.printStackTrace();
                 
             }

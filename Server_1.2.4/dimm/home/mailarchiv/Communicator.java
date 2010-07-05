@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Commands.*;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.Utilities.ParseToken;
 
@@ -49,7 +50,6 @@ public class Communicator extends WorkerParent
     
     int udp_listeners = 0;
     int tcp_listeners = 0;
-    boolean is_started;
     
     /** Creates a new instance of Communicator */
     public Communicator()
@@ -95,11 +95,11 @@ public class Communicator extends WorkerParent
             String real_ip = ipc.get_ip_for_if( "eth0" );
             if (real_ip != null)
             {
-                Main.info_msg( "Got real IP <" + real_ip + ">" );
+                LogManager.msg_comm( LogManager.LVL_INFO, "Got real IP <" + real_ip + ">" );
             }
             else
             {
-                Main.err_log( "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
+                LogManager.msg_comm( LogManager.LVL_ERR, "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
 
                 ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
                 using_fallback = true;
@@ -109,7 +109,7 @@ public class Communicator extends WorkerParent
 
             if (!ipc.is_route_ok())
             {
-                Main.err_log( "Invalid routing detected, setting to fallback IP: 192.168.201.201");
+                LogManager.msg_comm( LogManager.LVL_ERR, "Invalid routing detected, setting to fallback IP: 192.168.201.201");
 
                 ipc.set_ipconfig( 0, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
                 using_fallback = true;
@@ -153,7 +153,7 @@ public class Communicator extends WorkerParent
         if (is_started)
             return true;
 
-        Main.debug_msg(1, "Starting communicator tasks" );
+        LogManager.msg_comm( LogManager.LVL_DEBUG, "Starting communicator tasks" );
         
         start_broadcast_task();
         start_tcpip_task();
@@ -263,7 +263,7 @@ public class Communicator extends WorkerParent
                          udp_s.receive( packet );
                          udp_listeners++;
                          final DatagramSocket answer_sock = udp_s;
-                         Main.debug_msg(4, "udp_recv packet");
+                         LogManager.msg_comm( LogManager.LVL_VERBOSE, "udp_recv packet");
 
                          if (isGoodState())
                              this.setStatusTxt("Connected to " + String.valueOf(udp_listeners + tcp_listeners) + " client(s)");
@@ -290,7 +290,7 @@ public class Communicator extends WorkerParent
                                          exc.printStackTrace();
                                          setStatusTxt( "Communication broken: "  + exc.getMessage());
                                          setGoodState( false );
-                                         Main.err_log( getStatusTxt() );
+                                         LogManager.msg_comm( LogManager.LVL_WARN, getStatusTxt() );
                                          Main.sleep(2000);
                                      }
                                  }             
@@ -314,7 +314,7 @@ public class Communicator extends WorkerParent
                          exc.printStackTrace();
                          this.setStatusTxt( "Communication aborted: "  + exc.getMessage());
                          this.setGoodState( false );
-                         Main.err_log( getStatusTxt() );
+                         LogManager.msg_comm( LogManager.LVL_WARN, getStatusTxt() );
                          Main.sleep(2000);
                      }
                  }             
@@ -324,7 +324,7 @@ public class Communicator extends WorkerParent
                  if (!isShutdown())
                  {
                      exc.printStackTrace();
-                     Main.err_log("Communication closed: "  + exc.getMessage() );
+                     LogManager.msg_comm( LogManager.LVL_WARN, "Communication closed: "  + exc.getMessage() );
                      this.setStatusTxt( "Communication closed (2 processes?): "  + exc.getMessage());
                      this.setGoodState( false );
                      Main.sleep(2000);
@@ -393,7 +393,7 @@ public class Communicator extends WorkerParent
                                  exc.printStackTrace();
                                  setStatusTxt( "Communication aborted: "  + exc.getMessage());
                                  setGoodState( false );
-                                 Main.err_log( getStatusTxt() );
+                                 LogManager.msg_comm( LogManager.LVL_WARN, getStatusTxt() );
                              }
                          }             
                          return null;
@@ -409,7 +409,7 @@ public class Communicator extends WorkerParent
                  if (!isShutdown())
                  {
                      exc.printStackTrace();
-                     Main.err_log("Kommunikationsport geschlossen: "  + exc.getMessage() );
+                     LogManager.msg_comm( LogManager.LVL_WARN,"Kommunikationsport geschlossen: "  + exc.getMessage() );
                      this.setStatusTxt( "Communication is closed (2 processes?): "  + exc.getMessage());
                      this.setGoodState( false );
                      Main.sleep(5000);
@@ -560,7 +560,7 @@ public class Communicator extends WorkerParent
     
     void dispatch_tcp_comannd( String str, byte[] add_data, OutputStream out ) throws IOException
     {
-        Main.debug_msg( 5, "Received ip command <" + str + "> " );
+        LogManager.msg_comm( LogManager.LVL_VERBOSE, "Received ip command <" + str + "> " );
                 
         if (str.equals("?") || str.equals("help") )
         {
@@ -622,7 +622,7 @@ public class Communicator extends WorkerParent
         int len = str.length();
         String answer = null;
         
-        Main.debug_msg( 5, "Received command <" + str + "> from " + in_packet.getSocketAddress().toString() );
+        LogManager.msg_comm( LogManager.LVL_VERBOSE, "Received command <" + str + "> from " + in_packet.getSocketAddress().toString() );
         
         // THIS IS HANDLED BY BROADCAST -> EVERYBODY IN NETWORK MUST ANSWER
         if (len == HELLO_CMD.length() && str.compareTo(HELLO_CMD) == 0)
@@ -697,7 +697,7 @@ public class Communicator extends WorkerParent
     }
     void answer_udp( DatagramSocket s, DatagramPacket in_packet, String answer ) throws SocketException, IOException
     {
-        Main.debug_msg( 8, "Sending answer <" + answer + "> to " + in_packet.getSocketAddress().toString() );
+        LogManager.msg_comm( LogManager.LVL_VERBOSE, "Sending answer <" + answer + "> to " + in_packet.getSocketAddress().toString() );
         
         //byte frame_nr = (byte)(in_packet.getData()[0] - '0');
         

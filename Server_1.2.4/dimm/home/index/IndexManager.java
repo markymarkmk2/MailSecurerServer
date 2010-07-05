@@ -47,7 +47,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.zip.GZIPInputStream;
 import home.shared.zip.LocZipInputStream;
 import java.io.ByteArrayOutputStream;
@@ -183,7 +182,7 @@ class ThreadRunner implements Runnable
             }
             catch (Exception e)
             {
-                LogManager.err_log("Error in index runner", e );
+                LogManager.msg_index(LogManager.LVL_ERR, "Error in index runner", e );
                 e.printStackTrace();
             }
         }
@@ -472,13 +471,13 @@ public class IndexManager extends WorkerParent
             create = !IndexReader.indexExists(path);
             if (create)
             {
-                Main.err_log_warn(Main.Txt("Creating_new_index_in") + " " + path);
+                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, "Creating_new_index_in" + " " + path);
             }
         }
         
         if (IndexWriter.isLocked(dir))
         {
-            Main.err_log_warn(Main.Txt("Unlocking_already_locked_IndexWriter"));
+            LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, Main.Txt("Unlocking_already_locked_IndexWriter"));
             IndexWriter.unlock(dir);
         }
 
@@ -513,7 +512,7 @@ public class IndexManager extends WorkerParent
 
         if (IndexWriter.isLocked(dir))
         {
-            Main.err_log("Unlocking already locked IndexWriter");
+            LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, "Unlocking already locked IndexWriter");
             IndexWriter.unlock(dir);
         }
 
@@ -701,7 +700,7 @@ public class IndexManager extends WorkerParent
                     }
                     catch (Exception exc)
                     {
-                        LogManager.err_log_warn("Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
+                        LogManager.msg_index(LogManager.LVL_WARN, "Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
                     }
 
                 }
@@ -713,7 +712,7 @@ public class IndexManager extends WorkerParent
                     }
                     catch (Exception exc)
                     {
-                        LogManager.err_log_warn("Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
+                        LogManager.msg_index(LogManager.LVL_WARN, "Error building FilterValProvider for mail: " + exc.getLocalizedMessage());
                     }
                 }
                 return list;
@@ -737,7 +736,7 @@ public class IndexManager extends WorkerParent
         String subject = mime_msg.getMsg().getSubject();
         if (mime_msg.getEmail_list().size() == 0)
         {
-            LogManager.err_log_fatal("Found bogus mail (no from / to / cc) " + unique_id + ": skipping");
+            LogManager.msg_index(LogManager.LVL_ERR, "Found bogus mail (no from / to / cc) " + unique_id + ": skipping");
             return false;
         }
 
@@ -807,7 +806,7 @@ public class IndexManager extends WorkerParent
         if (d == null)
         {
             d = mail_file.getDate();
-            LogManager.log(Level.WARNING, "Mail " + unique_id + " has no Sent- or ReceivedDate");
+            LogManager.msg_index(LogManager.LVL_WARN,  "Mail " + unique_id + " has no Sent- or ReceivedDate");
         }
 
         doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -875,7 +874,7 @@ public class IndexManager extends WorkerParent
                     }
                     catch (Exception iOException)
                     {
-                        LogManager.err_log_fatal("Cannot detect characterset for message object " + unique_id + ": " + exc.getMessage());
+                        LogManager.msg_index(LogManager.LVL_ERR, "Cannot detect characterset for message object " + unique_id + ": " + exc.getMessage());
                     }
                 }
             }
@@ -903,7 +902,7 @@ public class IndexManager extends WorkerParent
             }
             else
             {
-                LogManager.err_log_fatal("Cannot index message object " + unique_id + ": " + content.getClass().getName());
+                LogManager.msg_index(LogManager.LVL_ERR, "Cannot index message object " + unique_id + ": " + content.getClass().getName());
             }
 
             if (doc.getField(CS_Constants.FLD_ATTACHMENT_NAME) != null)
@@ -937,15 +936,15 @@ public class IndexManager extends WorkerParent
         }
         catch (FileNotFoundException fileNotFoundException)
         {
-            LogManager.log(Level.SEVERE, unique_id, fileNotFoundException);
+            LogManager.msg_index(LogManager.LVL_ERR,  unique_id, fileNotFoundException);
         }
         catch (IOException iox)
         {
-            LogManager.log(Level.SEVERE, unique_id, iox);
+            LogManager.msg_index(LogManager.LVL_ERR,  unique_id, iox);
         }
         catch (MessagingException messagingException)
         {
-            LogManager.log(Level.SEVERE, unique_id, messagingException);
+            LogManager.msg_index(LogManager.LVL_ERR,  unique_id, messagingException);
         }
         return true;
     }
@@ -1079,7 +1078,7 @@ public class IndexManager extends WorkerParent
                 if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0)
                 {
                     doc.add(new Field(CS_Constants.FLD_TO, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.debug_msg(10, "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
+                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
 
                     // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
                     doc.add(new Field(CS_Constants.FLD_TO + "REG", ih.getValue(), Field.Store.NO, Field.Index.ANALYZED));
@@ -1092,7 +1091,7 @@ public class IndexManager extends WorkerParent
                     String cs = get_charset_from_content_type(ih.getValue());
                     if (cs != null)
                     {
-                        LogManager.debug_msg(10, "Mail " + uid + " detected charset " + cs);
+                        LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " detected charset " + cs);
                         doc.add(new Field(CS_Constants.FLD_CHARSET, cs, Field.Store.YES, Field.Index.NOT_ANALYZED));
                     }
                 }
@@ -1100,7 +1099,7 @@ public class IndexManager extends WorkerParent
                 {
                     // STORE ALL HEADERS INTO INDEX DB, WE DO INDEX BECAUSE WE SEARCH FOR TOKENS
                     doc.add(new Field(header_field_name, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.debug_msg(10, "Mail " + uid + " adding header <" + header_field_name + "> Val <" + ih.getValue() + ">");
+                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + header_field_name + "> Val <" + ih.getValue() + ">");
 
                     // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
                     if (found_eh)
@@ -1110,7 +1109,7 @@ public class IndexManager extends WorkerParent
                 }
                 else
                 {
-                    LogManager.debug_msg(10, "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
                 }
             }
         }
@@ -1136,7 +1135,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception messagingException)
         {
-            LogManager.log(Level.WARNING, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
         }
 
     }
@@ -1184,7 +1183,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception messagingException)
         {
-            LogManager.log(Level.WARNING, "Error in index_part_content for " + uid + ": " + messagingException.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in index_part_content for " + uid + ": " + messagingException.getMessage());
         }
 
     }
@@ -1221,7 +1220,7 @@ public class IndexManager extends WorkerParent
             catch (Exception e)
             {
                 SortedMap<String, Charset> map = Charset.availableCharsets();
-                LogManager.log(Level.WARNING, "Cannot retrieve characterset" + " " + cs.toUpperCase() + ": " + e.getLocalizedMessage());
+                LogManager.msg_index(LogManager.LVL_WARN,  "Cannot retrieve characterset" + " " + cs.toUpperCase() + ": " + e.getLocalizedMessage());
             }
         }
 
@@ -1242,7 +1241,7 @@ public class IndexManager extends WorkerParent
                     filename = "";
                 }
 
-                LogManager.debug_msg( 8, "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc " + doc.get_uuid());
+                LogManager.msg_index(LogManager.LVL_DEBUG,  "Indexing attachment " + filename + " MT:<" + mimetype + "> CS:<" + charset + "> to doc " + doc.get_uuid());
 
                 // YES
                 if (do_index_attachments)
@@ -1314,7 +1313,7 @@ public class IndexManager extends WorkerParent
                 filename = "";
             }
 
-            LogManager.log(Level.WARNING, "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: " + ee.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in index_content for " + uid + " " + filename + " mime_type <" + mimetype + ">: " + ee.getMessage());
             return;
         }
 
@@ -1328,7 +1327,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tgz_file " + doc.get_uuid()/*, io*/);
+            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_tgz_file " + doc.get_uuid()/*, io*/);
         }
     }
 
@@ -1361,7 +1360,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_tar_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_tar_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1398,7 +1397,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception io)
             {
-                LogManager.log(Level.SEVERE, "Error in extract_octet_stream: " + doc.get_uuid() + " " + io.getMessage());
+                LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_octet_stream: " + doc.get_uuid() + " " + io.getMessage());
             }
         }
     }
@@ -1437,7 +1436,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_gzip_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_gzip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1457,7 +1456,7 @@ public class IndexManager extends WorkerParent
                     continue;
                 }
 
-                LogManager.debug_msg( 8, "Indexing zip entry " + name + " + to " + doc.get_uuid());
+                LogManager.msg_index(LogManager.LVL_DEBUG,  "Indexing zip entry " + name + " + to " + doc.get_uuid());
                 String extention = name.substring(dot + 1, name.length());
 
                 ZipEntryInputStream zeis = new ZipEntryInputStream(zis, entry);
@@ -1477,17 +1476,17 @@ public class IndexManager extends WorkerParent
                 }
                 catch (ExtractionException extractionException)
                 {
-                    LogManager.log(Level.WARNING, "Error while extracting text from zip_entry " + name + " " + extractionException.getMessage());
+                    LogManager.msg_index(LogManager.LVL_WARN,  "Error while extracting text from zip_entry " + name + " " + extractionException.getMessage());
                 }
             }
         }
         catch (IllegalArgumentException wrong_zip_entry)
         {
-            LogManager.log(Level.SEVERE, "Error in zip file " + doc.get_uuid() + " " + wrong_zip_entry.getMessage());
+            LogManager.msg_index(LogManager.LVL_ERR,  "Error in zip file " + doc.get_uuid() + " " + wrong_zip_entry.getMessage());
         }
         catch (Exception io)
         {
-            LogManager.log(Level.SEVERE, "Error in extract_zip_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_zip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1505,7 +1504,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception e)
             {
-                LogManager.log(Level.WARNING, "Error while detecting language: ", e);
+                LogManager.msg_index(LogManager.LVL_WARN,  "Error while detecting language: ", e);
                 return;
             }
             if (lang != null)
@@ -1531,7 +1530,7 @@ public class IndexManager extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting Indexmanager");
+        LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX,  "Starting Indexmanager");
 
 
         try
@@ -1553,13 +1552,13 @@ public class IndexManager extends WorkerParent
                     DiskVault dv = m_ctx.get_vault_by_da_id(da_id);
                     if (dv == null)
                     {
-                        LogManager.err_log_fatal("Found mail without diskvault");
+                        LogManager.msg_index(LogManager.LVL_ERR, "Found mail without diskvault");
                         continue;
                     }
                     DiskSpaceHandler index_dsh = dv.get_dsh(ds_id);
                     if (index_dsh == null)
                     {
-                        LogManager.err_log_fatal("Found mail without diskspace");
+                        LogManager.msg_index(LogManager.LVL_ERR, "Found mail without diskspace");
                         continue;
                     }
                     index_dsh = dv.open_dsh(index_dsh, 1024 * 1024);
@@ -1582,7 +1581,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception e)
         {
-            LogManager.err_log("Error while cleaning up index hold buffer", e);
+            LogManager.msg_index(LogManager.LVL_ERR, "Error while cleaning up index hold buffer", e);
             e.printStackTrace();
         }
         if (!is_started)
@@ -1786,7 +1785,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse int field " + fld + " from index", exception);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot parse int field " + fld + " from index", exception);
         }
 
         return ret;
@@ -1806,7 +1805,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse bool field " + fld + " from index", exception);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot parse bool field " + fld + " from index", exception);
         }
 
         return ret;
@@ -1822,7 +1821,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception exception)
         {
-            LogManager.err_log("Cannot parse hex long field " + fld + " from index", exception);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot parse hex long field " + fld + " from index", exception);
         }
 
         return ret;
@@ -1878,7 +1877,7 @@ public class IndexManager extends WorkerParent
             try
             {
                 // IF WE CAN UPDATE, EVERY THING IS FINE, DEl MESSAGE
-                LogManager.log(Level.INFO, "Updating index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME));
+                LogManager.msg_index(LogManager.LVL_INFO,  "Updating index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME));
                 update_document(doc, index_dsh);
 
                 // AND MARK AS "BEEN OFFICIALLY PIMPED"
@@ -1886,13 +1885,13 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception ex)
             {
-                LogManager.log(Level.SEVERE, "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
+                LogManager.msg_index(LogManager.LVL_ERR,  "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
                 // CONTINUE ANYWAY INDEX COULD BE READ ONLY
                 }
         }
         else
         {
-            LogManager.log(Level.INFO, "Skipping existing mail " + doc.get(CS_Constants.FLD_UID_NAME) + ",  exists already in da:" + da_id + " ds:" + ds_id);
+            LogManager.msg_index(LogManager.LVL_INFO,  "Skipping existing mail " + doc.get(CS_Constants.FLD_UID_NAME) + ",  exists already in da:" + da_id + " ds:" + ds_id);
             return true;
         }
         return false;
@@ -1932,7 +1931,7 @@ public class IndexManager extends WorkerParent
         }
         catch (VaultException vaultException)
         {
-            LogManager.err_log("Cannot delete mail " + unique_id + ": ", vaultException);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot delete mail " + unique_id + ": ", vaultException);
         }
     }
 

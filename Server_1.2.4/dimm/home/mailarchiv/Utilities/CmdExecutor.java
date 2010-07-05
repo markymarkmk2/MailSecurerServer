@@ -6,7 +6,6 @@ package dimm.home.mailarchiv.Utilities;
  */
 
 
-import dimm.home.mailarchiv.Main;
 import java.io.*;
 import java.util.ArrayList;
 
@@ -111,7 +110,7 @@ public class CmdExecutor
             }
             catch (Exception e )
             {
-                System.out.println(e.toString());
+                LogManager.msg_system(LogManager.LVL_ERR, e.toString());
             }
 
             if (found_data && out_line != null && out_line.length() > 0)
@@ -159,6 +158,7 @@ public class CmdExecutor
         
         worker = new SwingWorker("CmdExecutor")
         {
+            @Override
             public Object construct()
             {
                 int ret = -1;
@@ -219,7 +219,7 @@ public class CmdExecutor
                             sb.append(cmd[i] + " ");
                         }                    
                         
-                        Main.debug_msg( 1, sb.toString() );
+                        LogManager.msg_system(LogManager.LVL_DEBUG, sb.toString() );
                     }
                     
                     start_time = System.currentTimeMillis();
@@ -238,7 +238,7 @@ public class CmdExecutor
                 }
                 catch (Exception err)
                 {
-                    Main.err_log_fatal("Cannot execute command " + cmd[0] + ": " + err.getMessage() );
+                    LogManager.msg_system(LogManager.LVL_ERR, "Cannot execute command " + cmd[0] + ": " + err.getMessage() );
                     ret = -2;
                 }
                 Integer iret = new Integer(ret);
@@ -303,7 +303,7 @@ public class CmdExecutor
         catch (Exception e )
         {
             e.printStackTrace();
-            System.out.println(e.toString());
+            LogManager.msg_system(LogManager.LVL_ERR, e.toString());
         }
         stdout = null;
         stderr = null;
@@ -321,6 +321,7 @@ public class CmdExecutor
         return ret;
     }
     
+    @SuppressWarnings("empty-statement")
     public int exec()
     {
         int ret = -1;
@@ -374,7 +375,7 @@ public class CmdExecutor
         int ret = e.exec();
 
         
-        System.out.println("Finished with error " + new Integer(ret).toString());
+        LogManager.msg_system(LogManager.LVL_ERR, "Finished with error " + new Integer(ret).toString());
             
         System.out.println("StdOut: ");
         String err = e.get_err_text();

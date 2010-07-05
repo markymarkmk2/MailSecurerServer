@@ -55,7 +55,7 @@ public class Login extends ImapCmd
             }
             catch (AuthException authException)
             {
-                LogManager.err_log("IMAP Login failed", authException);
+                LogManager.msg_imaps(LogManager.LVL_ERR,"IMAP Login failed", authException);
             }
         }
 

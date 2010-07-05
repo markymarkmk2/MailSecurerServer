@@ -157,7 +157,7 @@ public class MailBoxFetcher extends WorkerParentChild
         props.put("mail." + protocol + ".timeout", 300 * 1000);
 
         props.put( "mail.debug", "false");
-        if (LogManager.get_debug_lvl() > 9)
+        if (LogManager.has_lvl(LogManager.TYP_FETCHER, LogManager.LVL_VERBOSE))
             props.put( "mail.debug", "true");
 
         connect(protocol, server, port, username, password, props);
@@ -167,7 +167,7 @@ public class MailBoxFetcher extends WorkerParentChild
     {
         Session session = Session.getDefaultInstance(props, null);
 
-        if (LogManager.get_debug_lvl() > 9)
+        if (LogManager.has_lvl(LogManager.TYP_FETCHER, LogManager.LVL_VERBOSE))
         {
             session.setDebug(true);
         }
@@ -188,25 +188,26 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (AuthenticationFailedException e)
         {
             status.set_status(StatusEntry.ERROR, "Error while connecting to mail server <" + server + ">: Authentication failed");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), e);
             throw new Exception(status.get_status_txt(), e);
         }
         catch (IllegalStateException ise)
         {
             status.set_status(StatusEntry.ERROR, "Mail server <" + server + "> is connected already");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ise);
             throw new Exception(status.get_status_txt(), ise);
         }
         catch (MessagingException me)
         {
+            status.set_status(StatusEntry.ERROR, "Connect failed for " + protocol + "://" + server + ":" + port + " Usr:" + username + " PWDHash:" + password.hashCode());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
 
-            LogManager.err_log("Connect failed for " + protocol + "://" + server + ":" + port + " Usr:" + username + " PWDHash:" + password.hashCode());
-            LogManager.err_log("StoreProps where " + props.toString() );
+            LogManager.msg_fetcher(LogManager.LVL_ERR, "StoreProps where " + props.toString() );
            // LogManager.err_log("SystmProps where " + System.getProperties().toString() );
             if (me.getMessage().contains("sun.security.validator.ValidatorException"))
             {
                 status.set_status(StatusEntry.ERROR, "TLS Server Certificate could not be validated for mail server <" + server + ">");
-                LogManager.err_log(status.get_status_txt());
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 throw new Exception(status.get_status_txt(), me);
             }
             else if (test_flag(CS_Constants.ACCT_USE_TLS_IF_AVAIL) && me.getMessage().contains("javax.net.ssl.SSLHandshakeException"))
@@ -217,7 +218,7 @@ public class MailBoxFetcher extends WorkerParentChild
             else
             {
                 status.set_status(StatusEntry.ERROR, "Could not connect to mail server <" + server + ">: " + me.getMessage());
-                LogManager.err_log(status.get_status_txt());
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 throw new Exception(status.get_status_txt(), me);
             }
         }
@@ -228,14 +229,14 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (Exception e)
         {
             status.set_status(StatusEntry.ERROR, "Could not resolve default folder on mail server <" + server + ">: " + e.getMessage());
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
             throw new Exception(status.get_status_txt(), e);
         }
 
         if (inboxFolder == null)
         {
             status.set_status(StatusEntry.ERROR, "Missing default folder on mail server <" + server + ">");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
             throw new Exception(status.get_status_txt());
         }
 
@@ -250,7 +251,7 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (Exception e)
         {
             status.set_status(StatusEntry.ERROR, "Missing INBOX folder on mail server <" + server + ">");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
             throw new Exception(status.get_status_txt(), e);
         }
         try
@@ -260,7 +261,7 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (Exception e)
         {
             status.set_status(StatusEntry.ERROR, "cannot open INBOX folder on mail server <" + server + ">");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
             throw new Exception(status.get_status_txt(), e);
         }
         return;
@@ -278,7 +279,7 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (UnknownHostException uhe)
         {
             status.set_status(StatusEntry.ERROR, "Cannot resolve IP of mail server <" + imfetcher.getServer() + ">");
-            LogManager.err_log(status.get_status_txt());
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
         }
 
         do_finish = false;
@@ -316,7 +317,7 @@ public class MailBoxFetcher extends WorkerParentChild
                 if (e.getCause() instanceof AuthenticationFailedException)
                 {
                     status.set_status(StatusEntry.ERROR, "Authentication with mail server <" + imfetcher.getServer() + "> failed");
-                    LogManager.err_log(status.get_status_txt());
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 }
                 else
                 {
@@ -327,7 +328,7 @@ public class MailBoxFetcher extends WorkerParentChild
                     }
                      * */
                     status.set_status(StatusEntry.ERROR, "Connecting mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
-                    LogManager.err_log(status.get_status_txt());
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 }
                 try
                 {
@@ -361,7 +362,7 @@ public class MailBoxFetcher extends WorkerParentChild
             catch (Exception e)
             {
                 status.set_status(StatusEntry.ERROR, "Disconnecting from mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
-                LogManager.err_log(status.get_status_txt());
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
             }
 
             // PAUSE TODO: PUT INTO PARAMETER
@@ -423,13 +424,13 @@ public class MailBoxFetcher extends WorkerParentChild
                 catch (IllegalStateException ise)
                 {
                     status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> is not connected");
-                    LogManager.err_log(status.get_status_txt(), ise);
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ise);
                     return;
                 }
                 catch (IndexOutOfBoundsException iobe)
                 {
                     status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> has invalid index");
-                    LogManager.err_log(status.get_status_txt(), iobe);
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), iobe);
                     return;
                 }
 
@@ -452,25 +453,25 @@ public class MailBoxFetcher extends WorkerParentChild
             catch (FolderClosedException fce)
             {
                 status.set_status(StatusEntry.BUSY, "Mail server <" + imfetcher.getServer() + "> has no open inbox folder");
-                LogManager.debug_msg(status.get_status_txt(), fce);
+                LogManager.msg_fetcher(LogManager.LVL_DEBUG, status.get_status_txt(), fce);
                 break;
             }
             catch (java.lang.IllegalStateException se)
             {
                 status.set_status(StatusEntry.BUSY, "Mail server <" + imfetcher.getServer() + "> has illegal state");
-                LogManager.debug_msg(status.get_status_txt(), se);
+                LogManager.msg_fetcher(LogManager.LVL_DEBUG, status.get_status_txt(), se);
                 break;
             }
             catch (MessagingException me)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> failed at idle call");
-                LogManager.err_log(status.get_status_txt(), me);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
                 break;
             }
             catch (Exception e)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> has exception");
-                LogManager.err_log(status.get_status_txt(), e);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), e);
                 break;
             }
         }
@@ -505,7 +506,7 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (ArchiveMsgException ex)
         {
             status.set_status(StatusEntry.ERROR, "Cannot archive message from <" + imfetcher.getServer() + ">");
-            LogManager.err_log(status.get_status_txt(), ex);
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ex);
             if (mail != null)
             {
                 try
@@ -514,7 +515,7 @@ public class MailBoxFetcher extends WorkerParentChild
                 }
                 catch (IOException iOException)
                 {
-                    LogManager.err_log("Cannot move mail to quarantine", iOException);
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, "Cannot move mail to quarantine", iOException);
                 }
             }
         }
@@ -532,7 +533,7 @@ public class MailBoxFetcher extends WorkerParentChild
         catch (Exception e)
         {
             status.set_status(StatusEntry.ERROR, "Cannot delete message <" + get_subject(message) + "> on Mail server <" + imfetcher.getServer() + ">");
-            LogManager.err_log(status.get_status_txt(), e);
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), e);
         }
     }
 
@@ -556,7 +557,7 @@ public class MailBoxFetcher extends WorkerParentChild
             catch (Exception ex)
             {
                 status.set_status(StatusEntry.ERROR, "Archive of message <" + get_subject(message) + "> failed on Mail server <" + imfetcher.getServer() + ">");
-                LogManager.err_log(status.get_status_txt(), ex);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ex);
                 complete = false;
                 // TODO ERROR HANDLING : REPEAT ETC ETC ETC, HOLY SHIT!!!!
             }
@@ -574,12 +575,12 @@ public class MailBoxFetcher extends WorkerParentChild
             catch (FolderNotFoundException folder)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> has no inbox folder");
-                LogManager.err_log(status.get_status_txt(), folder);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), folder);
             }
             catch (MessagingException me)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> failed to expunge deleted messages");
-                LogManager.err_log(status.get_status_txt(), me);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
             }
         }
 
@@ -606,37 +607,37 @@ public class MailBoxFetcher extends WorkerParentChild
             catch (FolderClosedException fce)
             {
                 status.set_status(StatusEntry.BUSY, "Mail server <" + imfetcher.getServer() + "> has no open inbox folder");
-                LogManager.debug_msg(status.get_status_txt(), fce);
+                LogManager.msg_fetcher(LogManager.LVL_DEBUG, status.get_status_txt(), fce);
                 return;
             }
             catch (FolderNotFoundException folder)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> has no inbox folder");
-                LogManager.err_log(status.get_status_txt(), folder);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), folder);
                 return;
             }
             catch (IllegalStateException ise)
             {
                 status.set_status(StatusEntry.BUSY, "Mail server <" + imfetcher.getServer() + "> has illegal state");
-                LogManager.debug_msg(status.get_status_txt(), ise);
+                LogManager.msg_fetcher(LogManager.LVL_DEBUG, status.get_status_txt(), ise);
                 return;
             }
             catch (IndexOutOfBoundsException iobe)
             {
                     status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> has invalid index");
-                    LogManager.err_log(status.get_status_txt(), iobe);
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), iobe);
                 return;
             }
             catch (MessagingException me)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> failed at get_messages call");
-                LogManager.err_log(status.get_status_txt(), me);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
                 return;
             }
             catch (Exception me)
             {
                 status.set_status(StatusEntry.ERROR, "Mail server <" + imfetcher.getServer() + "> exception at get_messages call");
-                LogManager.err_log(status.get_status_txt(), me);
+                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
                 return;
             }
 

@@ -70,7 +70,7 @@ public abstract class WorkerParent
         if (statusTxt.length() > 0 && statusTxt.compareTo(last_status) != 0)
         {
             String classname = this.getName();
-            LogManager.debug_msg(6, classname + ": " + statusTxt );
+            LogManager.msg_system( LogManager.LVL_VERBOSE, classname + ": " + statusTxt );
         }
         last_status = statusTxt;
     }

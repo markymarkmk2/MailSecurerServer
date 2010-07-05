@@ -87,7 +87,7 @@ public class POP3Connection extends ProxyConnection
 
             // THE FIRST RESPONSE FROM SERVER IS SINGLE LINE
             m_Command = POP_SINGLELINE;
-            int dbg_level = (int)Main.get_debug_lvl();
+            boolean is_verbose = LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE);
             boolean server_wait_input = pe.isSSL() ? false : true;
             
             
@@ -95,8 +95,8 @@ public class POP3Connection extends ProxyConnection
             {
 
                 // read the answer from the server
-                if (dbg_level >= DBG_VERB)
-                    log( DBG_VERB, Main.Txt("Waiting_for_Server..."));
+                if (is_verbose)
+                    log(  Main.Txt("Waiting_for_Server..."));
                 sData = getDataFromInputStream(serverReader, serverSocket, m_Command, /*wait*/ server_wait_input).toString();
 
                 // verify if the user stopped the thread
@@ -111,7 +111,7 @@ public class POP3Connection extends ProxyConnection
                     if (clientSocket.isConnected() && !clientSocket.isClosed() && clientWriter != null && sData.length() > 0)
                     {
                         // write the answer to the POP client
-                        log(1, "Error : " + getErrorMessage());
+                        LogManager.msg_proxy(LogManager.LVL_WARN,  "Error : " + getErrorMessage());
                         clientWriter.write(getErrorMessage().getBytes());
                         clientWriter.flush();
                     }
@@ -125,7 +125,7 @@ public class POP3Connection extends ProxyConnection
                     break;
                 }
 
-                if (dbg_level >= DBG_VERB)
+                if (is_verbose)
                     log( "S: " + sData);
 
                 
@@ -143,8 +143,8 @@ public class POP3Connection extends ProxyConnection
                 // reset the command
                 m_Command = POP_SINGLELINE;
 
-                if (dbg_level >= DBG_VERB)
-                    log( DBG_VERB, Main.Txt("Waiting_for_Client..."));
+                if (is_verbose)
+                    log(  Main.Txt("Waiting_for_Client..."));
                 
                 // read the POP command from the client
                 sData = getDataFromInputStream(clientReader, clientSocket, POP_SINGLELINE, /*waot*/ false).toString();
@@ -162,7 +162,7 @@ public class POP3Connection extends ProxyConnection
                     break;
                 }
 
-                if (dbg_level >= DBG_VERB)
+                if (is_verbose)
                     log( "C: " + sData);
                 
                 while (sData.toUpperCase().startsWith("RETR "))
@@ -187,7 +187,7 @@ public class POP3Connection extends ProxyConnection
                     }
                     
                     sData = getDataFromInputStream(clientReader, clientSocket, POP_SINGLELINE, /*wait*/ false).toString();
-                    if (dbg_level >= DBG_VERB)
+                    if (is_verbose)
                         log( "C: " + sData);
 
                     
@@ -222,20 +222,20 @@ public class POP3Connection extends ProxyConnection
         {
             String msgerror = Main.Txt("Verify_that_you_are_connected_to_the_internet_or_that_the_POP_server_'") + pe.get_proxy().getRemoteServer() + Main.Txt("'_exists.");
             //Common.showError(msgerror);
-            Main.err_log(msgerror);
+            LogManager.msg_proxy(LogManager.LVL_ERR, msgerror);
         }
         catch (Exception e)
         {
             if (!pe.is_finished())
             {
-                LogManager.err_log(get_description() + ": " + e.getMessage() + " last command:" + last_command);
+                LogManager.msg_proxy(LogManager.LVL_DEBUG, get_description() + ": " + e.getMessage() + " last command:" + last_command);
             }
         }
         finally
         {
             closeConnections();            
         }
-        log(DBG_VERB -2, Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer()  );
+        log( Main.Txt("Finished") + " " + pe.get_proxy().getRemoteServer()  );
     }  // handleConnection
 
 
@@ -316,7 +316,7 @@ public class POP3Connection extends ProxyConnection
         catch (Exception exc)
         {
             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-            Main.err_log_fatal("Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+            LogManager.msg_proxy(LogManager.LVL_ERR, "Cannot close rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
             if (Main.get_bool_prop(MandantPreferences.ALLOW_CONTINUE_ON_ERROR, false) == false)
             {

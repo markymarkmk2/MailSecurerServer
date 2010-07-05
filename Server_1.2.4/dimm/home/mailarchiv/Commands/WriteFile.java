@@ -9,9 +9,9 @@
 
 package dimm.home.mailarchiv.Commands;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.File;
 import java.io.FileOutputStream;
-import dimm.home.mailarchiv.Main;
 import home.shared.Utilities.ParseToken;
 
 /**
@@ -57,7 +57,7 @@ public class WriteFile extends AbstractCommand
 
         boolean ok = true;
         
-        Main.debug_msg( 1, "Schreibe " + file_len + " Byte in Datei " + filename );
+        LogManager.msg_system(LogManager.LVL_DEBUG,  "Schreibe " + file_len + " Byte in Datei " + filename );
         
         try
         {
@@ -68,7 +68,7 @@ public class WriteFile extends AbstractCommand
         
         catch (Exception exc)
         {
-            Main.err_log_fatal("Kann Datei " + filename + " nicht schreiben: " + exc.getMessage() );
+            LogManager.msg_system(LogManager.LVL_ERR, "Kann Datei " + filename + " nicht schreiben: " + exc.getMessage() );
             ok = false;
         }        
         return ok;

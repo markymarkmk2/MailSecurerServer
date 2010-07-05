@@ -18,6 +18,7 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.SQL.OptCBEntry;
 import home.shared.SQL.UserSSOEntry;
 import java.util.ArrayList;
@@ -153,7 +154,7 @@ public class MailKonto
    
     public String getParameter(String folder)
     {
-        System.out.println("getParameter " + folder);
+        LogManager.msg_imaps(LogManager.LVL_VERBOSE, "getParameter " + folder);
         //Eigenschaften ermiiteln
         return "";
     }
@@ -195,7 +196,7 @@ public class MailKonto
         else
         {
             if (is.trace)
-                System.out.println(o);
+                LogManager.msg_imaps(LogManager.LVL_VERBOSE, o.toString());
         }
     }
 
@@ -219,7 +220,7 @@ public class MailKonto
     public MailFolder select(String key)
     {
         if (is.trace)
-            System.out.println("select " + key);
+            LogManager.msg_imaps(LogManager.LVL_VERBOSE, "select " + key);
 
         for (int i = 0; i < mail_folders.size(); i++)
         {

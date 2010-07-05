@@ -100,7 +100,7 @@ class HexLongComparator implements SortComparatorSource
                 } 
                 catch (Exception e)
                 {
-                    LogManager.err_log("Cannot read doc", e);
+                    LogManager.msg_index(LogManager.LVL_ERR, "Cannot read doc", e);
                 }
                 return 0;
             }
@@ -291,7 +291,7 @@ public class SearchCall
         }
         catch (Exception iOException)
         {
-            LogManager.err_log_fatal("Cannot retrieve results from index", iOException);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot retrieve results from index", iOException);
         }
         return null;
     }
@@ -538,7 +538,7 @@ public class SearchCall
         
 
         Query qry = build_lucene_qry(logic_list, ana);
-        LogManager.debug_msg(2, "Qry is: " + qry.toString());
+        LogManager.msg_index(LogManager.LVL_DEBUG,  "Qry is: " + qry.toString());
 
         run_lucene_searcher(dsh_list, qry, filter, n, level, ssoc);
     }
@@ -575,7 +575,7 @@ public class SearchCall
         
 
         Query qry = build_lucene_qry(lucene_qry, ana);
-        LogManager.debug_msg(2, "Qry is: " + lucene_qry);
+        LogManager.msg_index(LogManager.LVL_DEBUG,  "Qry is: " + lucene_qry);
 
         run_lucene_searcher(dsh_list, qry, filter, n, level, ssoc);
     }
@@ -755,7 +755,7 @@ public class SearchCall
 
         gather_lucene_qry_text( m_ctx, sb, logic_list, 0);
 
-        LogManager.debug_msg(2, "QueryParser: " + sb.toString());
+        LogManager.msg_index(LogManager.LVL_DEBUG,  "QueryParser: " + sb.toString());
 
         QueryParser parser = new QueryParser("FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
@@ -827,7 +827,7 @@ public class SearchCall
             DiskSpaceHandler dsh = dsh_list.get(i);
             if (dsh.islock_for_rebuild())
             {
-                LogManager.debug("Skipping index " + dsh.getDs().getPath() + " during rebuild");
+                LogManager.msg_index(LogManager.LVL_DEBUG, "Skipping index " + dsh.getDs().getPath() + " during rebuild");
                 continue;
             }
             IndexReader reader = null;
@@ -840,11 +840,11 @@ public class SearchCall
             }
             catch (VaultException vaultException)
             {
-                LogManager.err_log("Cannot open index " + dsh.getDs().getPath(), vaultException);
+                LogManager.msg_index(LogManager.LVL_ERR, "Cannot open index " + dsh.getDs().getPath(), vaultException);
             }
             catch (IndexException exc)
             {
-                LogManager.err_log("Cannot read index " + dsh.getDs().getPath(), exc);
+                LogManager.msg_index(LogManager.LVL_ERR, "Cannot read index " + dsh.getDs().getPath(), exc);
             }
         }
 
@@ -872,7 +872,7 @@ public class SearchCall
 
         long diff = System.currentTimeMillis() - start_time;
 
-        System.out.println("Search too " + diff + "ms");
+        LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX, "Search took " + diff + "ms");
         
         ScoreDoc[] sdocs = tdocs.scoreDocs;
         for (int k = sdocs.length - 1; k >= 0; k--)
@@ -964,11 +964,11 @@ public class SearchCall
         }
         catch (IOException ex)
         {
-            LogManager.err_log("Cannot open mail stream", ex);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot open mail stream", ex);
         }
         catch (VaultException ex)
         {
-            LogManager.err_log("Cannot open mail stream", ex);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot open mail stream", ex);
         }
 
         return "1: cannot open";
@@ -989,7 +989,7 @@ public class SearchCall
         }
         catch (VaultException ex)
         {
-            LogManager.err_log("Cannot open mail stream", ex);
+            LogManager.msg_index(LogManager.LVL_ERR, "Cannot open mail stream", ex);
             return null;
         }
     }
@@ -1100,7 +1100,7 @@ public class SearchCall
         ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, true );
         if (logic_list == null)
         {
-            LogManager.err_log(Main.Txt("Invalid_role_filter"));
+            LogManager.msg_index(LogManager.LVL_ERR, Main.Txt("Invalid_role_filter"));
             return false;
         }
 

@@ -145,7 +145,7 @@ public class BackupScript extends WorkerParentChild
         }
         catch (Exception parseException)
         {
-            LogManager.err_log("Startdatum_ist_nicht_okay", parseException);
+            LogManager.msg_backup( LogManager.LVL_ERR, "Startdatum_ist_nicht_okay", parseException);
             base_date = new Date();
         }
     }
@@ -412,7 +412,7 @@ public class BackupScript extends WorkerParentChild
         final ArrayList<SourceTargetEntry> backup_dir_list = new ArrayList<SourceTargetEntry>();
         if (!(vault instanceof DiskVault))
         {
-            LogManager.err_log("Backup ist only supported for Diskvaults");
+            LogManager.msg_backup( LogManager.LVL_ERR, "Backup ist only supported for Diskvaults");
             return false;
         }
         final DiskVault dv = (DiskVault) vault;
@@ -443,7 +443,7 @@ public class BackupScript extends WorkerParentChild
 
         if (ba_thread != null && ba_thread.isAlive())
         {
-            LogManager.err_log("Backup already running");
+            LogManager.msg_backup( LogManager.LVL_ERR, "Backup already running");
             return false;
         }
 
@@ -465,7 +465,7 @@ public class BackupScript extends WorkerParentChild
                 }
                 catch (Exception ex)
                 {
-                     LogManager.err_log("Error occured while running backup script " + backup.getId() + ": ", ex);
+                     LogManager.msg_backup( LogManager.LVL_ERR, "Error occured while running backup script " + backup.getId() + ": ", ex);
                 }
                 
             }
@@ -529,7 +529,7 @@ public class BackupScript extends WorkerParentChild
                 }
                 catch (Exception e)
                 {
-                    LogManager.err_log("Error during sync", e);
+                    LogManager.msg_backup( LogManager.LVL_ERR, "Error during sync", e);
                 }
                
                 if (ret == null)
@@ -537,14 +537,14 @@ public class BackupScript extends WorkerParentChild
                     ste.post_action();
 
                     ok = false;
-                    LogManager.err_log("Error while contacting backup server");
+                    LogManager.msg_backup( LogManager.LVL_ERR, "Error while contacting backup server");
                     break;
                 }
                 if (ret.charAt(0) != '0')
                 {
                     ste.post_action();
 
-                    LogManager.err_log(Main.Txt("Error_during_start_backup_of") + " " + ste.getName() + ": " + ret);
+                    LogManager.msg_backup( LogManager.LVL_ERR, Main.Txt("Error_during_start_backup_of") + " " + ste.getName() + ": " + ret);
                     ok = false;
                     break;
                 }
@@ -563,7 +563,7 @@ public class BackupScript extends WorkerParentChild
         }
         catch (Exception exc )
         {
-            LogManager.err_log(Main.Txt("Error_during_start_backup"), exc);
+            LogManager.msg_backup( LogManager.LVL_ERR, Main.Txt("Error_during_start_backup"), exc);
         }
         finally
         {
@@ -602,7 +602,7 @@ public class BackupScript extends WorkerParentChild
         String ret = sync_cmd.send_cmd( "abort_task " + SY_FILEJOB_ID  );
         if (ret == null || ret .charAt(0) != ' ')
         {
-            LogManager.err_log("Error while aborting backup server");
+            LogManager.msg_backup( LogManager.LVL_ERR, "Error while aborting backup server");
         }
     }
     void finish_backup(DimmCommand sync_cmd )
@@ -611,7 +611,7 @@ public class BackupScript extends WorkerParentChild
         String ret = sync_cmd.send_cmd( "abort_task " + SY_FILEJOB_ID  );
         if (ret == null || ret .charAt(0) != ' ')
         {
-            LogManager.err_log("Error while finishing backup server");
+            LogManager.msg_backup( LogManager.LVL_ERR, "Error while finishing backup server");
         }
     }
 
@@ -632,7 +632,7 @@ public class BackupScript extends WorkerParentChild
             String ret = sync_cmd.send_cmd( cmd );
             if (ret == null || ret.charAt(0) != '0')
             {
-                LogManager.err_log("Error while contacting backup server");
+                LogManager.msg_backup( LogManager.LVL_ERR, "Error while contacting backup server");
                 break;
             }
             // EMPTY ?
@@ -651,7 +651,7 @@ public class BackupScript extends WorkerParentChild
 
             job_status = ret;
             // "ID:%ld TB:%.0lf CB:%.0lf TF:%ld TD:%ld CF:%ld CD:%ld SP:%.0lf STF:%.0lf SCF:%.0lf LT:%.0lf PC:%d",
-            System.out.println(ret);
+            //System.out.println(ret);
             
             long state = pt.GetLong("JS:");
             if (state == DimmCommand.JOB_READY)

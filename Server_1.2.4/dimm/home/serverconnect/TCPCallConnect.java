@@ -127,7 +127,7 @@ public class TCPCallConnect extends WorkerParent
             if (server_port == 0)
             {
                 server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
-                LogManager.info_msg("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
+                LogManager.msg_comm( LogManager.LVL_INFO,"Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
             }            
         }
         else
@@ -136,7 +136,7 @@ public class TCPCallConnect extends WorkerParent
         }
         if (!use_ssl)
         {
-            LogManager.err_log_warn("Starting TCPListener w/o SSL on  port " + server_port);
+            LogManager.msg_comm( LogManager.LVL_WARN,"Starting TCPListener w/o SSL on  port " + server_port);
         }
 
 
@@ -539,7 +539,7 @@ public class TCPCallConnect extends WorkerParent
         catch (IOException iOException)
         {
             // CLIENT CLOSED CONN
-            LogManager.info_msg("Client " + s.getRemoteSocketAddress().toString() + " closed connection");
+            LogManager.msg_comm( LogManager.LVL_WARN,"Client " + s.getRemoteSocketAddress().toString() + " closed connection");
             return false;
         }
         
@@ -574,10 +574,10 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, String ret, OutputStream out ) throws IOException
     {
-        if (Main.get_debug_lvl() < DBG_LVL_VERB && ret.length() > 80)
-            Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret.substring(0, 80) + "...>");
+        if (ret.length() > 80)
+            LogManager.msg_comm( LogManager.LVL_VERBOSE, "Answer is <" + ret.substring(0, 80) + "...>");
         else
-            Main.debug_msg( DBG_LVL_VERB - 1, "Answer is <" + ret + ">");
+            LogManager.msg_comm( LogManager.LVL_VERBOSE, "Answer is <" + ret + ">");
 
         StringBuffer answer = new StringBuffer();
 
@@ -616,7 +616,7 @@ public class TCPCallConnect extends WorkerParent
 
     void write_tcp_answer( boolean ok, long alen, InputStream in, OutputStream out ) throws IOException
     {
-        Main.debug_msg(DBG_LVL_VERB -1, "Answer is stream with len " + alen + ">");
+        LogManager.msg_comm( LogManager.LVL_VERBOSE, "Answer is stream with len " + alen + ">");
 
         StringBuffer answer = new StringBuffer();
 
@@ -655,7 +655,7 @@ public class TCPCallConnect extends WorkerParent
             int rlen = in.read(buff, 0, (int) blen);
             if (rlen < 0)
             {
-                System.out.println("Short read wants: " + start_len + " left over: " + alen);
+                LogManager.msg_system(LogManager.LVL_ERR, "Short read wants: " + start_len + " left over: " + alen);
                 
                 while (alen-- > 0)
                     out.write(' ');
@@ -732,7 +732,7 @@ public class TCPCallConnect extends WorkerParent
                     if (arg.startsWith("SSO:") && arg.indexOf('.') >= 5 && Character.isDigit( arg.charAt(4)) )
                     {
                         String sso_token = arg.substring(4);
-                        Main.debug_msg(DBG_LVL_VERB - 1, "Detected SSO <" + sso_token + ">");
+                        LogManager.msg_comm( LogManager.LVL_VERBOSE, "Detected SSO <" + sso_token + ">");
 
                         if (!is_valid_sso(sso_token))
                         {
@@ -755,7 +755,7 @@ public class TCPCallConnect extends WorkerParent
 
                 args.append( params.get(i) );
             }
-            Main.debug_msg(DBG_LVL_VERB - 1, "Received ip command <" + cmd + " " + args + "> ");
+            LogManager.msg_comm( LogManager.LVL_VERBOSE,  "Received ip command <" + cmd + " " + args + "> ");
 
             // call_ ARE THE OLDSTYLE FUNCS
             if (cmd.substring(0,5).compareTo("call_") == 0 )
@@ -780,7 +780,7 @@ public class TCPCallConnect extends WorkerParent
                             return;
                         }
                     }
-                    Main.err_log("Unknown funtion call " + cmd_name);
+                    LogManager.msg_comm( LogManager.LVL_ERR, "Unknown funtion call " + cmd_name);
                     throw new Exception( "Unknown function call " + cmd_name);
                 }
                 catch (Exception iOException)
@@ -815,7 +815,7 @@ public class TCPCallConnect extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, "Starting communicator tasks");
+        LogManager.msg_comm( LogManager.LVL_DEBUG,  "Starting communicator tasks");
         if (is_started)
             return true;
 
@@ -968,7 +968,7 @@ public class TCPCallConnect extends WorkerParent
                                 exc.printStackTrace();
                                 setStatusTxt("Communication aborted: " + exc.getMessage());
                                 setGoodState(false);
-                                Main.err_log(getStatusTxt());
+                                LogManager.msg_comm( LogManager.LVL_ERR, getStatusTxt());
                             }
                         }
                         finally
@@ -996,7 +996,7 @@ public class TCPCallConnect extends WorkerParent
                 if (!isShutdown())
                 {
                     exc.printStackTrace();
-                    Main.err_log("Kommunikationsport geschlossen: " + exc.getMessage());
+                    LogManager.msg_comm( LogManager.LVL_ERR, "Kommunikationsport geschlossen: " + exc.getMessage());
                     this.setStatusTxt("Communication is closed (2 processes?): " + exc.getMessage());
                     this.setGoodState(false);
                     
@@ -1195,7 +1195,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of execute <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -1218,7 +1218,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of execute <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -1250,7 +1250,7 @@ public class TCPCallConnect extends WorkerParent
             {
                 tx.rollback();
             }
-            Main.err_log("Call of delete object failed:" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of delete object failed:" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
         finally
@@ -1274,7 +1274,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of query <" + cmd + "> gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of query <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -1292,7 +1292,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getMetaData gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of getMetaData gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -1346,7 +1346,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getMetaData gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of getMetaData gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -1370,7 +1370,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getSQLFirstRowField <" + qry + "> gave :" + exc.getMessage());
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of getSQLFirstRowField <" + qry + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
         finally

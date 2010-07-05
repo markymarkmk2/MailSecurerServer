@@ -136,7 +136,7 @@ public class LicenseChecker
                 }
                 catch (Exception iOException)
                 {
-                    LogManager.err_log("Cannot create demo ticket:", iOException);
+                    LogManager.msg_license( LogManager.LVL_ERR, "Cannot create demo ticket:", iOException);
                 }
             }
         }
@@ -151,7 +151,7 @@ public class LicenseChecker
         }
         catch (IOException iOException)
         {
-            LogManager.err_log("Cannot create hwid:", iOException);
+            LogManager.msg_license( LogManager.LVL_ERR, "Cannot create hwid:", iOException);
             return null;
         }
     }
@@ -333,7 +333,7 @@ public class LicenseChecker
                 }
                 catch (Exception exc)
                 {
-                    LogManager.err_log(Main.Txt("Error_while_reading_usermap"), exc);
+                    LogManager.msg_license( LogManager.LVL_ERR, Main.Txt("Error_while_reading_usermap"), exc);
                 }
                 finally
                 {
@@ -351,7 +351,7 @@ public class LicenseChecker
             }
             if (license_user_map == null)
             {
-                LogManager.err_log_warn(Main.Txt("Beginning_a_new_usermap,_file_was_not_found_or_broken"));
+                LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("Beginning_a_new_usermap,_file_was_not_found_or_broken"));
                 license_user_map = new HashMap<String, StatMailAddress>();
             }
         }
@@ -372,7 +372,7 @@ public class LicenseChecker
             }
             catch (Exception exception)
             {
-                LogManager.err_log_warn(Main.Txt("Cannot_write_usermap") + ": " + exception.getLocalizedMessage());
+                LogManager.msg_license( LogManager.LVL_ERR, Main.Txt("Cannot_write_usermap") + ": " + exception.getLocalizedMessage());
             }
             finally
             {
@@ -418,7 +418,7 @@ public class LicenseChecker
             // THIS ONE IS TRICKY: WE HAVE NOT FOUND AN EMAIL TO LICENSE, THIS SHOULD NOT HAPPEN, BECAUSE THIS MAILD SHOULD HAVE BEEN REJECTED BEFORE
             if (email == null)
             {
-                LogManager.err_log_warn(Main.Txt("No_email_to_license_found"));
+                LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("No_email_to_license_found"));
                 return false;
             }
 
@@ -480,7 +480,7 @@ public class LicenseChecker
                 {
                     if ((now - entry.getValue().getTimestamp()) > MAX_STAY_VALID_MS)
                     {
-                        LogManager.info_msg(Main.Txt("Removing_inactive_user_from_usermap") + ": " + entry.getValue().get_mail());
+                        LogManager.msg_license( LogManager.LVL_INFO, Main.Txt("Removing_inactive_user_from_usermap") + ": " + entry.getValue().get_mail());
                         set.remove(entry);
                         done = false;
                         break;
@@ -563,16 +563,16 @@ public class LicenseChecker
                     boolean valid = t.isValid();
                     ValidTicketContainer vtck = new ValidTicketContainer(t, valid);
                     if (valid)
-                        LogManager.info_msg(Main.Txt("Found_valid_license") + ": " + vtck.getTicket().toString());
+                        LogManager.msg_license( LogManager.LVL_INFO, Main.Txt("Found_valid_license") + ": " + vtck.getTicket().toString());
                     else
-                         LogManager.err_log_warn( vtck.getTicket().getLastErrMessage());
+                        LogManager.msg_license( LogManager.LVL_ERR,  vtck.getTicket().getLastErrMessage());
                     
                     return vtck;
                 }
             }
             catch (Exception exc)
             {
-                LogManager.err_log_warn( "Found invalid license ticket " + lic_path + ": " + exc);
+                LogManager.msg_license( LogManager.LVL_WARN,  "Found invalid license ticket " + lic_path + ": " + exc);
 
             }
             finally
@@ -591,7 +591,7 @@ public class LicenseChecker
         }
         else
         {
-            LogManager.err_log_warn(Main.Txt("No License was found"));
+            LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("No License was found"));
         }
         return null;
     }
@@ -612,7 +612,7 @@ public class LicenseChecker
         }
         catch (Exception exception)
         {
-            LogManager.err_log_warn(Main.Txt("Cannot_write_license_ticket") + ": " + exception.getLocalizedMessage());
+            LogManager.msg_license( LogManager.LVL_ERR, Main.Txt("Cannot_write_license_ticket") + ": " + exception.getLocalizedMessage());
         }
         finally
         {

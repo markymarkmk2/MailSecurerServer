@@ -6,12 +6,10 @@
 package dimm.home.mailarchiv.Utilities;
 
 import dimm.home.mailarchiv.*;
-import home.shared.CS_Constants;
 import home.shared.Utilities.CryptTools;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -76,7 +74,7 @@ public class Preferences
     }
     private void warn_unknown( String p)
     {
-        Main.err_log_warn(Main.Txt("Unknown_property") + " <" + p + ">");
+        LogManager.msg_system(LogManager.LVL_ERR, Main.Txt("Unknown_property") + " <" + p + ">");
     }
 
     public String get_prop( String p )
@@ -122,7 +120,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            LogManager.err_log( Main.Txt("Cannot_read_boolean_property") + ": ", exc);
+            LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_read_boolean_property") + ": ", exc);
         }
 
         return false;
@@ -149,7 +147,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            LogManager.err_log( Main.Txt("Cannot_read_long_property") + ": ", exc);
+            LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_read_long_property") + ": ", exc);
         }
 
         return -1;
@@ -177,7 +175,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            LogManager.err_log( Main.Txt("Cannot_read_int_property") + ": ", exc);
+            LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_read_int_property") + ": ", exc);
         }
 
         return -1;
@@ -216,7 +214,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            LogManager.err_log( Main.Txt("Cannot_read_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
+            LogManager.msg_system( LogManager.LVL_ERR, Main.Txt("Cannot_read_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
         }
 
         password = get_prop(ENC_PASSWORD);
@@ -231,7 +229,7 @@ public class Preferences
             String str = CryptTools.crypt_internal(password, LogManager.get_instance(), CryptTools.ENC_MODE.DECRYPT);
             if (str == null)
             {
-                LogManager.err_log_fatal("Cannot decrypt password from preferences");
+                LogManager.msg_system( LogManager.LVL_ERR, "Cannot decrypt password from preferences");
             }
             else
             {
@@ -253,7 +251,7 @@ public class Preferences
     {
         if (password == null)
         {
-            LogManager.err_log_fatal("There is no password set");
+            LogManager.msg_system( LogManager.LVL_ERR, "There is no password set");
         }
         else
         {
@@ -271,7 +269,7 @@ public class Preferences
         }
         catch (Exception exc)
         {
-            LogManager.err_log( Main.Txt("Cannot_write_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
+            LogManager.msg_system( LogManager.LVL_ERR,  Main.Txt("Cannot_write_properties") + " " + prop_file.getAbsolutePath() + ": ", exc);
         }
         return false;
     }

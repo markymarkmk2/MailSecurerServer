@@ -93,7 +93,7 @@ public class DBSAuth extends GenericRealmAuth
                 return new DBSUserContext(mailUser);
             }
         }
-        LogManager.info_msg( "DBS auth failed");
+        LogManager.msg_auth( LogManager.LVL_ERR, "DBS auth failed for user: " + user_principal);
         error_txt = Main.Txt("Authentication_failed");
 
         return null;

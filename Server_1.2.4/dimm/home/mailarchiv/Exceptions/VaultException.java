@@ -34,27 +34,27 @@ public class VaultException extends Exception {
     {
         super(msg);
         exc.printStackTrace();
-        LogManager.err_log_fatal( "VaultException: " + msg + ": " + exc.getMessage());
+        LogManager.msg_vault( LogManager.LVL_ERR, "VaultException: " + msg + ": ", exc);
     }
     public VaultException(DiskSpace ds, String msg, Exception exc )
     {
         super("DiskSpace <" + ds.getPath() + ">: " + msg);
         exc.printStackTrace();
-        LogManager.err_log_fatal( "VaultException: " + this.getMessage() + ": " + exc.getMessage());
+        LogManager.msg_vault( LogManager.LVL_ERR, "VaultException: " + this.getMessage() + ": ", exc);
 
     }
     public VaultException(DiskSpace ds, String msg)
     {
         super("DiskSpace <" + ds.getPath() + ">: " + msg);
        
-        LogManager.err_log_fatal( "VaultException: " + this.getMessage() );
+        LogManager.msg_vault( LogManager.LVL_ERR, "VaultException: " + this.getMessage() + ": " );
 
     }
     public VaultException(DiskSpace ds, Exception exc )
     {
         super("DiskSpace <" + ds.getPath() + ">: " + exc.getMessage());
         exc.printStackTrace();
-        LogManager.err_log_fatal( "VaultException: " + this.getMessage());
+        LogManager.msg_vault( LogManager.LVL_ERR, "VaultException: " + this.getMessage() + ": ");
 
     }
 }

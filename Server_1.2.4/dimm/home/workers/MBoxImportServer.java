@@ -163,7 +163,7 @@ public class MBoxImportServer extends WorkerParent
             }
             catch (Exception e)
             {
-                LogManager.err_log_fatal("Work_jobs got exception", e);
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Work_jobs got exception", e);
             }
          }
         finished = true;
@@ -200,12 +200,12 @@ public class MBoxImportServer extends WorkerParent
             mbie.status = "Error while parsing mbox file " + mbi.get_msg_file().getAbsolutePath() + ": " + extractionException.getMessage();
             mbie.err = 2;
 
-            LogManager.err_log(mbie.status, extractionException);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, mbie.status, extractionException);
             return;
         }
         try
         {
-            LogManager.info_msg(Main.Txt("Starting_import") + " N=" + mbie.total_msg + " (" + Long.toString(mbie.size/(1000*1000)) + "MB)" );
+            LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Starting_import") + " N=" + mbie.total_msg + " (" + Long.toString(mbie.size/(1000*1000)) + "MB)" );
             long start_t = System.currentTimeMillis();
             int i = 0;
             for (i = 0; i < mbie.total_msg; i++)
@@ -227,7 +227,7 @@ public class MBoxImportServer extends WorkerParent
             {
                 speed = (int)((1000*i) / (end_t - start_t));
             }
-            LogManager.info_msg(Main.Txt("Messages_imported") + ": " + i + " (" + speed + "/s)" );
+            LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Messages_imported") + ": " + i + " (" + speed + "/s)" );
         }
         catch (Exception exception)
         {
@@ -235,7 +235,7 @@ public class MBoxImportServer extends WorkerParent
             mbie.status = "Error while extracting mbox file " + mbi.get_msg_file().getAbsolutePath() + " at message " + mbie.act_msg + ": " + exception.getMessage();
             mbie.err = 3;
 
-            LogManager.err_log(mbie.status, exception);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, mbie.status, exception);
             return;
         }
         finally

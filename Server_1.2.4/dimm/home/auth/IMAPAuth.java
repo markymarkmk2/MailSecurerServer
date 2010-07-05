@@ -133,7 +133,7 @@ public class IMAPAuth extends GenericRealmAuth
         }
         catch (Exception exc)
         {
-            LogManager.err_log("Cannot connect to IMAP server " + protocol + "://" + host + ":" + port, exc );
+            LogManager.msg_auth( LogManager.LVL_ERR, "Cannot connect to IMAP server " + protocol + "://" + host + ":" + port, exc );
         }
         return null;
     }

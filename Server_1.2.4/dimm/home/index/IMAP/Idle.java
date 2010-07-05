@@ -5,7 +5,7 @@
 package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.LogicControl;
-import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 
@@ -76,7 +76,7 @@ public class Idle extends ImapCmd
                         throw new Exception("read_line empty");
                     }
                     if (is.trace)
-                        System.out.println( "In: " + rline );
+                        LogManager.msg_imaps(LogManager.LVL_VERBOSE,  "In: " + rline );
 
                     if (rline.toLowerCase().startsWith("done") || rline.toLowerCase().endsWith("close") || rline.toLowerCase().endsWith("logout"))
                     {

@@ -11,6 +11,7 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.Utilities.ParseToken;
 
 /**
@@ -26,6 +27,7 @@ public class StartVPN extends AbstractCommand
         super("STARTVPN");
     }
 
+    @Override
     public boolean do_command(String data)
     {
         answer = "";
@@ -57,7 +59,7 @@ public class StartVPN extends AbstractCommand
             int ret = exe.exec();
             if (ret != 0)
             {
-                Main.err_log("Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
+                LogManager.msg_system(LogManager.LVL_ERR, "Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
             }
             answer = "VPN:" + ret;
         }
@@ -72,7 +74,7 @@ public class StartVPN extends AbstractCommand
             int ret = exe.exec();
             if (ret != 0)
             {
-                Main.err_log("Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
+                LogManager.msg_system(LogManager.LVL_ERR, "Start VPN gave " + exe.get_out_text() + " " + exe.get_err_text() );
             }
             
             answer = "VPN:" + ret;

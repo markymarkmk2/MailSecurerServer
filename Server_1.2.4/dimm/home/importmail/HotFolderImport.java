@@ -355,7 +355,7 @@ public class HotFolderImport extends WorkerParentChild
         }
         catch (MessagingException ex)
         {
-            LogManager.log(Level.SEVERE, null, ex);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_HOTFOLDER, "handle_hotfolder_file failed", ex);
         }
 
         // TODO: QUARANTINE FOR FAILED OBJECTS

@@ -4,7 +4,6 @@
  */
 package dimm.home.hibernate;
 
-import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CompressingDailyRollingFileAppender;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.sql.Connection;
@@ -52,7 +51,7 @@ public class HibernateUtil
 
             conf = conf.setProperty(Environment.FORMAT_SQL, "false");
             // ADFUST SETTINGS
-            if (Main.get_debug_lvl() > 9)
+            if (LogManager.has_lvl(LogManager.TYP_SYSTEM, LogManager.LVL_VERBOSE))
             {
                 conf = conf.setProperty(Environment.SHOW_SQL, "true");
             }

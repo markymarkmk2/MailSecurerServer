@@ -2,9 +2,9 @@ package dimm.home.serverconnect;
 
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.Commands.AbstractCommand;
-import dimm.home.mailarchiv.Communicator;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -237,6 +237,10 @@ public class MWWebService
             return "1: " + exception.getMessage();
         }
     }
+    void err_log( String s )
+    {
+        LogManager.msg_comm( LogManager.LVL_ERR, s );
+    }
 
     @WebMethod(operationName = "execute")
     public String execute( @WebParam(name = "statement") String stmt_txt, @WebParam(name = "cmd") String cmd )
@@ -252,7 +256,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
+            err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -271,7 +275,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
+            err_log("Call of execute <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -292,7 +296,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of query <" + cmd + "> gave :" + exc.getMessage());
+            err_log("Call of query <" + cmd + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -311,7 +315,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getMetaData gave :" + exc.getMessage());
+            err_log("Call of getMetaData gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -366,7 +370,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getMetaData gave :" + exc.getMessage());
+            err_log("Call of getMetaData gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
     }
@@ -390,7 +394,7 @@ public class MWWebService
         }
         catch (Exception exc)
         {
-            Main.err_log("Call of getSQLFirstRowField <" + qry + "> gave :" + exc.getMessage());
+            err_log("Call of getSQLFirstRowField <" + qry + "> gave :" + exc.getMessage());
             return "1: " + exc.getMessage();
         }
         finally

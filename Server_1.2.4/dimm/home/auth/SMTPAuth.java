@@ -10,8 +10,6 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.Socket;
 
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.AuthenticationFailedException;
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -162,19 +160,19 @@ public class SMTPAuth extends GenericRealmAuth
                 {
                     code = transport.simpleCommand("MAIL FROM:" + mailadr);
                     String ret = transport.getLastServerResponse();
-                    LogManager.debug_msg(4, ret);
+                    LogManager.msg_auth( LogManager.LVL_VERBOSE, ret);
                 }
                 if (is_smtp_ok(code))
                 {
                     code = transport.simpleCommand("RCPT TO:" + mailadr);
                     String ret = transport.getLastServerResponse();
-                    LogManager.debug_msg(4, ret);
+                    LogManager.msg_auth( LogManager.LVL_VERBOSE, ret);
                 }
                 if (is_smtp_ok(code))
                 {
                     code = transport.simpleCommand("RSET");
                     String ret = transport.getLastServerResponse();
-                    LogManager.debug_msg(4, ret);
+                    LogManager.msg_auth( LogManager.LVL_VERBOSE, ret);
                 }
             }
 
@@ -183,18 +181,18 @@ public class SMTPAuth extends GenericRealmAuth
             else
             {
                 String ret = transport.getLastServerResponse();
-                LogManager.err_log( "SMTP auth failed: " + ret);
+                LogManager.msg_auth( LogManager.LVL_ERR, "SMTP auth failed: " + ret);
                 error_txt = ret;
             }
         }
         catch (AuthenticationFailedException exc)
         {
-            LogManager.info_msg( "SMTP auth failed");
+            LogManager.msg_auth( LogManager.LVL_ERR, "SMTP auth failed", exc);
             error_txt = Main.Txt("Authentication_failed");
         }
         catch (MessagingException messagingException)
         {
-            LogManager.err_log( "SMTP auth aborted: ", messagingException);
+            LogManager.msg_auth( LogManager.LVL_ERR, "SMTP auth aborted: ", messagingException);
             error_txt = messagingException.getMessage();
         }
         return null;
@@ -209,7 +207,7 @@ public class SMTPAuth extends GenericRealmAuth
         }
         catch (MessagingException ex)
         {
-            LogManager.err_log( "Cannot close SMTP connect", ex);
+            LogManager.msg_auth( LogManager.LVL_ERR, "Cannot close SMTP connect", ex);
         }
     }
 

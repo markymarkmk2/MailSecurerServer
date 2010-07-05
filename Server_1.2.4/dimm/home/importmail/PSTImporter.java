@@ -11,6 +11,7 @@ import com.pff.PSTFolder;
 import com.pff.PSTObject;
 import com.pff.DescriptorIndexNode;
 import com.pff.PSTMessage;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -42,8 +43,9 @@ public class PSTImporter
                 if (obj instanceof PSTMessage)
                 {
                     PSTMessage msg = (PSTMessage)obj;
-                    System.out.println(msg.getSubject());
-                    System.out.println(msg.getSentRepresentingName());
+                    LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_IMPORT, msg.getSubject());
+                    LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_IMPORT, msg.getSentRepresentingName());
+                   
                 }
         }
 

@@ -12,6 +12,7 @@ package dimm.home.mailarchiv.Commands;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantPreferences;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.Preferences;
 import home.shared.Utilities.ParseToken;
 
@@ -84,14 +85,14 @@ public class GetSetOption extends AbstractCommand
             {
                 if (is_setter)
                 {
-                    Main.debug_msg( 1, "Parameter <" + name + "> was set to <" + val + ">");
+                    LogManager.msg_system(LogManager.LVL_DEBUG, "Parameter <" + name + "> was set to <" + val + ">");
                 }
                 ok = true;
             }                    
         }
         catch (Exception exc)
         {
-            Main.err_log("Setting parameter <" + data + "> failed: " + exc.getMessage() );
+            LogManager.msg_system(LogManager.LVL_ERR, "Setting parameter <" + data + "> failed: " + exc.getMessage() );
             return false;
         }
         

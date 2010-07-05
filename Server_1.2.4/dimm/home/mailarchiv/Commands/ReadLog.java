@@ -25,6 +25,7 @@ public class ReadLog extends AbstractCommand
         super("READLOG");
     }
 
+    @Override
     public boolean do_command(String data)
     {
         answer = "";

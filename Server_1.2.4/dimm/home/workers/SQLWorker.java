@@ -122,7 +122,7 @@ public class SQLWorker extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log_fatal("Cannot connect to local database, i am lost");
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot connect to local database, i am lost");
             throw new SQLException( "OpenSQLConnect failed: " + exc.getMessage() );
         }   
     }
@@ -152,7 +152,7 @@ public class SQLWorker extends WorkerParent
         }
         catch (Exception exception)
         {
-            Main.err_log_fatal("Cannot load jdbc drivers: " + exception.getMessage());
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot load jdbc drivers: " + exception.getMessage());
         }
     }
     
@@ -275,7 +275,7 @@ public class SQLWorker extends WorkerParent
     }
     public boolean work_sql_update( File f )
     {
-        Main.info_msg("Calling SQL statement updates");
+        LogManager.msg_system( LogManager.LVL_INFO, "Calling SQL statement updates");
 
         Connection c = null;
         Statement sta = null;
@@ -332,12 +332,12 @@ public class SQLWorker extends WorkerParent
                     sta.execute(check_sql_st);
                     if (condition.compareTo("onok") == 0)
                     {
-                        Main.info_msg("Calling statement: " + check_sql_st);
+                        LogManager.msg_system( LogManager.LVL_INFO, "Calling statement: " + check_sql_st);
                         sta.execute(do_sql_st);
                     }
                     else
                     {
-                        Main.err_log("Statement <" + check_sql_st + "> passed, skipping <" + do_sql_st + ">");
+                        LogManager.msg_system( LogManager.LVL_ERR, "Statement <" + check_sql_st + "> passed, skipping <" + do_sql_st + ">");
                     }
                 }
                 catch (Exception e)
@@ -347,17 +347,17 @@ public class SQLWorker extends WorkerParent
                     {
                         if (condition.compareTo("onfail") == 0)
                         {
-                            Main.info_msg("Calling statement: " + check_sql_st);
+                            LogManager.msg_system( LogManager.LVL_INFO, "Calling statement: " + check_sql_st);
                             sta.execute(do_sql_st);
                         }
                         else
                         {
-                            Main.err_log("Statement <" + check_sql_st + "> failed, skipping <" + do_sql_st + ">");
+                            LogManager.msg_system( LogManager.LVL_ERR, "Statement <" + check_sql_st + "> failed, skipping <" + do_sql_st + ">");
                         }
                     }
                     catch (Exception _exc)
                     {
-                        Main.err_log("Statement <" + sql_st + "> gave exception: " + _exc.getMessage());
+                        LogManager.msg_system( LogManager.LVL_ERR, "Statement <" + sql_st + "> gave exception: " + _exc.getMessage());
                         has_err = true;
                     }
                 }
@@ -380,7 +380,7 @@ public class SQLWorker extends WorkerParent
                 {
                     tmp = new File( tmp.getAbsolutePath() + "x");
                 }
-                Main.err_log("Saving sql update file to <" + tmp.getPath() + ">");
+                LogManager.msg_system( LogManager.LVL_ERR, "Saving sql update file to <" + tmp.getPath() + ">");
                 f.renameTo(tmp);
             }
 
@@ -388,7 +388,7 @@ public class SQLWorker extends WorkerParent
         }
         catch (Exception exc)
         {
-            Main.err_log("Error occured while updating database with " + f.getName() + ": " + exc.getMessage());
+            LogManager.msg_system( LogManager.LVL_ERR, "Error occured while updating database with " + f.getName() + ": " + exc.getMessage());
         }
         finally
         {
@@ -429,7 +429,7 @@ public class SQLWorker extends WorkerParent
             {
                 String id = rs.getString(1);
                 String name = rs.getString(2);
-                LogManager.info_msg("Mandant " + id + " is " + name );
+                LogManager.msg_system( LogManager.LVL_INFO, "Mandant " + id + " is " + name );
             }
                         
             rs.close();
@@ -438,7 +438,7 @@ public class SQLWorker extends WorkerParent
         } 
         catch (Exception ex)
         {
-            Main.err_log_fatal("Cannot initialize SQL-Worker: " + ex.getMessage() );
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot initialize SQL-Worker: " + ex.getMessage() );
             ex.printStackTrace();            
             return false;
         }
@@ -565,7 +565,7 @@ public class SQLWorker extends WorkerParent
 
     private void flush_sql_error_buffer( File[] f, Statement sql_stm )
     {
-        Main.info_msg("Flushing SQL statement buffer (" + f.length + " entries left)");
+        LogManager.msg_system( LogManager.LVL_INFO, "Flushing SQL statement buffer (" + f.length + " entries left)");
                         
         int errs_in_a_row = 0;
         
@@ -605,17 +605,17 @@ public class SQLWorker extends WorkerParent
             }                        
             catch (Exception exc)
             {
-                Main.err_log("Error occured while flushing file " + f[i].getName() + ": " + exc.getMessage());
+                LogManager.msg_system( LogManager.LVL_ERR, "Error occured while flushing file " + f[i].getName() + ": " + exc.getMessage());
                 errs_in_a_row++;
             }
             if (errs_in_a_row > 3)
             {
-                Main.err_log("Too many errors while flushing statement buffer, aborting");
+                LogManager.msg_system( LogManager.LVL_ERR, "Too many errors while flushing statement buffer, aborting");
                 break;
             }
         }        
         if (i == f.length)
-            Main.info_msg("SQL statement buffer was flushed completely");
+            LogManager.msg_system( LogManager.LVL_INFO, "SQL statement buffer was flushed completely");
 
     }
 
@@ -625,7 +625,7 @@ public class SQLWorker extends WorkerParent
         SQLWorker sql = new SQLWorker();
         if (sql.initialize())
         {
-            Main.err_log("Database is valid, cannot rebuild");
+            LogManager.msg_system( LogManager.LVL_ERR, "Database is valid, cannot rebuild");
             return;
         }
 

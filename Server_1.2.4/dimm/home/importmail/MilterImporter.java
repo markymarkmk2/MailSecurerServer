@@ -86,33 +86,33 @@ class JilterServerRunnable implements Runnable
             while (this.processor.process(this.socket, (ByteBuffer) dataBuffer.flip()))
             {
                 dataBuffer.compact();
-                LogManager.debug(Main.Txt("Going_to_read"));
+                LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Going_to_read"));
                 if (this.socket.read(dataBuffer) == -1)
                 {
-                    LogManager.debug(Main.Txt("socket_reports_EOF,_exiting_read_loop"));
+                    LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("socket_reports_EOF,_exiting_read_loop"));
                     break;
                 }
-                LogManager.debug(Main.Txt("Back_from_read"));
+                LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Back_from_read"));
             }
         }
         catch (IOException e)
         {
-            LogManager.debug(Main.Txt("Unexpected_exception,_connection_will_be_closed"), e);
+            LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Unexpected_exception,_connection_will_be_closed"), e);
         }
         finally
         {
-            LogManager.debug(Main.Txt("Closing_processor"));
+            LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Closing_processor"));
             this.processor.close();
-            LogManager.debug(Main.Txt("Processor_closed"));
+            LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Processor_closed"));
             try
             {
-                LogManager.debug(Main.Txt("Closing_socket"));
+                LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Closing_socket"));
                 this.socket.close();
-                LogManager.debug(Main.Txt("Socket_closed"));
+                LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Socket_closed"));
             }
             catch (IOException e)
             {
-                LogManager.debug(Main.Txt("Unexpected_exception"), e);
+                LogManager.msg_milter(LogManager.LVL_DEBUG, Main.Txt("Unexpected_exception"), e);
             }
         }
         is_finished = true;
@@ -171,7 +171,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
     {
         if (os != null)
         {
-            LogManager.log(Level.SEVERE, Main.Txt("removing_aborted_milter_import"));
+            LogManager.msg_milter(LogManager.LVL_ERR,  Main.Txt("removing_aborted_milter_import"));
             try
             {
                 os.close();
@@ -205,7 +205,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
                 if (m_ctx.wait_on_no_space())
                 {
                     handler.set_status( StatusEntry.WAITING, Main.Txt("No_space_left_for_mail_from_milter") );
-                    LogManager.log(Level.SEVERE, handler.get_status_txt() );
+                    LogManager.msg_milter(LogManager.LVL_ERR,  handler.get_status_txt() );
 
                     while (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
                     {
@@ -223,7 +223,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
                 Notification.throw_notification_one_shot(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("No_space_left_for_mail_skipping_mail" ) );
 
                 handler.set_status( StatusEntry.ERROR, Main.Txt("No_space_left_for_mail_from_milter,_skipping_mail") );
-                LogManager.log(Level.SEVERE, handler.get_status_txt() );
+                LogManager.msg_milter(LogManager.LVL_ERR,  handler.get_status_txt() );
                 return JilterStatus.SMFIS_TEMPFAIL;
             }
             
@@ -239,7 +239,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         }
         catch (Exception archiveMsgException)
         {
-            LogManager.log(Level.SEVERE, Main.Txt("cannot_create_temp_file"), archiveMsgException);
+            LogManager.msg_milter(LogManager.LVL_ERR,  Main.Txt("cannot_create_temp_file"), archiveMsgException);
             return JilterStatus.SMFIS_TEMPFAIL;
         }
 	return JilterStatus.SMFIS_CONTINUE;
@@ -289,7 +289,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             if (os == null)
             {
                 // TODO: ARCHIVE FAILED
-                LogManager.log(Level.SEVERE, "Got out-of-bound eom, discarding mail");
+                LogManager.msg_milter(LogManager.LVL_ERR,  "Got out-of-bound eom, discarding mail");
                 return JilterStatus.SMFIS_CONTINUE;
             }
             os.close();
@@ -310,7 +310,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         catch (Exception ex)
         {
             // TODO: ARCHIVE FAILED
-            LogManager.log(Level.SEVERE, null, ex);
+            LogManager.msg_milter(LogManager.LVL_ERR,  null, ex);
         }
         return JilterStatus.SMFIS_CONTINUE;        
     }
@@ -342,7 +342,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         }
         catch (IOException iOException)
         {
-            LogManager.log(Level.SEVERE, Main.Txt("Could_not_write_milter_body"), iOException);
+            LogManager.msg_milter(LogManager.LVL_ERR,  Main.Txt("Could_not_write_milter_body"), iOException);
             return JilterStatus.SMFIS_TEMPFAIL;
 
         }
@@ -365,7 +365,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         }
         catch (IOException iOException)
         {
-            LogManager.log(Level.SEVERE, Main.Txt("Could_not_write_milter_body"), iOException);
+            LogManager.msg_milter(LogManager.LVL_ERR,  Main.Txt("Could_not_write_milter_body"), iOException);
             return JilterStatus.SMFIS_TEMPFAIL;
         }
         return JilterStatus.SMFIS_CONTINUE;
@@ -405,7 +405,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         }
         catch (MessagingException messagingException)
         {
-            LogManager.log(Level.WARNING, "Error while detecting bcc addresses", messagingException);
+            LogManager.msg_milter(LogManager.LVL_WARN,  "Error while detecting bcc addresses", messagingException);
         }
         file_mail.set_bcc(bcc_list);
     }
@@ -457,11 +457,11 @@ public class MilterImporter extends WorkerParentChild
     
     private void log_debug( String s )
     {
-        LogManager.debug_msg( s );
+        LogManager.msg_milter(LogManager.LVL_DEBUG,  s );
     }
     private void log_debug( String s, Exception e )
     {
-        LogManager.debug_msg( s, e );
+        LogManager.msg_milter(LogManager.LVL_DEBUG,  s, e );
     }
 
 

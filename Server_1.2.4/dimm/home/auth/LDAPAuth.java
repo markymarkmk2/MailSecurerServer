@@ -140,6 +140,9 @@ public class LDAPAuth extends GenericRealmAuth
         this.admin_pwd = admin_pwd;
         this.user_search_base = user_search_base;
         this.search_attribute = search_attribute;
+        if (this.search_attribute == null  || this.search_attribute.length() == 0)
+            this.search_attribute = "cn";
+
         this.mail_field_list = mfl;
         if (mail_field_list == null || mail_field_list.length() == 0)
             mail_field_list = "mail";
@@ -214,7 +217,7 @@ public class LDAPAuth extends GenericRealmAuth
             String rootSearchBase = get_user_search_base();
             String admin_dn =  search_attribute + "=" + admin_name + "," + rootSearchBase;
            
-            LogManager.debug_msg(4, "connect: " + admin_dn);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "connect: " + admin_dn);
             connect_env.put(Context.SECURITY_PRINCIPAL, admin_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, admin_pwd);
             
@@ -288,7 +291,7 @@ public class LDAPAuth extends GenericRealmAuth
         }
         ldap_qry.append(")");
 
-        LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
         NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry.toString(), ctrl);
         ArrayList<String> mail_list = new ArrayList<String>();
@@ -349,7 +352,7 @@ public class LDAPAuth extends GenericRealmAuth
             String searchFilter = "(" + search_attribute + "=" + user_name + ")";
             int cnt  = 0;
 
-            LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
             NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             if (!enumeration.hasMore())
             {
@@ -395,7 +398,7 @@ public class LDAPAuth extends GenericRealmAuth
         try
         {
             String rootSearchBase = get_user_search_base();
-            LogManager.debug_msg(4, "get_user_attribute: " + rootSearchBase + " " + search_attributes);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "get_user_attribute: " + rootSearchBase + " " + search_attributes);
             NamingEnumeration<SearchResult> results = uctx.ctx.search(rootSearchBase, search_attributes, return_attributes);
             if (results.hasMoreElements())
             {
@@ -414,7 +417,8 @@ public class LDAPAuth extends GenericRealmAuth
     {
         try
         {
-            uctx.ctx.close();
+            if (uctx.ctx != null)
+                uctx.ctx.close();
         }
         catch (NamingException namingException)
         {
@@ -432,7 +436,7 @@ public class LDAPAuth extends GenericRealmAuth
 
         String rootSearchBase = get_user_search_base();
 
-        LogManager.debug_msg(4, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
         NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry, ctrl);
 
         ArrayList<String> dn_list = new ArrayList<String>();

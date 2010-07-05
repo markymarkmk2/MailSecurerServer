@@ -98,7 +98,7 @@ public class Notification
         String send_to = m_ctx.getMandant().getNotificationlist();
         if (send_to == null || send_to.length() == 0)
         {
-            LogManager.err_log_fatal( Main.Txt("Cannot_find_to_adress_in_notification"));
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_find_to_adress_in_notification"));
             return;
         }
 
@@ -112,7 +112,7 @@ public class Notification
 
             if (!smtp.connect())
             {
-                LogManager.err_log_fatal( Main.Txt("Cannot_connect_to_SMTP_host") + " " + host + ":" + port );
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_connect_to_SMTP_host") + " " + host + ":" + port );
                 return;
             }
             String user = m_ctx.getMandant().getSmtp_user();
@@ -123,7 +123,7 @@ public class Notification
 
             if (smtp_ctx == null)
             {
-                LogManager.err_log_fatal( Main.Txt("Cannot_authenticate_at_SMTP_host") + " " + host + ":" + port + " user " + user + " to " + send_to );
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_authenticate_at_SMTP_host") + " " + host + ":" + port + " user " + user + " to " + send_to );
                 smtp.disconnect();
                 return;
             }
@@ -158,7 +158,7 @@ public class Notification
                 }
                 catch (AddressException addressException)
                 {
-                    LogManager.err_log_fatal( Main.Txt("Invalid_To_address") + ":" + adr_list[i], addressException);
+                    LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Invalid_To_address") + ":" + adr_list[i], addressException);
                     ad = new InternetAddress("root@localhost", false);
                 }
 
@@ -169,7 +169,7 @@ public class Notification
         }
         catch (Exception exc )
         {
-             LogManager.err_log_fatal( Main.Txt("Cannot_send_notification_mail") + " " + host + ":" + port + " to " + send_to + ": ", exc );
+             LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_send_notification_mail") + " " + host + ":" + port + " to " + send_to + ": ", exc );
         }
         finally
         {

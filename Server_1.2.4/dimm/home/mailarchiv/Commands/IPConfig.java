@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileWriter;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.Utilities.ParseToken;
 import java.io.FileReader;
 
@@ -210,7 +211,7 @@ ONBOOT=yes
         File f = new File(conf_file);
         if (!f.exists())
         {
-            Main.err_log( "Invalid network interface eth" + eth_nr );
+            LogManager.msg_system(LogManager.LVL_ERR,  "Invalid network interface eth" + eth_nr );
             return false;
         }
         
@@ -264,7 +265,7 @@ ONBOOT=yes
         catch (Exception exc)
         {
             answer = "INET_NOK";
-            Main.err_log( "Writing Inet config failed: " + exc.getMessage() );
+            LogManager.msg_system(LogManager.LVL_ERR,  "Writing Inet config failed: " + exc.getMessage() );
             return false;
         }
                 
@@ -326,7 +327,7 @@ ONBOOT=yes
         catch (Exception exc)
         {
             answer = "INET_NOK";
-            Main.err_log( "Writing Inet config failed: " + exc.getMessage() );
+            LogManager.msg_system(LogManager.LVL_ERR,  "Writing Inet config failed: " + exc.getMessage() );
             return false;
         }
                 
@@ -346,11 +347,11 @@ ONBOOT=yes
         String real_ip = get_ip_for_if( "eth" + eth_nr );
         if (real_ip != null)
         {
-            Main.debug_msg( 0, "Got real IP <" + real_ip + ">" );
+            LogManager.msg_system(LogManager.LVL_DEBUG,   "Got real IP <" + real_ip + ">" );
         }
         else
         {
-            Main.err_log( "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
+            LogManager.msg_system(LogManager.LVL_ERR, "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
             
             if (dhcp)
             {
@@ -362,7 +363,7 @@ ONBOOT=yes
         
         if (!is_route_ok())
         {
-            Main.err_log( "Invalid routing detected, setting to fallback IP: 192.168.201.201");
+            LogManager.msg_system(LogManager.LVL_ERR, "Invalid routing detected, setting to fallback IP: 192.168.201.201");
 
             set_ipconfig( eth_nr, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
             answer = "INET_NOK";
@@ -384,7 +385,7 @@ ONBOOT=yes
         String vpn_ip = get_ip_for_if( "tap0" );
         if (vpn_ip != null)
         {
-            Main.debug_msg( 0, "Got vpn IP <" + vpn_ip + ">" );
+            LogManager.msg_system(LogManager.LVL_DEBUG,  "Got vpn IP <" + vpn_ip + ">" );
             //Main.get_control().get_sql_worker().set_boxdata( vpn_ip );
         }
         
@@ -437,7 +438,7 @@ ONBOOT=yes
         catch (Exception exc)
         {
             answer = "INET_NOK";
-            Main.err_log( "Writing Inet config failed: " + exc.getMessage() );
+            LogManager.msg_system(LogManager.LVL_ERR, "Writing Inet config failed: " + exc.getMessage() );
             return false;
         }
                 
@@ -463,11 +464,11 @@ ONBOOT=yes
         String real_ip = get_ip_for_if( "eth" + eth_nr );
         if (real_ip != null)
         {
-            Main.debug_msg( 0, "Got real IP <" + real_ip + ">" );
+            LogManager.msg_system(LogManager.LVL_DEBUG,  "Got real IP <" + real_ip + ">" );
         }
         else
         {
-            Main.err_log( "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
+            LogManager.msg_system(LogManager.LVL_ERR, "Cannot detect valid IP, setting to fallback IP: 192.168.201.201");
             
             if (dhcp)
             {
@@ -479,7 +480,7 @@ ONBOOT=yes
         
         if (!is_route_ok())
         {
-            Main.err_log( "Invalid routing detected, setting to fallback IP: 192.168.201.201");
+            LogManager.msg_system(LogManager.LVL_ERR, "Invalid routing detected, setting to fallback IP: 192.168.201.201");
 
             set_ipconfig( eth_nr, /*dhcp*/ false, "192.168.201.201", "255.255.255.0", "192.168.201.202", "192.168.201.201");
             answer = "INET_NOK";
@@ -501,7 +502,7 @@ ONBOOT=yes
         String vpn_ip = get_ip_for_if( "tap0" );
         if (vpn_ip != null)
         {
-            Main.debug_msg( 0, "Got vpn IP <" + vpn_ip + ">" );
+            LogManager.msg_system(LogManager.LVL_DEBUG, "Got vpn IP <" + vpn_ip + ">" );
             //Main.get_control().get_sql_worker().set_boxdata( vpn_ip );
         }
         

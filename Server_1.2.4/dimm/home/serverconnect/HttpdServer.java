@@ -32,7 +32,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.net.ServerSocketFactory;
 import javax.xml.ws.soap.SOAPBinding;
 import javax.net.ssl.KeyManagerFactory;
@@ -220,7 +219,7 @@ public class HttpdServer
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.SEVERE, null, ex);
+            LogManager.msg_comm( LogManager.LVL_ERR,  "start_httpd failed", ex);
         }
 
     }

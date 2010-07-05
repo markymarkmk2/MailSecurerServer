@@ -10,7 +10,6 @@ import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayOutputStream;
@@ -96,7 +95,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
             int mail_e = line.indexOf(">");
             if (mail_s == -1 || mail_e == -1)
             {
-                LogManager.log(Level.WARNING, "Cannot find mail recipient in enevlope header line: " + line  );
+                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Cannot find mail recipient in enevlope header line: " + line  );
                 continue;
             }
             String mail = line.substring(mail_s + 1, mail_e);
@@ -112,7 +111,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
             }
             catch (AddressException addressException)
             {
-                LogManager.log(Level.WARNING, "Invalid recipient address in enevlope header line: " + line, addressException );
+                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Invalid recipient address in enevlope header line: " + line, addressException );
             }
             
             // CHECK IF ADR IS ALREADY IN RCPLIST
@@ -160,7 +159,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                 catch (MessagingException mexc)
                 {
                     // TRY TO READ DIRECTLY FROM STREAM
-                    LogManager.debug_msg(2, "Rereading broken IMAP message");
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Rereading broken IMAP message", mexc);
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     m.writeTo(bos);
                     bos.close();
@@ -225,7 +224,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                 }
                 else
                 {
-                    LogManager.err_log_warn(Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer() + ": " + subject);
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer() + ": " + subject);
                     
                     //Notification.throw_notification_one_shot(imfetcher.getMandant(), Notification.NF_ERROR, Main.Txt("Invalid_envelope_format_while_fetching_msg_from") + " " + imfetcher.getServer());
                 }
@@ -233,10 +232,11 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
 
             catch (IOException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
-            }            catch (MessagingException ex)
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_FETCHER, "archive_message failed", ex);
+            }
+            catch (MessagingException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_FETCHER, "archive_message failed", ex);
             }
 
         }

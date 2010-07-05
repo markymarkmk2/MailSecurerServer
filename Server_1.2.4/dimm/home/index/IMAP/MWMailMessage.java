@@ -28,8 +28,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.Header;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
@@ -122,15 +120,15 @@ public class MWMailMessage implements MailInfo
                 }
                 catch (FileNotFoundException ex)
                 {
-                    Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+                    LogManager.msg_imaps(LogManager.LVL_ERR, "try_load_mail failed", ex);
                 }
                 catch (MessagingException ex)
                 {
-                    Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+                    LogManager.msg_imaps(LogManager.LVL_ERR, "try_load_mail failed", ex);
                 }
                 catch (IOException ex)
                 {
-                    Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+                    LogManager.msg_imaps(LogManager.LVL_ERR, "try_load_mail failed", ex);
                 }
             }
 
@@ -149,7 +147,7 @@ public class MWMailMessage implements MailInfo
         }
         catch (Exception interruptedException)
         {
-            LogManager.err_log_fatal("Error while loading mail file", interruptedException);
+            LogManager.msg_imaps(LogManager.LVL_ERR,"Error while loading mail file", interruptedException);
         }
         mmail = null;
         return false;
@@ -208,7 +206,7 @@ public class MWMailMessage implements MailInfo
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_imaps(LogManager.LVL_WARN, "getMIF failed", ex);
         }
         return "";
     }
@@ -245,7 +243,7 @@ public class MWMailMessage implements MailInfo
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_imaps(LogManager.LVL_WARN,  "het_header failed", ex);
         }
         return "";
     }
@@ -303,7 +301,7 @@ public class MWMailMessage implements MailInfo
         }
         catch (MessagingException ex)
         {
-            Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+            LogManager.msg_imaps(LogManager.LVL_WARN, "get_rfc_header failed", ex);
         }
 
         return ret;
@@ -431,7 +429,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
             catch (MessagingException ex)
             {
                 ex.printStackTrace();
-                Logger.getLogger(MWMailMessage.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_WARN,  "get_header_fields failed", ex);
             }
         }
         else
@@ -600,7 +598,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         }
         catch (Exception e)
         {
-            System.out.println("Invalid Charset: " + mt);
+            LogManager.msg_imaps(LogManager.LVL_WARN,  "Invalid Charset: " + mt);
         }
         return "UTF-8";
     }
@@ -674,7 +672,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
             }
             catch (Exception messagingException)
             {
-                LogManager.log(Level.WARNING, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
+                LogManager.msg_imaps(LogManager.LVL_WARN, "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
             }
 
         }
@@ -800,7 +798,7 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         }
         if (mp == null)
         {
-            System.out.println("Invalid content in get_part ");
+            LogManager.msg_imaps(LogManager.LVL_WARN, "Invalid content in get_part" );
             return null;
         }
         
@@ -809,7 +807,8 @@ ENVELOPE ("Tue, 21 Apr 2009 17:50:44 +0200" "Re: bbb"
         String[] plist = id.split("\\.");
         if (plist.length == 0)
         {
-            System.out.println("Invalid id in get_part ");
+            LogManager.msg_imaps(LogManager.LVL_WARN, "Invalid id in get_part" );
+            
             return null;
         }
 

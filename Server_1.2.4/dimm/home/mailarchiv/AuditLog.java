@@ -133,7 +133,7 @@ public class AuditLog
         }
         catch (SQLException sQLException)
         {
-            LogManager.err_log("Cannot create new audit database", sQLException);
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot create new audit database", sQLException);
         }
     }
 
@@ -145,7 +145,7 @@ public class AuditLog
         }
         catch (SQLException sQLException)
         {
-            LogManager.info_msg("Creating new audit database: " + sQLException.getMessage());
+            LogManager.msg_system( LogManager.LVL_INFO, "Creating new audit database: " + sQLException.getMessage());
             return create_db();
         }
     }
@@ -273,7 +273,7 @@ public class AuditLog
         }
         catch (SQLException sQLException)
         {
-            LogManager.err_log("Cannot add to audit_log", sQLException);
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot add to audit_log", sQLException);
         }
         finally
         {
@@ -408,7 +408,7 @@ public class AuditLog
         }
         catch (SQLException sQLException)
         {
-            LogManager.err_log_fatal("Cannot connect to audit table" , sQLException);
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot connect to audit table" , sQLException);
             return false;
         }
         try
@@ -441,7 +441,7 @@ public class AuditLog
 
         if ((failed && on_fail) || (!failed && !on_fail))
         {
-            LogManager.info_msg("Performing database update: " + alter_cmd);
+            LogManager.msg_system( LogManager.LVL_INFO, "Performing database update: " + alter_cmd);
             try
             {
                 st.executeUpdate(alter_cmd);
@@ -449,7 +449,7 @@ public class AuditLog
             }
             catch (Exception exc)
             {
-                LogManager.err_log_fatal("Cannot change table struct " +  alter_cmd, exc);
+                LogManager.msg_system( LogManager.LVL_ERR, "Cannot change table struct " +  alter_cmd, exc);
                 try
                 {
                     st.close();
@@ -468,7 +468,7 @@ public class AuditLog
                 }
                 catch (Exception exc)
                 {
-                    LogManager.err_log_fatal("Cannot fill changed table struct " +  fill_cmd, exc);
+                    LogManager.msg_system( LogManager.LVL_ERR, "Cannot fill changed table struct " +  fill_cmd, exc);
                     return changed;
                 }
             }
@@ -517,7 +517,7 @@ public class AuditLog
         }
         catch (SQLException sQLException)
         {
-            LogManager.err_log("Cannot create indices in audit_log", sQLException);
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot create indices in audit_log", sQLException);
         }
         finally
         {

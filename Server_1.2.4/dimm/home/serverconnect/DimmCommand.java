@@ -73,7 +73,7 @@ public class DimmCommand
         }
         catch (Exception iOException)
         {
-            LogManager.err_log("Cannot connect to " + server + ":" + port, iOException);
+            LogManager.msg_comm( LogManager.LVL_ERR, "Cannot connect to " + server + ":" + port, iOException);
         }
         return false;
     }
@@ -110,7 +110,7 @@ public class DimmCommand
 
             StringBuffer sb = new StringBuffer();
             String tcmd = string + "\n";
-            System.out.println("DCS: " + string);
+            LogManager.msg_system(LogManager.LVL_VERBOSE, "DCS: " + string);
             socket.getOutputStream().write(tcmd.getBytes("UTF-8"));
 
             while (true)
@@ -124,7 +124,7 @@ public class DimmCommand
                 }
                 if (is_finished( sb ))
                 {
-                    System.out.println("DCR: " + sb.toString());
+                    LogManager.msg_system(LogManager.LVL_VERBOSE, "DCR: " + sb.toString());
                     return sb.toString();
                 }
                 if (rlen <= 0)
@@ -135,7 +135,7 @@ public class DimmCommand
         }
         catch (Exception iOException)
         {
-            LogManager.err_log("Comm with ApplServer " + server + ":" + port + " failed", iOException);
+            LogManager.msg_comm( LogManager.LVL_ERR, "Comm with ApplServer " + server + ":" + port + " failed", iOException);
         }
         return null;
     }

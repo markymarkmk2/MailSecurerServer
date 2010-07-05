@@ -10,6 +10,7 @@ import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.FileTransferManager;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import home.shared.Utilities.ZipUtilities;
@@ -183,7 +184,7 @@ public class UpdateWorker extends WorkerParent
         }
         catch ( Exception exc )
         {
-            Main.err_log("Error while reading SB remote version from file " + remote_ver_path + " : " + exc.getMessage());
+            LogManager.msg_system( LogManager.LVL_ERR, "Error while reading remote version from file " + remote_ver_path + " : " + exc.getMessage());
         }
         return remote_ver;
     }
@@ -209,7 +210,7 @@ public class UpdateWorker extends WorkerParent
             {                
                 if (remote_ver_code > local_ver_code)
                 {
-                    Main.info_msg("Detected new Version " + remote_ver);
+                    LogManager.msg_system( LogManager.LVL_INFO, "Detected new Version " + remote_ver);
                     return true;
                 }
                 return false;
@@ -218,7 +219,7 @@ public class UpdateWorker extends WorkerParent
             boolean ret = remote_ver.compareTo(local_ver) > 0 ? true: false;            
             if (ret)
             {
-                Main.info_msg("Detected new Version " + remote_ver);
+                LogManager.msg_system( LogManager.LVL_INFO, "Detected new Version " + remote_ver);
                 return true;
             }
         }
@@ -239,7 +240,7 @@ public class UpdateWorker extends WorkerParent
         }
         catch (NumberFormatException numberFormatException)
         {
-            Main.err_log_fatal("Invalid version String " + ver + ": " + numberFormatException.getMessage());
+            LogManager.msg_system( LogManager.LVL_ERR, "Invalid version String " + ver + ": " + numberFormatException.getMessage());
         }
         return 0;
     }
@@ -286,7 +287,7 @@ public class UpdateWorker extends WorkerParent
                     }
                     catch (Exception exc)
                     {
-                        Main.err_log(exc.getMessage());
+                        LogManager.msg_system( LogManager.LVL_ERR, exc.getMessage());
                     }
                 }
                 
@@ -327,7 +328,7 @@ public class UpdateWorker extends WorkerParent
             File here = new File(".");
             String[] exclude_list = {"update", "logs", "database", "db", "temp" };
             ZipUtilities zu = new ZipUtilities();
-            Main.debug_msg(1, "Saving actual installation...");
+            LogManager.msg_system( LogManager.LVL_INFO,  "Saving actual installation...");
             
             zu.zip(here.getAbsolutePath(), Main.UPDATE_PATH + "last_valid_version.zip", exclude_list);
             
@@ -387,7 +388,7 @@ public class UpdateWorker extends WorkerParent
         catch (IOException ex)
         {
             ex.printStackTrace();
-            Main.err_log_fatal("Error while calling updater: " +  ex.getMessage());
+            LogManager.msg_system( LogManager.LVL_ERR, "Error while calling updater: " +  ex.getMessage());
         }
         finally
         {
@@ -423,13 +424,13 @@ public class UpdateWorker extends WorkerParent
                     }
                     catch (Exception exc)
                     {
-                        Main.err_log(exc.getMessage());
+                        LogManager.msg_system( LogManager.LVL_ERR, exc.getMessage());
                     }
                     
                     LogicControl.sleep(20000);
                     
                     // IWE GET HERE, WE ARE LOST, BECAUSE UPDATE SHOULD OF KICKES US AWAY
-                    Main.err_log("Update failed, we did not restart");
+                    LogManager.msg_system( LogManager.LVL_ERR, "Update failed, we did not restart");
                     cycle_duration = VERYLONG_DELAY;
                 }                                
             }                        

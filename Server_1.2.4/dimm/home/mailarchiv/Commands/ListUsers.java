@@ -68,7 +68,7 @@ public class ListUsers extends AbstractCommand
                     auth_realm = GenericRealmAuth.factory_create_realm(acct);
                     if (!auth_realm.connect())
                     {
-                        LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" + acct.getIp());
+                        LogManager.msg_auth( LogManager.LVL_DEBUG, "Cannot connect to realm " + acct.getType() + ":" + acct.getIp());
                         continue;
                     }
 
@@ -79,7 +79,7 @@ public class ListUsers extends AbstractCommand
                     }
                     catch (Exception exc)
                     {
-                        LogManager.debug("list_users_for_group failed: " , exc);
+                        LogManager.msg_auth( LogManager.LVL_DEBUG, "list_users_for_group failed: " , exc);
                     }
 
 /*
@@ -120,10 +120,10 @@ public class ListUsers extends AbstractCommand
                         }
                         catch (NamingException namingException)
                         {
-                            System.out.println("naming Exception: " + namingException.getLocalizedMessage());
+                            LogManager.msg_system(LogManager.LVL_ERR,"naming Exception: " + namingException.getLocalizedMessage());
                         }
 
-                        if (auth_realm.user_is_member_of(role, user, mail_alias_list))
+                        if (GenericRealmAuth.user_is_member_of(role, user, mail_alias_list))
                         {
                             StringBuffer sb = new StringBuffer();
                             sb.append(user);
@@ -147,7 +147,7 @@ public class ListUsers extends AbstractCommand
                 catch (Exception namingException)
                 {
                     namingException.printStackTrace();
-                    LogManager.err_log("Error while getting userlist from realm " + realm_name, namingException);
+                    LogManager.msg_auth( LogManager.LVL_ERR,"Error while getting userlist from realm " + realm_name, namingException);
                 }
                 finally
                 {

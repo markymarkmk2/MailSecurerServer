@@ -239,7 +239,7 @@ public class MandantContext
             }
             catch (Exception indexException)
             {
-                LogManager.err_log(Main.Txt("Error while closing vault " + vault.get_name()), indexException);
+                LogManager.msg_archive(LogManager.LVL_ERR, Main.Txt("Error while closing vault " + vault.get_name()), indexException);
             }
         }
         getVaultArray().clear();
@@ -338,15 +338,15 @@ public class MandantContext
             }
             catch (IndexException ex)
             {
-                LogManager.err_log_fatal(Main.Txt("Index_error_while_flushing_index"), ex);
+                LogManager.msg_index(LogManager.LVL_ERR, Main.Txt("Index_error_while_flushing_index"), ex);
             }
             catch (VaultException ex)
             {
-                LogManager.err_log_fatal(Main.Txt("Vault_error_while_flushing_index"), ex);
+                LogManager.msg_index(LogManager.LVL_ERR, Main.Txt("Vault_error_while_flushing_index"), ex);
             }
             catch (Exception ex)
             {
-                LogManager.err_log_fatal(Main.Txt("Unknown_error_while_flushing_index"), ex);
+                LogManager.msg_index(LogManager.LVL_ERR, Main.Txt("Unknown_error_while_flushing_index"), ex);
             }
         }
     }
@@ -357,7 +357,7 @@ public class MandantContext
         {
             if (!worker_list.get(i).start_run_loop())
             {
-                LogManager.err_log_fatal(Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
+                LogManager.msg_system(LogManager.LVL_ERR, Main.Txt("Cannot_start_runloop_for_Worker") + " " + worker_list.get(i).getName());
             }
         }
     }
@@ -390,7 +390,7 @@ public class MandantContext
         }
         catch (Exception ex)
         {
-            LogManager.err_log_fatal(Main.Txt("Cannot_create_has_searcher_list") + " " + getMandant().getName(), ex);
+            LogManager.msg_system(LogManager.LVL_ERR, Main.Txt("Cannot_create_has_searcher_list") + " " + getMandant().getName(), ex);
         }
         
 
@@ -408,7 +408,7 @@ public class MandantContext
             {
                 ms.setStatusTxt("Cannot create milter: " + ex.getMessage());
                 ms.setGoodState(false);
-                LogManager.err_log_fatal(ms.getStatusTxt(), ex);
+                LogManager.msg_system(LogManager.LVL_ERR,  ms.getStatusTxt(), ex);
             }
         }
 
@@ -463,7 +463,7 @@ public class MandantContext
             {
                 boolean imap_ssl = test_flag(CS_Constants.MA_IMAP_SSL);
 
-                LogManager.info_msg("Starting " + (imap_ssl ? "SSL-" : "") + "IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
+                LogManager.msg_imaps(LogManager.LVL_INFO, "Starting " + (imap_ssl ? "SSL-" : "") + "IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
 
 
                 imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port(), imap_ssl);
@@ -471,7 +471,7 @@ public class MandantContext
             }
             catch (IOException ex)
             {
-                LogManager.err_log_fatal(Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName() + ": " + ex.getMessage());
+                LogManager.msg_imaps(LogManager.LVL_ERR,Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName() + ": " + ex.getMessage());
             }
         }
     }
@@ -543,7 +543,7 @@ public class MandantContext
 
         if (worker_list.size() > 1)
         {
-            LogManager.err_log_fatal(Main.Txt("Workerlist is not empty") + " " + getMandant().getName());
+            LogManager.msg_system(LogManager.LVL_ERR, Main.Txt("Workerlist is not empty") + " " + getMandant().getName());
             worker_list.clear();
         }
 
@@ -665,7 +665,7 @@ public class MandantContext
             }
             catch (Exception e)
             {
-                LogManager.err_log("Error while cleaning importbuffers", e);
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Error while cleaning importbuffers", e);
             }
         }
     }
@@ -830,7 +830,7 @@ public class MandantContext
             {
                 if ((Integer.parseInt(role.getFlags()) & CS_Constants.ROLE_DISABLED) == CS_Constants.ROLE_DISABLED)
                 {
-                    LogManager.debug_msg(4, "Skipping disabled role " + role.getName());
+                    LogManager.msg_auth(LogManager.LVL_DEBUG, "Skipping disabled role " + role.getName());
                     continue;
                 }
             }
@@ -839,7 +839,7 @@ public class MandantContext
             }
             if ((acct.getFlags() & CS_Constants.ACCT_DISABLED) == CS_Constants.ACCT_DISABLED)
             {
-                    LogManager.debug_msg(4, "Skipping disabled realm for role " + role.getName());
+                    LogManager.msg_auth(LogManager.LVL_DEBUG,  "Skipping disabled realm for role " + role.getName());
                     continue;
             }
 
@@ -849,7 +849,7 @@ public class MandantContext
 
             if (!auth_realm.connect())
             {
-                LogManager.err_log("Cannot connect to realm " + acct.getType() + ":" + acct.getIp() + ":" + acct.getPort());
+                LogManager.msg_auth(LogManager.LVL_WARN, "Cannot connect to realm " + acct.getType() + ":" + acct.getIp() + ":" + acct.getPort());
                 continue;
 
             }
@@ -863,7 +863,7 @@ public class MandantContext
             }
             catch (Exception namingException)
             {
-                LogManager.err_log("Cannot retrieve mail list", namingException);
+                LogManager.msg_auth(LogManager.LVL_ERR, "Cannot retrieve mail list", namingException);
                 auth_realm.disconnect();
                 continue;
             }
@@ -940,7 +940,7 @@ public class MandantContext
             File hold_buffer_dir = getTempFileHandler().get_hold_mail_path();
             if (hold_buffer_dir.exists() && hold_buffer_dir.listFiles().length > 0)
             {
-                LogManager.debug_msg(Main.Txt("Trying_to_resolve_hold_buffer"));
+                LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Trying_to_resolve_hold_buffer"));
 
                 File[] flist = hold_buffer_dir.listFiles();
 
@@ -954,7 +954,7 @@ public class MandantContext
                     DiskVault dv = get_vault_by_da_id(da_id);
                     if (dv == null)
                     {
-                        LogManager.err_log(Main.Txt("Cannot_clean_up_hold_buffer,_missing_diskvault_ID") + " " + da_id);
+                        LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, Main.Txt("Cannot_clean_up_hold_buffer,_missing_diskvault_ID") + " " + da_id);
                         continue;
                     }
                     boolean encoded = hold_uuid.endsWith(RFCGenericMail.get_suffix_for_encoded());
@@ -965,12 +965,12 @@ public class MandantContext
                     // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
                     Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
                 }
-                LogManager.debug_msg(Main.Txt("Finishing_resolving_hold_buffer"));
+                LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Finishing_resolving_hold_buffer"));
             }
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
-            LogManager.err_log("Error while cleaning up hold buffer", e);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Error while cleaning up hold buffer", e);
             return;
         }
     }
@@ -980,7 +980,7 @@ public class MandantContext
         File import_buffer_dir = getTempFileHandler().get_import_mail_path();
         if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
         {
-            LogManager.debug_msg(Main.Txt("Trying_to_resolve_import_buffer"));
+            LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Trying_to_resolve_import_buffer"));
 
             File[] flist = import_buffer_dir.listFiles();
             return flist;
@@ -995,7 +995,7 @@ public class MandantContext
             return;
         }
 
-        LogManager.debug_msg(Main.Txt("Trying_to_resolve_mailimport_buffer"));
+        LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Trying_to_resolve_mailimport_buffer"));
         try
         {
 
@@ -1016,7 +1016,7 @@ public class MandantContext
                 DiskVault dv = get_vault_by_da_id(da_id);
                 if (dv == null)
                 {
-                    LogManager.err_log(Main.Txt("Cannot_clean_up_import_buffer,_missing_diskvault_ID") + " " + da_id);
+                    LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Cannot_clean_up_import_buffer,_missing_diskvault_ID" + " " + da_id);
                     continue;
                 }
                 RFCFileMail mf = new RFCFileMail(file, new Date(), encoded);
@@ -1026,12 +1026,12 @@ public class MandantContext
                 Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);
 
             }
-            LogManager.debug_msg(Main.Txt("Finishing_resolving_import_buffer"));
+            LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Finishing_resolving_import_buffer"));
 
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
-            LogManager.err_log("Error while cleaning up import buffer", e);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,"Error while cleaning up import buffer", e);
             return;
         }
     }
@@ -1041,7 +1041,7 @@ public class MandantContext
         File import_buffer_dir = getTempFileHandler().get_clientimport_path();
         if (import_buffer_dir.exists() && import_buffer_dir.listFiles().length > 0)
         {
-            LogManager.debug_msg(Main.Txt("Trying_to_resolve_clientimport_buffer"));
+            LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Trying_to_resolve_clientimport_buffer"));
 
             File[] flist = import_buffer_dir.listFiles();
             return flist;
@@ -1071,12 +1071,12 @@ public class MandantContext
                 DiskVault dv = get_vault_by_da_id(da_id);
                 if (dv == null)
                 {
-                    LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
+                    LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,Main.Txt("Cannot_clean_up_clientimport_buffer,_missing_diskvault_ID") + " " + da_id);
                     continue;
                 }
                 if (!dv.has_sufficient_space())
                 {
-                    LogManager.err_log(Main.Txt("Cannot_clean_up_clientimport_buffer,_not_enough_space") + " " + dv.get_name());
+                    LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,Main.Txt("Cannot_clean_up_clientimport_buffer,_not_enough_space") + " " + dv.get_name());
                     continue;
                 }
 
@@ -1084,12 +1084,12 @@ public class MandantContext
                 Main.get_control().register_new_import(this, dv.get_da(), file.getAbsolutePath());
 
             }
-            LogManager.debug_msg(Main.Txt("Finishing_resolving_import_buffer"));
+            LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT,Main.Txt("Finishing_resolving_import_buffer"));
 
         }
         catch (Exception e) // CATCH ANY ERROR HERE
         {
-            LogManager.err_log("Error while cleaning up import buffer", e);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,"Error while cleaning up import buffer", e);
             return;
         }
     }

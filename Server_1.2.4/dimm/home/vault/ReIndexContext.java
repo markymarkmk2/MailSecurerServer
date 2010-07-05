@@ -194,7 +194,7 @@ public class ReIndexContext
                 }
                 catch (Exception e)
                 {
-                    LogManager.err_log_fatal("Unknown error during reindex", e);
+                    LogManager.msg_index( LogManager.LVL_ERR, "Unknown error during reindex", e);
                 }
                 finally
                 {
@@ -273,7 +273,7 @@ public class ReIndexContext
             }
             catch (Exception exc )
             {
-                LogManager.err_log("Error closing last index", exc);
+                LogManager.msg_index( LogManager.LVL_ERR,"Error closing last index", exc);
             }
 
             set_status(Main.Txt("Deleting_index_data"));
@@ -299,7 +299,7 @@ public class ReIndexContext
             Iterator<File> it = data_dir.get_file_iterator();
 
             set_status(Main.Txt("Starting_reindex"));
-            LogManager.debug(getLast_msg());
+            LogManager.msg_index( LogManager.LVL_DEBUG, getLast_msg());
 
 
             IndexManager idx = context.get_index_manager();
@@ -346,16 +346,16 @@ public class ReIndexContext
                     String uuid = data_dsh.get_message_uuid(rfc);
 
                     // AND INDEX IT
-                    if (LogManager.get_debug_lvl() > 5)
+                    if (LogManager.has_lvl(LogManager.TYP_INDEX, LogManager.LVL_DEBUG))
                     {
-                        LogManager.debug("Indexing " + mailfile.getAbsolutePath() + " " + mailfile.length());
+                        LogManager.msg_index( LogManager.LVL_DEBUG,"Indexing " + mailfile.getAbsolutePath() + " " + mailfile.length());
                     }
                     boolean ok = idx.handle_IndexJobEntry(context, uuid, da_id, data_dsh.ds.getId(), index_dsh, rfc,
                             /*delete_after_index*/ false, /*parallel*/ /*true*/true,/*skip_account_match*/ true);
 
                     if (!ok)
                     {
-                        LogManager.err_log("Indexing " + mailfile.getAbsolutePath() + " failed");
+                        LogManager.msg_index( LogManager.LVL_ERR, "Indexing " + mailfile.getAbsolutePath() + " failed");
                         errs_in_row++;
                     }
                     else
@@ -373,7 +373,7 @@ public class ReIndexContext
                 catch (VaultException vaultException)
                 {
                     set_status(Main.Txt("Invalid_mailfile"));
-                    LogManager.err_log(last_msg, vaultException);
+                    LogManager.msg_index( LogManager.LVL_ERR,last_msg, vaultException);
                 }
                 if (errs_in_row > 50)
                 {
@@ -425,7 +425,7 @@ public class ReIndexContext
         catch (VaultException vaultException)
         {
             set_status(Main.Txt("Aborting_reindex"));
-            LogManager.err_log(last_msg, vaultException);
+            LogManager.msg_index( LogManager.LVL_ERR,last_msg, vaultException);
         }
         finally
         {
@@ -470,7 +470,7 @@ public class ReIndexContext
             if (!dsf.exists())
             {
                 set_status("DiskSpace <" + dsf.getAbsolutePath() + "> was not found, skipping");
-                LogManager.err_log_fatal(getLast_msg());
+                LogManager.msg_index( LogManager.LVL_ERR,getLast_msg());
                 continue;
             }
 
@@ -484,7 +484,7 @@ public class ReIndexContext
                 catch (Exception vaultException)
                 {
                     set_status(Main.Txt("Reindex_aborted"));
-                    LogManager.err_log(getLast_msg(), vaultException);
+                    LogManager.msg_index( LogManager.LVL_ERR,getLast_msg(), vaultException);
                 }
                 continue;
             }
@@ -525,7 +525,7 @@ public class ReIndexContext
             if (use_dsh_idx == null)
             {
                 set_status(Main.Txt("No index disk space found for disk space <" + dsf.getAbsolutePath() + ">"));
-                LogManager.err_log_fatal(getLast_msg());
+                LogManager.msg_index( LogManager.LVL_ERR,getLast_msg());
             }
             try
             {
@@ -534,14 +534,14 @@ public class ReIndexContext
             catch (VaultException vaultException)
             {
                 set_status(Main.Txt("Reindex_aborted:") + " " + vaultException.getMessage());
-                LogManager.err_log(getLast_msg(), vaultException);
+                LogManager.msg_index( LogManager.LVL_ERR,getLast_msg(), vaultException);
             }
         }
     }
 
     private void set_status( String Txt )
     {
-        LogManager.debug_msg(Txt);
+        LogManager.msg_index( LogManager.LVL_DEBUG,Txt);
         last_msg = Txt;
     }
 

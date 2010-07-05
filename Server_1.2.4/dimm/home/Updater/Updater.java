@@ -7,6 +7,7 @@ package dimm.home.Updater;
 
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
 import home.shared.Utilities.ZipListener;
 import home.shared.Utilities.ZipStatusDlg;
@@ -116,11 +117,11 @@ public class Updater
             }
             catch (InterruptedException ex)
             {
-                Logger.getLogger(Updater.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_system(LogManager.LVL_ERR, "do_update failed", ex);
             }
             catch (InvocationTargetException ex)
             {
-                Logger.getLogger(Updater.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_system(LogManager.LVL_ERR, "do_update failed", ex);
             }
             
             
@@ -315,7 +316,7 @@ public class Updater
             else
             {
                 if (arg1 != null)
-                    Main.info_msg(line);
+                    LogManager.msg_system( LogManager.LVL_INFO, line);
             }
           
             return true;
@@ -332,7 +333,7 @@ public class Updater
             else
             {
                 if (arg1 != null)
-                    Main.info_msg(line);
+                    LogManager.msg_system( LogManager.LVL_INFO, line);
             }
             return true;
         }

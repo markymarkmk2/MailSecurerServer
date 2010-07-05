@@ -227,7 +227,7 @@ public abstract class GenericRealmAuth
         props.put("mail." + protocol + ".timeout", 300 * 1000);
 
         props.put( "mail.debug", "false");
-        if (LogManager.get_debug_lvl() > 5)
+        if (LogManager.has_auth_lvl( LogManager.LVL_DEBUG))
             props.put( "mail.debug", "true");
 
 
@@ -327,7 +327,7 @@ public abstract class GenericRealmAuth
         ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, compressed );
         if (logic_list == null)
         {
-            LogManager.err_log(Main.Txt("Invalid_role_filter"));
+            LogManager.msg_auth( LogManager.LVL_ERR, Main.Txt("Invalid_role_filter"));
             return false;
         }
 
@@ -335,7 +335,7 @@ public abstract class GenericRealmAuth
         FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
         boolean ret = matcher.eval();
 
-        LogManager.debug( "User " + user + " is " + (ret?"":"not ") + "member of role " + role.getName());
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "User " + user + " is " + (ret?"":"not ") + "member of role " + role.getName());
 
         return ret;
     }

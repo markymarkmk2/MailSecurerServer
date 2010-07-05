@@ -66,7 +66,7 @@ public class FileSystemViewCommand extends AbstractCommand
         String file_str = pt.GetString("FL:");        
         String path_arg = pt.GetString("PA:");        
         String cmd = pt.GetString("CMD:");
-        LogManager.debug_msg(8, "FSV In : " + data);
+        log(LogManager.LVL_DEBUG, "In : " + data);
 
         
         try
@@ -169,7 +169,7 @@ public class FileSystemViewCommand extends AbstractCommand
             answer = "1: " + iOException.getMessage();
             return true;
         }
-        LogManager.debug_msg(8, "FSV Out: " + answer);
+        log(LogManager.LVL_DEBUG, "Out : " + answer);
 
         return true;
     }

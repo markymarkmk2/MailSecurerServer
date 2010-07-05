@@ -7,6 +7,7 @@ package dimm.home.index.IMAP;
 
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -110,7 +111,7 @@ public class MWImapServer extends Thread
     {
         if (trace)
         {
-            System.out.println( "Out: " + message);
+            LogManager.msg_imaps(LogManager.LVL_VERBOSE, "Out: " + message);
         }
         message += "\r\n";
         out.write(message);
@@ -121,7 +122,7 @@ public class MWImapServer extends Thread
     {
         if (trace)
         {
-            System.out.print( message);
+            LogManager.msg_imaps(LogManager.LVL_VERBOSE,  message);
         }
         out.write(message);
         out.flush();
@@ -131,7 +132,7 @@ public class MWImapServer extends Thread
     {
         if (trace)
         {
-            System.out.print( new String( data, start, len ));
+            LogManager.msg_imaps(LogManager.LVL_VERBOSE,  new String( data, start, len ));
         }
         s.getOutputStream().write( data, start, len);
         s.getOutputStream().flush();
@@ -169,7 +170,7 @@ public class MWImapServer extends Thread
         line = line.trim();
 
         if (trace)
-            System.out.println( "In: " + line );
+            LogManager.msg_imaps(LogManager.LVL_VERBOSE,  "In: " + line );
 
         int i = line.indexOf(" ");
         if (i > 0)

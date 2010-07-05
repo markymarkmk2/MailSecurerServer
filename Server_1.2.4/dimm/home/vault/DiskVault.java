@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.logging.Level;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -136,7 +135,7 @@ public class DiskVault implements Vault, StatusHandler
             File dsf = new File( ds.getPath() );
             if ( !dsf.exists() )
             {
-                LogManager.err_log( Main.Txt("DiskSpace_was_not_found") + ": " + dsf.getAbsolutePath());
+                LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("DiskSpace_was_not_found") + ": " + dsf.getAbsolutePath());
                 continue;
             }
 
@@ -186,7 +185,7 @@ public class DiskVault implements Vault, StatusHandler
             catch (IOException _ex)
             {
                 status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("Error_while_writing_to_disk") + ": " +  _ex.getMessage());
-                LogManager.err_log( status.get_status_txt() );
+                LogManager.msg_archive( LogManager.LVL_ERR,  status.get_status_txt() );
                 throw new ArchiveMsgException( status.get_status_txt()   );
             }
         }
@@ -225,7 +224,7 @@ public class DiskVault implements Vault, StatusHandler
             else
             {
                 status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath() + ": " +  vaultException.getMessage());
-                LogManager.err_log( status.get_status_txt() );
+                LogManager.msg_archive( LogManager.LVL_ERR, status.get_status_txt() );
                 throw new VaultException( vaultException.getMessage() );
             }
         }
@@ -263,7 +262,7 @@ public class DiskVault implements Vault, StatusHandler
             }
             catch (VaultException vaultException)
             {
-                LogManager.err_log( toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
+                LogManager.msg_archive( LogManager.LVL_ERR, toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath(), vaultException);
                 dsh.create();
                 
                 dsh.open();
@@ -375,7 +374,7 @@ public class DiskVault implements Vault, StatusHandler
         }
         catch (Exception iOException)
         {
-            LogManager.err_log("Error while updating index", iOException);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Error while updating index", iOException);
         }
 
         return ret;
@@ -411,7 +410,7 @@ public class DiskVault implements Vault, StatusHandler
         }
         catch (Exception ex)
         {
-            LogManager.log(Level.SEVERE, null, ex);
+            
             throw new ArchiveMsgException(toString() + ": " + Main.Txt("Cannot write data file") + ": " +   ex.getMessage());
         }
         
@@ -419,7 +418,7 @@ public class DiskVault implements Vault, StatusHandler
 
 
         String uuid = data_dsh.get_message_uuid(msg);
-        LogManager.log(Level.FINE, "Wrote mail file " + uuid);
+        LogManager.msg_archive( LogManager.LVL_DEBUG,  "Wrote mail file " + uuid);
         
 
         // AND INDEX IT AFTERWARDS
@@ -437,7 +436,7 @@ public class DiskVault implements Vault, StatusHandler
         else
         {
             if (!parallel_index)
-                LogManager.log(Level.SEVERE, "No parallel index");
+                LogManager.msg_archive( LogManager.LVL_ERR,  "No parallel index");
             
             // NO, DO RIGHT HERE
             idx.handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, /*delete_after_index*/true, parallel_index, /*skip_account_match*/ false);
@@ -457,7 +456,7 @@ public class DiskVault implements Vault, StatusHandler
             }
             catch (Exception ex)
             {
-                LogManager.err_log("Error while flushing DiskSpace " + dsh.ds.getPath(), ex);
+                LogManager.msg_archive( LogManager.LVL_ERR, "Error while flushing DiskSpace " + dsh.ds.getPath(), ex);
             }
         }
     }
@@ -474,7 +473,7 @@ public class DiskVault implements Vault, StatusHandler
             }
             catch (Exception ex)
             {
-                LogManager.err_log("Error while closing DiskSpace " + dsh.ds.getPath(), ex);
+                LogManager.msg_archive( LogManager.LVL_ERR, "Error while closing DiskSpace " + dsh.ds.getPath(), ex);
             }
         }
     }

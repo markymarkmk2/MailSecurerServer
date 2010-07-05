@@ -7,10 +7,15 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.SwingWorker;
-import java.util.*;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.Serializable;
+import java.io.StringReader;
 import java.nio.charset.Charset;
-import java.io.*;
-import java.util.logging.Level;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 public class Extractor implements Serializable
 {
@@ -76,7 +81,7 @@ public class Extractor implements Serializable
         {
             if (!mime_not_supported_list.containsKey(mimetype))
             {
-                LogManager.debug_msg( 2, "Cannot get text handler from document of this type: " + mimetype);
+                LogManager.msg_extract( LogManager.LVL_WARN, "Cannot get text handler from document of this type: " + mimetype);
                 mime_not_supported_list.put(mimetype, null);
             }
             return new StringReader("");
@@ -85,7 +90,7 @@ public class Extractor implements Serializable
         {
             try
             {
-                LogManager.debug_msg(7, "Extracting with extractor " + extractor.getClass().getName());
+                LogManager.msg_extract( LogManager.LVL_VERBOSE, "Extracting with extractor " + extractor.getClass().getName());
                 Reader rdr = null;
                 SwingWorker sw = new SwingWorker("Extractor")
                 {
@@ -100,7 +105,7 @@ public class Extractor implements Serializable
                        }
                        catch (Exception ee)
                        {
-                           LogManager.log(Level.WARNING, "Extraction error: " + ee.getMessage() );
+                           LogManager.msg_extract( LogManager.LVL_WARN, "Extraction error: " + ee.getMessage() );
                            return ee;
                        }
                     }

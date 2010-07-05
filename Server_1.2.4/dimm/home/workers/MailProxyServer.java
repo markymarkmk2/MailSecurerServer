@@ -141,7 +141,7 @@ public class MailProxyServer extends ListWorkerParent
 
             pe.set_server_sock( pop3_ss );
 
-            Main.info_msg("MailProxy is running for the host '" + protocol + "://" + host +
+             LogManager.msg_proxy( LogManager.LVL_INFO, "MailProxy is running for the host '" + protocol + "://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
            
 
@@ -151,7 +151,7 @@ public class MailProxyServer extends ListWorkerParent
                 {
                     pop3_ss.setSoTimeout(1000);
                     Socket theSocket = pop3_ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the pop3 host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
+                    LogManager.msg_proxy( LogManager.LVL_DEBUG,  "Connection accepted for the pop3 host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
 
                     if (pe.is_finished())
                     {
@@ -183,12 +183,12 @@ public class MailProxyServer extends ListWorkerParent
                 }
             }
 
-            Main.info_msg("stopping the pop3 proxy for host '" + host + "' on local port " + LocalPort);
+            LogManager.msg_proxy( LogManager.LVL_INFO, "stopping the pop3 proxy for host '" + host + "' on local port " + LocalPort);
         }
         catch (java.net.BindException be)
         {
             String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
-            Main.err_log(errmsg);
+            LogManager.msg_proxy( LogManager.LVL_ERR, errmsg);
             this.setStatusTxt("Not listening, port in use");
             this.setGoodState(false);
             
@@ -199,11 +199,11 @@ public class MailProxyServer extends ListWorkerParent
             if (!pe.is_finished())
             {
                 String errmsg = "The System could not open the Socket on the local port " + LocalPort +". " + ex.getMessage();
-                Main.err_log(errmsg);
+                LogManager.msg_proxy( LogManager.LVL_ERR, errmsg, ex);
                 this.setStatusTxt("Not listening, cannot open port");
                 this.setGoodState(false);
 
-                Main.err_log(ex.getMessage());
+               
             }
         }
 
@@ -216,7 +216,7 @@ public class MailProxyServer extends ListWorkerParent
                 pop3_ss = null;
             } catch (Exception e)
             {
-                Main.err_log(e.getMessage());
+                LogManager.msg_proxy( LogManager.LVL_ERR, e.getMessage());
             }
         }
 
@@ -246,7 +246,7 @@ public class MailProxyServer extends ListWorkerParent
             }
             // 1 second timeout
             smtp_ss.setSoTimeout(1000);
-            Main.info_msg("MailProxy is running for the host '" + protocol + "://" + host +
+            LogManager.msg_proxy( LogManager.LVL_INFO, "MailProxy is running for the host '" + protocol + "://" + host +
                     ":" + RemotePort + "' on local port " + LocalPort);
             pe.set_server_sock( smtp_ss );
 
@@ -257,7 +257,7 @@ public class MailProxyServer extends ListWorkerParent
                 try
                 {
                     Socket theSocket = smtp_ss.accept();
-                    Main.debug_msg( 2, "Connection accepted for the smtp host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
+                    LogManager.msg_proxy( LogManager.LVL_DEBUG,  "Connection accepted for the smtp host '" + host + "' on local port " + pe.get_proxy().getLocalPort());
 
                     if (pe.is_finished())
                     {                       
@@ -287,13 +287,13 @@ public class MailProxyServer extends ListWorkerParent
                 }
             }
 
-            Main.info_msg("stopping the smtp proxy for host '" + host + "' on local port " + LocalPort);
+            LogManager.msg_proxy( LogManager.LVL_INFO, "stopping the smtp proxy for host '" + host + "' on local port " + LocalPort);
             
         } 
         catch (java.net.BindException be)
         {
             String errmsg = "The System could not bind the Socket on the local port " + LocalPort + " for the host '" + host + "'. Check if this port is being used by other programs.";
-            Main.err_log(errmsg);
+            LogManager.msg_proxy( LogManager.LVL_ERR, errmsg);
             this.setStatusTxt("Not listening, port in use");
             this.setGoodState(false);
             
@@ -304,11 +304,11 @@ public class MailProxyServer extends ListWorkerParent
             if (!pe.is_finished())
             {
                 String errmsg = "The System could not open the Socket on the local port " + LocalPort +". " + ex.getMessage();
-                Main.err_log(errmsg);
+                LogManager.msg_proxy( LogManager.LVL_ERR, errmsg);
                 this.setStatusTxt("Not listening, cannot open port");
                 this.setGoodState(false);
 
-                Main.err_log(ex.getMessage());
+                LogManager.msg_proxy( LogManager.LVL_ERR, ex.getMessage());
             }
         }
 
@@ -321,7 +321,7 @@ public class MailProxyServer extends ListWorkerParent
                 smtp_ss = null;
             } catch (Exception e)
             {
-                Main.err_log(e.getMessage());
+                LogManager.msg_proxy( LogManager.LVL_ERR, e.getMessage());
             }
         }
 
@@ -402,7 +402,7 @@ public class MailProxyServer extends ListWorkerParent
     @Override
     public boolean start_run_loop()
     {
-        Main.debug_msg(1, NAME + " is starting " + child_list.size() + " tasks" );
+        LogManager.msg_proxy( LogManager.LVL_DEBUG,  NAME + " is starting " + child_list.size() + " tasks" );
         
         if (!Main.get_control().is_licensed(LicenseTicket.PRODUCT_BASE))
         {
@@ -473,7 +473,7 @@ public class MailProxyServer extends ListWorkerParent
                     ProxyConnection m = connection_list.get(i);
                     if (m.is_timeout())
                     {
-                        LogManager.err_log("Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());                        
+                        LogManager.msg_proxy( LogManager.LVL_WARN, "Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());
                         m.closeConnections();
                     }
 
@@ -503,7 +503,7 @@ public class MailProxyServer extends ListWorkerParent
         {
             if (rfc_dump.exists())
             {
-                Main.err_log_warn("Removing existing rfc_dump file " + rfc_dump.getName());
+                LogManager.msg_proxy( LogManager.LVL_WARN, "Removing existing rfc_dump file " + rfc_dump.getName());
                 rfc_dump.delete();
             }
 
@@ -517,7 +517,7 @@ public class MailProxyServer extends ListWorkerParent
         catch (Exception exc)
         {
             long space_left_mb = (long) (new File(Main.RFC_PATH).getFreeSpace() / (1024.0 * 1024.0));
-            Main.err_log_fatal("Cannot open rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
+            LogManager.msg_proxy( LogManager.LVL_ERR, "Cannot open rfc dump file: " + exc.getMessage() + ", free space is " + space_left_mb + "MB");
 
             try
             {

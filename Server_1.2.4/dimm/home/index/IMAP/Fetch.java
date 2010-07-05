@@ -10,8 +10,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.Part;
 import org.apache.commons.codec.binary.Base64;
@@ -66,7 +64,7 @@ class LengthOutputStream extends OutputStream
             }
             catch (IOException iOException)
             {
-                System.out.println("Error during los write (" + len + "," + act_length + "): " + iOException.getMessage());
+                LogManager.msg_imaps(LogManager.LVL_ERR, "Error during los write (" + len + "," + act_length + ")" , iOException);
             }
             act_length += len;
             return;
@@ -138,7 +136,7 @@ class Range
         catch (NumberFormatException numberFormatException)
         {
         }
-        LogManager.err_log("Invalid IMAP range str: " + s);
+        LogManager.msg_imaps( LogManager.LVL_WARN, "Invalid IMAP range str: " + s);
         throw new IllegalArgumentException("Invalid Range");
     }
 }
@@ -413,11 +411,11 @@ public class Fetch extends ImapCmd
             }
             catch (IOException ex)
             {
-                Logger.getLogger(Fetch.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "raw_fetch failed", ex);
             }
             catch (MessagingException ex)
             {
-                Logger.getLogger(Fetch.class.getName()).log(Level.SEVERE, null, ex);
+                LogManager.msg_imaps(LogManager.LVL_ERR, "raw_fetch failed", ex);
             }
         }
 
@@ -527,11 +525,11 @@ public class Fetch extends ImapCmd
                         {
                             server.s.getOutputStream().write( hdata );
                             if (server.trace)
-                                System.out.print(theader);
+                                LogManager.msg_imaps(LogManager.LVL_VERBOSE, theader);
                         }
                         catch (IOException iOException)
                         {
-                            System.out.print(iOException.getLocalizedMessage());
+                            LogManager.msg_imaps(LogManager.LVL_VERBOSE, iOException.getLocalizedMessage());
                         }
                     }
                     else if (tag.equals("rfc822.size"))

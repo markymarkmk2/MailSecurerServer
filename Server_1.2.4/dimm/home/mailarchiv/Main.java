@@ -6,7 +6,6 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.Updater.Updater;
-import dimm.home.mailarchiv.Commands.HandleCertificate;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
@@ -86,7 +85,7 @@ public class Main
     
     static void print_system_property( String key )
     {
-        LogManager.info_msg("Property " + key + ": " + System.getProperty(key) );
+        LogManager.msg_system( LogManager.LVL_INFO, "Property " + key + ": " + System.getProperty(key) );
     }
 
     public static GeneralPreferences get_prefs()
@@ -153,7 +152,7 @@ public class Main
         }
         catch ( Exception exc)
         {
-            Main.err_log_fatal("Cannot create local dirs: " + exc.getMessage() );
+            LogManager.msg_system( LogManager.LVL_ERR, "Cannot create local dirs: " + exc.getMessage() );
         }
 
         try
@@ -162,12 +161,12 @@ public class Main
         }
         catch ( Exception exc)
         {
-            Main.err_log_fatal("Cannot use 256 bit encryption falling back to 128 bit: " + exc.getMessage() );
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY, "Cannot use 256 bit encryption falling back to 128 bit: " + exc.getMessage() );
             CryptAESInputStream.lame_security = true;
             CryptAESOutputStream.lame_security = true;
         }
         
-        info_msg("Starting " + APPNAME + " V" + VERSION );
+        LogManager.msg_system( LogManager.LVL_INFO, "Starting " + APPNAME + " V" + VERSION );
 
 
 
@@ -199,7 +198,7 @@ public class Main
                 }
                 catch (NumberFormatException numberFormatException)
                 {
-                    err_log("Invalid portnumber on commandline, using default: " + ws_port);
+                    LogManager.msg_system( LogManager.LVL_ERR, "Invalid portnumber on commandline, using default: " + ws_port);
                 }
             }
             if (args[i].compareTo("-init_db") == 0)
@@ -225,7 +224,7 @@ public class Main
             {
                 System.setProperty("proxyPort",get_prop(GeneralPreferences.PXSOCKSPORT));
                 System.setProperty("proxyHost",get_prop(GeneralPreferences.PXSERVER));
-                info_msg("Using Proxyserver " + get_prop(GeneralPreferences.PXSERVER) + ":" + get_prop( GeneralPreferences.PXSOCKSPORT ) );
+                LogManager.msg_system( LogManager.LVL_INFO, "Using Proxyserver " + get_prop(GeneralPreferences.PXSERVER) + ":" + get_prop( GeneralPreferences.PXSOCKSPORT ) );
             }
         }
         catch (Exception exc)
@@ -235,7 +234,7 @@ public class Main
 
         if (init_db)
         {
-            info_msg("Building new database");
+            LogManager.msg_system( LogManager.LVL_INFO, "Building new database");
             SQLWorker.build_hibernate_tables();
         }
         
@@ -247,7 +246,7 @@ public class Main
              
 
 
-        info_msg("Using DB connect " + SQLWorker.get_db_connect_string());
+        LogManager.msg_system( LogManager.LVL_INFO, "Using DB connect " + SQLWorker.get_db_connect_string());
 
        
         
@@ -307,9 +306,9 @@ public class Main
                 // EVERY OBJECT HANDLES THIS FOR ITS MEMBERS
                 StringBuffer sb = new StringBuffer("Requirement Checks:\n");
                 if (!control.check_requirements( sb ))
-                    Main.err_log_fatal(sb.toString() );
+                    LogManager.msg_system( LogManager.LVL_ERR, sb.toString() );
                 else
-                    Main.info_msg(sb.toString() );                
+                    LogManager.msg_system( LogManager.LVL_DEBUG, sb.toString() );
                 
                 
                 control.run();
@@ -321,12 +320,12 @@ public class Main
             }
             catch (Exception exc)
             {
-                err_log_fatal( "Caught unhandled exception, restarting application:" + exc.getMessage() );
+                LogManager.msg_system( LogManager.LVL_ERR,  "Caught unhandled exception, restarting application:" + exc.getMessage() );
                 exc.printStackTrace( );               
                 LogicControl.sleep(5000);
             }
         }
-        info_msg( Main.APPNAME + " is shut down");
+        LogManager.msg_system( LogManager.LVL_INFO,  Main.APPNAME + " is shut down");
         try
         {
             File f = new File("shutdown_ok.txt");
@@ -371,11 +370,11 @@ public class Main
         {
             CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
             String s = cos.toString();
-            LogManager.debug("Testing key length " + key.length() + " OK");
+            LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_SECURITY, "Testing key length " + key.length() + " OK");
         }
         catch (Exception exc)
         {
-            LogManager.err_log("Testing key length " + key.length() + " NOK: " + exc.getMessage());
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Testing key length " + key.length() + " NOK: " + exc.getMessage());
         }
 
         AuditLog.getInstance().start( args );
@@ -410,11 +409,7 @@ public class Main
         
         return false;
     }
-    static public long get_debug_lvl()
-    {
-        return LogManager.get_debug_lvl();
-//        return get_long_prop( GeneralPreferences.DEBUG, startup_debug_level );
-    }
+    
     
     void read_args( String[] args )
     {
@@ -424,7 +419,7 @@ URL res = classloader.getResource("org/apache/poi/poifs/filesystem/POIFSFileSyst
 String path = res.getPath();
 System.out.println("Core POI came from " + path);
 */
-        LogManager.set_debug_lvl( get_long_prop( GeneralPreferences.DEBUG, (long)0 ) );
+        LogManager.set_debug_lvl( get_long_prop( GeneralPreferences.DEBUG, (long)LogManager.LVL_WARN ) );
         String x = "";
         for (int i = 0; i < args.length; i++)
         {
@@ -438,12 +433,13 @@ System.out.println("Core POI came from " + path);
                 }
                 catch (Exception exc)
                 {
-                    LogManager.set_debug_lvl(  1 );
+                    LogManager.set_debug_lvl(  LogManager.LVL_WARN );
                 }
+
             }
         }
 
-        LogManager.info_msg("Args: " +x);
+        LogManager.msg_system( LogManager.LVL_INFO,  "Args: " +x);
     }
 
     
@@ -477,7 +473,7 @@ System.out.println("Core POI came from " + path);
                 }
                 catch (Exception exc)
                 {
-                    Main.err_log( "Long preference " + pref_name + " has wrong format");
+                    LogManager.msg_system( LogManager.LVL_ERR,  "Long preference " + pref_name + " has wrong format");
                 }
             }
         }
@@ -533,7 +529,7 @@ System.out.println("Core POI came from " + path);
                 if (bool_false.indexOf(ret.charAt(0)) >= 0)
                     return false;
                 
-                Main.err_log( "Boolean preference " + pref_name + " has wrong format");
+                LogManager.msg_system( LogManager.LVL_ERR,  "Boolean preference " + pref_name + " has wrong format");
             }
         }
         return def;
@@ -670,30 +666,34 @@ System.out.println("Core POI came from " + path);
     {
         return work_dir;
     }
-
+/*
     public static void info_msg( String string )
     {
-        LogManager.info_msg(string);
+        LogManager.msg_system( LogManager.LVL_INFO, string);
     }
     public static void err_log( String string )
     {
-        LogManager.err_log(string);
+        LogManager.msg_system( LogManager.LVL_ERR, string);
     }
 
     public static void err_log_fatal( String string )
     {
-        LogManager.err_log_fatal(string);
+        LogManager.msg_system( LogManager.LVL_ERR, string);
     }
     
-    public static void debug_msg( int i, String string )
+    public static void debug_msg( String string )
     {
-        LogManager.debug_msg(i, string);
+        LogManager.msg_system( LogManager.LVL_DEBUG, string);
+    }
+    public static void verbose_msg( String string )
+    {
+        LogManager.msg_system( LogManager.LVL_VERBOSE, string);
     }
     public static void err_log_warn( String string )
     {
-         LogManager.err_log_warn(string);
+        LogManager.msg_system( LogManager.LVL_WARN, string);
     }
-
+*/
     static ArrayList<String> missing_transl_tokens = new ArrayList<String>();
 
     public static String Txt(String string )

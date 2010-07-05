@@ -41,7 +41,6 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -240,11 +239,11 @@ public class DiskSpaceHandler
             }
             catch (CorruptIndexException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "commit_index failed", ex);
             }
             catch (IOException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "commit_index failed", ex);
             }
         }
     }
@@ -620,7 +619,7 @@ public class DiskSpaceHandler
                 if ( m != null && m  instanceof Mandant)
                 {
                     Mandant ma = (Mandant)m;
-                    System.out.println("Found Mandant " + ma.getName() + " on DS " + ds.getPath());
+                    LogManager.msg_archive( LogManager.LVL_INFO, "Found Mandant " + ma.getName() + " on DS " + ds.getPath());
                     
                     // CHEKC IF WE HAVE NEW ENCODED SAVE FILE (WITH COMPLETE STRUCTS)
                     if (ma.getDiskArchives().size() > 0)
@@ -643,7 +642,7 @@ public class DiskSpaceHandler
                 Object o = read_info_enc_object("dsinfo.xml.sav");
                 if (o instanceof DiskSpaceInfo)
                 {
-                    LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
+                    LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
                     dsi = (DiskSpaceInfo)o;
                     info_touched = true;
                     update_info();
@@ -653,7 +652,7 @@ public class DiskSpaceHandler
             }
             catch (Exception iOException)
             {
-                LogManager.err_log_warn(Main.Txt("Recovering_from_broken_ds_info_object_failed") + ": " + iOException.getMessage());
+                LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Recovering_from_broken_ds_info_object_failed") + ": " + iOException.getMessage());
             }
             // DATAPATH EXISTS AND INFO IS BROKEN???
             File mail_path = new File(getMailPath());
@@ -667,7 +666,7 @@ public class DiskSpaceHandler
                 int enc_mode = RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE;
                 long capacity = 0;
 
-                LogManager.err_log_warn(Main.Txt("Rescanning_disk_space") + " " + ds.getPath());
+                LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Rescanning_disk_space") + " " + ds.getPath());
                 while (it.hasNext())
                 {
                     File f = it.next();
@@ -683,7 +682,7 @@ public class DiskSpaceHandler
                 dsi.setCapacity(capacity);
                 dsi.setEncMode(  enc_mode );
                 info_touched = true;
-                LogManager.err_log_fatal(Main.Txt("We_recovered_disk_info_and_need_reindex_for") + ": " + ds.getPath());
+                LogManager.msg_archive( LogManager.LVL_ERR, Main.Txt("We_recovered_disk_info_and_need_reindex_for") + ": " + ds.getPath());
                 update_info();
 
                 return;
@@ -955,7 +954,7 @@ public class DiskSpaceHandler
             }
             catch (VaultException vaultException)
             {
-                LogManager.err_log("Invalid path in info_recursive", vaultException);
+                LogManager.msg_archive( LogManager.LVL_ERR, "Invalid path in info_recursive", vaultException);
             }
         }
         return local_dsi;
@@ -1032,7 +1031,7 @@ public class DiskSpaceHandler
         }
         catch (Exception ex)
         {
-            LogManager.err_log_fatal( "Invalid capacity string " + s, ex);
+            LogManager.msg_archive( LogManager.LVL_ERR,  "Invalid capacity string " + s, ex);
             cap = 0;
         }
         return cap;
@@ -1150,7 +1149,7 @@ public class DiskSpaceHandler
 
             if (enc_mode == RFCGenericMail.ENC_NONE)
             {
-                LogManager.err_log_fatal( "No encryption!");
+                LogManager.msg_archive( LogManager.LVL_ERR,  "No encryption!");
                 bos = os;
             }
             else
@@ -1272,9 +1271,11 @@ public class DiskSpaceHandler
                     write_index.commit();
                     if (optimize)
                     {
-                        LogManager.log(Level.INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
+                        LogManager.msg_archive( LogManager.LVL_INFO, Main.Txt("Optimizing_index_on_diskspace") + " " + ds.getPath());
+
                         write_index.optimize(LUC_OPTIMIZE_FILES);
-                        LogManager.log(Level.INFO, Main.Txt("Optimizing_finished_on_diskspace") + " " + ds.getPath());
+                        
+                        LogManager.msg_archive( LogManager.LVL_INFO, Main.Txt("Optimizing_finished_on_diskspace") + " " + ds.getPath());
                     }
                 }
                 if (hash_checker != null)
@@ -1293,17 +1294,17 @@ public class DiskSpaceHandler
             }
             catch (CorruptIndexException ex)
             {
-                LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " is corrupted: ", ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "Index on Diskspace " + ds.getPath() + " is corrupted: ", ex);
                 throw new IndexException( ex.getMessage() );
             }
             catch (IOException ex)
             {
-                LogManager.log(Level.SEVERE, "Index on Diskspace " + ds.getPath() + " cannot be accessed: ", ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "Index on Diskspace " + ds.getPath() + " cannot be accessed: ", ex);
                 throw new IndexException( ex.getMessage() );
             }
             catch (Exception ex)
             {
-                LogManager.log(Level.SEVERE, "Error in Index " + ds.getPath() + " cannot be accessed: ", ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "Error in Index " + ds.getPath() + " cannot be accessed: ", ex);
                 throw new IndexException( ex.getMessage() );
             }
         }
@@ -1316,7 +1317,7 @@ public class DiskSpaceHandler
            
             catch (Exception ex)
             {
-                LogManager.log(Level.SEVERE, "Update info failed on Diskspace " + ds.getPath() + ": ", ex);
+                LogManager.msg_archive( LogManager.LVL_ERR,  "Update info failed on Diskspace " + ds.getPath() + ": ", ex);
                 throw new VaultException( ex.getMessage() );
             }
         }
@@ -1344,12 +1345,12 @@ public class DiskSpaceHandler
     public void lock_for_rebuild()
     {
         rebuild_lock = true;
-        LogManager.log(Level.SEVERE, "ReIndex Lock fehlt");
+        LogManager.msg_archive( LogManager.LVL_ERR,  "ReIndex Lock fehlt");
     }
     public void unlock_for_rebuild()
     {
         rebuild_lock = false;
-        LogManager.log(Level.SEVERE, "ReIndex Lock fehlt");
+        LogManager.msg_archive( LogManager.LVL_ERR,  "ReIndex Lock fehlt");
     }
     public boolean islock_for_rebuild()
     {
@@ -1395,7 +1396,9 @@ public class DiskSpaceHandler
     void check_free_space()
     {
         File tmp_path = new File( ds.getPath() );
-        double free = tmp_path.getFreeSpace();
+        long l = tmp_path.getFreeSpace();
+        //l = Long.MAX_VALUE;
+        double free = l;
 
         set_no_space_left( free <MIN_FREE_SPACE );
         set_low_space_left( free <LOW_FREE_SPACE,  free);

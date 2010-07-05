@@ -134,7 +134,7 @@ public class POP3Auth extends GenericRealmAuth
         }
         catch (AuthenticationFailedException exc)
         {
-            LogManager.info_msg( "SMTP auth failed");
+            LogManager.msg_auth( LogManager.LVL_ERR, "SMTP auth failed", exc);
             error_txt = Main.Txt("Authentication_failed");
         }
         catch (MessagingException messagingException)

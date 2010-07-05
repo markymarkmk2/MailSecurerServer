@@ -203,7 +203,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             ldap_qry.append( ")" );
         ldap_qry.append(")");
 
-        LogManager.debug_msg(4, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
 
         NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry.toString(), ctrl);
         ArrayList<String> mail_list = new ArrayList<String>();
@@ -293,12 +293,12 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             String searchFilter = "(&(objectCategory=person)(objectClass=user)(cn=" + user_principal + "))";
             int cnt  = 0;
 
-            LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
             NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             if (!enumeration.hasMore())
             {
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(name=" + user_principal + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
@@ -314,7 +314,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                 }
 
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(userPrincipalName=" + login_name + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
@@ -329,14 +329,14 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                     login_name += "@" + act.getLdapdomain();
                 }
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(mail=" + login_name + "))";
-                LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
             {
                 cnt++;
             }
-            System.out.println("" + cnt);
+            //System.out.println("" + cnt);
             // NOT HERE
             if (!enumeration.hasMore())
             {
@@ -381,7 +381,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         try
         {
             String rootSearchBase = get_user_search_base();
-            LogManager.debug_msg(4, "open_user: " + rootSearchBase + " " + search_attributes);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + search_attributes);
             NamingEnumeration<SearchResult> results = uctx.ctx.search(rootSearchBase, search_attributes, return_attributes);
             if (results.hasMoreElements())
             {
@@ -418,7 +418,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
 
         String rootSearchBase = get_user_search_base();
 
-        LogManager.debug_msg(4, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
         NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry, ctrl);
 
         ArrayList<String> dn_list = new ArrayList<String>();
@@ -442,7 +442,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
 
         String rootSearchBase = get_user_search_base();
 
-        LogManager.debug_msg(4, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "DN_Qry: " + rootSearchBase + " " + ldap_qry);
         NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry, ctrl);
 
         ArrayList<String> dn_list = new ArrayList<String>();

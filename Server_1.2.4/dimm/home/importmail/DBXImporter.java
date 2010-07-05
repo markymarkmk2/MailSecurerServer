@@ -17,7 +17,6 @@ import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.mail.Message;
@@ -548,7 +547,7 @@ public class DBXImporter extends WorkerParentChild implements MultipleMailImport
             }
             catch (IOException ex)
             {
-                LogManager.log(Level.SEVERE, null, ex);
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Closing DBX failed", ex);
             }
         }
     }

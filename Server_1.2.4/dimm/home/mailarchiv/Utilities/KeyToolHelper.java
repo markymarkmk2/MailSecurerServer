@@ -5,7 +5,6 @@
 
 package dimm.home.mailarchiv.Utilities;
 
-import dimm.home.mailarchiv.Main;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -177,7 +176,7 @@ public class KeyToolHelper
         }
         catch (Exception keyStoreException)
         {
-            LogManager.err_log("Cannot get alias from certificate: " + keyStoreException.getMessage());
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY, "Cannot get alias from certificate: " + keyStoreException.getMessage());
             return null;
         }
     }
@@ -278,7 +277,7 @@ public class KeyToolHelper
         File keystore = new File(ca_cert_file);
         if ( !keystore.exists() )
         {
-            LogManager.err_log("Keystor does not exist: " + ca_cert_file);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Keystor does not exist: " + ca_cert_file);
             return null;
         }
         
@@ -295,7 +294,7 @@ public class KeyToolHelper
         }
         catch (Exception keyStoreException)
         {
-            LogManager.err_log("Cannot get load keystore " + ca_cert_file + ": "  + keyStoreException.getMessage());
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Cannot get load keystore " + ca_cert_file + ": "  + keyStoreException.getMessage());
             return null;
         }
     }
@@ -315,12 +314,12 @@ public class KeyToolHelper
             }
             else
             {
-                LogManager.err_log("Missing alias " + MS_ALIAS + " in key store");
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Missing alias " + MS_ALIAS + " in key store");
             }
         }
         catch (KeyStoreException ex)
         {
-                LogManager.err_log("Invalid alias " + MS_ALIAS + " in key store: " + ex.getMessage());
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Invalid alias " + MS_ALIAS + " in key store: " + ex.getMessage());
         }
         return false;
     }
