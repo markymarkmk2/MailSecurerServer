@@ -37,7 +37,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public class Main 
 {
     
-    private static final String VERSION = "1.3.4";
+    private static final String VERSION = "1.3.8";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -118,6 +118,8 @@ public class Main
         print_system_property( "os.version");
         print_system_property( "user.dir");
 
+
+
         try
         {
             File f = new File( LOG_PATH );
@@ -155,6 +157,9 @@ public class Main
             LogManager.msg_system( LogManager.LVL_ERR, "Cannot create local dirs: " + exc.getMessage() );
         }
 
+        // PREFS FOR ARGS, ARGS HABEN PRIO
+        create_prefs();
+
         try
         {
             Security.addProvider(new BouncyCastleProvider() );
@@ -175,8 +180,6 @@ public class Main
         // DEFAULT IS DERBY
         SQLWorker.set_to_derby_db();
 
-        // PREFS FOR ARGS, ARGS HABEN PRIO
-        create_prefs();
         
         read_args( args );
         
@@ -413,6 +416,16 @@ public class Main
     
     void read_args( String[] args )
     {
+        // READ LOG LEVELS FROM PREFS
+        String[] log_types = LogManager.get_log_types();
+        for (int i = 0; i < log_types.length; i++)
+        {
+            String typ = log_types[i];
+            int lvl = (int)Main.get_long_prop( "LOG_" + typ, (long)LogManager.LVL_WARN );
+
+            LogManager.set_lvl(typ, lvl);
+        }
+
 /*
 ClassLoader classloader = org.apache.poi.poifs.filesystem.POIFSFileSystem.class.getClassLoader();
 URL res = classloader.getResource("org/apache/poi/poifs/filesystem/POIFSFileSystem.class");
@@ -711,7 +724,7 @@ System.out.println("Core POI came from " + path);
 
         if (!missing_transl_tokens.contains(string))
         {
-            System.out.println("Missing translation resource: " + string);
+            LogManager.msg_system(LogManager.LVL_DEBUG, "Missing translation resource: " + string);
 
             missing_transl_tokens.add(string);
             try

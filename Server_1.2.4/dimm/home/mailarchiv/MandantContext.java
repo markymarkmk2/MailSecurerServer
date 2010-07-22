@@ -71,6 +71,7 @@ public class MandantContext
     private ReIndexContext rctx;
     long next_reinit_importbuffer;
     private boolean shutdown;
+    ThreadPoolWatcher thread_watcher;
 
     public MandantContext( MandantPreferences _prefs, Mandant _m )
     {
@@ -81,12 +82,20 @@ public class MandantContext
         worker_list = new ArrayList<WorkerParent>();
 
         next_reinit_importbuffer = System.currentTimeMillis() + 5 * 60 * 1000; // CLEAN IMPORTBUFFER EVERY 1h
+
+        thread_watcher = new ThreadPoolWatcher(mandant.getName());
     }
 
     public Mandant getMandant()
     {
         return mandant;
     }
+
+    public ThreadPoolWatcher getThreadWatcher()
+    {
+        return thread_watcher;
+    }
+
 
     void reload_mandant( Mandant m )
     {
@@ -529,12 +538,14 @@ public class MandantContext
             }
         }
 
+        thread_watcher.shutdown_thread_pools(5000);
+        // REMOVE INDEXMANAGER
+        index_manager.setShutdown(true);
+
         // DO NOT REMOVE COMM; WE ARE IN COMM RIGHT NOW
       /*  tcp_conn.setShutdown(true);
         worker_list.remove( tcp_conn );*/
 
-        // REMOVE INDEXMANAGER
-        index_manager.setShutdown(true);
 
         wait_for_shutdown(5);
 

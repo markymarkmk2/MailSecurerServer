@@ -19,7 +19,7 @@ import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
@@ -56,12 +56,9 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import javax.mail.Address;
 import javax.mail.Header;
@@ -149,195 +146,21 @@ class MyMimetype
     }
 }
 
-class ThreadRunner implements Runnable
-{
-
-    final ThreadBlockList aiw;
-
-    public ThreadRunner( ThreadBlockList aiw )
-    {
-        this.aiw = aiw;
-    }
-
-    @Override
-    public void run()
-    {
-        while (aiw.keepRunning || !aiw.queue.isEmpty())
-        {
-            IndexJobEntry ije = aiw.queue.poll();
-            try
-            {
-                if (ije != null)
-                {
-                    ije.run();
-                }
-                else
-                {
-                    /*
-                     * Nothing in queue so lets wait
-                     */
-                    Thread.sleep(aiw.sleepMilisecondOnEmpty);
-                }
-
-            }
-            catch (Exception e)
-            {
-                LogManager.msg_index(LogManager.LVL_ERR, "Error in index runner", e );
-                e.printStackTrace();
-            }
-        }
-        aiw.isWRunning = false;
-    }
-}
 
 
 
-class ThreadBlockList implements Runnable
-{
-    Thread[] thread_array;
-    Thread wathdog_thread;
-    BlockingQueue<IndexJobEntry> queue;
-    boolean isWRunning;
-    boolean keepRunning = true;
-    long sleepMilisecondOnEmpty = 100;
-
-    public ThreadBlockList( int cnt)
-    {
-        queue = new ArrayBlockingQueue<IndexJobEntry>(cnt);
-
-        thread_array = new Thread[cnt];
-        
-        for (int i = 0; i < cnt; i++)
-        {
-            thread_array[i] = start();
-        }
-
-        wathdog_thread = new Thread(this, "IndexWatchdog" );
-        wathdog_thread.start();
-    }
-
-    Thread start()
-    {
-        ThreadRunner wr = new ThreadRunner(this);
-        Thread thread = new Thread(wr, "IndexThread");
-        thread.start();
-        return thread;
-    }
-
-    private void stop()
-    {
-        this.keepRunning = false;
-        try
-        {
-            while (isWRunning )
-            {
-                //using the same sleep duration as writer uses
-                Thread.sleep(sleepMilisecondOnEmpty);
-            }
-        }
-        catch (InterruptedException e)
-        {
-            e.printStackTrace();
-        }
-    }
-    void execute( IndexJobEntry ije ) throws InterruptedException
-    {
-        //System.out.println("QS free: " + queue.remainingCapacity());
-        queue.put(ije);
-    }
-
-
-
-    public void close() throws CorruptIndexException, IOException
-    {
-        stop();
-    }
-
-    public int get_write_queue_size()
-    {
-        return queue.size();
-    }
-
-    public int get_queue_entries()
-    {
-        return get_write_queue_size() /*+ get_extract_queue_size()*/;
-    }
-
-    @Override
-    public void run()
-    {
-        while (this.keepRunning)
-        {
-            for (int i = 0; i < thread_array.length; i++)
-            {
-                Thread thread = thread_array[i];
-
-                if (thread.isInterrupted() || !thread.isAlive())
-                {
-                    // REVIVE
-                    thread_array[i] = start();
-                }
-            }
-            try
-            {
-                Thread.sleep(1000);
-            }
-            catch (InterruptedException interruptedException)
-            {
-            }
-        }
-    }
-
-    int get_busy_threads()
-    {
-        return queue.size() - queue.remainingCapacity();
-    }
-}
-class BlockThreadPoolExecutor extends ThreadPoolExecutor
-{
-    Semaphore sem;
-    BlockingQueue<IndexJobEntry>[] queue_array;
-    public BlockThreadPoolExecutor(int cnt)
-    {
-        super(cnt, cnt, 1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>()  );
-        sem = new Semaphore(cnt);
-    }
-
-    @Override
-    public void execute( Runnable command )
-    {
-        try
-        {
-            sem.acquire();
-        }
-        catch (InterruptedException interruptedException)
-        {
-            return;
-        }
-        super.execute(command);
-    }
-
-
-    @Override
-    protected void afterExecute( Runnable r, Throwable t )
-    {
-        super.afterExecute(r, t);
-        sem.release();
-    }
-
-
-    int get_busy_threads()
-    {
-        return this.getCorePoolSize() - sem.availablePermits();
-    }
-
-}
 /**
  *
  * @author mw
  */
 public class IndexManager extends WorkerParent
 {
+
+    public static boolean no_single_instance()
+    {
+        return false;
+    }
+    public static boolean index_buffer_test = false;
 
     protected Charset utf8_charset = Charset.forName("UTF-8");
     ArrayList<MailHeaderVariable> header_list;
@@ -348,15 +171,19 @@ public class IndexManager extends WorkerParent
     Map<String, String> analyzerMap;
     Extractor extractor;
     MandantContext m_ctx;
-    private SwingWorker idle_worker;
+    private BackgroundWorker idle_worker;
     ArrayList<String> email_headers;
     ArrayList<String> allowed_headers;
     ArrayList<String> allowed_domains;
     GroupEntry acct_exclude_list;
 
-    //private final BlockThreadPoolExecutor index_thread_pool;
-    private final ThreadBlockList index_thread_pool;
+    private ThreadPoolExecutor index_run_thread_pool;
+    private ThreadPoolExecutor index_run_single_thread_pool;
+    private ThreadPoolExecutor index_load_thread_pool;
     private static final long MAX_INDEX_THREADS = 8l;
+
+
+
     
     public IndexManager( MandantContext _m_ctx, ArrayList<MailHeaderVariable> _header_list, boolean _do_index_attachments )
     {
@@ -398,8 +225,12 @@ public class IndexManager extends WorkerParent
         build_header_lists();
 
         int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
-        index_thread_pool = new ThreadBlockList(index_threads);
 
+        index_run_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexMail" , index_threads, 10 );
+
+        index_run_single_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexSequentialMail" , 1, 10 );
+
+        index_load_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "LoadMail" , 1, 10 );
 
         is_started = false;
     }
@@ -471,7 +302,7 @@ public class IndexManager extends WorkerParent
             create = !IndexReader.indexExists(path);
             if (create)
             {
-                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, "Creating_new_index_in" + " " + path);
+                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, Main.Txt("Creating_new_index_in") + " " + path);
             }
         }
         
@@ -959,25 +790,33 @@ public class IndexManager extends WorkerParent
             if (idx >= 0)
             {
                 idx += 8;
-                while (" =\t".indexOf(ct.charAt(idx)) >= 0)
+                if (ct.length() > idx)
                 {
-                    idx++;
-                }
-
-                String cs = ct.substring(idx);
-
-                String[] parts = cs.split("[; ,\t]");
-                if (parts.length > 0)
-                {
-                    String ret = parts[0];
-                    StringTokenizer st = new StringTokenizer(ret, "\"\'[](){}");
-                    if (st.hasMoreElements())
+                    while (" =\t".indexOf(ct.charAt(idx)) >= 0)
                     {
-                        return st.nextToken();
+                        idx++;
+                        if (idx >= ct.length())
+                        {
+                            idx = 0;
+                            break;
+                        }
                     }
-                    else
+
+                    String cs = ct.substring(idx);
+
+                    String[] parts = cs.split("[; ,\t]");
+                    if (parts.length > 0)
                     {
-                        return ret;
+                        String ret = parts[0];
+                        StringTokenizer st = new StringTokenizer(ret, "\"\'[](){}");
+                        if (st.hasMoreElements())
+                        {
+                            return st.nextToken();
+                        }
+                        else
+                        {
+                            return ret;
+                        }
                     }
                 }
             }
@@ -1527,12 +1366,10 @@ public class IndexManager extends WorkerParent
         return mimeType;
     }
 
-    @Override
-    public boolean start_run_loop()
+
+
+    void clean_up_index_buffer()
     {
-        LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX,  "Starting Indexmanager");
-
-
         try
         {
             File index_file_dir = m_ctx.getTempFileHandler().get_index_buffer_mail_path();
@@ -1568,11 +1405,12 @@ public class IndexManager extends WorkerParent
                         RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
 
                         // TRY INDEX IN FOREGROUND
-                        if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg, 
+                        if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg,
                                         /*delete_after_index*/ true, /*parallel_index*/ false, /*skip_account_match*/ false))
                         {
                             // IF THIS FAILES, WE DEL MSG -> NOT IN INDEX
                             // THIS SHOULD ONLY HAPPEN ON HEAVILY BROKEN FILES
+                            LogManager.msg_index(LogManager.LVL_WARN, "Removing broken index mail " + uuid);
                             msg.delete();
                         }
                     }
@@ -1584,10 +1422,22 @@ public class IndexManager extends WorkerParent
             LogManager.msg_index(LogManager.LVL_ERR, "Error while cleaning up index hold buffer", e);
             e.printStackTrace();
         }
+
+    }
+    @Override
+    public boolean start_run_loop()
+    {
+        LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX,  "Starting Indexmanager");
+
+
+
+        clean_up_index_buffer();
+
+
         if (!is_started)
         {
 
-            idle_worker = new SwingWorker(getName() + ".Idle")
+            idle_worker = new BackgroundWorker(getName() + ".Idle")
             {
 
                 @Override
@@ -1649,10 +1499,19 @@ public class IndexManager extends WorkerParent
     void do_idle()
     {
         long last_index_flush = 0;
+        
 
         while (!isShutdown())
         {
-            LogicControl.sleep(1000);
+            if (index_buffer_test)
+            {
+                clean_up_index_buffer();
+            }
+            else
+                LogicControl.sleep(1000);
+
+
+            
             long now = System.currentTimeMillis();
 
             work_jobs();
@@ -1664,6 +1523,7 @@ public class IndexManager extends WorkerParent
                 last_index_flush = now;
             }
         }
+        
         finished = true;
     }
 
@@ -2021,16 +1881,93 @@ public class IndexManager extends WorkerParent
         System.out.println("Close time: " + (stopTime - closeTime) + " ms");
         System.out.println("Total time: " + (stopTime - startTime) + " ms");
     }
-
+/*
     public int get_index_thread_pool_entries()
     {
-        return index_thread_pool.get_busy_threads();
+        return index_run_thread_pool..get_busy_threads();
+    }
+*/
+
+    Future<IndexJobEntry> execute_run( final IndexJobEntry aThis ) throws InterruptedException
+    {
+        //index_run_thread_pool.execute(aThis);
+       // System.out.println("Exec Queue cap    :" + index_run_thread_pool.getQueue().remainingCapacity());
+       // System.out.println("Exec Thread active:" + index_run_thread_pool.getActiveCount() );
+        Future<IndexJobEntry> result = index_run_thread_pool.submit(new Callable<IndexJobEntry>()
+        {
+
+            @Override
+            public IndexJobEntry call() throws Exception
+            {
+                 aThis.index_mail_parallel();
+                 return aThis;
+            }
+        });
+        return result;
+
+    }
+    Future<IndexJobEntry> execute_single_run( final IndexJobEntry aThis ) throws InterruptedException
+    {
+        //index_run_single_thread_pool.execute(aThis);
+        Future<IndexJobEntry> result = index_run_single_thread_pool.submit(new Callable<IndexJobEntry>()
+        {
+
+            @Override
+            public IndexJobEntry call() throws Exception
+            {
+                 aThis.index_mail_sequential();
+                 return aThis;
+            }
+        });
+        return result;
+
+    }
+    Future<IndexJobEntry> execute_load( final IndexJobEntry aThis ) throws InterruptedException
+    {
+        Future<IndexJobEntry> result = index_load_thread_pool.submit(new Callable<IndexJobEntry>()
+        {
+
+            @Override
+            public IndexJobEntry call() throws Exception
+            {
+                 aThis.load_mail_file(false);
+                 return aThis;
+            }
+        });
+        return result;
     }
 
 
-    void execute( IndexJobEntry aThis ) throws InterruptedException
+    public boolean index_thread_pool_finished()
     {
-        index_thread_pool.execute(aThis);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public void restart_index_thread_pool()
+    {
+        LogManager.msg_index(LogManager.LVL_INFO, "Clearing index buffer");
+
+        boolean pool_finished = false;
+        while (true && index_run_thread_pool != null)
+        {
+            if (m_ctx.getThreadWatcher().shutdown_thread_pool(index_run_thread_pool, 1000))
+            {
+                pool_finished = true;
+                break;
+            }
+            
+            if (isShutdown())
+                break;
+        }
+        if (pool_finished)
+            LogManager.msg_index(LogManager.LVL_INFO, "Index buffer was cleared");
+        else
+            LogManager.msg_index(LogManager.LVL_ERR, "Index buffer was not cleared");
+
+
+        int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
+        index_run_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexMail" , index_threads, 10 );
+        
     }
 }
 

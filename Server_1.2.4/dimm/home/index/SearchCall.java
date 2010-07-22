@@ -515,7 +515,17 @@ public class SearchCall
         {
             throw new IllegalArgumentException(Main.Txt("No_disk_spaces_for_search_found"));
         }
-        Analyzer ana = dsh_list.get(0).create_read_analyzer();
+        // GET FIRST VALID ANALYZER
+        Analyzer ana = null;
+        for (int i = 0; i < dsh_list.size(); i++)
+        {
+            DiskSpaceHandler dsh = dsh_list.get(i);
+            ana = dsh.create_read_analyzer();
+            if (ana != null)
+                break;
+        }
+        if (ana == null)
+            throw new IllegalArgumentException(Main.Txt("No_valid_diskspaces_available"));
 
 
         // BUILD USER FILTER

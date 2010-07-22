@@ -10,7 +10,7 @@
 package dimm.home.workers;
 
 import dimm.home.mailarchiv.*;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -56,7 +56,7 @@ public class UserTaskServer extends WorkerParent
     
     Timer timer;
     final ArrayList<UserTask> task_list;
-    SwingWorker idle_worker;
+    BackgroundWorker idle_worker;
 
     boolean m_Stop = false;
     
@@ -88,7 +88,7 @@ public class UserTaskServer extends WorkerParent
     {
         if (!is_started)
         {
-            idle_worker = new SwingWorker(NAME)
+            idle_worker = new BackgroundWorker(NAME)
             {
                 @Override
                 public Object construct()

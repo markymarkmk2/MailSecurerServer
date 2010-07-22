@@ -17,9 +17,11 @@ import home.shared.mail.RFCMimeMail;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import javax.mail.MessagingException;
-import javax.swing.SwingWorker;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -29,7 +31,7 @@ import org.apache.lucene.index.IndexWriter;
  *
  * @author mw
  */
-public class IndexJobEntry  implements Runnable
+public class IndexJobEntry
 {
     private MandantContext m_ctx;
     String unique_id;
@@ -43,6 +45,7 @@ public class IndexJobEntry  implements Runnable
     Document doc;
     IndexWriter writer;
     RFCMimeMail mime_msg;
+    boolean sequential_ret;
 
     public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean skip_account_match )
     {
@@ -58,6 +61,7 @@ public class IndexJobEntry  implements Runnable
         doc = null;
         writer = null;
         mime_msg = null;
+        sequential_ret = false;
 
     }
     public void close()
@@ -68,76 +72,65 @@ public class IndexJobEntry  implements Runnable
         msg = null;
     }
 
-    @Override
-    public void run()
+    
+    public void index_mail_parallel()
     {
         try
         {
-            synchronized( ixm )
-            {
-                mime_msg = ixm.load_mail_file(msg);
-            }
-            if (mime_msg == null)
-                throw new Exception( "Cannot load message" );
 
+            Exception ex = null;
+/*            try
+            {
+                Future<IndexJobEntry> result = ixm.execute_load(this);
+                result.get();
+            }
+            catch (ExecutionException ex1)
+            {
+                ex = ex1;
+            }
+            catch (InterruptedException ex1)
+            {
+                ex = ex1;
+            }
+
+            if (ex != null)
+                throw new VaultException( "Cannot load message", ex );
+*/
             boolean ret = handle_pre_index(mime_msg);
 
             if (ret)
             {
-                if (LogManager.has_lvl(LogManager.TYP_INDEX, LogManager.LVL_VERBOSE))
-                {
-                    LogManager.msg_index(LogManager.LVL_VERBOSE, "Adding to write queue, size is: " + index_dsh.get_async_index_writer().get_write_queue_size());
-                }
-                index_dsh.get_async_index_writer().add_to_write_queue(this);                
-                return;
+                index_dsh.execute_write(this);                
             }
 
         }
         catch (Exception ex)
         {
             LogManager.msg_index(LogManager.LVL_ERR, "IndexJobEntry::run fails", ex);
+            close();
         }
-        close();
+        
     }
 
-    boolean load_mail_file(boolean parallel)
+    void load_mail_file(boolean parallel)
     {
+        Exception ex = null;
+
         if (parallel)
         {
-            SwingWorker sw = new SwingWorker()
-            {
-                @Override
-                protected Object doInBackground() throws Exception
-                {
-                    try
-                    {
-                        return ixm.load_mail_file(msg);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogManager.msg_index(LogManager.LVL_ERR, "Error occured while loading message " + unique_id + ": ", ex);
-                        mime_msg = null;
-                    }
-                    return null;
-                }
-            };
-            sw.execute();
-
-             // 20 MINUTES
             try
             {
-                Object o = sw.get(1200, TimeUnit.MINUTES);
-                if (o != null && o instanceof RFCMimeMail)
-                {
-                    mime_msg = (RFCMimeMail) o;
-                }
+                Future<IndexJobEntry> result = ixm.execute_load(this);
+                result.get();
             }
-            catch (Exception interruptedException)
+            catch (ExecutionException ex1)
             {
-                mime_msg = null;
+                ex = ex1;
             }
-
-            sw = null;
+            catch (InterruptedException ex1)
+            {
+                ex = ex1;
+            }
         }
         else
         {
@@ -150,19 +143,19 @@ public class IndexJobEntry  implements Runnable
             }
             catch (MessagingException messagingException)
             {
+                ex = messagingException;
             }
             catch (IOException iOException)
             {
+                ex = iOException;
             }
-        }
+       }
 
         if (mime_msg == null)
         {
-            LogManager.msg_index(LogManager.LVL_ERR, "Error occured while loading message " + unique_id + ": ");
-            return false;
+            LogManager.msg_index(LogManager.LVL_ERR, "Error occured while loading message " + unique_id, ex);
+            
         }
-
-        return true;
     }
    
     boolean handle_index()
@@ -170,47 +163,97 @@ public class IndexJobEntry  implements Runnable
         boolean parallel_index = Main.get_bool_prop(GeneralPreferences.INDEX_MAIL_IN_BG, true);
         return handle_index(parallel_index);
     }
+    void index_mail_sequential()
+    {
+        int max_load_tries = 3;
+
+        while (max_load_tries > 0)
+        {
+            load_mail_file(false);
+
+            if (mime_msg != null)
+                break;
+
+            max_load_tries--;
+            LogicControl.sleep(1000);
+        }
+        if (max_load_tries <= 0)
+        {
+            LogManager.msg_index(LogManager.LVL_ERR,  "Could not load message " + unique_id );
+            close();
+            sequential_ret = false;
+            return;
+        }
+
+
+        boolean ret = handle_pre_index(mime_msg);
+        if (ret)
+        {
+            ret = handle_post_index();
+        }
+        close();
+
+        sequential_ret = ret;
+    }
 
     boolean handle_index(boolean parallel_index)
     {
         ixm.setStatusTxt(Main.Txt("Indexing mail file") + " " + unique_id);
 
-        // LOAD MAIL IN AN OWN THREAD, WE CAN CATCH OOMs BETTER
         if (!parallel_index)
         {
-            int max_load_tries = 3;
-
-            while (max_load_tries > 0)
+            Future<IndexJobEntry> result;
+            try
             {
-                if (load_mail_file(parallel_index))
-                    break;
-
-                max_load_tries--;
-                LogicControl.sleep(1000);
+                result = ixm.execute_single_run(this);
             }
-            if (max_load_tries <= 0)
+            catch (Exception ex)
             {
-                LogManager.msg_index(LogManager.LVL_ERR,  "Could not load message " + unique_id );
+                LogManager.msg_index(LogManager.LVL_ERR,  "handle_single_index failed", ex);
                 close();
                 return false;
             }
 
-
-            boolean ret = handle_pre_index(mime_msg);
-            if (ret)
+            while (!result.isDone() && !result.isCancelled())
             {
-                ret = handle_post_index();
+                try
+                {
+                    result.get(1000, TimeUnit.MILLISECONDS);
+                }
+                catch (InterruptedException interruptedException)
+                {
+                }
+                catch (ExecutionException executionException)
+                {
+                }
+                catch (TimeoutException timeoutException)
+                {
+                }
+                if (ixm.isShutdown())
+                {
+                    try
+                    {
+                        result.cancel(true);
+                    }
+                    catch (Exception e)
+                    {
+                    }
+                    break;
+                }
             }
-            close();
 
-            return ret;
+            return sequential_ret;
         }
 
         try
         {
             //LogManager.debug_msg(8, "Adding to extract queue, size is: " + index_dsh.get_async_index_writer().get_extract_queue_size());
+            load_mail_file( true );
 
-            ixm.execute(this);
+            if (mime_msg != null)
+            {
+                ixm.execute_run(this);
+            }
         }
         catch (Exception ex)
         {
@@ -265,13 +308,15 @@ public class IndexJobEntry  implements Runnable
         return false;
     }
 
-    boolean handle_post_index()
+    public boolean handle_post_index()
     {
         try
         {
             // SHOVE IT RIGHT OUT!!!
             synchronized (index_dsh.idx_lock)
             {
+
+                //LogManager.msg_index(LogManager.LVL_WARN,  "Not adding to index: " + unique_id);
                 writer.addDocument(doc);
             }
 
@@ -294,16 +339,23 @@ public class IndexJobEntry  implements Runnable
 
             if (delete_after_index)
             {
-                msg.delete();
+                if (IndexManager.index_buffer_test)
+                    LogManager.msg_index(LogManager.LVL_WARN, "Skipping delete because of test: " + unique_id);
+                else
+                    msg.delete();
             }
-            close();
+            
             return true;
         }
         catch (Exception ex)
         {
             LogManager.msg_index(LogManager.LVL_WARN,  "Error occured while indexing message " + unique_id + ": ", ex);
         }
-        close();
+        finally
+        {
+            close();
+        }
+
         return false;
     }
 

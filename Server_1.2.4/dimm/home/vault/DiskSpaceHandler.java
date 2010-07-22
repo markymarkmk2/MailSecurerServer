@@ -8,7 +8,7 @@ package dimm.home.vault;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.hiber_dao.DiskSpaceDAO;
 import dimm.home.hibernate.HXStream;
-import dimm.home.index.AsyncIndexWriter;
+import dimm.home.index.IndexJobEntry;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCFileMail;
@@ -41,6 +41,10 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -154,6 +158,9 @@ class HashChecker
     }
     void add_entry( Document doc, int ds_id, String hash )
     {
+        if (IndexManager.no_single_instance())
+            return;
+
         synchronized( map )
         {
             DocHashEntry dhe = new DocHashEntry(hash, doc, ds_id);
@@ -171,7 +178,8 @@ public class DiskSpaceHandler
 
     boolean _open;
     IndexWriter write_index;
-    AsyncIndexWriter async_index_writer;
+    //AsyncIndexWriter async_index_writer;
+    ThreadPoolExecutor write_index_thread_pool;
 
     MandantContext m_ctx;  
     public final String idx_lock = "idx";
@@ -180,6 +188,7 @@ public class DiskSpaceHandler
     boolean low_space_left;
     boolean no_space_left;
 
+    public final String DSINFO_FILENAME = "dsinfo.xml";
 
     private static long FLUSH_OPTIMIZE_CYCLE_MS = 60*60*1000;
     private static final long MIN_FREE_SPACE = 100000000l;  // 100 MB
@@ -201,10 +210,27 @@ public class DiskSpaceHandler
         next_flush_optimize_ts = 0;  // OPTIMIZE AT STARTUP
 //        next_flush_optimize_ts = System.currentTimeMillis() + FLUSH_OPTIMIZE_CYCLE_MS;
     }
-    public AsyncIndexWriter get_async_index_writer()
+    public ExecutorService get_write_index_thread_pool()
     {
-        return async_index_writer;
+        return write_index_thread_pool;
     }
+    public Future<IndexJobEntry> execute_write( final IndexJobEntry aThis ) throws InterruptedException
+    {
+
+        Future<IndexJobEntry> result = write_index_thread_pool.submit( new Callable<IndexJobEntry>()
+        {
+
+            @Override
+            public IndexJobEntry call() throws Exception
+            {
+                aThis.handle_post_index();
+                return aThis;
+            }
+        });
+
+        return result;
+    }
+
 
     HashChecker get_hash_checker()
     {
@@ -286,6 +312,22 @@ public class DiskSpaceHandler
     {
         return (int)m_ctx.getPrefs().get_long_prop( MandantPreferences.INDEX_THREADS, MandantPreferences.DFTL_INDEX_THREADS );
     }
+
+   
+    public void open_write_index_pool()
+    {
+
+        if (write_index_thread_pool != null)
+        {
+            m_ctx.getThreadWatcher().shutdown_thread_pool(write_index_thread_pool, 5000);
+        }
+
+
+        write_index_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "WriteIndex" , 1, 20 );
+/*        OfferBlockingQueue<Runnable> run_queue = new OfferBlockingQueue<Runnable>(20);
+        write_index_thread_pool = new ThreadPoolExecutor(1, 1, 10, TimeUnit.MINUTES, run_queue);*/
+        //write_index_thread_pool = Executors.newSingleThreadExecutor();
+    }
     public IndexWriter create_write_index() throws VaultException, IndexException
     {
         try
@@ -300,13 +342,9 @@ public class DiskSpaceHandler
                 {
                     write_index = m_ctx.get_index_manager().create_index(getIndexPath(), dsi.getLanguage());
                     write_index.commit();
-                    
-                    if (async_index_writer != null)
-                    {
-                        async_index_writer.close();
-                    }
 
-                    async_index_writer = new AsyncIndexWriter(get_indexthreads());
+                    open_write_index_pool();
+//                    async_index_writer = new AsyncIndexWriter(get_indexthreads());
 
                     return write_index;
                 }
@@ -339,11 +377,14 @@ public class DiskSpaceHandler
                     boolean  can_create_index = !exists_info();
 
                     write_index = m_ctx.get_index_manager().open_index(getIndexPath(), dsi.getLanguage(), can_create_index);
+
+                    open_write_index_pool();
+                    /*
                     if (async_index_writer != null)
                     {
                         async_index_writer.close();
                     }
-                    async_index_writer = new AsyncIndexWriter(get_indexthreads());
+                    async_index_writer = new AsyncIndexWriter(get_indexthreads());*/
                 }
                 return write_index;
             }
@@ -363,11 +404,15 @@ public class DiskSpaceHandler
             {
                 synchronized( idx_lock )
                 {
-                    if (async_index_writer != null)
+                    if (write_index_thread_pool != null)
+                    {
+                        m_ctx.getThreadWatcher().shutdown_thread_pool(write_index_thread_pool, 5000);
+                    }
+/*                    if (async_index_writer != null)
                     {
                         async_index_writer.close();
                         async_index_writer = null;
-                    }
+                    }*/
                     if (write_index != null)
                     {
                         write_index.commit();
@@ -396,6 +441,14 @@ public class DiskSpaceHandler
         {
             close();
         }
+        else
+        {
+            if (!exists_info() && (ds.getStatus().compareTo( CS_Constants.DS_EMPTY) == 0))
+            {
+                create();
+            }
+        }
+
 
         read_info();
 
@@ -404,6 +457,21 @@ public class DiskSpaceHandler
 
     public Analyzer create_read_analyzer()
     {
+
+
+        if (!is_open())
+        {
+
+            try
+            {
+                open();
+            }
+            catch (Exception ex)
+            {
+                LogManager.msg_archive(LogManager.LVL_ERR, "Cannot read_info on Diskspace " + ds.getPath(), ex);
+                return null;
+            }
+        }
         return m_ctx.get_index_manager().create_analyzer(dsi.getLanguage(), /*do_indexs*/ false);
     }
 
@@ -545,6 +613,27 @@ public class DiskSpaceHandler
         bis.close();
         return o;
     }
+    private Object read_sav_info_enc_object( String filename ) throws FileNotFoundException, IOException
+    {
+
+
+        InputStream bis = new FileInputStream(ds.getPath() + "/" + filename + ".enc.sav");
+        try
+        {
+            CryptAESInputStream cis = new CryptAESInputStream( bis, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), CS_Constants.get_InternalPassPhrase() );
+            bis = cis;
+        }
+        catch (Exception exc)
+        {
+            return fall_back_read_info_object(  filename + ".sav" );
+        }
+
+        XStream xs = new XStream();
+        Object o = xs.fromXML(bis);
+        bis.close();
+        return o;
+    }
+
 
 
     private void fall_back_write_info_object( Object o, String filename ) throws FileNotFoundException, IOException
@@ -585,9 +674,11 @@ public class DiskSpaceHandler
 
     private boolean exists_info()
     {
-        File f = new File(ds.getPath() + "/" + "dsinfo.xml");
-        return f.exists();
+        if (exists_info_enc_object(DSINFO_FILENAME))
+            return true;
 
+        File f = new File(ds.getPath() + "/" + DSINFO_FILENAME);
+        return f.exists();
     }
     private void read_info() throws VaultException
     {
@@ -595,7 +686,7 @@ public class DiskSpaceHandler
         {
             synchronized( data_lock )
             {
-                Object o = read_info_enc_object( "dsinfo.xml" );
+                Object o = read_info_enc_object( DSINFO_FILENAME );
 
                 if (o instanceof DiskSpaceInfo)
                 {
@@ -639,7 +730,7 @@ public class DiskSpaceHandler
         {
             try
             {
-                Object o = read_info_enc_object("dsinfo.xml.sav");
+                Object o = read_sav_info_enc_object(DSINFO_FILENAME);
                 if (o instanceof DiskSpaceInfo)
                 {
                     LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Recovering_from_broken_ds_info_object") + ": " + ex.getMessage());
@@ -712,7 +803,7 @@ public class DiskSpaceHandler
         {
             synchronized( data_lock )
             {
-                write_info_enc_object( dsi, "dsinfo.xml" );
+                write_info_enc_object( dsi, DSINFO_FILENAME );
                 write_info_enc_object( ds.getDiskArchive().getMandant(), "ma.xml" );
                 info_touched = false;
             }
@@ -1203,7 +1294,7 @@ public class DiskSpaceHandler
             add_message_info(msg);
 
         }
-    }
+    }/*
     public InputStream open_decrypted_mail_stream(RFCGenericMail msg, String password ) throws  VaultException
     {
         try
@@ -1227,7 +1318,7 @@ public class DiskSpaceHandler
         {
             throw new VaultException(ds, e);
         }
-    }
+    }*/
     private static long size_recursive(File f)
     {
         long len = 0;
@@ -1254,7 +1345,10 @@ public class DiskSpaceHandler
     void flush(boolean and_optimize) throws IndexException, VaultException
     {
         if (!is_open())
+        {
+            check_free_space();
             return;
+        }
         
         if (is_index() && write_index != null)
         {
@@ -1345,12 +1439,12 @@ public class DiskSpaceHandler
     public void lock_for_rebuild()
     {
         rebuild_lock = true;
-        LogManager.msg_archive( LogManager.LVL_ERR,  "ReIndex Lock fehlt");
+        LogManager.msg_archive( LogManager.LVL_WARN,  "ReIndex Lock fehlt");
     }
     public void unlock_for_rebuild()
     {
         rebuild_lock = false;
-        LogManager.msg_archive( LogManager.LVL_ERR,  "ReIndex Lock fehlt");
+        LogManager.msg_archive( LogManager.LVL_WARN,  "ReIndex Lock fehlt");
     }
     public boolean islock_for_rebuild()
     {
@@ -1455,6 +1549,9 @@ public class DiskSpaceHandler
 
     public void create_hash_checker() throws VaultException, IOException, IndexException
     {
+        if (IndexManager.no_single_instance())
+            return;
+
         if (hash_checker != null)
         {
             hash_checker.close();
@@ -1474,6 +1571,9 @@ public class DiskSpaceHandler
 
     public void add_hash_entry( String txt_hash, Document doc, int ds_id )
     {
+        if (IndexManager.no_single_instance())
+            return;
+
         if (hash_checker != null)
             hash_checker.add_entry(doc, ds_id, txt_hash);
     }

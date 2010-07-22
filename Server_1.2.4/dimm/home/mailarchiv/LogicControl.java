@@ -141,6 +141,8 @@ public class LogicControl
     MBoxImportServer mb_import_server;
     private boolean shutdown;
 
+    ThreadPoolWatcher thread_watcher;
+
     
     
 
@@ -225,6 +227,9 @@ public class LogicControl
     public LogicControl()
     {
         Main.control = this;
+
+        thread_watcher = new ThreadPoolWatcher("System");
+        
         lic_checker = new LicenseChecker( );
 
         mandanten_list = new ArrayList<MandantContext>();
@@ -281,6 +286,12 @@ public class LogicControl
     {
         return mb_import_server;
     }
+
+    public ThreadPoolWatcher getThreadWatcher()
+    {
+        return thread_watcher;
+    }
+
 
 
     private void add_mandant( MandantPreferences prefs, Mandant m )

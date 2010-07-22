@@ -6,7 +6,6 @@ import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.Serializable;
@@ -16,15 +15,28 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-public class Extractor implements Serializable
+public class Extractor implements Serializable, Runnable
 {
     MandantContext m_ctx;
     protected Map<String, TextExtractor> handlers;
 
     int extr_timeout_s = 60;
+
+    ThreadPoolExecutor service;
+    
+
     public Extractor( MandantContext m_ctx )
     {
+
+        service = m_ctx.getThreadWatcher().create_blocking_thread_pool("Extractor", 4, 10);
+//        OfferBlockingQueue<Runnable> run_queue = new OfferBlockingQueue<Runnable>(1);
+//        service = new ThreadPoolExecutor(4, 4, 10, TimeUnit.MINUTES, run_queue);
+        //service =  Executors.newSingleThreadExecutor();
 
         extr_timeout_s = (int)Main.get_long_prop(GeneralPreferences.INDEX_TIMEOUT, 180);
         this.m_ctx = m_ctx;
@@ -75,8 +87,8 @@ public class Extractor implements Serializable
 
     public Reader getText( final InputStream is, final DocumentWrapper doc, final String mimetype, final Charset fromCharset ) throws ExtractionException
     {
-        final TextExtractor extractor;
-        extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
+        
+        final TextExtractor extractor = handlers.get(mimetype.toLowerCase(Locale.ENGLISH));
         if (extractor == null)
         {
             if (!mime_not_supported_list.containsKey(mimetype))
@@ -91,51 +103,63 @@ public class Extractor implements Serializable
             try
             {
                 LogManager.msg_extract( LogManager.LVL_VERBOSE, "Extracting with extractor " + extractor.getClass().getName());
-                Reader rdr = null;
-                SwingWorker sw = new SwingWorker("Extractor")
-                {
+                
+
+                Future<Object> result = service.submit(new Callable<Object>() {
 
                     @Override
-                    public Object construct()
+                    public Object call() throws Exception
                     {
                        try
                        {
+/*                           if (extractor == null)
+                               extractor = null;
+                           if (is == null)
+                               extractor = extractor;
+                           if (doc == null)
+                               extractor = extractor;
+*/
                             Reader _rdr =  extractor.getText(is, doc, fromCharset);
                             return _rdr;
                        }
                        catch (Exception ee)
                        {
-                           LogManager.msg_extract( LogManager.LVL_WARN, "Extraction error: " + ee.getMessage() );
+                           LogManager.msg_extract( LogManager.LVL_WARN, "Extraction error: ",  ee );
                            return ee;
                        }
                     }
-                };
-                sw.start();
-                sw.join(extr_timeout_s * 1000);
-                if (sw.finished())
-                {
-                    Object o = sw.get();
+                });
 
-                    if (o != null)
-                    {
-                        if ( o instanceof Reader)
-                        {
-                            return (Reader)o;
-                        }
-                    }
-                }
-                else
+
+                Object o = result.get(10, TimeUnit.MINUTES);
+                
+
+                if (o != null)
                 {
-                    sw.interrupt();
+                    if ( o instanceof Reader)
+                    {
+                        return (Reader)o;
+                    }
+                    if ( o instanceof Exception)
+                    {
+                        Exception ex = (Exception) o;
+                        throw new ExtractionException("Extraction failed from document of this type: " + mimetype + ": " + ex.getMessage());
+                    }
                 }
                 throw new ExtractionException("Extraction failed from document of this type: " + mimetype);
             }
             catch (Exception ee)
             {
-                throw new ExtractionException("Extraction failed from document of this type: " + mimetype);
+                throw new ExtractionException("Extraction failed from document of this type: " + mimetype, ee);
 //                return new StringReader("");
             }
         }
+    }
+
+    @Override
+    public void run()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     

@@ -29,6 +29,9 @@ public class PDFExtractor implements TextExtractor, Serializable
 
         File file = null;
         PDDocument document = null;
+        Writer output = null;
+        PDFTextStripper stripper = null;
+        PDFParser parser = null;
 /*        File pdf_file = null;
         FileInputStream fis = null;*/
         try
@@ -36,7 +39,7 @@ public class PDFExtractor implements TextExtractor, Serializable
            /* pdf_file = m_ctx.getTempFileHandler().writeTemp("PDFExtract", "extract", "txt", is);
             fis = new FileInputStream( pdf_file );*/
 
-            PDFParser parser = new PDFParser(is);
+            parser = new PDFParser(is);
             parser.parse();
             document = parser.getPDDocument();
             if (document.isEncrypted())
@@ -46,11 +49,11 @@ public class PDFExtractor implements TextExtractor, Serializable
             }
             file = m_ctx.getTempFileHandler().create_temp_file("PDFExtract", "extract", "txt");
 
-            Writer output = null;
+            
             output = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
-            PDFTextStripper stripper = new PDFTextStripper();
+            stripper = new PDFTextStripper();
             stripper.writeText(document, output);
-            output.close();
+            
         }
         catch (Exception e)
         {
@@ -64,14 +67,20 @@ public class PDFExtractor implements TextExtractor, Serializable
         {
             try
             {
+                if (output != null)
+                {
+                    try
+                    {
+                        output.close();
+                    }
+                    catch (IOException iOException)
+                    {
+                    }
+                }
                 if (document != null)
                 {
                     document.close();
                 }
-             /*   if (pdf_file != null)
-                {
-                     m_ctx.getTempFileHandler().delete( pdf_file );
-                }*/
             }
             catch (IOException io)
             {

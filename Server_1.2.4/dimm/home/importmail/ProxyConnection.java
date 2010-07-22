@@ -467,7 +467,7 @@ public abstract class ProxyConnection implements Runnable
         
         if ((System.currentTimeMillis()- last_activity)/1000 > ACTIVITY_TIMEOUT)
         {
-            LogManager.msg_proxy(LogManager.LVL_ERR, "No activity for " + ACTIVITY_TIMEOUT + "s: " + get_description() + " last command:" + last_command );
+            LogManager.msg_proxy(LogManager.LVL_WARN, "No activity for " + ACTIVITY_TIMEOUT + "s: " + get_description() + " last command:" + last_command );
             return true;
         }
         return false;

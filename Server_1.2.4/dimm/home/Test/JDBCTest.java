@@ -10,7 +10,7 @@
  */
 package dimm.home.Test;
 
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -124,7 +124,7 @@ public class JDBCTest extends javax.swing.JFrame
 
     void run_insert() throws SQLException
     {
-        SwingWorker sw = new SwingWorker("JDBCTest") {
+        BackgroundWorker sw = new BackgroundWorker("JDBCTest") {
 
             @Override
             public Object construct()

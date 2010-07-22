@@ -8,7 +8,7 @@ package dimm.home.Updater;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import home.shared.Utilities.ZipListener;
 import home.shared.Utilities.ZipStatusDlg;
 import home.shared.Utilities.ZipUtilities;
@@ -126,7 +126,7 @@ public class Updater
             
             
         }               
-        SwingWorker sw = new SwingWorker("Updater")
+        BackgroundWorker sw = new BackgroundWorker("Updater")
         {
             @Override
             public Object construct()
@@ -822,7 +822,7 @@ public class Updater
         }
         
         final Updater upd = new Updater(args);
-        SwingWorker sw = new SwingWorker("Updater")
+        BackgroundWorker sw = new BackgroundWorker("Updater")
         {
 
             @Override

@@ -12,7 +12,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.DirectoryEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import home.shared.CS_Constants;
 import home.shared.hibernate.DiskSpace;
 import home.shared.mail.RFCFileMail;
@@ -148,7 +148,7 @@ public class ReIndexContext
     MandantContext context;
     int da_id;
     int ds_id;
-    SwingWorker sw;
+    BackgroundWorker sw;
     private String last_msg = "";
     private boolean busy = false;
     private boolean pause = false;
@@ -179,7 +179,7 @@ public class ReIndexContext
         }
 
         busy = true;
-        sw = new SwingWorker("ReIndex")
+        sw = new BackgroundWorker("ReIndex")
         {
 
             @Override
@@ -190,7 +190,10 @@ public class ReIndexContext
                     
 
                     prepare_reindex();
-                    reindex();
+                    if (!abort)
+                    {
+                        reindex();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -198,8 +201,6 @@ public class ReIndexContext
                 }
                 finally
                 {
-                    
-
                     busy = false;
                 }
                 return null;
@@ -215,6 +216,8 @@ public class ReIndexContext
 
         String path = data_dsh.getMailPath();
         DirectoryEntry data_dir = new DirectoryEntry(new File(path));
+        ReIndexDSHEntry re = new ReIndexDSHEntry(data_dsh, index_dsh, data_dir);
+        reindex_list.add(re);
 
 
         long total_size = 0;
@@ -226,12 +229,18 @@ public class ReIndexContext
             File mailfile = it.next();
             total_size += mailfile.length();
             total_cnt++;
+            
+            re.setTotal_cnt(total_cnt);
+            re.setTotal_size(total_size);
+
+            // CHECK ABORT
+            if (abort)
+            {
+                set_status(Main.Txt("Aborting_reindex"));
+                break;
+            }
         }
 
-        ReIndexDSHEntry re = new ReIndexDSHEntry(data_dsh, index_dsh, data_dir);
-        re.setTotal_cnt(total_cnt);
-        re.setTotal_size(total_size);
-        reindex_list.add(re);
     }
 
     void reindex() throws VaultException, IndexException, IOException
@@ -244,6 +253,12 @@ public class ReIndexContext
                 act_re_idx = i;
             }
             reindex(reIndexDSHEntry);
+
+            // CHECK ABORT
+            if (abort)
+            {
+                break;
+            }
         }
     }
 
@@ -381,14 +396,16 @@ public class ReIndexContext
                 }
             }
 
-            while (data_dsh.get_async_index_writer().get_queue_entries() > 0 || idx.get_index_thread_pool_entries() > 0)
+            // THIS WILL WAIT UNTIL ALL INDEX THREADS ARE FINISHED
+            set_status(Main.Txt("Waiting_for_queues_to_finish: ") );
+            idx.restart_index_thread_pool();
+            index_dsh.open_write_index_pool();
+
+/*            while (data_dsh.get_async_index_writer().get_queue_entries() > 0 )
             {
-                set_status(Main.Txt("Waiting_for_queues_to_finish: ") + 
-                        Integer.toString( data_dsh.get_async_index_writer().get_queue_entries() +
-                                         idx.get_index_thread_pool_entries()) );
                 LogicControl.sleep(500);
             }
-
+*/
             set_status(Main.Txt("Optimizing_index"));
             try
             {
@@ -398,7 +415,7 @@ public class ReIndexContext
                     reIndexDSHEntry.setAct_size((long)(reIndexDSHEntry.getTotal_size() * 0.99));
                 }
 
-                data_dsh.flush(/*optimize*/ true);
+                index_dsh.flush(/*optimize*/ true);
 
                 // 100 %
                 synchronized (stat_sb)

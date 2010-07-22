@@ -6,29 +6,23 @@
 package dimm.home.mailarchiv.Utilities;
 
 import dimm.home.mailarchiv.Main;
+import home.shared.CS_Constants;
+import home.shared.Utilities.LogConfigEntry;
 import home.shared.Utilities.LogListener;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
+import java.util.Vector;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.SimpleLayout;
 
 
-class LogTypeEntry
-{
-    String typ;
-    int lvl;
 
-    public LogTypeEntry( String typ )
-    {
-        this.typ = typ;
-        this.lvl = LogManager.LVL_ERR;
-    }
-
-}
 /**
  *
  * @author mw
@@ -44,17 +38,20 @@ public class LogManager implements  LogListener
     public static final String PREFS_PATH = "preferences/";
     public static final String LOG_PATH = "logs/";
 
+    public static int MAX_MSG_CACHE_SIZE = 5000;
    
 
     static long dbg_level = LVL_WARN;
     private static String LOG_L4J = "logfj.log";
+
+    public static SimpleDateFormat message_sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
+
 
     static LogTypeEntry[] lte_array =
     {
         new LogTypeEntry(TYP_AUTH),
         new LogTypeEntry(TYP_EXTRACT),
         new LogTypeEntry(TYP_PROXY),
-        new LogTypeEntry(TYP_CONNECTOR),
         new LogTypeEntry(TYP_HOTFOLDER),
         new LogTypeEntry(TYP_IMPORT),
         new LogTypeEntry(TYP_FETCHER),
@@ -72,6 +69,39 @@ public class LogManager implements  LogListener
         new LogTypeEntry(TYP_INDEX)
     };
 
+    public static final String[] get_log_types()
+    {
+        String[] ret = new String[lte_array.length];
+
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            String r = lte_array[i].typ;
+            ret[i] = r;
+        }
+        return ret;
+
+    }
+
+    public static final ArrayList<LogConfigEntry> get_log_config_arry()
+    {
+        ArrayList<LogConfigEntry> arr = new ArrayList<LogConfigEntry>();
+
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            arr.add( new LogConfigEntry( lte_array[i].typ, lte_array[i].lvl));
+        }
+        return arr;
+
+    }
+    public static final  void set_log_config_arry(ArrayList<LogConfigEntry> arr)
+    {
+
+        for (int i = 0; i < arr.size(); i++)
+        {
+            set_lvl(arr.get(i).typ, arr.get(i).level);
+        }
+    }
+
     public static final String get_lvl_name( int lvl)
     {
         switch (lvl )
@@ -84,6 +114,11 @@ public class LogManager implements  LogListener
         }
         return "Unknown";
 
+    }
+    
+    public static final String get_logfile( String type)
+    {
+        return "LOG_" + type + ".log";
     }
 
     public static final String get_logfile( int lvl)
@@ -99,7 +134,6 @@ public class LogManager implements  LogListener
         return null;
 
     }
-
 
     public static void msg_auth( int lvl, String string, Exception exc )
     {
@@ -269,19 +303,58 @@ public class LogManager implements  LogListener
     }
     private static void _msg( int lvl, String type, String msg, Exception exc )
     {
-        String s = get_lvl_name( lvl) + ": " + type + ": " + msg;
+
+        java.util.Date now = new java.util.Date();
+        StringBuffer sb = new StringBuffer();
+
+        sb.append( message_sdf.format( now ) );
+        sb.append( ": " );
+
+
+        sb.append( get_lvl_name( lvl) );
+        sb.append( ": " );
+        sb.append( type );
+        sb.append( ": " );
+        
         if (exc != null)
         {
-            s += exc.getLocalizedMessage();
+            msg += ": " + exc.getLocalizedMessage();
         }
-        String file = get_logfile(lvl);
-        file_log( file, s );
+
+        sb.append( msg );
+        String s = sb.toString();
+
+        // ADD TO CACHE
+        LogTypeEntry lte = get_lte( type );
+        if (lte != null)
+        {
+            lte.add_msg(lvl, msg, now);
+        }
+
+        System.out.println( s );
+        if (exc != null && exc instanceof RuntimeException)
+            exc.printStackTrace();
+
+
+        if (lvl != LVL_VERBOSE)
+        {            
+
+            lte.check_max_size();
+
+            lte.file_log( s );
+        }
     }
 
+    // SINGLETON
     private LogManager()
     {
     }
 
+    public static void set_lvl( String typ, int lvl)
+    {
+        LogTypeEntry logTypeEntry = get_lte( typ );
+        logTypeEntry.lvl = lvl;
+    }
    
 
    
@@ -299,37 +372,8 @@ public class LogManager implements  LogListener
             main_logger.setLevel(org.apache.log4j.Level.ERROR);
     }
 
+  
 
-
-   
-    static SimpleDateFormat sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
-
-
-
-    static synchronized void file_log( String file, String s )
-    {
-        System.out.println( s );
-
-        if (file != null)
-        {
-            File log = new File( LOG_PATH + file );
-            try
-            {
-                FileWriter fw = new FileWriter( log,  true );
-                java.util.Date now = new java.util.Date();
-
-                fw.write( sdf.format( now ) );
-                fw.write( ": " );
-                fw.write( s );
-                fw.write( "\n" );
-                fw.close();
-            }
-            catch ( Exception exc)
-            {
-                exc.printStackTrace();
-            }
-        }
-    }
 
     public static LogManager get_instance()
     {
@@ -367,12 +411,17 @@ public class LogManager implements  LogListener
             System.out.println("Logger init failed! " + iOException.getMessage());
         }
 
+
+
     }
-
-
 
     public static File get_file_by_type( String log_type )
     {
+        LogTypeEntry lte = get_lte(log_type);
+        if (lte != null)
+        {
+            return lte.get_log_file();
+        }
         if (log_type.compareTo(L4J) == 0)
             return new File(LOG_PATH + LOG_L4J);
         if (log_type.compareTo(ERR) == 0)
@@ -409,6 +458,151 @@ public class LogManager implements  LogListener
         return has_lvl(typ, lvl);
     }
 
-   
+
+
+    /**
+     * Given a byte array this method:
+     * a. creates a String out of it
+     * b. reverses the string
+     * c. extracts the lines
+     * d. characters in extracted line will be in reverse order,
+     *    so it reverses the line just before storing in Vector.
+     *
+     *  On extracting required numer of lines, this method returns TRUE,
+     *  Else it returns FALSE.
+     *
+     * @param bytearray
+     * @param lineCount
+     * @param lastNlines
+     * @return
+     */
+    private static boolean parseLinesFromLast( byte[] bytearray, int lineCount, Vector<String> lastNlines )
+    {
+        String lastNChars = new String(bytearray);
+        StringBuffer sb = new StringBuffer(lastNChars);
+        lastNChars = sb.reverse().toString();
+        StringTokenizer tokens = new StringTokenizer(lastNChars, "\n");
+        while (tokens.hasMoreTokens())
+        {
+            StringBuffer sbLine = new StringBuffer((String) tokens.nextToken());
+            lastNlines.add(sbLine.reverse().toString());
+            if (lastNlines.size() == lineCount)
+            {
+                return true;//indicates we got 'lineCount' lines
+            }
+        }
+        return false; //indicates didn't read 'lineCount' lines
+    }
+
+    /**
+     * Reads last N lines from the given file. File reading is done in chunks.
+     *
+     * Constraints:
+     * 1 Minimize the number of file reads -- Avoid reading the complete file
+     * to get last few lines.
+     * 2 Minimize the JVM in-memory usage -- Avoid storing the complete file
+     * info in in-memory.
+     *
+     * Approach: Read a chunk of characters from end of file. One chunk should
+     * contain multiple lines. Reverse this chunk and extract the lines.
+     * Repeat this until you get required number of last N lines. In this way
+     * we read and store only the required part of the file.
+     *
+     * 1 Create a RandomAccessFile.
+     * 2 Get the position of last character using (i.e length-1). Let this be curPos.
+     * 3 Move the cursor to fromPos = (curPos - chunkSize). Use seek().
+     * 4 If fromPos is less than or equal to ZERO then go to step-5. Else go to step-6
+     * 5 Read characters from beginning of file to curPos. Go to step-9.
+     * 6 Read 'chunksize' characters from fromPos.
+     * 7 Extract the lines. On reading required N lines go to step-9.
+     * 8 Repeat step 3 to 7 until
+     *			a. N lines are read.
+     *		OR
+     *			b. All lines are read when num of lines in file is less than N.
+     * Last line may be a incomplete, so discard it. Modify curPos appropriately.
+     * 9 Exit. Got N lines or less than that.
+     *
+     * @param fileName
+     * @param lineCount
+     * @param chunkSize
+     * @return
+     */
+    public static Vector<String> tail( String log_type, long offset, int lineCount )
+    {
+        Vector<String> lastNlines = new Vector<String>();
+
+        // GET FROM CACHE?
+        LogTypeEntry lte = get_lte( log_type );
+
+        if (lte != null && (lineCount  + offset) < lte.msg_cache.size())
+        {
+            for (int i = 0; i < lineCount; i++)
+            {
+                lastNlines.add( lte.get_msg((int)offset + i));
+            }
+            return lastNlines;
+        }
+
+        File log_file = LogManager.get_file_by_type(log_type);
+
+        int chunkSize = CS_Constants.STREAM_BUFFER_LEN;
+        RandomAccessFile raf = null;
+        try
+        {
+            raf = new RandomAccessFile(log_file, "r");
+
+            int delta = 0;
+            long curPos = raf.length() - 1 - offset;
+            long fromPos;
+            byte[] bytearray;
+            while (true)
+            {
+                fromPos = curPos - chunkSize;
+                if (fromPos <= 0)
+                {
+                    raf.seek(0);
+                    bytearray = new byte[(int) curPos];
+                    raf.readFully(bytearray);
+                    parseLinesFromLast(bytearray, lineCount, lastNlines);
+                    break;
+                }
+                else
+                {
+                    raf.seek(fromPos);
+                    bytearray = new byte[chunkSize];
+                    raf.readFully(bytearray);
+                    if (parseLinesFromLast(bytearray, lineCount, lastNlines))
+                    {
+                        break;
+                    }
+                    delta = ((String) lastNlines.get(lastNlines.size() - 1)).length();
+                    lastNlines.remove(lastNlines.size() - 1);
+                    curPos = fromPos + delta;
+                }
+            }
+
+            return lastNlines;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+        finally
+        {
+            if (raf != null)
+            {
+                try
+                {
+                    raf.close();
+                }
+                catch (IOException iOException)
+                {
+                }
+            }
+        }
+    }
+
+
 
 }

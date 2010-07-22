@@ -11,7 +11,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.FileTransferManager;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import home.shared.Utilities.ZipUtilities;
 import java.io.BufferedWriter;
@@ -49,7 +49,7 @@ public class UpdateWorker extends WorkerParent
     String os_name;
     String server_path;
     
-    SwingWorker update_worker;
+    BackgroundWorker update_worker;
     
     long cycle_duration;
     boolean automatic;
@@ -269,7 +269,7 @@ public class UpdateWorker extends WorkerParent
             return;
         
         
-        update_worker = new SwingWorker(NAME + ".CheckUpdates")
+        update_worker = new BackgroundWorker(NAME + ".CheckUpdates")
         {
 
 
@@ -447,7 +447,7 @@ public class UpdateWorker extends WorkerParent
     @Override
     public boolean start_run_loop()
     {
-        SwingWorker worker = new SwingWorker(NAME)
+        BackgroundWorker worker = new BackgroundWorker(NAME)
         {
             @Override
             public Object construct()

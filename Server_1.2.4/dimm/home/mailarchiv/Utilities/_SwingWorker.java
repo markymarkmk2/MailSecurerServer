@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * You must now invoke start() on the SwingWorker after
  * creating it.
  */
-public abstract class SwingWorker
+public abstract class _SwingWorker
 {
     private Object value;  // see getValue(), setValue()
     private Thread thread;
@@ -63,6 +63,7 @@ public abstract class SwingWorker
      * Called on the event dispatching thread (not on the worker thread)
      * after the <code>construct</code> method has returned.
      */
+    
     public boolean finished()
     {
         Thread t = threadVar.get();
@@ -150,8 +151,9 @@ public abstract class SwingWorker
      * Start a thread that will call the <code>construct</code> method
      * and then exit.
      */
-    public SwingWorker(String name)
+    public _SwingWorker(String name)
     {
+
         final Runnable doFinished = new Runnable()
         {
             @Override

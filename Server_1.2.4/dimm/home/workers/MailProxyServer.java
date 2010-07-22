@@ -19,8 +19,7 @@ import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
-import home.shared.Utilities.DefaultSSLServerSocketFactory;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import home.shared.license.LicenseTicket;
 import home.shared.mail.EncodedMailOutputStream;
 import java.io.BufferedOutputStream;
@@ -41,11 +40,8 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.net.ServerSocketFactory;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
@@ -60,12 +56,37 @@ import javax.net.ssl.TrustManagerFactory;
 public class MailProxyServer extends ListWorkerParent
 {
     public static final String NAME = "MailProxyServer";
-    private static final int MAX_THREADS = 100;
+    private static final int MAX_THREADS = 50;
+
+    private static final int MAX_QUEUE = 150;
 
 
     final ArrayList<ProxyConnection> connection_list;
     ExecutorService connect_thread_pool;
 
+
+    class NamedThreadFactory implements  ThreadFactory
+{
+
+    String name;
+
+
+    public NamedThreadFactory( String name )
+    {
+        this.name = name;
+    }
+
+
+    @Override
+    public Thread newThread( Runnable r )
+    {
+        String thr_name = name;
+
+        Thread thr = new Thread(r, thr_name);
+        return thr;
+    }
+
+}
 
     /**
      * Constructor
@@ -79,7 +100,10 @@ public class MailProxyServer extends ListWorkerParent
         
   //      m_Stop = false;
         connection_list = new ArrayList<ProxyConnection>();
-        connect_thread_pool = Executors.newFixedThreadPool(MAX_THREADS);
+
+        connect_thread_pool = Main.get_control().getThreadWatcher().create_blocking_thread_pool("MailProxyServer", MAX_THREADS, MAX_QUEUE);
+        //Executors.newFixedThreadPool(MAX_THREADS, new NamedThreadFactory("MailProxyServer"));
+//        connect_thread_pool = Executors.newFixedThreadPool(MAX_THREADS, new NamedThreadFactory("MailProxyServer"));
     }
 
    
@@ -417,7 +441,7 @@ public class MailProxyServer extends ListWorkerParent
             if (pe.is_started())
                 continue;
             
-            SwingWorker worker = new SwingWorker(NAME)
+            BackgroundWorker worker = new BackgroundWorker(NAME)
             {
                 @Override
                 public Object construct()
@@ -438,7 +462,7 @@ public class MailProxyServer extends ListWorkerParent
 
         if (!is_started)
         {
-            idle_worker = new SwingWorker(NAME + ".Idle")
+            idle_worker = new BackgroundWorker(NAME + ".Idle")
             {
                 @Override
                 public Object construct()

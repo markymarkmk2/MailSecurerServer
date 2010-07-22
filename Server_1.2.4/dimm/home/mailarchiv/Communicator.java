@@ -21,7 +21,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Commands.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import home.shared.Utilities.ParseToken;
 
 /**
@@ -158,7 +158,7 @@ public class Communicator extends WorkerParent
         start_broadcast_task();
         start_tcpip_task();
          
-        SwingWorker worker = new SwingWorker(NAME)
+        BackgroundWorker worker = new BackgroundWorker(NAME)
         {
             @Override
             public Object construct()
@@ -180,7 +180,7 @@ public class Communicator extends WorkerParent
 
     boolean start_broadcast_task()
     {
-        SwingWorker worker = new SwingWorker(NAME + ".BroadcastTask")
+        BackgroundWorker worker = new BackgroundWorker(NAME + ".BroadcastTask")
         {
             @Override
             public Object construct()
@@ -205,7 +205,7 @@ public class Communicator extends WorkerParent
     }
     boolean start_tcpip_task()
     {
-        SwingWorker worker = new SwingWorker(NAME + ".TcpIpTask")
+        BackgroundWorker worker = new BackgroundWorker(NAME + ".TcpIpTask")
         {
             @Override
             public Object construct()
@@ -270,7 +270,7 @@ public class Communicator extends WorkerParent
                          
                          //System.out.println( "Packet gefunden" );
 
-                         SwingWorker work = new SwingWorker(NAME + ".UdpDispatch")
+                         BackgroundWorker work = new BackgroundWorker(NAME + ".UdpDispatch")
                          {
                           
                               @Override
@@ -351,7 +351,7 @@ public class Communicator extends WorkerParent
                  final Socket s = tcp_s.accept();
                  s.setTcpNoDelay( true );
                                   
-                 SwingWorker work = new SwingWorker(NAME + ".TcpIpDispatch")
+                 BackgroundWorker work = new BackgroundWorker(NAME + ".TcpIpDispatch")
                  {
 
                      @Override

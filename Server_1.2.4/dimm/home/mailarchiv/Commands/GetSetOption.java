@@ -14,7 +14,9 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.Preferences;
+import home.shared.Utilities.LogConfigEntry;
 import home.shared.Utilities.ParseToken;
+import java.util.ArrayList;
 
 /**
  *
@@ -198,7 +200,8 @@ public class GetSetOption extends AbstractCommand
             answer = "0: ";
             return true;
 
-         }
+        }
+
         
         return false;
     }

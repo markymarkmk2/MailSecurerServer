@@ -8,7 +8,6 @@ import com.sun.mail.imap.IMAPFolder;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
-import dimm.home.mailarchiv.LogicControl;
 import java.io.IOException;
 import java.util.*;
 
@@ -44,6 +43,7 @@ public class MailBoxFetcher extends WorkerParentChild
 
     public static final int WAIT_PERIOD_S = 60;
     public static final int IMAP_IDLE_PERIOD = 10;
+    public static final int MSG_BULK_SIZE = 1000;  // FETCH 1000 MSG IN A ROW, TO SPEED UP DELETION 
 
     
 
@@ -187,27 +187,22 @@ public class MailBoxFetcher extends WorkerParentChild
         }
         catch (AuthenticationFailedException e)
         {
-            status.set_status(StatusEntry.ERROR, "Error while connecting to mail server <" + server + ">: Authentication failed");
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), e);
+            status.set_status(StatusEntry.ERROR, "Authentication failed: " + e.getMessage());
             throw new Exception(status.get_status_txt(), e);
         }
         catch (IllegalStateException ise)
         {
-            status.set_status(StatusEntry.ERROR, "Mail server <" + server + "> is connected already");
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ise);
+            status.set_status(StatusEntry.ERROR, "Is connected already");
             throw new Exception(status.get_status_txt(), ise);
         }
         catch (MessagingException me)
         {
             status.set_status(StatusEntry.ERROR, "Connect failed for " + protocol + "://" + server + ":" + port + " Usr:" + username + " PWDHash:" + password.hashCode());
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), me);
-
-            LogManager.msg_fetcher(LogManager.LVL_ERR, "StoreProps where " + props.toString() );
+            LogManager.msg_fetcher(LogManager.LVL_DEBUG, "Store Props: " + props.toString() );
            // LogManager.err_log("SystmProps where " + System.getProperties().toString() );
             if (me.getMessage().contains("sun.security.validator.ValidatorException"))
             {
                 status.set_status(StatusEntry.ERROR, "TLS Server Certificate could not be validated for mail server <" + server + ">");
-                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 throw new Exception(status.get_status_txt(), me);
             }
             else if (test_flag(CS_Constants.ACCT_USE_TLS_IF_AVAIL) && me.getMessage().contains("javax.net.ssl.SSLHandshakeException"))
@@ -217,8 +212,7 @@ public class MailBoxFetcher extends WorkerParentChild
             }
             else
             {
-                status.set_status(StatusEntry.ERROR, "Could not connect to mail server <" + server + ">: " + me.getMessage());
-                LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+                status.set_status(StatusEntry.ERROR, "Could not connect to mail server: " + me.getMessage());                
                 throw new Exception(status.get_status_txt(), me);
             }
         }
@@ -228,15 +222,13 @@ public class MailBoxFetcher extends WorkerParentChild
         }
         catch (Exception e)
         {
-            status.set_status(StatusEntry.ERROR, "Could not resolve default folder on mail server <" + server + ">: " + e.getMessage());
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+            status.set_status(StatusEntry.ERROR, "Could not resolve default folder: " + e.getMessage());
             throw new Exception(status.get_status_txt(), e);
         }
 
         if (inboxFolder == null)
         {
-            status.set_status(StatusEntry.ERROR, "Missing default folder on mail server <" + server + ">");
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+            status.set_status(StatusEntry.ERROR, "Missing default folder");
             throw new Exception(status.get_status_txt());
         }
 
@@ -250,8 +242,7 @@ public class MailBoxFetcher extends WorkerParentChild
         }
         catch (Exception e)
         {
-            status.set_status(StatusEntry.ERROR, "Missing INBOX folder on mail server <" + server + ">");
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+            status.set_status(StatusEntry.ERROR, "Missing INBOX folder");
             throw new Exception(status.get_status_txt(), e);
         }
         try
@@ -260,8 +251,7 @@ public class MailBoxFetcher extends WorkerParentChild
         }
         catch (Exception e)
         {
-            status.set_status(StatusEntry.ERROR, "cannot open INBOX folder on mail server <" + server + ">");
-            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+            status.set_status(StatusEntry.ERROR, "cannot open INBOX folder: " + e.getMessage());
             throw new Exception(status.get_status_txt(), e);
         }
         return;
@@ -316,7 +306,7 @@ public class MailBoxFetcher extends WorkerParentChild
             {
                 if (e.getCause() instanceof AuthenticationFailedException)
                 {
-                    status.set_status(StatusEntry.ERROR, "Authentication with mail server <" + imfetcher.getServer() + "> failed");
+                    status.set_status(StatusEntry.ERROR, "Authentication with mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
                     LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
                 }
                 else
@@ -328,7 +318,7 @@ public class MailBoxFetcher extends WorkerParentChild
                     }
                      * */
                     status.set_status(StatusEntry.ERROR, "Connecting mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
-                    LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt());
+                    LogManager.msg_fetcher(LogManager.LVL_WARN, status.get_status_txt());
                 }
                 try
                 {
@@ -438,6 +428,17 @@ public class MailBoxFetcher extends WorkerParentChild
                 {
                     return;
                 }
+                if (messages.length > MSG_BULK_SIZE)
+                {
+                    Message[] tmp = new Message[MSG_BULK_SIZE];
+
+                    for (int i = 0; i < tmp.length; i++)
+                    {
+                        tmp[i] = messages[i];
+                    }
+                    messages = tmp;
+                }
+
                 archive_messages(messages);
             }
         });
@@ -595,14 +596,15 @@ public class MailBoxFetcher extends WorkerParentChild
             Message[] messages = null;
             try
             {
-                /*if (store.isConnected())
-                {*/
-                    messages = inboxFolder.getMessages();
-                /*}
+                int cnt = inboxFolder.getMessageCount();
+                if (cnt > MSG_BULK_SIZE)
+                {
+                    messages = inboxFolder.getMessages(1, MSG_BULK_SIZE);
+                }
                 else
                 {
-                    return;
-                }*/
+                    messages = inboxFolder.getMessages();
+                }
             }
             catch (FolderClosedException fce)
             {
@@ -645,6 +647,18 @@ public class MailBoxFetcher extends WorkerParentChild
             {
                 break;
             }
+            
+            if (messages.length > MSG_BULK_SIZE)
+            {
+                Message[] tmp = new Message[MSG_BULK_SIZE];
+
+                for (int i = 0; i < tmp.length; i++)
+                {
+                    tmp[i] = messages[i];
+                }
+                messages = tmp;
+            }
+
             status.set_status(StatusEntry.BUSY, Main.Txt("Fetching_new_messages_from_server") + " " + imfetcher.getServer());
             complete = archive_messages(messages);
         }

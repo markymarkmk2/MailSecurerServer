@@ -14,7 +14,7 @@ import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import java.io.File;
 import java.io.FileFilter;
@@ -531,7 +531,7 @@ public class SQLWorker extends WorkerParent
     {
         if (!is_started)
         {
-            SwingWorker worker = new SwingWorker(NAME)
+            BackgroundWorker worker = new BackgroundWorker(NAME)
             {
                 @Override
                 public Object construct()

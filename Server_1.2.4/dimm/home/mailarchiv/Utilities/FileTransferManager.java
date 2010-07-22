@@ -603,7 +603,7 @@ public class FileTransferManager extends WorkerParent
             put.setDoAuthentication(true); 
                         
             // SEND IN THREAD, THEN WE CAN ABORT USING GUI
-            SwingWorker sw = new SwingWorker(NAME)
+            BackgroundWorker sw = new BackgroundWorker(NAME)
             {
 
                 @Override

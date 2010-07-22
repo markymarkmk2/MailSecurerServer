@@ -400,7 +400,8 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
     {
         try
         {
-            uctx.ctx.close();
+            if (uctx != null && uctx.ctx != null)
+                uctx.ctx.close();
         }
         catch (NamingException namingException)
         {

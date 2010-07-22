@@ -32,7 +32,7 @@ public class CmdExecutor
     BufferedReader stdout;
     BufferedReader stderr;
     Process p;
-    SwingWorker worker;
+    BackgroundWorker worker;
     
     boolean no_shell;
     boolean no_debug;
@@ -156,7 +156,7 @@ public class CmdExecutor
         out_line = "";
         err_line = "";
         
-        worker = new SwingWorker("CmdExecutor")
+        worker = new BackgroundWorker("CmdExecutor")
         {
             @Override
             public Object construct()

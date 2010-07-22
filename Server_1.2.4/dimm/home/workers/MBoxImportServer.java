@@ -11,7 +11,7 @@ package dimm.home.workers;
 import dimm.home.importmail.MultipleMailImporter;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.vault.Vault;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
@@ -64,7 +64,7 @@ public class MBoxImportServer extends WorkerParent
     public static final String NAME = "MBoxImportServer";
     Timer timer;
     final ArrayList<MBoxImporterEntry> import_list;
-    SwingWorker idle_worker;
+    BackgroundWorker idle_worker;
     boolean m_Stop = false;
 
     /** Creates a new instance of StatusDisplay */
@@ -95,7 +95,7 @@ public class MBoxImportServer extends WorkerParent
         if (is_started)
             return true;
 
-        idle_worker = new SwingWorker(NAME)
+        idle_worker = new BackgroundWorker(NAME)
         {
 
             @Override

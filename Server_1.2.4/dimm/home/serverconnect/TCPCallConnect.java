@@ -42,7 +42,7 @@ import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
@@ -821,7 +821,7 @@ public class TCPCallConnect extends WorkerParent
 
         start_tcpip_task();
 
-        SwingWorker worker = new SwingWorker(getName())
+        BackgroundWorker worker = new BackgroundWorker(getName())
         {
 
             @Override
@@ -867,7 +867,7 @@ public class TCPCallConnect extends WorkerParent
 
     boolean start_tcpip_task()
     {
-        SwingWorker worker = new SwingWorker(getName() + ".TcpIpTask")
+        BackgroundWorker worker = new BackgroundWorker(getName() + ".TcpIpTask")
         {
 
             @Override
@@ -940,7 +940,7 @@ public class TCPCallConnect extends WorkerParent
                 final Socket s = tcp_s.accept();
                 s.setTcpNoDelay(true);
 
-                SwingWorker work = new SwingWorker(getName() + ".TcpIpDispatcher")
+                BackgroundWorker work = new BackgroundWorker(getName() + ".TcpIpDispatcher")
                 {
 
                     @Override

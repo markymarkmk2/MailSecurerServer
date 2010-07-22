@@ -22,10 +22,11 @@ public class WordExtractor implements TextExtractor, Serializable
     public Reader getText( InputStream is, DocumentWrapper doc, Charset charset ) throws ExtractionException
     {
         File file = null;
+        Writer out = null;
         try
         {
             file = m_ctx.getTempFileHandler().create_temp_file("WordExtract", "extract", "tmp");
-            Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
+            out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
             WordTextExtractorFactory wtef = new WordTextExtractorFactory();
             wtef.textExtractor(is).getText(out);
             out.close();
@@ -33,11 +34,37 @@ public class WordExtractor implements TextExtractor, Serializable
         }
         catch (Exception io)
         {
+            if (out != null)
+            {
+                try
+                {
+                    out.close();
+                    out = null;
+                }
+                catch (IOException iOException)
+                {
+                }
+            }
+            
             if (file != null && file.exists())
             {
                 m_ctx.getTempFileHandler().delete(file);
             }
             throw new ExtractionException("failed to extract text from word document:" + io.getMessage());
+        }
+        finally
+        {
+            if (out != null)
+            {
+                try
+                {
+                    out.close();
+                }
+                catch (IOException iOException)
+                {
+                }
+            }
+
         }
     }
 }

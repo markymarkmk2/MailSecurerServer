@@ -431,8 +431,11 @@ public class LicenseChecker
                 if (license_user_map.size() >= get_max_units())
                 {
                     // AHH, MONEY...
-                    return false;
+                    String l_str = "( " + license_user_map.size() + "/" + get_max_units() + " Users reached)";
+                    LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("License_is_exceeded") + l_str);
+                    return true;
                 }
+
                 // ADD THIS ENTRY TO USERMAP
                 adr = new StatMailAddress(email.get_mail(), email.getAdr_type(), 0, 0);
                 license_user_map.put(email.get_mail(), adr);

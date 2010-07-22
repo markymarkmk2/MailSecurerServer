@@ -9,6 +9,7 @@
 
 package dimm.home.mailarchiv;
 
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.Preferences;
 
 
@@ -132,6 +133,13 @@ public class GeneralPreferences extends Preferences
         prop_names.add( TRUSTSTORE );
         prop_names.add( INDEX_TIMEOUT );
         prop_names.add( AUDIT_DB_CONNECT );
+
+        String[] log_types = LogManager.get_log_types();
+        for (int i = 0; i < log_types.length; i++)
+        {
+            String string = log_types[i];
+            prop_names.add( "LOG_" + string );
+        }
         
                 
         read_props();

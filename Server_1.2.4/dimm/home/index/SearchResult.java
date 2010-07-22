@@ -7,6 +7,9 @@ package dimm.home.index;
 
 import home.shared.hibernate.Role;
 import java.io.IOException;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.ParallelMultiSearcher;
+import org.apache.lucene.search.Searchable;
 import org.apache.lucene.search.Searcher;
 
 /**
@@ -124,10 +127,28 @@ public class SearchResult
     }
     public void close()
     {
+
         try
         {
             if (searcher != null)
+            {
+                if (searcher instanceof ParallelMultiSearcher)
+                {
+                    ParallelMultiSearcher pms = (ParallelMultiSearcher) searcher;
+                    Searchable[] searchers = pms.getSearchables();
+                    for (int i = 0; i < searchers.length; i++)
+                    {
+                        Searchable searchable = searchers[i];
+                        if (searchable instanceof IndexSearcher)
+                        {
+                            IndexSearcher is = (IndexSearcher)searchable;
+                            is.getIndexReader().close();
+                        }
+                        searchable.close();
+                    }
+                }
                 searcher.close();
+            }
         }
         catch (IOException iOException)
         {

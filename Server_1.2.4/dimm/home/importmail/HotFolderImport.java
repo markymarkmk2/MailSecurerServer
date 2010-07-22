@@ -258,7 +258,7 @@ public class HotFolderImport extends WorkerParentChild
                         // LOOK FOR ENTRY IN PREVIOUS RESULT
                         for (int j = 0; j < last_entry_list.size(); j++)
                         {
-                            DirectoryEntry last_entry = entry_list.get(j);
+                            DirectoryEntry last_entry = last_entry_list.get(j);
 
                             // SAME PATH?
                             if (last_entry.getFile().getAbsolutePath().equals(flist[i].getAbsolutePath()))

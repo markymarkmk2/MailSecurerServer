@@ -307,6 +307,9 @@ public class DiskVault implements Vault, StatusHandler
     public boolean handle_existing_mail_in_vault( IndexManager idx, RFCGenericMail msg ) throws CorruptIndexException, IOException
     {
 
+        if (IndexManager.no_single_instance())
+            return false;
+
         // return false;
         boolean ret = false;
         String hash = new String(Base64.encodeBase64(msg.get_hash()));
@@ -322,6 +325,7 @@ public class DiskVault implements Vault, StatusHandler
             dhe = dsh.has_hash_entry(hash);
             if (dhe != null)
             {
+                LogManager.msg_index(LogManager.LVL_DEBUG, "Found short term hash for msg " + msg.toString());
                 break;
             }
             search_arr[i] = dsh.get_searcher();
@@ -367,10 +371,14 @@ public class DiskVault implements Vault, StatusHandler
 
                 if (dsh.getDs().getId() == doc_ds_id)
                 {
-                    // UPDATE IF NECESSARY WITH  NEW BCC
+                    // UPDATE IF NECESSARY WITH NEW BCC
+                    LogManager.msg_index(LogManager.LVL_DEBUG, "Found long term hash for msg " + msg.toString());
+
                     ret = IndexManager.handle_bcc_and_update(dsh, doc, msg);
                 }
             }
+
+            pms.close();
         }
         catch (Exception iOException)
         {

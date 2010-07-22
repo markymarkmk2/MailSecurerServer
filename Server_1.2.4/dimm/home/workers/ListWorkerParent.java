@@ -8,7 +8,7 @@ package dimm.home.workers;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.mailarchiv.Utilities.SwingWorker;
+import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.license.LicenseTicket;
@@ -23,7 +23,7 @@ public class ListWorkerParent extends WorkerParent
    // protected boolean m_Stop = false;
 
     final ArrayList<WorkerParentChild> child_list;
-    SwingWorker idle_worker;
+    BackgroundWorker idle_worker;
 
     public ListWorkerParent( String _name )
     {
@@ -119,7 +119,7 @@ public class ListWorkerParent extends WorkerParent
                     continue;
                 }
                 final WorkerParentChild child = child_list.get(i);
-                SwingWorker worker = new SwingWorker(child.get_name())
+                BackgroundWorker worker = new BackgroundWorker(child.get_name())
                 {
 
                     @Override
@@ -134,7 +134,7 @@ public class ListWorkerParent extends WorkerParent
         }
         if (!is_started)
         {
-            idle_worker = new SwingWorker(getName())
+            idle_worker = new BackgroundWorker(getName())
             {
 
                 @Override
