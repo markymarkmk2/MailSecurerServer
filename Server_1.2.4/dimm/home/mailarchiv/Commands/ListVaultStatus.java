@@ -5,6 +5,8 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.hibernate.HParseToken;
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.vault.DiskSpaceHandler;
@@ -16,6 +18,7 @@ import home.shared.hibernate.Mandant;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 
 /**
@@ -74,15 +77,30 @@ public class ListVaultStatus extends AbstractCommand
                         {
                         }
                     }
+                    else
+                    {
+                        try
+                        {
+                            IndexReader rdr = dsh.create_read_index();
+                            docs = rdr.numDocs();
+                            rdr.close();
+                        }
+                        catch (Exception e)
+                        {
+                        }
+                    }
                     DiskSpaceInfo dsi = dsh.getDsi();
-                    File fs = new File( ds.getPath() );
-                    long free_space = fs.getFreeSpace();
-                    long total_space = fs.getTotalSpace();
-                    long last_mod = dsi.getLastEntryTS();
+                    if (dsi != null)
+                    {
+                        File fs = new File( ds.getPath() );
+                        long free_space = fs.getFreeSpace();
+                        long total_space = fs.getTotalSpace();
+                        long last_mod = dsi.getLastEntryTS();
 
-                    String line = "TP:DS ID:" + ds.getId() + " CNT:" + docs + " CAP:" + dsi.getCapacity() + " FS:" + free_space + " TS:" + total_space + " LM:" + last_mod + "\n";
+                        String line = "TP:DS ID:" + ds.getId() + " CNT:" + docs + " CAP:" + dsi.getCapacity() + " FS:" + free_space + " TS:" + total_space + " LM:" + last_mod + "\n";
 
-                    result_list.append(line);                    
+                        result_list.append(line);
+                    }
                 }
 
 

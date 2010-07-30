@@ -17,7 +17,6 @@ import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Main;
-import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.mailarchiv.WorkerParent;
@@ -587,6 +586,7 @@ public class IndexManager extends WorkerParent
         // IF WE DO NOT FIND A MATCHING ACCOUNT, WE DELETE MAIL
         if (acct_match == null && !skip_account_filter)
         {
+            LogManager.msg_index(LogManager.LVL_DEBUG, "Skipping unmatching mail " + unique_id);
             if (delete_after_index)
             {
                 delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
@@ -597,11 +597,9 @@ public class IndexManager extends WorkerParent
         if (!skip_account_filter)
         {
             ArrayList<String> domain_list = m_ctx.get_index_manager().getAllowed_domains();
-            boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded(domain_list, mime_msg.getEmail_list());
+            boolean exceeded = Main.get_control().get_license_checker().is_license_exceeded(m_ctx, domain_list, mime_msg.getEmail_list());
             if (exceeded)
             {
-                Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded"));
-
                 if (delete_after_index)
                 {
                     delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);

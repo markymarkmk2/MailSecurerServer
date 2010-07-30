@@ -11,6 +11,7 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.hibernate.HParseToken;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import home.shared.Utilities.ParseToken;
 import home.shared.license.HWIDLicenseTicket;
 import home.shared.license.LicenseTicket;
@@ -50,8 +51,11 @@ public class LicenseConfig extends AbstractCommand
         if ( command.compareTo("CHECK") == 0)
         {
             String product = pt.GetString("PRD:");
-            boolean licensed = Main.get_control().get_license_checker().is_licensed(product);
-            answer = "0: LS:" + (licensed?"1":"0");
+            LicenseChecker lc = Main.get_control().get_license_checker();
+            boolean licensed = lc.is_licensed(product);
+            int max_users = lc.get_max_units(product);
+            int used_users = lc.get_used_units(product);
+            answer = "0: LS:" + (licensed?"1":"0") + " MU:" + max_users + " UU:" + used_users;
             return true;
         }
 

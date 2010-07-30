@@ -7,6 +7,8 @@ package dimm.home.mailarchiv.Utilities;
 import com.thoughtworks.xstream.XStream;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Notification.Notification;
 import home.shared.license.DemoLicenseTicket;
 import home.shared.license.HWIDLicenseTicket;
 import home.shared.license.LicenseTicket;
@@ -408,7 +410,7 @@ public class LicenseChecker
         return null;
     }
 
-    public boolean is_license_exceeded( ArrayList<String> domain_list, ArrayList<RFCMailAddress> email_list )
+    public boolean is_license_exceeded( MandantContext m_ctx, ArrayList<String> domain_list, ArrayList<RFCMailAddress> email_list )
     {
         synchronized (umap_mtx)
         {
@@ -426,14 +428,36 @@ public class LicenseChecker
             StatMailAddress adr = license_user_map.get(email.get_mail());
             if (adr == null)
             {
+                int max_units = get_max_units(LicenseTicket.PRODUCT_BASE);
+                int used_units = get_used_units(LicenseTicket.PRODUCT_BASE);
+
+
                 // NOT FOUND; WE HAVE THE FIRST MAIL FROM A NEW USER
                 // -> CHECK IF UNITS IS SUFFICIENT
-                if (license_user_map.size() >= get_max_units())
+                if (used_units >= max_units)
                 {
                     // AHH, MONEY...
-                    String l_str = "( " + license_user_map.size() + "/" + get_max_units() + " Users reached)";
-                    LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("License_is_exceeded") + l_str);
-                    return true;
+                    String l_str = " (" + used_units + "/" + max_units + " Users reached)";
+                    LogManager.msg_license( LogManager.LVL_ERR, Main.Txt("License_is_exceeded") + l_str);
+                    Notification.throw_notification(m_ctx.getMandant(), Notification.NF_ERROR, Main.Txt("License_is_exceeded") + l_str);
+
+                    return true;  // LEAVE WITH ERROR
+                }
+
+                // WARN EVERY 5% USERS IF MORE THAN 2/3
+                if (used_units >= (max_units * 2) / 3)
+                {
+                    int modulo_cnt = max_units / 20;
+                    int warn_type = LogManager.LVL_INFO;
+                    if ((used_units * 100)/max_units > 80)
+                        warn_type = LogManager.LVL_WARN;
+
+                    if (used_units % modulo_cnt == 0)
+                    {
+                        String l_str = " (" + used_units + "/" + max_units + " Users reached)";
+                        LogManager.msg_license( warn_type, Main.Txt("Licenseinformation") + l_str);
+                        Notification.throw_notification(m_ctx.getMandant(), Notification.NF_INFORMATIVE, Main.Txt("Licenseinformation") + l_str);
+                    }
                 }
 
                 // ADD THIS ENTRY TO USERMAP
@@ -454,14 +478,27 @@ public class LicenseChecker
         return false;
     }
 
-    public int get_max_units()
+    public int get_max_units(String product)
     {
-        ValidTicketContainer ticket = get_ticket( LicenseTicket.PRODUCT_BASE );
+        ValidTicketContainer ticket = get_ticket( product );
         if (ticket != null)
         {
             if (ticket.isValid())
             {
                 return ticket.getTicket().getUnits();
+            }
+        }
+        return 0;
+    }
+
+    public int get_used_units(String product)
+    {
+        if (product.compareTo(LicenseTicket.PRODUCT_BASE) == 0)
+        {
+            synchronized (umap_mtx)
+            {
+                if (license_user_map != null)
+                    return license_user_map.size();
             }
         }
         return 0;
