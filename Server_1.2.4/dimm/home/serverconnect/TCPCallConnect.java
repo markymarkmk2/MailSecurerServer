@@ -47,6 +47,7 @@ import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.Utilities.ParseToken;
+import home.shared.hibernate.Mandant;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -1241,6 +1242,15 @@ public class TCPCallConnect extends WorkerParent
 
             AuditLog alog = AuditLog.getInstance();
             alog.object_delete( ssoc, o );
+
+/* IS DONE FROM CLIENT
+ if (o instanceof Mandant)
+            {
+                Mandant m = (Mandant)o;
+                // REINIT REMOVES DATA STRUCTS
+                Main.get_control().reinit_mandant(m.getId());
+            }
+ * */
             
             return "0: ";
         }

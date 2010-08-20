@@ -79,6 +79,8 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.SimpleFSLockFactory;
+import org.apache.lucene.util.Version;
 
 class ZipEntryInputStream extends InputStream
 {
@@ -290,7 +292,7 @@ public class IndexManager extends WorkerParent
     // OPEN AND IF NOT EXISTS, CREATE, SO OPEN ALWAYS SUCCEEDS
     public IndexWriter open_index( String path, String language, boolean can_create ) throws IOException
     {
-        FSDirectory dir = FSDirectory.getDirectory(path);
+        FSDirectory dir = FSDirectory.open(new File(path), new SimpleFSLockFactory());
 
         Analyzer analyzer = create_analyzer(language, true);
 
@@ -298,7 +300,7 @@ public class IndexManager extends WorkerParent
         boolean create = false;
         if (can_create)
         {
-            create = !IndexReader.indexExists(path);
+            create = !IndexReader.indexExists(dir);
             if (create)
             {
                 LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_INDEX, Main.Txt("Creating_new_index_in") + " " + path);
@@ -325,7 +327,7 @@ public class IndexManager extends WorkerParent
 
     public static IndexReader open_read_index( String path ) throws IOException
     {
-        FSDirectory dir = FSDirectory.getDirectory(path);
+        FSDirectory dir = FSDirectory.open(new File(path), new SimpleFSLockFactory());
 
         IndexReader reader = IndexReader.open(dir, /*rd_only*/ true);
 
@@ -335,7 +337,7 @@ public class IndexManager extends WorkerParent
     // CREATE (AND DELETE OLD STUFF!!!!) SHOULD ONLY BE USED BY REINDEX OR MANUAL FUNCS
     public IndexWriter create_index( String path, String language ) throws IOException
     {
-        FSDirectory dir = FSDirectory.getDirectory(path);
+        FSDirectory dir = FSDirectory.open(new File(path), new SimpleFSLockFactory());
 
         Analyzer analyzer = create_analyzer(language, true);
 
@@ -404,7 +406,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception e)
         {
-            analyzer = new StandardAnalyzer();
+            analyzer = new StandardAnalyzer(Version.LUCENE_24);
         }
         PerFieldAnalyzerWrapper wrapper = new PerFieldAnalyzerWrapper(analyzer);
 
@@ -1808,11 +1810,11 @@ public class IndexManager extends WorkerParent
         int docsInIndex  = Integer.parseInt(args[0]);
 
         // create an index called 'index' in a temporary directory
-        String indexDir = "m:/tmp/lucenetest";
+        File indexDir =  new File("m:/tmp/lucenetest");
+        FSDirectory dir = FSDirectory.open(indexDir);
 
-        Analyzer    analyzer = new StopAnalyzer();
-        IndexWriter writer   = new IndexWriter(indexDir, analyzer, true, new IndexWriter.MaxFieldLength(100000) );
-        FSDirectory dir = FSDirectory.getDirectory(indexDir);
+        Analyzer    analyzer = new StopAnalyzer(Version.LUCENE_24);
+        IndexWriter writer   = new IndexWriter(dir, analyzer, true, new IndexWriter.MaxFieldLength(100000) );
 
         IndexReader reader = IndexReader.open(dir, /*rd_only*/ true);
 

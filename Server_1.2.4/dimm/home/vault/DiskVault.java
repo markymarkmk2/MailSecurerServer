@@ -225,6 +225,9 @@ public class DiskVault implements Vault, StatusHandler
             {
                 status.set_status(StatusEntry.BUSY, toString() + ": " + Main.Txt("Cannot_open_active_diskspace") + " " + dsh.getDs().getPath() + ": " +  vaultException.getMessage());
                 LogManager.msg_archive( LogManager.LVL_ERR, status.get_status_txt() );
+                if (vaultException.getCause() != null)
+                    LogManager.msg_archive( LogManager.LVL_ERR, "Cause: " + vaultException.getCause().getLocalizedMessage() );
+                
                 throw new VaultException( vaultException.getMessage() );
             }
         }
@@ -358,8 +361,8 @@ public class DiskVault implements Vault, StatusHandler
 
             TermsFilter filter = new TermsFilter();
             filter.addTerm(term);
-            // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE ONE RESULT
-            TopDocs tdocs = pms.search(qry, filter, 1, null);
+            // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE FIRST RESULT
+            TopDocs tdocs = pms.search(qry, filter, 1/*, null*/);
 
             if (tdocs.totalHits > 0)
             {

@@ -5,8 +5,6 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.hibernate.HParseToken;
-import dimm.home.mailarchiv.Exceptions.IndexException;
-import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.vault.DiskSpaceHandler;

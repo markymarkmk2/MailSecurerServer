@@ -48,22 +48,27 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
+
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.MultiSearcher;
 import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.ScoreDocComparator;
 import org.apache.lucene.search.Searchable;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.SortComparatorSource;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermsFilter;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.util.Version;
 
 
+
+
+/*
 class HexLongComparator implements SortComparatorSource
 {
 
@@ -132,7 +137,19 @@ class HexLongComparator implements SortComparatorSource
             }
         };
     }
-}
+}*/
+
+
+ class HexLongParser implements FieldCache.LongParser
+ {
+
+    @Override
+    public long parseLong( String arg0 )
+    {
+        return Long.parseLong(arg0, 16);
+    }
+
+ }
 /**
  *
  * @author mw
@@ -767,7 +784,7 @@ public class SearchCall
 
         LogManager.msg_index(LogManager.LVL_DEBUG,  "QueryParser: " + sb.toString());
 
-        QueryParser parser = new QueryParser("FLDN_BODY", ana);
+        QueryParser parser = new QueryParser(Version.LUCENE_24, "FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
 
         String qry_str = sb.toString();
@@ -782,7 +799,7 @@ public class SearchCall
     }
     Query build_lucene_qry( String qry_str, Analyzer ana ) throws ParseException
     {
-        QueryParser parser = new QueryParser("FLDN_BODY", ana);
+        QueryParser parser = new QueryParser(Version.LUCENE_24, "FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
 
         if (qry_str.length() == 0)
@@ -820,6 +837,7 @@ public class SearchCall
         return mail_addr_list;
     }
 
+    static int pms_sw = 0;
 
     void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, UserSSOEntry ssoc  ) throws IOException
     {
@@ -865,14 +883,25 @@ public class SearchCall
             search_arr[i] = searcher_list.get(i);
         }
 
+
+
+        SortField hex_long_field = new SortField(CS_Constants.FLD_DATE, new HexLongParser(), /*reverse*/ true);
         
-        HexLongComparator hlc = new HexLongComparator();
-        Sort sort = new Sort(new SortField(CS_Constants.FLD_DATE, hlc));
+        Sort sort = new Sort( hex_long_field);
 
 
 
         // PARALLEL SEARCH
-        ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
+        MultiSearcher pms;
+        pms_sw = 0;
+/*        if (pms_sw  == 0)
+        {*/
+            pms = new FullParallelMultiSearcher(search_arr);
+        /*}
+        else
+        {
+            pms = new ParallelMultiSearcher(search_arr);
+        }*/
 
         // SSSSEEEEAAAARRRRCHHHHHHH
 
@@ -885,7 +914,7 @@ public class SearchCall
         LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX, "Search took " + diff + "ms");
         
         ScoreDoc[] sdocs = tdocs.scoreDocs;
-        for (int k = sdocs.length - 1; k >= 0; k--)
+        for (int k = sdocs.length - 1 ; k >= 0; k--)
         {
             ScoreDoc scoreDoc = sdocs[k];
 

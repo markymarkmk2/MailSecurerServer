@@ -73,6 +73,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( SSO_TIMEOUT_S );
         prop_names.add( INDEX_THREADS );
         prop_names.add( DSH_HOUR_DIRS );
+        prop_names.add( LANG );
     }
     
     public void setContext( MandantContext _context )

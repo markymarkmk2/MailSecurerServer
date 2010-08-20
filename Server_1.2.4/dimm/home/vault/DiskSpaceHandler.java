@@ -752,8 +752,10 @@ public class DiskSpaceHandler
                 // WE ARE LOST, BUILD A NEW ONE FROM SCRATCH, WE PROBABLY NEED TO REINDEX
                 dsi = new DiskSpaceInfo();
                 dsi.setLanguage( m_ctx.getPrefs().get_language());
+                LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Building_entry_list") + " " + mail_path.getAbsolutePath());
                 DirectoryEntry de = new DirectoryEntry( mail_path );
                 Iterator<File> it = de.get_file_iterator();
+                LogManager.msg_archive( LogManager.LVL_WARN, Main.Txt("Done_building_entry_list"));
                 int enc_mode = RFCFileMail.dflt_encoded ? RFCFileMail.dflt_encoding : RFCFileMail.ENC_NONE;
                 long capacity = 0;
 

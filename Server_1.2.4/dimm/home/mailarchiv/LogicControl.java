@@ -772,7 +772,11 @@ public class LogicControl
                     ctx = get_mandant_by_id(mid);
                     ctx.initialize_mandant(this);
                 }
-
+            }
+            else
+            {
+                // WE ARE REMOVING A MANDANT
+                ctx = null;
             }
         }
         catch (Exception e)

@@ -8,20 +8,67 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Stack;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
 
 public class EmailFilter extends TokenFilter implements Serializable
 {
 
     public static final String TOKEN_TYPE_EMAIL = "EMAILPART";
-    private Stack<Token> emailTokenStack;
+    private Stack<String> emailTokenStack;
+
+    TermAttribute termAtt;
+    PositionIncrementAttribute posIncrAtt;
 
     public EmailFilter( TokenStream in )
     {
         super(in);
-        emailTokenStack = new Stack<Token>();
+
+        emailTokenStack = new Stack<String>();
+        termAtt = addAttribute(TermAttribute.class);
+        posIncrAtt = addAttribute(PositionIncrementAttribute.class);
     }
 
     @Override
+    public boolean incrementToken() throws IOException
+    {
+        if (emailTokenStack.size() > 0)
+        {
+            termAtt.setTermBuffer(emailTokenStack.pop());
+            return true;
+        }
+        if (!input.incrementToken())
+        {
+            return false;
+        }
+        scanToken();
+
+        if (emailTokenStack.size() > 0)
+        {
+            termAtt.setTermBuffer(emailTokenStack.pop());
+        }
+
+        return true;
+    }
+
+    private void scanToken() throws IOException
+    {
+        String emailAddress = String.copyValueOf(termAtt.termBuffer() );
+
+        emailAddress = emailAddress.replaceAll("<", "");
+        emailAddress = emailAddress.replaceAll(">", "");
+        emailAddress = emailAddress.replaceAll("\"", "");
+
+        String[] parts = extractEmailParts(emailAddress);
+
+
+        for (int i = 0; i < parts.length; i++)
+        {
+            emailTokenStack.push( parts[i].trim() );
+        }
+    }
+
+/*    @Override
     public Token next() throws IOException
     {
 
@@ -66,7 +113,7 @@ public class EmailFilter extends TokenFilter implements Serializable
             }
         }
     }
-
+*/
     private String[] extractWhitespaceParts( String email )
     {
         String[] whitespaceParts = email.split(" ");
@@ -128,4 +175,5 @@ public class EmailFilter extends TokenFilter implements Serializable
         }
         return partsList.toArray(new String[0]);
     }
+
 }
