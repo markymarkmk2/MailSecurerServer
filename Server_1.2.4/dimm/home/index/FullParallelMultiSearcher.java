@@ -6,6 +6,8 @@ package dimm.home.index;
 
 import java.io.IOException;
 import java.text.Collator;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -33,10 +35,273 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.NamedThreadFactory;
-import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.ThreadInterruptedException;
 
-class HitQueue extends PriorityQueue<ScoreDoc>
+abstract class MWPriorityQueue<T>
+{
+
+    protected int size;
+    private int maxSize;
+    protected T[] heap;
+
+    /** Determines the ordering of objects in this priority queue.  Subclasses
+    must define this one method. */
+    protected abstract boolean lessThan( T a, T b );
+
+    /**
+     * This method can be overridden by extending classes to return a sentinel
+     * object which will be used by {@link #initialize(int)} to fill the queue, so
+     * that the code which uses that queue can always assume it's full and only
+     * change the top without attempting to insert any new object.<br>
+     *
+     * Those sentinel values should always compare worse than any non-sentinel
+     * value (i.e., {@link #lessThan} should always favor the
+     * non-sentinel values).<br>
+     *
+     * By default, this method returns false, which means the queue will not be
+     * filled with sentinel values. Otherwise, the value returned will be used to
+     * pre-populate the queue. Adds sentinel values to the queue.<br>
+     *
+     * If this method is extended to return a non-null value, then the following
+     * usage pattern is recommended:
+     *
+     * <pre>
+     * // extends getSentinelObject() to return a non-null value.
+     * PriorityQueue<MyObject> pq = new MyQueue<MyObject>(numHits);
+     * // save the 'top' element, which is guaranteed to not be null.
+     * MyObject pqTop = pq.top();
+     * &lt;...&gt;
+     * // now in order to add a new element, which is 'better' than top (after
+     * // you've verified it is better), it is as simple as:
+     * pqTop.change().
+     * pqTop = pq.updateTop();
+     * </pre>
+     *
+     * <b>NOTE:</b> if this method returns a non-null value, it will be called by
+     * {@link #initialize(int)} {@link #size()} times, relying on a new object to
+     * be returned and will not check if it's null again. Therefore you should
+     * ensure any call to this method creates a new instance and behaves
+     * consistently, e.g., it cannot return null if it previously returned
+     * non-null.
+     *
+     * @return the sentinel object to use to pre-populate the queue, or null if
+     *         sentinel objects are not supported.
+     */
+    protected T getSentinelObject()
+    {
+        return null;
+    }
+
+    /** Subclass constructors must call this. */
+    @SuppressWarnings("unchecked")
+    protected final void initialize( int maxSize )
+    {
+        size = 0;
+        int heapSize;
+        if (0 == maxSize)
+        // We allocate 1 extra to avoid if statement in top()
+        {
+            heapSize = 2;
+        }
+        else
+        {
+            if (maxSize == Integer.MAX_VALUE)
+            {
+                // Don't wrap heapSize to -1, in this case, which
+                // causes a confusing NegativeArraySizeException.
+                // Note that very likely this will simply then hit
+                // an OOME, but at least that's more indicative to
+                // caller that this values is too big.  We don't +1
+                // in this case, but it's very unlikely in practice
+                // one will actually insert this many objects into
+                // the PQ:
+                heapSize = Integer.MAX_VALUE;
+            }
+            else
+            {
+                // NOTE: we add +1 because all access to heap is
+                // 1-based not 0-based.  heap[0] is unused.
+                heapSize = maxSize + 1;
+            }
+        }
+        heap = (T[]) new Object[heapSize]; // T is unbounded type, so this unchecked cast works always
+        this.maxSize = maxSize;
+
+        // If sentinel objects are supported, populate the queue with them
+        T sentinel = getSentinelObject();
+        if (sentinel != null)
+        {
+            heap[1] = sentinel;
+            for (int i = 2; i < heap.length; i++)
+            {
+                heap[i] = getSentinelObject();
+            }
+            size = maxSize;
+        }
+    }
+
+    /**
+     * Adds an Object to a PriorityQueue in log(size) time. If one tries to add
+     * more objects than maxSize from initialize an
+     * {@link ArrayIndexOutOfBoundsException} is thrown.
+     *
+     * @return the new 'top' element in the queue.
+     */
+    public final T add( T element )
+    {
+        size++;
+        heap[size] = element;
+        upHeap();
+        return heap[1];
+    }
+
+    public T pop_top()
+    {
+        T ret = heap[size];
+        heap[size] = null;
+        size--;
+        return ret;
+    }
+
+    /**
+     * Adds an Object to a PriorityQueue in log(size) time.
+     * It returns the object (if any) that was
+     * dropped off the heap because it was full. This can be
+     * the given parameter (in case it is smaller than the
+     * full heap's minimum, and couldn't be added), or another
+     * object that was previously the smallest value in the
+     * heap and now has been replaced by a larger one, or null
+     * if the queue wasn't yet full with maxSize elements.
+     */
+    public T insertWithOverflow( T element )
+    {
+        if (size < maxSize)
+        {
+            add(element);
+            return null;
+        }
+        else if (size > 0 && !lessThan(element, heap[1]))
+        {
+            T ret = heap[1];
+            heap[1] = element;
+            updateTop();
+            return ret;
+        }
+        else
+        {
+            return element;
+        }
+    }
+
+    /** Returns the least element of the PriorityQueue in constant time. */
+    public final T top()
+    {
+        // We don't need to check size here: if maxSize is 0,
+        // then heap is length 2 array with both entries null.
+        // If size is 0 then heap[1] is already null.
+        return heap[1];
+    }
+
+    /** Removes and returns the least element of the PriorityQueue in log(size)
+    time. */
+    public final T pop()
+    {
+        if (size > 0)
+        {
+            T result = heap[1];			  // save first value
+            heap[1] = heap[size];			  // move last to first
+            heap[size] = null;			  // permit GC of objects
+            size--;
+            downHeap();				  // adjust heap
+            return result;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Should be called when the Object at top changes values. Still log(n) worst
+     * case, but it's at least twice as fast to
+     *
+     * <pre>
+     * pq.top().change();
+     * pq.updateTop();
+     * </pre>
+     *
+     * instead of
+     *
+     * <pre>
+     * o = pq.pop();
+     * o.change();
+     * pq.push(o);
+     * </pre>
+     *
+     * @return the new 'top' element.
+     */
+    public final T updateTop()
+    {
+        downHeap();
+        return heap[1];
+    }
+
+    /** Returns the number of elements currently stored in the PriorityQueue. */
+    public final int size()
+    {
+        return size;
+    }
+
+    /** Removes all entries from the PriorityQueue. */
+    public final void clear()
+    {
+        for (int i = 0; i <= size; i++)
+        {
+            heap[i] = null;
+        }
+        size = 0;
+    }
+
+    private final void upHeap()
+    {
+        int i = size;
+        T node = heap[i];			  // save bottom node
+        int j = i >>> 1;
+        while (j > 0 && lessThan(node, heap[j]))
+        {
+            heap[i] = heap[j];			  // shift parents down
+            i = j;
+            j = j >>> 1;
+        }
+        heap[i] = node;				  // install saved node
+    }
+
+    private final void downHeap()
+    {
+        int i = 1;
+        T node = heap[i];			  // save top node
+        int j = i << 1;				  // find smaller child
+        int k = j + 1;
+        if (k <= size && lessThan(heap[k], heap[j]))
+        {
+            j = k;
+        }
+        while (j <= size && lessThan(heap[j], node))
+        {
+            heap[i] = heap[j];			  // shift up child
+            i = j;
+            j = i << 1;
+            k = j + 1;
+            if (k <= size && lessThan(heap[k], heap[j]))
+            {
+                j = k;
+            }
+        }
+        heap[i] = node;				  // install saved node
+    }
+}
+
+class MWHitQueue extends MWPriorityQueue<ScoreDoc>
 {
 
     private boolean prePopulate;
@@ -80,7 +345,7 @@ class HitQueue extends PriorityQueue<ScoreDoc>
      *          specifies whether to pre-populate the queue with sentinel values.
      * @see #getSentinelObject()
      */
-    HitQueue( int size, boolean prePopulate )
+    MWHitQueue( int size, boolean prePopulate )
     {
         this.prePopulate = prePopulate;
         initialize(size);
@@ -119,12 +384,12 @@ class MWMultiSearcherCallableWithSort implements Callable<TopFieldDocs>
     private final Filter filter;
     private final int nDocs;
     private final int i;
-    private final FieldDocSortedHitQueue hq;
+    private final MWFieldDocSortedHitQueue hq;
     private final int[] starts;
     private final Sort sort;
 
     public MWMultiSearcherCallableWithSort( Lock lock, Searchable searchable, Weight weight,
-            Filter filter, int nDocs, FieldDocSortedHitQueue hq, Sort sort, int i, int[] starts )
+            Filter filter, int nDocs, MWFieldDocSortedHitQueue hq, Sort sort, int i, int[] starts )
     {
         this.lock = lock;
         this.searchable = searchable;
@@ -203,11 +468,11 @@ class MWMultiSearcherCallableNoSort implements Callable<TopDocs>
     private final Filter filter;
     private final int nDocs;
     private final int i;
-    private final HitQueue hq;
+    private final MWHitQueue hq;
     private final int[] starts;
 
     public MWMultiSearcherCallableNoSort( Lock lock, Searchable searchable, Weight weight,
-            Filter filter, int nDocs, HitQueue hq, int i, int[] starts )
+            Filter filter, int nDocs, MWHitQueue hq, int i, int[] starts )
     {
         this.lock = lock;
         this.searchable = searchable;
@@ -246,7 +511,8 @@ class MWMultiSearcherCallableNoSort implements Callable<TopDocs>
     }
 }
 
-class FieldDocSortedHitQueue extends PriorityQueue<FieldDoc>
+
+class MWFieldDocSortedHitQueue extends MWPriorityQueue<FieldDoc>
 {
 
     volatile SortField[] fields = null;
@@ -259,7 +525,7 @@ class FieldDocSortedHitQueue extends PriorityQueue<FieldDoc>
      * @param fields Fieldable names, in priority order (highest priority first).
      * @param size  The number of hits to retain.  Must be greater than zero.
      */
-    FieldDocSortedHitQueue( int size )
+    MWFieldDocSortedHitQueue( int size )
     {
         initialize(size);
     }
@@ -369,8 +635,92 @@ class FieldDocSortedHitQueue extends PriorityQueue<FieldDoc>
 
         return c > 0;
     }
-}
 
+    @Override
+    public FieldDoc insertWithOverflow( FieldDoc element )
+    {
+        return super.insertWithOverflow(element);
+    }
+
+
+
+    void sort()
+    {
+        Comparator<FieldDoc> comp = new Comparator<FieldDoc>()
+        {
+
+            @Override
+            public int compare( FieldDoc docA, FieldDoc docB )
+            {
+                final int n = fields.length;
+                int c = 0;
+                for (int i = 0; i < n && c == 0; ++i)
+                {
+                    final int type = fields[i].getType();
+                    if (type == SortField.STRING)
+                    {
+                        final String s1 = (String) docA.fields[i];
+                        final String s2 = (String) docB.fields[i];
+                        // null values need to be sorted first, because of how FieldCache.getStringIndex()
+                        // works - in that routine, any documents without a value in the given field are
+                        // put first.  If both are null, the next SortField is used
+                        if (s1 == null)
+                        {
+                            c = (s2 == null) ? 0 : -1;
+                        }
+                        else if (s2 == null)
+                        {
+                            c = 1;
+                        }
+                        else if (fields[i].getLocale() == null)
+                        {
+                            c = s1.compareTo(s2);
+                        }
+                        else
+                        {
+                            c = collators[i].compare(s1, s2);
+                        }
+                    }
+                    else
+                    {
+                        if (docA == null)
+                        {
+                            if (docB == null)
+                                return 0;
+
+                            return 1;
+                        }
+                        if (docB == null)
+                            return -1;
+                        
+                        c = docA.fields[i].compareTo(docB.fields[i]);
+                        if (type == SortField.SCORE)
+                        {
+                            c = -c;
+                        }
+                    }
+                    // reverse sort
+                    if (fields[i].getReverse())
+                    {
+                        c = -c;
+                    }
+                }
+
+                // avoid random sort order that could lead to duplicates (bug #31241):
+                if (c == 0)
+                {
+                    return docB.doc - docA.doc;
+                }
+
+                // QUEUE IS SORTED UPSIDE DOWN
+                return -c;
+            }
+        };
+        Arrays.sort(heap, 1, size() + 1, comp);
+
+    }
+
+}
 /**
  *
  * @author mw
@@ -428,7 +778,7 @@ public class FullParallelMultiSearcher extends MultiSearcher
     @Override
     public TopDocs search( Weight weight, Filter filter, int nDocs ) throws IOException
     {
-        final HitQueue hq = new HitQueue(nDocs, false);
+        final MWHitQueue hq = new MWHitQueue(nDocs, false);
         final Lock lock = new ReentrantLock();
         final ExecutionHelper<TopDocs> runner = new ExecutionHelper<TopDocs>(executor);
 
@@ -470,7 +820,7 @@ public class FullParallelMultiSearcher extends MultiSearcher
 
 //    final FieldDocSortedHitQueue hq = new FieldDocSortedHitQueue(nDocs);
         // MW:ALLOW SEARCH FOR N RESULTS IN EACH SEARCHABLE
-        final FieldDocSortedHitQueue hq = new FieldDocSortedHitQueue(nDocs * searchables.length);
+        final MWFieldDocSortedHitQueue hq = new MWFieldDocSortedHitQueue(nDocs * searchables.length);
 
         final Lock lock = new ReentrantLock();
         final ExecutionHelper<TopFieldDocs> runner = new ExecutionHelper<TopFieldDocs>(executor);
@@ -492,10 +842,12 @@ public class FullParallelMultiSearcher extends MultiSearcher
             ret_size = nDocs;
         }
 
+        hq.sort();
+        
         final ScoreDoc[] scoreDocs = new ScoreDoc[ret_size];
         for (int i = ret_size - 1; i >= 0; i--) // put docs in array
         {
-            scoreDocs[i] = hq.pop();
+            scoreDocs[i] = hq.pop_top();
         }
 
         return new TopFieldDocs(totalHits, scoreDocs, hq.getFields(), maxScore);
