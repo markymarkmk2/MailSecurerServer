@@ -74,6 +74,8 @@ public class GeneralPreferences extends Preferences
     public static final String FQDN = "FQDN";
     public static final String TRUSTSTORE = "TrustStore";
     public static final String AUDIT_DB_CONNECT = "AuditDBConnect";
+    public static final String ONLY_FROM_ADRESS_LIC = "OnlyFromAddrLic";
+    public static final String ALLOW_UNKNOWN_DOMAIN_MAIL = "AllowInknownDomainMail";
 
     
     /** Creates a new instance of Preferences */
@@ -133,6 +135,8 @@ public class GeneralPreferences extends Preferences
         prop_names.add( TRUSTSTORE );
         prop_names.add( INDEX_TIMEOUT );
         prop_names.add( AUDIT_DB_CONNECT );
+        prop_names.add( ONLY_FROM_ADRESS_LIC );
+        prop_names.add( ALLOW_UNKNOWN_DOMAIN_MAIL );
 
         String[] log_types = LogManager.get_log_types();
         for (int i = 0; i < log_types.length; i++)

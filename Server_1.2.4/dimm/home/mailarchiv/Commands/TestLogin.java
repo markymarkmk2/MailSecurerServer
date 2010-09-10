@@ -57,8 +57,8 @@ public class TestLogin extends AbstractCommand
             // PRUEFE OB DER LOGIN OK IST
             boolean auth_ok = auth_realm.connect();
 
-            // ON NON-LDAP CONNECTIONS WE HAVE TO CHECK USERNAME DIRECTLY IF USER WAS GIVEN TOO
-            if (auth_ok && type.compareTo("ldap") != 0 && admin_name.length() > 0)
+            // ON NON-LDAP/AD CONNECTIONS WE HAVE TO CHECK USERNAME DIRECTLY IF USER WAS GIVEN TOO
+            if (auth_ok && type.compareTo("ldap") != 0 && type.compareTo("ad") != 0 && admin_name.length() > 0)
             {
                 if (auth_realm.open_user_context(admin_name, admin_pwd))
                 {

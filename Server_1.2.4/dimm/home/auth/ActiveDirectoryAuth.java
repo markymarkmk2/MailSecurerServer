@@ -4,6 +4,7 @@
  */
 package dimm.home.auth;
 
+import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -65,7 +66,16 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
     String get_user_search_base() throws NamingException
     {
         if (user_search_base != null && user_search_base.length() > 0)
-            return user_search_base;
+        {
+            // DO WE HAVE AN ABSOLUTE DN?
+            if (user_search_base.toUpperCase().contains("DC="))
+                return user_search_base;
+
+            // NO, WE NEED OUT NAMING CONTEXT
+            Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
+            Attribute attribute = attributes.get("defaultNamingContext");
+            return user_search_base + "," + attribute.get().toString();
+        }
         
         Attributes attributes = ctx.getAttributes(ctx.getNameInNamespace());
         Attribute attribute = attributes.get("defaultNamingContext");
@@ -202,10 +212,10 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         if (users.size() > 1)
             ldap_qry.append( ")" );
         ldap_qry.append(")");
+        String ldap_qry_txt = ldap_qry.toString();
+        LogManager.msg_auth( LogManager.LVL_DEBUG, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry_txt);
 
-        LogManager.msg_auth( LogManager.LVL_DEBUG, "list_mailaliases_for_userlist: " + rootSearchBase + " " + ldap_qry);
-
-        NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry.toString(), ctrl);
+        NamingEnumeration<SearchResult> results = ctx.search(rootSearchBase, ldap_qry_txt, ctrl);
         ArrayList<String> mail_list = new ArrayList<String>();
         while (results.hasMoreElements())
         {
@@ -256,6 +266,10 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                 }
             }
         }
+        if (mail_list.size() == 0)
+        {
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "No mail entries found for query: " + rootSearchBase + " " + ldap_qry);
+        }
         return mail_list;
     }
 
@@ -279,6 +293,8 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
 
     ADUserContext open_user( String user_principal, String pwd )
     {
+        String rootSearchBase = "?";
+        SearchResult sr = null;
         try
         {
             SearchControls ctrl = new SearchControls();
@@ -288,7 +304,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                         DN
                     });
 
-            String rootSearchBase = get_user_search_base();
+            rootSearchBase = get_user_search_base();
 
             String searchFilter = "(&(objectCategory=person)(objectClass=user)(cn=" + user_principal + "))";
             int cnt  = 0;
@@ -298,7 +314,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             if (!enumeration.hasMore())
             {
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(name=" + user_principal + "))";
-                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "search_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
@@ -314,7 +330,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                 }
 
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(userPrincipalName=" + login_name + "))";
-                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "search_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
@@ -329,7 +345,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
                     login_name += "@" + act.getLdapdomain();
                 }
                 searchFilter = "(&(objectCategory=person)(objectClass=user)(mail=" + login_name + "))";
-                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "search_user: " + rootSearchBase + " " + searchFilter);
                 enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             }
             else
@@ -342,9 +358,29 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             {
                 return null;
             }
+            sr = enumeration.next(); //This is the enumeration object obtained on step II above
+
+        }
+        catch (Exception namingException)
+        {
+            if (namingException instanceof javax.naming.NameNotFoundException)
+            {
+                String searchFilter = "(&(objectCategory=person)(objectClass=user)(cn=" + user_principal + "))";
+                error_txt = Main.Txt("User_konnte_nicht_im_AD_gefunden_werden") + ": " + rootSearchBase + " -> " + searchFilter;
+            }
+            else
+            {
+                error_txt = namingException.getMessage();
+            }
+            return null;
+        }
+
+        // sr CONTAINS THE SEARCH RESULT WITH THE USER DATA
+        try
+        {
 
             // NOW GET THE DN FOR THIS USER
-            SearchResult sr = enumeration.next(); //This is the enumeration object obtained on step II above
+            
             Attributes res_attr = sr.getAttributes();
             Attribute adn = res_attr.get(DN);
             String user_dn = adn.get().toString();
@@ -358,14 +394,18 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
             connect_env.put(Context.SECURITY_PRINCIPAL, user_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, pwd);
 
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "Found user trying to connect: " + user_dn );
+
             user_ctx = new InitialLdapContext(connect_env, null);
-          
+
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "User connected successfully: " + user_dn );
+
             return new ADUserContext(user_dn, user_ctx);
         }
         catch (Exception namingException)
         {
             error_txt = namingException.getMessage();
-            namingException.printStackTrace();
+            LogManager.msg_auth( LogManager.LVL_WARN, "User connect failed: " + error_txt );
         }
         return null;
     }
@@ -381,7 +421,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         try
         {
             String rootSearchBase = get_user_search_base();
-            LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + search_attributes);
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "get_user_attribute: " + rootSearchBase + " " + search_attributes);
             NamingEnumeration<SearchResult> results = uctx.ctx.search(rootSearchBase, search_attributes, return_attributes);
             if (results.hasMoreElements())
             {

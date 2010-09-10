@@ -392,8 +392,9 @@ public class LicenseChecker
         }
     }
 
-    RFCMailAddress get_matching_license_email( ArrayList<String> domain_list, ArrayList<RFCMailAddress> email_list )
+    ArrayList<RFCMailAddress> get_matching_license_emails( ArrayList<String> domain_list, ArrayList<RFCMailAddress> email_list )
     {
+        ArrayList<RFCMailAddress> list = new ArrayList<RFCMailAddress>();
         for (int i = 0; i < email_list.size(); i++)
         {
             RFCMailAddress adr = email_list.get(i);
@@ -403,11 +404,11 @@ public class LicenseChecker
                 String domain = domain_list.get(j);
                 if (adr.get_domain().compareToIgnoreCase(domain) == 0)
                 {
-                    return adr;
+                    list.add(adr);
                 }
             }
         }
-        return null;
+        return list;
     }
 
     public boolean is_license_exceeded( MandantContext m_ctx, ArrayList<String> domain_list, ArrayList<RFCMailAddress> email_list )
@@ -415,17 +416,37 @@ public class LicenseChecker
         synchronized (umap_mtx)
         {
 
-            RFCMailAddress email = get_matching_license_email(domain_list, email_list);
+            RFCMailAddress lic_email = null;
+            
+            ArrayList<RFCMailAddress> matching_email_list = get_matching_license_emails(domain_list, email_list);
 
             // THIS ONE IS TRICKY: WE HAVE NOT FOUND AN EMAIL TO LICENSE, THIS SHOULD NOT HAPPEN, BECAUSE THIS MAILD SHOULD HAVE BEEN REJECTED BEFORE
-            if (email == null)
+            if (matching_email_list.size() == 0)
             {
                 LogManager.msg_license( LogManager.LVL_WARN, Main.Txt("No_email_to_license_found"));
                 return false;
             }
+            if (Main.get_bool_prop(GeneralPreferences.ONLY_FROM_ADRESS_LIC, true))
+            {
+                for (int i = 0; i < matching_email_list.size(); i++)
+                {
+                    RFCMailAddress rFCMailAddress = matching_email_list.get(i);
+                    if (rFCMailAddress.getAdr_type() == RFCMailAddress.ADR_TYPE.FROM)
+                    {
+                        lic_email = rFCMailAddress;
+                        break;
+                    }
+                }
+            }
+
+            if (lic_email == null)
+            {
+                // WE FOUND A VALID MAILADDRESS BUT THE FROM ADDRESS DOES NOT BELONG TO OUR DOMAINS
+                return false;
+            }
 
             // GET ENTRY FROM LICENSE MAP
-            StatMailAddress adr = license_user_map.get(email.get_mail());
+            StatMailAddress adr = license_user_map.get(lic_email.get_mail());
             if (adr == null)
             {
                 int max_units = get_max_units(LicenseTicket.PRODUCT_BASE);
@@ -461,12 +482,12 @@ public class LicenseChecker
                 }
 
                 // ADD THIS ENTRY TO USERMAP
-                adr = new StatMailAddress(email.get_mail(), email.getAdr_type(), 0, 0);
-                license_user_map.put(email.get_mail(), adr);
+                adr = new StatMailAddress(lic_email.get_mail(), lic_email.getAdr_type(), 0, 0);
+                license_user_map.put(lic_email.get_mail(), adr);
 
                 update_license_map();
             }
-            if (email.is_from())
+            if (lic_email.is_from())
             {
                 adr.incSndCnt();
             }

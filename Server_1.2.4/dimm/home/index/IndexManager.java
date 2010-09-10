@@ -462,7 +462,7 @@ public class IndexManager extends WorkerParent
         final ArrayList<RFCMailAddress> mail_list = mime_msg.getEmail_list();
 
         // FIRST CHECK FOR CORRECT DOMAIN
-        /*
+        
         boolean matches_domain = false;
         for (Iterator<RFCMailAddress> it = mail_list.iterator(); it.hasNext();)
         {
@@ -476,8 +476,14 @@ public class IndexManager extends WorkerParent
         }
         if (!matches_domain)
         {
+            LogManager.msg_index(LogManager.LVL_WARN, "No_valid_mail_domain_found_for_mail");
+
+            // THIW WAS ALLOWED UNTIL 1.4.4, SO WE STAY COMPATIBLE BUT WE CAN SWITCH IT OFF
+            if (!Main.get_bool_prop(GeneralPreferences.ALLOW_UNKNOWN_DOMAIN_MAIL, true))
+                return true;
+
             return false;
-        }*/
+        }
 
 
         // BUILD A VAL PROVIDER FOR THIS MESSAGE
@@ -589,6 +595,7 @@ public class IndexManager extends WorkerParent
         if (acct_match == null && !skip_account_filter)
         {
             LogManager.msg_index(LogManager.LVL_DEBUG, "Skipping unmatching mail " + unique_id);
+            
             if (delete_after_index)
             {
                 delete_mail_before_index(m_ctx, unique_id, da_id, ds_id);
@@ -647,8 +654,6 @@ public class IndexManager extends WorkerParent
         Message msg = mime_msg.getMsg();
         try
         {
-            Enumeration mail_header_list = msg.getAllHeaders();
-
             index_headers(doc, unique_id, msg.getAllHeaders());
 
             Object content = null;
