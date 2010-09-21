@@ -17,7 +17,7 @@ public class Subscribe extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         is.response(sid, true, "SUBSCRIBE completed");
         return 1;

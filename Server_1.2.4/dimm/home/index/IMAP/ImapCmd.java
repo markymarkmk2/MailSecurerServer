@@ -147,5 +147,5 @@ public abstract class ImapCmd
     }
 
 
-    public abstract int action(  MWImapServer is, String sid, String parameter) throws IOException;
+    public abstract int action(  ImapsInstance is, String sid, String parameter) throws IOException;
 }

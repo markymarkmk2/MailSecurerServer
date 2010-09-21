@@ -17,12 +17,12 @@ public class Logout extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return logout( is, sid, parameter );
     }
 
-    private int logout( MWImapServer is, String sid, String par )
+    private int logout( ImapsInstance is, String sid, String par )
     {
         if (is.m_ctx != null)
         {

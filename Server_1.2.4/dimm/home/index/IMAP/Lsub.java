@@ -17,12 +17,12 @@ public class Lsub extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return lsub( is, sid, parameter );
     }
 
-    static int lsub( MWImapServer is, String sid, String par )
+    static int lsub( ImapsInstance is, String sid, String par )
     {
         if (is.get_konto() != null)
         {

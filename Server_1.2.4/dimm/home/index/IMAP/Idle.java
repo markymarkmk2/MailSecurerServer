@@ -23,12 +23,12 @@ public class Idle extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return idle(is, sid, parameter);
     }
 
-    int idle( MWImapServer is, String sid, String parameter )
+    int idle( ImapsInstance is, String sid, String parameter )
     {
         if (is.get_konto() == null)
         {

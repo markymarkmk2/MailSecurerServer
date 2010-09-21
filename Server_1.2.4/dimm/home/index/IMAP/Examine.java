@@ -17,7 +17,7 @@ public class Examine extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return Select.select( is, sid, parameter );
     }

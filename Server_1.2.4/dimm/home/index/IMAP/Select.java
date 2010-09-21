@@ -17,12 +17,12 @@ public class Select extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return select( is, sid, parameter );
     }
 
-    static int select(MWImapServer is,  String sid, String par )
+    static int select(ImapsInstance is,  String sid, String par )
     {
         if (is.get_konto() != null)
         {

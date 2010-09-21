@@ -183,14 +183,14 @@ class MailFolderCache
  *
  * @author mw
  */
-public class IMAPBrowser extends WorkerParentChild
+public class IMAPServer extends WorkerParentChild
 {
 
     ServerSocket sock;
     MandantContext m_ctx;
     String host;
     int port;
-    final ArrayList<MWImapServer> srv_list;
+    final ArrayList<ImapsInstance> imaps_instance_list;
     ArrayList<MailFolderCache> folder_cache;
 
 
@@ -217,12 +217,12 @@ public class IMAPBrowser extends WorkerParentChild
     public void set_search_results( SearchCall sc, String user, String pwd )
     {
         ArrayList<MailFolder> update_list = new ArrayList<MailFolder>();
-        synchronized(srv_list)
+        synchronized(imaps_instance_list)
         {
             log_debug("Adding " + sc.get_result_cnt() + " results to IMAP account ");
-            for (int i = 0; i < srv_list.size(); i++)
+            for (int i = 0; i < imaps_instance_list.size(); i++)
             {
-                MWImapServer mWImapServer = srv_list.get(i);
+                ImapsInstance mWImapServer = imaps_instance_list.get(i);
                 if (mWImapServer.get_konto() == null)
                     continue;
 
@@ -295,7 +295,7 @@ public class IMAPBrowser extends WorkerParentChild
     }
 
 
-    public IMAPBrowser( MandantContext m_ctx, String host, int port, boolean is_ssl ) throws IOException
+    public IMAPServer( MandantContext m_ctx, String host, int port, boolean is_ssl ) throws IOException
     {
         this.m_ctx = m_ctx;
         this.host = host;
@@ -318,7 +318,7 @@ public class IMAPBrowser extends WorkerParentChild
             sock = new ServerSocket(port, 0, InetAddress.getByName(host));
         }
 
-        srv_list = new ArrayList<MWImapServer>();
+        imaps_instance_list = new ArrayList<ImapsInstance>();
         folder_cache = new ArrayList<MailFolderCache>();
     }
 
@@ -342,15 +342,15 @@ public class IMAPBrowser extends WorkerParentChild
                 sock.close();
             sock = null;
             
-            synchronized (srv_list)
+            synchronized (imaps_instance_list)
             {
-                for (int i = 0; i < srv_list.size(); i++)
+                for (int i = 0; i < imaps_instance_list.size(); i++)
                 {
-                    MWImapServer imapServer = srv_list.get(i);
+                    ImapsInstance imapServer = imaps_instance_list.get(i);
                     imapServer.close();
                 }
             }
-            srv_list.clear();
+            imaps_instance_list.clear();
             for (int i = 0; i < folder_cache.size(); i++)
             {
                 MailFolderCache c = folder_cache.get(i);
@@ -390,10 +390,10 @@ public class IMAPBrowser extends WorkerParentChild
                 if (LogManager.has_lvl(LogManager.TYP_IMAPS, LogManager.LVL_VERBOSE ))
                     trace = true;
 
-                MWImapServer mwimap = new MWImapServer(this, m_ctx, cl, trace);
-                synchronized(srv_list)
+                ImapsInstance mwimap = new ImapsInstance(this, m_ctx, cl, trace);
+                synchronized(imaps_instance_list)
                 {
-                    srv_list.add(mwimap);
+                    imaps_instance_list.add(mwimap);
                 }
                 mwimap.start();
 
@@ -432,14 +432,14 @@ public class IMAPBrowser extends WorkerParentChild
     @Override
     public void idle_check()
     {
-        synchronized (srv_list)
+        synchronized (imaps_instance_list)
         {
-            for (int i = 0; i < srv_list.size(); i++)
+            for (int i = 0; i < imaps_instance_list.size(); i++)
             {
-                MWImapServer sr = srv_list.get(i);
+                ImapsInstance sr = imaps_instance_list.get(i);
                 if (!sr.isAlive())
                 {
-                    srv_list.remove(i);
+                    imaps_instance_list.remove(i);
                     sr.close();
                     i = -1;
                     continue;
@@ -451,9 +451,23 @@ public class IMAPBrowser extends WorkerParentChild
     public int getInstanceCnt()
     {
         int r = 0;
-        synchronized (srv_list)
+        synchronized (imaps_instance_list)
         {
-            r = srv_list.size();
+            r = imaps_instance_list.size();
+        }
+        return r;
+    }
+    public int getUserInstanceCnt(String user)
+    {
+        int r = 0;
+        synchronized (imaps_instance_list)
+        {
+            for (int i = 0; i < imaps_instance_list.size(); i++)
+            {
+                ImapsInstance sr = imaps_instance_list.get(i);
+                if (sr.get_konto().get_username().compareTo(user) == 0)
+                    r++;
+            }
         }
         return r;
     }

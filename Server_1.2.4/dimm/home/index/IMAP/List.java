@@ -17,12 +17,12 @@ public class List extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return list( is, sid, parameter );
     }
 
-    static  int list( MWImapServer is, String sid, String par )
+    static  int list( ImapsInstance is, String sid, String par )
     {
         int h;
         int anz;

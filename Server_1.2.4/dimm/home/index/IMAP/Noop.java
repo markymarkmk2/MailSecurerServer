@@ -18,20 +18,20 @@ public class Noop extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         handle_messages_searched( is );
         return noop(is, sid, parameter);
     }
 
-    static int noop( MWImapServer is, String sid, String parameter )
+    static int noop( ImapsInstance is, String sid, String parameter )
     {
 
         is.response(sid, true, "NOOP completed");
         return 0;
     }
 
-    static void handle_messages_searched(MWImapServer is)
+    static void handle_messages_searched(ImapsInstance is)
     {
         MailFolder folder = is.get_selected_folder();
 

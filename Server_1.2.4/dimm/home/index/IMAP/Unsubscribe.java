@@ -17,7 +17,7 @@ public class Unsubscribe extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         is.response(sid, true, "UNSUBSCRIBE completed");
         return 1;

@@ -35,7 +35,7 @@ import javax.mail.Part;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimePart;
 
-public class MWMailMessage implements MailInfo
+public class MailMessage implements MailInfo
 {
     String uuid;
     String header = null;
@@ -55,7 +55,7 @@ public class MWMailMessage implements MailInfo
     RFCGenericMail rfc;
     SearchResult sc_result;
 
-    private MWMailMessage()
+    private MailMessage()
     {
     }
 /*
@@ -167,7 +167,7 @@ public class MWMailMessage implements MailInfo
 
     }
 
-    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCGenericMail rfc,  long uid, SearchResult sc  )
+    public MailMessage( MailFolder mailfile, MailKonto parent, RFCGenericMail rfc,  long uid, SearchResult sc  )
     {
         this.parent = parent;
         this.mailfile = mailfile;

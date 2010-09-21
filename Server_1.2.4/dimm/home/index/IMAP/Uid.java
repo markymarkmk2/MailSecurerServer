@@ -110,12 +110,12 @@ public class Uid extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter ) throws IOException
+    public int action( ImapsInstance is, String sid, String parameter ) throws IOException
     {
         return uid( is, sid, parameter );
     }
 
-     private int uid( MWImapServer is, String sid, String par ) throws IOException
+     private int uid( ImapsInstance is, String sid, String par ) throws IOException
     {
 
          resetCounter();
@@ -153,6 +153,10 @@ public class Uid extends ImapCmd
                 {
                     success &= Fetch.fetch(this, is, iRange.getMin(), iRange.getMax(), 2, /*is_uid*/ true, part);
                 }
+                else if (command.toLowerCase().equals("store"))
+                {
+                    success = true;
+                }
                 else
                 {
                     //Unknown Command
@@ -175,7 +179,7 @@ public class Uid extends ImapCmd
         return success ? 0 : 1;
     }
 
-    boolean search( MWImapServer is, long min, long max, int offset, String part[] )
+    boolean search( ImapsInstance is, long min, long max, int offset, String part[] )
     {
         String result = "SEARCH";
         MailFolder folder = is.get_selected_folder();

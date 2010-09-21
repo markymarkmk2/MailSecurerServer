@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import javax.mail.MessagingException;
 import javax.mail.Part;
 import org.apache.commons.codec.binary.Base64;
@@ -144,7 +145,7 @@ class Range
 public class Fetch extends ImapCmd
 {
 
-    private static void write_header_fields( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException
+    private static void write_header_fields( ImapsInstance is, MailMessage msg, String orig_tag, String tag ) throws IOException
     {
 
         //message
@@ -156,7 +157,7 @@ public class Fetch extends ImapCmd
         is.rawwrite(hdata, 0, hdata.length);
     }
 
-    private static void write_text( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
+    private static void write_text( ImapsInstance is, MailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
     {
         msg.load_rfc_mail();
 
@@ -236,7 +237,7 @@ public class Fetch extends ImapCmd
         return sb.toString().getBytes();
     }
 
-    private static void write_body_part( MWImapServer is, MWMailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
+    private static void write_body_part( ImapsInstance is, MailMessage msg, String orig_tag, String tag ) throws IOException, MessagingException
     {
         msg.load_rfc_mail();
 
@@ -337,77 +338,30 @@ public class Fetch extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return raw_fetch(is, sid, parameter);
     }
 
-    int raw_fetch( MWImapServer is, String sid, String par )
+    int raw_fetch( ImapsInstance is, String sid, String par )
     {
         String part[] = imapsplit(par);
         String range = part[0];
         boolean success = true;
 
         resetCounter();
+
+        ArrayList<IRange> range_list = IRange.build_range_list( range );
         
-        while (!range.equals(""))
+         for (int i = 0; i < range_list.size(); i++)
         {
-            /* range could be 34:38,42:43,45 */
-            String bereich = "";
-            int i = range.indexOf(",");
-            if (i < 0)
-            {
-                bereich = range;
-                range = "";
-            }
-            else
-            {
-                bereich = range.substring(0, i);
-                range = range.substring(i + 1);
-            }
-            long min = -1;
-            long max = -1;
-            i = bereich.indexOf(":");
-            if (i < 0)
-            {
-                try
-                {
-                    min = max = Integer.parseInt(bereich);
-                }
-                catch (Exception e)
-                {
-                }
-            }
-            else
-            {
-                try
-                {
-                    min = Long.parseLong(bereich.substring(0, i));
-                }
-                catch (Exception e)
-                {
-                }
-
-                try
-                {
-                    max = Long.parseLong(bereich.substring(i + 1));
-                }
-                catch (Exception e)
-                {
-                }
-
-                if (max == 0)
-                {
-                    max = -1;
-                }
-            }
+            IRange iRange = range_list.get(i);
+            
             try
             {
                 //debug
                 //System.out.println("call "+command+" from:"+min+" to:"+max);
-                success &= fetch(this, is, min, max, 1, false, part);
-                is.response(sid, success, "FETCH " + (success ? "completed" : "failed"));
-                return success ? 0 : 1;
+                success &= fetch(this, is, iRange.getMin(), iRange.getMax(), 1, false, part);
             }
             catch (IOException ex)
             {
@@ -418,13 +372,12 @@ public class Fetch extends ImapCmd
                 LogManager.msg_imaps(LogManager.LVL_ERR, "raw_fetch failed", ex);
             }
         }
-
-        is.response(sid, false, "FETCH failed");
+        is.response(sid, success, "FETCH " + (success ? "completed" : "failed"));
         return 1;
     }
 
 
-    static boolean fetch( ImapCmd cmd, MWImapServer server, long min, long max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
+    static boolean fetch( ImapCmd cmd, ImapsInstance server, long min, long max, int offset, boolean is_uid, String part[] ) throws IOException, MessagingException
     {
         boolean ret = false;
         
@@ -435,7 +388,7 @@ public class Fetch extends ImapCmd
 
         for (int i = 0; i < mailfolder.anzMessages(); i++)
         {
-            MWMailMessage msg = mailfolder.get_mail_message(i);
+            MailMessage msg = mailfolder.get_mail_message(i);
             if (msg == null)
             {
                 continue;
@@ -455,6 +408,11 @@ public class Fetch extends ImapCmd
             }
             else
             {
+                if (min > 0)
+                {
+                    if (i + 1 < min)
+                        continue;
+                }
                 if (max > 0)
                 {
                     if (i > max)

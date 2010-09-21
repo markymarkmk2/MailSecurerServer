@@ -36,7 +36,7 @@ public class MailKonto
     ArrayList<MailFolder> mail_folders;
     MandantContext m_ctx;
     UserSSOEntry sso_entry;
-    MWImapServer is;
+    ImapsInstance is;
 
     public static final boolean qry_folder = true;
     public static final boolean browse_folder = true;
@@ -59,7 +59,7 @@ public class MailKonto
         return false;
     }
 
-    public MailKonto(MWImapServer is, String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list, UserSSOEntry sso_entry)
+    public MailKonto(ImapsInstance is, String user, String pwd, MandantContext _mtx, ArrayList<String> mail_alias_list, UserSSOEntry sso_entry)
     {
         this.is = is;
         this.user = user;

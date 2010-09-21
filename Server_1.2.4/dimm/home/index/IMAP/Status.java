@@ -17,12 +17,12 @@ public class Status extends ImapCmd
     }
 
     @Override
-    public int action( MWImapServer is, String sid, String parameter )
+    public int action( ImapsInstance is, String sid, String parameter )
     {
         return status( is, sid, parameter );
     }
 
-    static int status( MWImapServer is, String sid, String par )
+    static int status( ImapsInstance is, String sid, String par )
     {
         int h;
         int anz;

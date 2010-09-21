@@ -15,7 +15,7 @@ import java.util.*;
 
 
 
-public class MWImapServer extends Thread
+public class ImapsInstance extends Thread
 {
     private final static String RESTAG = "* ";
     boolean shutdown = false;
@@ -39,11 +39,11 @@ public class MWImapServer extends Thread
     int con = 0;
     MandantContext m_ctx;
     private boolean has_searched = false;
-    IMAPBrowser parent;
+    IMAPServer parent;
 
     static HashMap<String, ImapCmd> cmd_map;
 
-    public MWImapServer( IMAPBrowser parent, MandantContext m_ctx, Socket s, boolean trace )
+    public ImapsInstance( IMAPServer parent, MandantContext m_ctx, Socket s, boolean trace )
     {
         super("ImapServer for " + s.getRemoteSocketAddress().toString());
 
@@ -68,6 +68,7 @@ public class MWImapServer extends Thread
         add( new Subscribe());
         add( new Uid());
         add( new Unsubscribe());
+        add( new Authenticate());
     }
     public MailKonto get_konto()
     {
@@ -90,7 +91,7 @@ public class MWImapServer extends Thread
         mailfolder = folder;
     }
 
-    public IMAPBrowser get_parent()
+    public IMAPServer get_parent()
     {
         return parent;
     }
@@ -141,6 +142,11 @@ public class MWImapServer extends Thread
     void response( String message )
     {
         write(RESTAG + message);
+    }
+
+    String read() throws IOException
+    {
+        return in.readLine();
     }
 
     void response( String sid, boolean ok, String message )
@@ -268,15 +274,21 @@ public class MWImapServer extends Thread
     {
         if (konto != null)
         {
-            parent.clear_cache( konto.get_username() );
-            konto.close();
+            // DELETE CACHES ONLY IF WE ARE THER LAST ONE
+            if (parent.getUserInstanceCnt( konto.get_username() ) == 1)
+            {
+                parent.clear_cache( konto.get_username() );
+                konto.close();
+            }
+            
             konto = null;
         }
+        /* DONE INSIDE konto.close
         if (mailfolder != null)
         {
             mailfolder.close();
             mailfolder = null;
-        }
+        }*/
 
         if (out != null)
         {

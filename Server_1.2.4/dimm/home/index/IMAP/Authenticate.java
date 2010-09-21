@@ -8,15 +8,17 @@ package dimm.home.index.IMAP;
 import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.SQL.UserSSOEntry;
+import java.io.IOException;
+import org.apache.commons.codec.binary.Base64;
 /**
  *
  * @author mw
  */
-public class Login extends ImapCmd
+public class Authenticate extends ImapCmd
 {
-    public Login()
+    public Authenticate()
     {
-        super( "login");
+        super( "authenticate");
     }
 
     @Override
@@ -27,11 +29,25 @@ public class Login extends ImapCmd
 
     private int login( ImapsInstance is, String sid, String par )
     {
-        String auth[] = imapsplit(par);
-        if (auth != null && auth.length >= 2)
+
+        is.write("+");
+        String login_param;
+        try
         {
-            String user = auth[0];
-            String pwd = auth[1];
+            login_param = is.read();
+        }
+        catch (IOException iOException)
+        {
+            is.response(sid, false, "LOGIN failed");
+            return 1;
+        }
+
+        String name = new String(Base64.decodeBase64(login_param.getBytes()));
+        String auth[] = name.split("\0");
+        if (auth != null && auth.length >= 3)
+        {
+            String user = auth[1];
+            String pwd = auth[2];
 
             try
             {

@@ -23,6 +23,6 @@ public interface MailQueue
 {
     public void set(MailKonto parent);
     public void init(); //if Thread , it can start now
-    public void add(MWMailMessage m);
+    public void add(MailMessage m);
     public void raise(String messageid,String tag,String mfid);
 }

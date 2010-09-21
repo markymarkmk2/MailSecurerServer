@@ -22,8 +22,8 @@ public class MailFolder
     //String file;
     MailKonto konto;
     String key = null;
-    ArrayList<MWMailMessage> uid_map_list;
-    ArrayList<MWMailMessage> last_uid_map;
+    ArrayList<MailMessage> uid_map_list;
+    ArrayList<MailMessage> last_uid_map;
     String uid_validity;
     int year;
     int month;
@@ -67,7 +67,7 @@ public class MailFolder
         this.konto = konto;        
        // this.file = file;
         this.key = key;
-        uid_map_list = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MailMessage>();
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
         last_time_used = System.currentTimeMillis();
@@ -87,7 +87,7 @@ public class MailFolder
         if (key.startsWith(TESTTOKEN))
         {
             RFCFileMail testmessage = new RFCFileMail( new File("M:\\test.eml"), false);
-            uid_map_list.add( new MWMailMessage( this, konto, testmessage, 42, null ) );
+            uid_map_list.add( new MailMessage( this, konto, testmessage, 42, null ) );
         }
     }
 
@@ -103,7 +103,7 @@ public class MailFolder
         this.month = month;
         day = -1;
 
-        uid_map_list = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MailMessage>();
 
         uid_validity = Integer.toString(year*12*31 + month*31 + day);
     }
@@ -117,7 +117,7 @@ public class MailFolder
         this.month = month;
         this.day = day;
 
-        uid_map_list = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MailMessage>();
 
         uid_validity = Integer.toString(year*365 + month*31 + day);
     }
@@ -190,11 +190,11 @@ public class MailFolder
     }
    
 
-    public synchronized MWMailMessage getMessage( String uuid )
+    public synchronized MailMessage getMessage( String uuid )
     {
         try
         {
-            MWMailMessage mesg = get_mail_message( uuid);
+            MailMessage mesg = get_mail_message( uuid);
             return mesg;
             
         }
@@ -204,7 +204,7 @@ public class MailFolder
         }
         return null;
     }
-    public MWMailMessage getUidMesg(int uid)
+    public MailMessage getUidMesg(int uid)
     {
        
         try
@@ -227,7 +227,7 @@ public class MailFolder
         //Getting information without reading mf-file
         try
         {
-            MWMailMessage mesg = get_mail_message(uuid);
+            MailMessage mesg = get_mail_message(uuid);
 
             return (MailInfo)mesg;
         }
@@ -278,11 +278,11 @@ public class MailFolder
         return last_uid_map.size();
     }
 
-    MWMailMessage get_mail_message(  String uuid )
+    MailMessage get_mail_message(  String uuid )
     {
         for (int i = 0; i < uid_map_list.size(); i++)
         {
-            MWMailMessage mm = uid_map_list.get(i);
+            MailMessage mm = uid_map_list.get(i);
             if (mm.uuid.compareTo(uuid) == 0)
                 return mm;
 
@@ -290,11 +290,11 @@ public class MailFolder
         return null;
 
     }
-    MWMailMessage get_mail_message( int idx )
+    MailMessage get_mail_message( int idx )
     {
          return uid_map_list.get(idx);
     }
-    MWMailMessage get_last_mail_message(  int idx  )
+    MailMessage get_last_mail_message(  int idx  )
     {
          return last_uid_map.get(idx);
     }
@@ -311,7 +311,7 @@ public class MailFolder
     {
         for (int i = 0; i < uid_map_list.size(); i++)
         {
-            MWMailMessage mm = uid_map_list.get(i);
+            MailMessage mm = uid_map_list.get(i);
             if (mm.getUID() == uid)
                 return mm.uuid;
 
@@ -510,6 +510,8 @@ public class MailFolder
                 MandantContext m_ctx = konto.m_ctx;
                 sc.search_lucene(konto.user, konto.pwd, ge.getChildren(), 100, CS_Constants.USERMODE.UL_USER);
 
+                // ADD TO US AND ALL OTHER, DO WE REALLY WANT THIS, IF SEARCH IS FROM MAIL CLIENT?
+                //konto.is.parent.set_search_results(sc, konto.get_username(), konto.get_pwd());
                 add_new_mail_resultlist( m_ctx, sc );
             }
             catch (IOException ex)
@@ -537,7 +539,7 @@ public class MailFolder
         {
             for (int i = 0; i < last_uid_map.size(); i++)
             {
-                MWMailMessage mWMailMessage = last_uid_map.get(i);
+                MailMessage mWMailMessage = last_uid_map.get(i);
                 mWMailMessage.close();
             }
             last_uid_map.clear();
@@ -546,7 +548,7 @@ public class MailFolder
         {
             for (int i = 0; i < uid_map_list.size(); i++)
             {
-                MWMailMessage mWMailMessage = uid_map_list.get(i);
+                MailMessage mWMailMessage = uid_map_list.get(i);
                 mWMailMessage.close();
             }
             uid_map_list.clear();
@@ -559,7 +561,7 @@ public class MailFolder
         {
             for (int i = 0; i < last_uid_map.size(); i++)
             {
-                MWMailMessage mWMailMessage = last_uid_map.get(i);
+                MailMessage mWMailMessage = last_uid_map.get(i);
                 mWMailMessage.close();
             }
             last_uid_map.clear();
@@ -567,7 +569,7 @@ public class MailFolder
         last_uid_map = uid_map_list;
 
         uid_validity = Long.toString(System.currentTimeMillis() / 1000);
-        uid_map_list = new ArrayList<MWMailMessage>();
+        uid_map_list = new ArrayList<MailMessage>();
         
 
         int results = sc.get_result_cnt();
@@ -597,7 +599,7 @@ public class MailFolder
                     date_id *= 1000;
                 }
                 
-                MWMailMessage mail = new MWMailMessage( this, konto, rfc, date_id + last_msg_id++, result );
+                MailMessage mail = new MailMessage( this, konto, rfc, date_id + last_msg_id++, result );
 
                 uid_map_list.add( mail );
 
