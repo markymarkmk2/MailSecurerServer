@@ -345,6 +345,16 @@ public class LogManager implements  LogListener
         }
     }
 
+
+    public static void set_all( int lvl )
+    {
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            LogTypeEntry logTypeEntry = lte_array[i];
+            logTypeEntry.lvl = lvl;
+        }
+    }
+
     // SINGLETON
     private LogManager()
     {

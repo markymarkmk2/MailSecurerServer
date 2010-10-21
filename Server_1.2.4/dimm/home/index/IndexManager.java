@@ -714,8 +714,12 @@ public class IndexManager extends WorkerParent
                     }
                 }
             }
-
-            if (content instanceof Multipart)
+            if (content == null)
+            {
+                LogManager.msg_index(LogManager.LVL_ERR, "Cannot index message object " + unique_id + ": Message has no content");
+                // DO NOT RETURN FALSE, WE SAVE ANYWAY, MAYBE WE CAN INDEX IT IN A LATER REVISION
+            }
+            else if (content instanceof Multipart)
             {
                 Multipart mp = (Multipart) content;
 
@@ -739,6 +743,7 @@ public class IndexManager extends WorkerParent
             else
             {
                 LogManager.msg_index(LogManager.LVL_ERR, "Cannot index message object " + unique_id + ": " + content.getClass().getName());
+                // DO NOT RETURN FALSE, WE SAVE ANYWAY, MAYBE WE CAN INDEX IT IN A LATER REVISION
             }
 
             if (doc.getField(CS_Constants.FLD_ATTACHMENT_NAME) != null)

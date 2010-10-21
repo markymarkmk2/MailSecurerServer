@@ -44,10 +44,13 @@ public class Noop extends ImapCmd
                 is.response("1 EXPUNGE");
             }
 
-            for (int m = 0; m < folder.anzMessages(); m++)
+/*            for (int m = 0; m < folder.anzMessages(); m++)
             {
                 is.response(Integer.toString(m+1) + " RECENT");
             }
+ * */
+            is.response(folder.anzMessages() + " RECENT");
+
             is.response(Integer.toString(folder.anzMessages()) + " EXISTS");
             is.set_has_searched( false );
         }

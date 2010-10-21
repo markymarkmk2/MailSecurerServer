@@ -11,7 +11,7 @@ import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
 import dimm.home.importmail.ProxyEntry;
-import dimm.home.index.IMAP.IMAPBrowser;
+import dimm.home.index.IMAP.IMAPServer;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.serverconnect.TCPCallConnect;
@@ -66,7 +66,7 @@ public class MandantContext
     private TempFileHandler tempFileHandler;
     private TCPCallConnect tcp_conn;
     private IndexManager index_manager;
-    private IMAPBrowser imap_browser;
+    private IMAPServer imap_browser;
     ArrayList<WorkerParent> worker_list;
     private ReIndexContext rctx;
     long next_reinit_importbuffer;
@@ -475,7 +475,7 @@ public class MandantContext
                 LogManager.msg_imaps(LogManager.LVL_INFO, "Starting " + (imap_ssl ? "SSL-" : "") + "IMAP-Server for " + getMandant().getName() + " on " + getMandant().getImap_host() + ":" + getMandant().getImap_port());
 
 
-                imap_browser = new IMAPBrowser(this, getMandant().getImap_host(), getMandant().getImap_port(), imap_ssl);
+                imap_browser = new IMAPServer(this, getMandant().getImap_host(), getMandant().getImap_port(), imap_ssl);
                 ibs.add_child(imap_browser);
             }
             catch (IOException ex)
@@ -647,7 +647,7 @@ public class MandantContext
         this.rctx = rctx;
     }
 
-    public IMAPBrowser get_imap_server()
+    public IMAPServer get_imap_server()
     {
         return imap_browser;
     }
@@ -819,7 +819,8 @@ public class MandantContext
             if (usc != null)
             {
                 // USER STILL VALID
-                if (now - usc.getLast_auth() < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
+                long diff_s = (now - usc.getLast_auth()) / 1000;
+                if (diff_s < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
                 {
                     // REWIND CLOCK
                     usc.setLast_auth( System.currentTimeMillis() );
@@ -908,7 +909,8 @@ public class MandantContext
                     {
                         // STORE ACT RESULTS
                         usc.setLast_auth(now);
-                        usc.setMail_list(mail_list);
+                        if (mail_list != null && !mail_list.isEmpty())
+                            usc.setMail_list(mail_list);
                     }
                     else
                     {

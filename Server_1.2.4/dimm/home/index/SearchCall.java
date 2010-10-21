@@ -202,7 +202,7 @@ public class SearchCall
         return "0: sc" + id + " N:" + sc.result.size();
     }
 */
-    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level, boolean with_imap )
+    public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level, boolean volatile_storage )
     {
 
 
@@ -245,7 +245,21 @@ public class SearchCall
         int id = 0;
         synchronized (call_list)
         {
-            id = call_list.size();
+            if (!volatile_storage)
+            {
+                id = call_list.size();
+            }
+            else
+            {
+                // REAL HACK, ALL SEARCHCALL-IDS ABOVE 1000 ARE VOLATILE, ONE PER USER
+                id = 1000 + ssoc.getUser_sso_id();
+
+                String sce_id = "sc" + id;
+                if (SearchCall.get_sce(sce_id) != null)
+                {
+                    SearchCall.close_search_call(sce_id);
+                }
+            }
             SearchCallEntry sce = new SearchCallEntry(ssoc, sc, id);
             call_list.add(sce);
         }

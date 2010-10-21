@@ -34,7 +34,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
  *
  * @author Administrator
  */
-public class Main 
+public final class Main
 {
     
     private static final String VERSION = "1.4.4";
@@ -99,6 +99,7 @@ public class Main
 
     
     /** Creates a new instance of Main */
+    @SuppressWarnings("LeakingThisInConstructor")
     public Main(String[] args)
     {
         me = this;
@@ -187,6 +188,14 @@ public class Main
         {
             if (args[i].compareTo("-t") == 0)
                 trace_mode = true;
+            if (args[i].compareTo("-vvv") == 0)
+            {
+                LogManager.set_all(LogManager.LVL_VERBOSE);
+            }
+            if (args[i].compareTo("-vv") == 0)
+            {
+                LogManager.set_all(LogManager.LVL_DEBUG);
+            }
                        
             if (args[i].compareTo("-server_ip") == 0 && args[i + 1] != null)
             {

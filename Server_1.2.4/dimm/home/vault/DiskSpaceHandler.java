@@ -930,6 +930,17 @@ public class DiskSpaceHandler
         File mail_file = new File( absolutePath );
         if (!mail_file.exists())
         {
+            // TRY OTHER VARIANT MAYBE WE HAVE SWITCHED?
+            if (fmode == RFCGenericMail.FILENAME_MODE.HMS_FILE)
+                fmode = RFCGenericMail.FILENAME_MODE.H_OK_DIR_MS_FILE;
+            else
+                fmode = RFCGenericMail.FILENAME_MODE.HMS_FILE;
+
+           absolutePath = RFCFileMail.get_mailpath_from_time( parent_path, time, enc_mode, fmode );
+        }
+        mail_file = new File( absolutePath );
+        if (!mail_file.exists())
+        {
            throw new VaultException( ds, "Cannot retrieve mail file for " + time + ": " + absolutePath );
         }
 
