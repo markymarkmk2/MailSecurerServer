@@ -5,19 +5,24 @@
 package dimm.home.exchange;
 
 import com.microsoft.schemas.exchange.services._2006.messages.ExchangeServicePortType;
+import com.microsoft.schemas.exchange.services._2006.types.ArrayOfRealItemsType;
 import com.microsoft.schemas.exchange.services._2006.types.BaseFolderType;
 import com.microsoft.schemas.exchange.services._2006.types.ExchangeVersionType;
+import com.microsoft.schemas.exchange.services._2006.types.ItemIdType;
 import com.microsoft.schemas.exchange.services._2006.types.ItemType;
+import com.microsoft.schemas.exchange.services._2006.types.MessageType;
 import com.sun.xml.ws.wsdl.parser.InaccessibleWSDLException;
 import home.shared.exchange.ExchangeAuthenticator;
 import home.shared.exchange.dao.ItemTypeDAO;
 import home.shared.exchange.util.ExchangeEnvironmentSettings;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.codec.binary.Base64;
 
 
 /**
@@ -87,6 +92,7 @@ public class ExchangeDevelopmentTest
 
         List<ItemType> mails = itemTypeDAO.getFolderItems( port, baseFolderType.getFolderId() );
 
+        List<ItemIdType> full_mail_list = new ArrayList<ItemIdType>();
         long total_size = 0;
         for (Iterator<ItemType> it1 = mails.iterator(); it1.hasNext();)
         {
@@ -95,7 +101,28 @@ public class ExchangeDevelopmentTest
             String s = mail.getSubject();
             System.out.println("Mail: " + s  + " Size: " + size);
             total_size += size.intValue();
+
+            List<ItemIdType> mail_list = new ArrayList<ItemIdType>();
+            mail_list.add(mail.getItemId());
+            full_mail_list.add(mail.getItemId());
+            ArrayOfRealItemsType rfc_mails = itemTypeDAO.getItem(port, mail_list);
+            System.out.println(rfc_mails.getItemOrMessageOrCalendarItem().size());
         }
+
+        ArrayOfRealItemsType rfc_mails = itemTypeDAO.getItem(port, full_mail_list);
+        
+        for (int i = 0; i < rfc_mails.getItemOrMessageOrCalendarItem().size(); i++)
+        {
+            ItemType msg_type = (MessageType) rfc_mails.getItemOrMessageOrCalendarItem().get(i);
+            String mime_txt = msg_type.getMimeContent().getValue();
+            String charset = msg_type.getMimeContent().getCharacterSet();
+            
+            byte[] data = Base64.decodeBase64(mime_txt.getBytes());
+            String mailtext = new String( data, charset );
+            System.out.println("mail:" + mailtext);
+            
+        }
+
         System.out.println("Folder: " + baseFolderType.getDisplayName()  + " Size: " + total_size);
 
         if (baseFolderType.getChildFolderCount() > 0)

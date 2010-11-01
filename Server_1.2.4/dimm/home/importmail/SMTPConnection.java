@@ -76,12 +76,6 @@ public class SMTPConnection extends ProxyConnection
 
         try
         {
-/*            clientWriter = new BufferedOutputStream(clientSocket.getOutputStream(),
-                    clientSocket.getSendBufferSize());
-
-            clientReader = new BufferedInputStream(clientSocket.getInputStream(),
-                    clientSocket.getReceiveBufferSize());
-*/
             clientWriter = clientSocket.getOutputStream();
             clientReader = clientSocket.getInputStream();
             
@@ -99,13 +93,9 @@ public class SMTPConnection extends ProxyConnection
             serverSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             clientSocket.setSoTimeout(SOCKET_TIMEOUT[0]);
             
-      /*      LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getReceiveBufferSize());
-            LogManager.debug_msg(DBG_VERB, "getReceiveBufferSize: " + serverSocket.getSendBufferSize());
-            LogManager.debug_msg(DBG_VERB, "getSoTimeout: " + serverSocket.getSoTimeout());*/
 
             serverWriter = serverSocket.getOutputStream();
             serverReader = serverSocket.getInputStream();
- 
  
             
             String sData = "";
@@ -142,6 +132,18 @@ public class SMTPConnection extends ProxyConnection
                         clientWriter.flush();
                     }
                     break;
+                }
+                if (last_command != null && last_command.startsWith("EHLO"))
+                {
+                    // FILTER OUT PIPELIONING, WE DONT SUPPORT IT
+                    int idx = sData.indexOf("250-PIPELINING\r\n");
+                    if (idx == -1)
+                        idx = sData.indexOf("250 PIPELINING\r\n");
+                    if (idx >= 0)
+                    {
+                        // FROM 250 PIPELINING\r\n to 250 HELP\r\n
+                        sData = sData.substring(0, idx + 4) + "HELP" + sData.substring(idx + 14);
+                    }
                 }
 
                 if (m_Command == SMTP_DATA)
@@ -188,9 +190,14 @@ public class SMTPConnection extends ProxyConnection
                 // CHECK FOR CLIENT W/O LOGOUT
                 if (last_command != null && last_command.equals("DATA"))
                 {
-                    // WE LOG AFTER OUT 120 s
+                    // WE LOG AFTER OUT 30 s
+                    int to = 30;
+                    if (pe.isSSL())
+                    {
+                        to = 1;
+                    }
                     
-                    int avail = wait_for_avail( clientReader, clientSocket, 120 );
+                    int avail = wait_for_avail( clientReader, clientSocket, to );
                     if (avail == 0)
                     {
                         serverWriter.write("QUIT\r\n".getBytes());
@@ -224,12 +231,36 @@ public class SMTPConnection extends ProxyConnection
                 if (is_verbose)
                     log( "C: " + sData);
 
+                String token = sData.toUpperCase();
+
+                // WE BLOCK STARTTLS
+                if (token.startsWith("STARTTLS"))
+                {
+                    clientWriter.write("454 TLS not available\r\n".getBytes());
+                    clientWriter.flush();
+
+                    reset_timeout();
+                    // MAYBE CIENT DROPS BACK TO STANDATD
+
+                    int avail = wait_for_avail( clientReader, clientSocket, 10 );
+                    if (avail == 0)
+                    {
+                        serverWriter.write("QUIT\r\n".getBytes());
+                        serverWriter.flush();
+                        break;
+                    }
+
+                    sData = getDataFromInputStream(clientReader, clientSocket,  SMTP_CLIENTREQUEST, /*wait*/false).toString();
+                    last_command = sData.toUpperCase().trim();
+                }
+
+
                 // write it to the SMTP server
                 serverWriter.write(sData.getBytes());
                 serverWriter.flush();
                 reset_timeout();
 
-                String token = sData.toUpperCase();
+                token = sData.toUpperCase();
                 if (token.startsWith("DATA") || token.endsWith("\r\nDATA\r\n") )
                 {
                     m_Command = SMTP_DATA;

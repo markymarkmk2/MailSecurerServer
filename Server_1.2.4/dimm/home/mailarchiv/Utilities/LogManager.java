@@ -49,6 +49,7 @@ public class LogManager implements  LogListener
 
     static LogTypeEntry[] lte_array =
     {
+        new LogTypeEntry(TYP_EXCEXPTIONS),
         new LogTypeEntry(TYP_AUTH),
         new LogTypeEntry(TYP_EXTRACT),
         new LogTypeEntry(TYP_PROXY),
@@ -66,10 +67,11 @@ public class LogManager implements  LogListener
         new LogTypeEntry(TYP_COMM),
         new LogTypeEntry(TYP_ARCHIVE),
         new LogTypeEntry(TYP_BACKUP),
-        new LogTypeEntry(TYP_INDEX)
+        new LogTypeEntry(TYP_INDEX),
+        new LogTypeEntry(TYP_EXCHANGE)
     };
 
-    public static final String[] get_log_types()
+    public static String[] get_log_types()
     {
         String[] ret = new String[lte_array.length];
 
@@ -82,7 +84,7 @@ public class LogManager implements  LogListener
 
     }
 
-    public static final ArrayList<LogConfigEntry> get_log_config_arry()
+    public static ArrayList<LogConfigEntry> get_log_config_arry()
     {
         ArrayList<LogConfigEntry> arr = new ArrayList<LogConfigEntry>();
 
@@ -93,7 +95,7 @@ public class LogManager implements  LogListener
         return arr;
 
     }
-    public static final  void set_log_config_arry(ArrayList<LogConfigEntry> arr)
+    public static  void set_log_config_arry(ArrayList<LogConfigEntry> arr)
     {
 
         for (int i = 0; i < arr.size(); i++)
@@ -102,7 +104,7 @@ public class LogManager implements  LogListener
         }
     }
 
-    public static final String get_lvl_name( int lvl)
+    public static String get_lvl_name( int lvl)
     {
         switch (lvl )
         {
@@ -116,12 +118,12 @@ public class LogManager implements  LogListener
 
     }
     
-    public static final String get_logfile( String type)
+    public static String get_logfile( String type)
     {
         return "LOG_" + type + ".log";
     }
 
-    public static final String get_logfile( int lvl)
+    public static String get_logfile( int lvl)
     {
         switch (lvl )
         {
@@ -248,6 +250,22 @@ public class LogManager implements  LogListener
     {
         msg_backup(lvl, string, null);
     }
+    public static void msg_exchange( int lvl, String string, Exception exc )
+    {
+        msg( lvl,  TYP_EXCHANGE, string, exc);
+    }
+    public static void msg_exchange( int lvl, String string )
+    {
+        msg_exchange(lvl, string, null);
+    }
+
+    public static void printStackTrace( Exception e )
+    {
+        _msg( e);
+    }
+
+
+
     static LogTypeEntry get_lte( String s )
     {
         for (int i = 0; i < lte_array.length; i++)
@@ -301,9 +319,37 @@ public class LogManager implements  LogListener
             }
         }
     }
+
+private static void _msg( Exception exc )
+    {
+        java.util.Date now = new java.util.Date();
+        StringBuffer sb = new StringBuffer();
+
+        sb.append( message_sdf.format( now ) );
+        sb.append( ": " );
+
+
+        if (exc != null)
+        {
+            sb.append( exc.getLocalizedMessage() );
+        }
+
+
+        String s = sb.toString();
+
+        // ADD TO CACHE
+        LogTypeEntry lte = get_lte( TYP_EXCEXPTIONS );
+
+
+        System.out.println( s );
+
+        lte.check_max_size();
+
+        lte.file_log( s, exc );
+    }
+
     private static void _msg( int lvl, String type, String msg, Exception exc )
     {
-
         java.util.Date now = new java.util.Date();
         StringBuffer sb = new StringBuffer();
 
@@ -333,7 +379,7 @@ public class LogManager implements  LogListener
 
         System.out.println( s );
         if (exc != null && exc instanceof RuntimeException)
-            exc.printStackTrace();
+            printStackTrace(exc);
 
 
         if (lvl != LVL_VERBOSE)
@@ -354,6 +400,8 @@ public class LogManager implements  LogListener
             logTypeEntry.lvl = lvl;
         }
     }
+
+   
 
     // SINGLETON
     private LogManager()
@@ -595,7 +643,7 @@ public class LogManager implements  LogListener
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            printStackTrace(e);
             return null;
         }
         finally

@@ -190,8 +190,10 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         // RETURN VALS
         SearchControls ctrl = new SearchControls();
         ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
-        ctrl.setReturningAttributes(new String[]{"mail"});
-        //ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses", "otherMailbox"});
+        //ctrl.setReturningAttributes(new String[]{"mail"});
+        ctrl.setReturningAttributes(new String[]{"mail", "userPrincipalName", "proxyAddresses", "otherMailbox"});
+        // USER PRINZIPAL NAME IS NOT AN EMAIL, IT CAN CONTAIN SPACES
+//        ctrl.setReturningAttributes(new String[]{"mail", "proxyAddresses", "otherMailbox"});
         // USER ROOT
         String rootSearchBase = get_user_search_base();
         // BUILD ORED LIST OF DNs
@@ -203,7 +205,7 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
         for (int i = 0; i < users.size(); i++)
         {
             String string = users.get(i);
-            if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0)
+            if (act.getLdapdomain() != null && act.getLdapdomain().length() > 0 && string.indexOf('@') == -1)
             {
                 string += "@" + act.getLdapdomain();
             }
@@ -278,9 +280,9 @@ public class ActiveDirectoryAuth extends GenericRealmAuth
     {
         if (group != null && group.length() > 0)
         {            
-            return list_attribute_qry("(&(objectClass=user)(memberOf=" + group + "))", "name");
+            return list_attribute_qry("(&(objectClass=user)(memberOf=" + group + "))", "userPrincipalName");
         }
-        return list_attribute_qry("(objectClass=user)", "name");
+        return list_attribute_qry("(objectClass=user)", "userPrincipalName");
     }
 
     @Override

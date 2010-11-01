@@ -275,7 +275,9 @@ public class IndexManager extends WorkerParent
             String excl_data = acct.getExcludefilter();
             if (excl_data != null && excl_data.length() > 0)
             {
-                list.add(new GroupEntry(FilterMatcher.get_filter_list(excl_data, /*compr*/ true), /*neg*/ false, /*is_or*/ true));
+                GroupEntry ge = new GroupEntry( FilterMatcher.get_filter_list(excl_data, /*compr*/ true) );
+                ge.setPrevious_is_or(true);
+                list.add(ge);
             }
         }
         if (list.size() > 0)

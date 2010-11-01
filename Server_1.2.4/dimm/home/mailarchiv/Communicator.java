@@ -87,6 +87,12 @@ public class Communicator extends WorkerParent
     {
         using_fallback = false;
         
+        // NOT AN APPLIANCE?
+        if (!Main.get_bool_prop(GeneralPreferences.AUTO_SET_IP))
+        {
+            // WE ARE DONE
+            return true;
+        }
         
         if (System.getProperty("os.name").startsWith("Linux"))
         {

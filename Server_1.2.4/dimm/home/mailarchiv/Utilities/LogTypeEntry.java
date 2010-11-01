@@ -8,6 +8,7 @@ package dimm.home.mailarchiv.Utilities;
 import home.shared.Utilities.ZipUtilities;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -160,6 +161,24 @@ public class LogTypeEntry
         catch ( Exception exc)
         {
             System.err.println(s);
+        }
+    }
+    synchronized void file_log( String s, Exception e )
+    {
+        File log = get_log_file();
+        try
+        {
+            PrintWriter fw = new PrintWriter( new FileWriter(log,  true ) );
+            fw.write( s );
+            fw.write( "\n" );
+            e.printStackTrace( fw );
+            fw.write( "\n" );
+            fw.close();
+        }
+        catch ( Exception exc)
+        {
+            System.err.println(s);
+            e.printStackTrace(System.err );
         }
     }
 

@@ -18,6 +18,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
+import javax.net.ssl.SSLSocket;
 
 /**
  *
@@ -36,7 +37,9 @@ public abstract class ProxyConnection implements Runnable
 
     static final int SOCKET_TIMEOUT[] = {30000, 60000};
     final static byte END_OF_MULTILINE[] = {'\r','\n', '.', '\r','\n' };
+    final static byte END_OF_MULTILINE_QUIT[] = {'\r','\n', '.', '\r','\n','Q','U','I','T','\r','\n' };
     final static String END_OF_MULTILINE_STR = "\r\n.\r\n";
+    final static String END_OF_MULTILINE_QUIT_STR = "\r\n.\r\nQUIT\r\n";
     final static byte END_OF_LINE[] = {'\r','\n'};
     final static String END_OF_LINE_STR = "\r\n";
 
@@ -427,6 +430,28 @@ public abstract class ProxyConnection implements Runnable
 
         return false;
     }
+    boolean has_multi_eol_quit( byte buffer[], int rlen )
+    {
+        if (rlen < END_OF_MULTILINE_QUIT.length)
+            return false;
+
+        int start = rlen - END_OF_MULTILINE_QUIT.length;
+        int i = 0;
+        for (i = 0; i < END_OF_MULTILINE_QUIT.length; i++)
+        {
+            if (buffer[i + start] != END_OF_MULTILINE_QUIT[i])
+                break;
+        }
+
+        if ( i == END_OF_MULTILINE_QUIT.length)
+        {
+            if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_VERBOSE))
+                log( Main.Txt("Detected_MEOLQ") );
+            return true;
+        }
+
+        return false;
+    }
     boolean is_command_quit(String sData)
     {
         if (sData.length() >= 4)
@@ -443,7 +468,7 @@ public abstract class ProxyConnection implements Runnable
 
     void log( String txt )
     {
-        if (LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_DEBUG))
+        if (!LogManager.has_lvl(LogManager.TYP_PROXY, LogManager.LVL_DEBUG))
             return;
 
         if (txt.endsWith("\r\n"))
@@ -483,7 +508,7 @@ public abstract class ProxyConnection implements Runnable
     {
         int maxwait = s * 10;
         int avail = 0;
-
+        
         while (avail == 0 && maxwait > 0)
         {
             if (sock.isClosed() || sock.isInputShutdown() || !sock.isConnected())
@@ -847,6 +872,7 @@ public abstract class ProxyConnection implements Runnable
 
         return output;
     }
+   
 
 
     String getErrorMessage()
@@ -915,6 +941,13 @@ public abstract class ProxyConnection implements Runnable
                         {
                             finished = true;
                         }
+                        /*
+                        // DETECT QUIT AFTER DATA PIPELINING
+                        if (has_multi_eol_quit(buffer, rlen))
+                        {
+                            finished = true;
+                            m_error = ERROR_QUIT_AFTER_DATA_PIPELINIG;
+                        }*/
                     }
 
 
@@ -946,7 +979,11 @@ public abstract class ProxyConnection implements Runnable
                         disable_timeout();
                         try
                         {
-                            bos.write(buffer, 0, rlen);
+                            // WE FOUND \r\n.\r\n AFTER MESSAGE, OMIT THE END IN MSG
+                            if (finished && rlen > 3 && buffer[rlen-3] == '.')
+                                bos.write(buffer, 0, rlen - 3 );
+                            else
+                                bos.write(buffer, 0, rlen);
                         }
                         catch (Exception exc)
                         {

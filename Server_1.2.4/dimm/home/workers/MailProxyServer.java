@@ -158,7 +158,7 @@ public class MailProxyServer extends ListWorkerParent
             }
             else
             {
-                pop3_ss = new ServerSocket(LocalPort);
+                pop3_ss = new ServerSocket(LocalPort, 5, InetAddress.getByName(local_host));
             }
             // 1 second timeout
             pop3_ss.setSoTimeout(1000);
@@ -266,7 +266,7 @@ public class MailProxyServer extends ListWorkerParent
             }
             else
             {
-                smtp_ss = new ServerSocket(LocalPort);
+                smtp_ss = new ServerSocket(LocalPort, 5, InetAddress.getByName(local_host));
             }
             // 1 second timeout
             smtp_ss.setSoTimeout(1000);

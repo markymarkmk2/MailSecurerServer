@@ -30,6 +30,7 @@ import dimm.home.mailarchiv.Commands.ShellCmd;
 import dimm.home.mailarchiv.Commands.StartVPN;
 import dimm.home.mailarchiv.Commands.TestLogin;
 import dimm.home.mailarchiv.Commands.HandleCertificate;
+import dimm.home.mailarchiv.Commands.ImportExchange;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
 import dimm.home.mailarchiv.Commands.LicenseConfig;
@@ -47,7 +48,6 @@ import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.Utilities.ParseToken;
-import home.shared.hibernate.Mandant;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -173,6 +173,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new LicenseConfig() );
         cmd_list.add( new BackupCommand() );
         cmd_list.add( new ListVaultStatus() );
+        cmd_list.add( new ImportExchange() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
@@ -436,7 +437,7 @@ public class TCPCallConnect extends WorkerParent
                                     }
                                     else if (cn.compareTo("boolean") == 0 || cn.endsWith(".Boolean"))
                                     {
-                                        arg = new Boolean(params.get(k));
+                                        arg = Boolean.valueOf(params.get(k));
                                     }
                                     else                                    
                                     {
@@ -1269,6 +1270,28 @@ public class TCPCallConnect extends WorkerParent
         }
     }
 
+
+    public String RMX_executeQueryCnt( UserSSOEntry ssoc, String stmt_txt, String max_cnt, String cmd )
+    {
+        try
+        {
+            StatementEntry ste = get_sta(get_id(stmt_txt));
+
+            int max_rows = Integer.parseInt(max_cnt);
+            ste.sta.setMaxRows(max_rows);
+
+            ResultSet rs = ste.sta.executeQuery(cmd);
+
+            String id = new_result_entry(ste.ce, rs);
+
+            return "0: " + id;
+        }
+        catch (Exception exc)
+        {
+            LogManager.msg_comm( LogManager.LVL_ERR, "Call of query <" + cmd + "> gave :" + exc.getMessage());
+            return "1: " + exc.getMessage();
+        }
+    }
 
     public String RMX_executeQuery( UserSSOEntry ssoc, String stmt_txt, String cmd )
     {

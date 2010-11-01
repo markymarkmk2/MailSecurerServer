@@ -10,6 +10,7 @@ package dimm.home.mailarchiv;
 
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.Updater.UpdateWorker;
+import dimm.home.exchange.ExchangeImportServer;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.importmail.DBXImporter;
 import dimm.home.importmail.MBoxImporter;
@@ -139,6 +140,8 @@ public class LogicControl
     LicenseChecker lic_checker;
     
     MBoxImportServer mb_import_server;
+    ExchangeImportServer ex_import_server;
+    
     private boolean shutdown;
 
     ThreadPoolWatcher thread_watcher;
@@ -259,6 +262,9 @@ public class LogicControl
             mb_import_server = new MBoxImportServer();
             worker_list.add(mb_import_server);
 
+            ex_import_server = new ExchangeImportServer();
+            worker_list.add(ex_import_server);
+
             sql = new SQLWorker();
             worker_list.add(sql);
 
@@ -285,6 +291,10 @@ public class LogicControl
     public MBoxImportServer get_mb_import_server()
     {
         return mb_import_server;
+    }
+    public ExchangeImportServer get_ex_import_server()
+    {
+        return ex_import_server;
     }
 
     public ThreadPoolWatcher getThreadWatcher()

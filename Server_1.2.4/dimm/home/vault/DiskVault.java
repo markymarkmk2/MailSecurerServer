@@ -504,14 +504,34 @@ public class DiskVault implements Vault, StatusHandler
     @Override
     public boolean has_sufficient_space()
     {
-        DiskSpaceHandler dsh = get_next_active_data_diskspace(0);
-        if (dsh == null)
-            return false;
+        for (int i = 0; ; i++)
+        {
+            DiskSpaceHandler dsh = get_next_active_data_diskspace(i);
+            if (dsh == null)
+                break;
 
-        if (dsh.no_space_left())
-            return false;
+            if (!dsh.no_space_left())
+                return true;
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean has_sufficient_space(long size)
+    {
+        for (int i = 0; ; i++)
+        {
+            DiskSpaceHandler dsh = get_next_active_data_diskspace(i);
+            if (dsh == null)
+                break;
 
-        return true;
+            if (!dsh.no_space_left())
+            {
+                if (dsh.checkCapacity(size))
+                    return true;
+            }
+        }
+        return false;
     }
 
     @Override

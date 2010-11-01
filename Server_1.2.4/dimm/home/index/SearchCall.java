@@ -666,6 +666,7 @@ public class SearchCall
                 {
                     String field_name = mail_headers.get(m);
                     filter.addTerm(new Term(field_name, mail_adress));
+                    LogManager.msg_index(LogManager.LVL_DEBUG, "Adding filter " + field_name + ":" + mail_adress);
                 }
             }
         }
@@ -898,6 +899,7 @@ public class SearchCall
         }
 
 
+        LogManager.msg_index(LogManager.LVL_DEBUG,  "Searching in " + search_arr.length + " diskspaces");
 
         SortField hex_long_field = new SortField(CS_Constants.FLD_DATE, new HexLongParser(), /*reverse*/ true);
         
@@ -924,10 +926,10 @@ public class SearchCall
 
 
         long diff = System.currentTimeMillis() - start_time;
-
-        LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_INDEX, "Search took " + diff + "ms");
-        
         ScoreDoc[] sdocs = tdocs.scoreDocs;
+
+        LogManager.msg_index(LogManager.LVL_DEBUG, "Search took " + diff + "ms, " + sdocs.length + " results found");
+        
         for (int k = sdocs.length - 1 ; k >= 0; k--)
         {
             ScoreDoc scoreDoc = sdocs[k];

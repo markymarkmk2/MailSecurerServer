@@ -32,13 +32,19 @@ class SourceTargetEntry
     File source;
     String target;
     boolean is_file;
+    boolean allow_errors;
 
-    public SourceTargetEntry( String name, File source, String target, boolean is_file )
+    public SourceTargetEntry( String name, File source, String target, boolean is_file, boolean allow_errors )
     {
         this.name = name;
         this.source = source;
         this.target = target;
         this.is_file = is_file;
+        this.allow_errors = allow_errors;
+    }
+    public SourceTargetEntry( String name, File source, String target, boolean is_file )
+    {
+        this( name, source, target, is_file, false );
     }
 
     public String getName()
@@ -425,7 +431,7 @@ public class BackupScript extends WorkerParentChild
             backup_dir_list.add( new SourceTargetEntry( "System lib", new File( Main.work_dir + "/lib"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System lic", new File( Main.work_dir + "/license"), get_system_subpath(m_ctx), false) );
             backup_dir_list.add( new SourceTargetEntry( "System Server", new File( Main.work_dir + "/MailArchiv.jar"), get_system_subpath(m_ctx), true) );
-            backup_dir_list.add( new SourceTargetEntry( "System logs", new File( Main.work_dir + "/logs"), get_system_subpath(m_ctx), false) );
+            backup_dir_list.add( new SourceTargetEntry( "System logs", new File( Main.work_dir + "/logs"), get_system_subpath(m_ctx), false, /*allow_errors*/true) );
         }
 
         for (int i = 0; i < dv.get_dsh_list().size(); i++)
@@ -513,9 +519,12 @@ public class BackupScript extends WorkerParentChild
                 {
                     src_path = src_path.substring(0, src_path.length() - 2);
                 }
+                String no_err_txt = " NO_ERRORS";
+                if (ste.allow_errors)
+                    no_err_txt = "";
 
                 String cmd = "copy_files "+ (ste.is_file() ? "FILE":"FOLDER") + " \"" + ste.getName() + "\" 127.0.0.1 11172 \"" + src_path + "\" \"" +
-                            ste.getName() + "\" " + ag_ip + " " + ag_port + " \"" + targetpath + "\" NO_ERRORS NOWAIT CP:0";
+                            ste.getName() + "\" " + ag_ip + " " + ag_port + " \"" + targetpath + "\"" + no_err_txt + " NOWAIT CP:0";
 
                 cmd = cmd.replace('\\', '/');
                 set_status(StatusEntry.BUSY, Main.Txt("Starting_backup_of") + " "+ ste.getName());

@@ -76,6 +76,8 @@ public class GeneralPreferences extends Preferences
     public static final String AUDIT_DB_CONNECT = "AuditDBConnect";
     public static final String ONLY_FROM_ADRESS_LIC = "OnlyFromAddrLic";
     public static final String ALLOW_UNKNOWN_DOMAIN_MAIL = "AllowInknownDomainMail";
+    public static final String EXCHANGE_IMPORT_MAX_CHUNK_SIZE = "ExchangeImportMaxChunkSize";
+    public static final String AUTO_SET_IP = "AutoSetIP";
 
     
     /** Creates a new instance of Preferences */
@@ -137,6 +139,8 @@ public class GeneralPreferences extends Preferences
         prop_names.add( AUDIT_DB_CONNECT );
         prop_names.add( ONLY_FROM_ADRESS_LIC );
         prop_names.add( ALLOW_UNKNOWN_DOMAIN_MAIL );
+        prop_names.add( EXCHANGE_IMPORT_MAX_CHUNK_SIZE );
+        prop_names.add( AUTO_SET_IP );
 
         String[] log_types = LogManager.get_log_types();
         for (int i = 0; i < log_types.length; i++)
