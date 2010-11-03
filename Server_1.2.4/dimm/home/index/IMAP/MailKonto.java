@@ -109,8 +109,7 @@ public class MailKonto
             MailFolder folder = mail_folders.get(i);
             folder.close();
         }
-        mail_folders.clear();
-        mail_alias_list.clear();
+        mail_folders.clear();        
     }
 
     public boolean isInitialized()

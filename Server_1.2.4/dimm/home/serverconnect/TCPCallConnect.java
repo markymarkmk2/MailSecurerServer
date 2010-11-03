@@ -799,6 +799,11 @@ public class TCPCallConnect extends WorkerParent
                     Object ret = call_method(s, stream_len, cmd, params, sso_entry);
 
                     alog.call_function( sso_entry, cmd, params, ret );
+
+                    if (LogManager.has_lvl(LogManager.TYP_COMM, LogManager.LVL_VERBOSE))
+                    {
+                        LogManager.msg_comm( LogManager.LVL_VERBOSE, cmd + " " + args + "::" + ret);
+                    }
                     
                     if (ret != null)
                     {
@@ -1633,7 +1638,6 @@ public class TCPCallConnect extends WorkerParent
     {
         try
         {
-
             InputStreamEntry ise = get_istream(get_id(stream_id));
             if (ise != null)
             {
@@ -1645,7 +1649,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception iOException)
         {
-            return "1: Exception: " + iOException.getMessage();
+            return "2: Exception: " + iOException.getMessage();
         }
         finally
         {
