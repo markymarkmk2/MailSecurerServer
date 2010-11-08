@@ -70,6 +70,13 @@ public class MailBoxFetcher extends WorkerParentChild
         return imfetcher;
     }
 
+    @Override
+    public int get_mandant_id()
+    {
+        return imfetcher.getMandant().getId();
+    }
+
+
     String get_mailbox_protokoll()
     {
 

@@ -795,6 +795,12 @@ public class Communicator extends WorkerParent
     {
         return "";
     }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        return "";
+    }
 }
  
 

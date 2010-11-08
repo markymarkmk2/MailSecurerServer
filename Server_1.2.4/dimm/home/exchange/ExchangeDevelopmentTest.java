@@ -7,11 +7,14 @@ package dimm.home.exchange;
 import com.microsoft.schemas.exchange.services._2006.messages.ExchangeServicePortType;
 import com.microsoft.schemas.exchange.services._2006.types.ArrayOfRealItemsType;
 import com.microsoft.schemas.exchange.services._2006.types.BaseFolderType;
+import com.microsoft.schemas.exchange.services._2006.types.ConnectingSIDType;
+import com.microsoft.schemas.exchange.services._2006.types.DistinguishedFolderIdNameType;
+import com.microsoft.schemas.exchange.services._2006.types.DistinguishedFolderIdType;
+import com.microsoft.schemas.exchange.services._2006.types.ExchangeImpersonationType;
 import com.microsoft.schemas.exchange.services._2006.types.ExchangeVersionType;
 import com.microsoft.schemas.exchange.services._2006.types.ItemIdType;
 import com.microsoft.schemas.exchange.services._2006.types.ItemType;
 import com.microsoft.schemas.exchange.services._2006.types.MessageType;
-import com.sun.xml.ws.wsdl.parser.InaccessibleWSDLException;
 import home.shared.exchange.ExchangeAuthenticator;
 import home.shared.exchange.dao.ItemTypeDAO;
 import home.shared.exchange.util.ExchangeEnvironmentSettings;
@@ -42,17 +45,63 @@ public class ExchangeDevelopmentTest
     public static void main( String[] args )
     {        
         ItemTypeDAO itemTypeDAO;
+        com.sun.xml.ws.transport.http.client.HttpTransportPipe.dump=true;
+        com.sun.xml.ws.transport.http.HttpAdapter.dump=true;
+        com.sun.xml.ws.transport.http.server.ServerAdapter.dump = true;
+
 
         try
         {
             ExchangeAuthenticator.reduce_ssl_security();
            
-            ExchangeServicePortType port = ExchangeAuthenticator.open_exchange_port( "mw", "helikon", "w2k8becom.dimm.home", "192.168.1.121" );
-            ExchangeEnvironmentSettings settings = new ExchangeEnvironmentSettings( ExchangeEnvironmentSettings.get_cultures()[0], ExchangeVersionType.EXCHANGE_2007_SP_1 );
+            ExchangeServicePortType port = ExchangeAuthenticator.open_exchange_port( "ServiceAccount", "12345", "w2k8becom.dimm.home", "192.168.1.121" );
+            ExchangeEnvironmentSettings settings = new ExchangeEnvironmentSettings( ExchangeEnvironmentSettings.get_cultures()[0], ExchangeVersionType.EXCHANGE_2010 );
 
             // Test out the new ItemTypeDAO functionality.
             itemTypeDAO = new ItemTypeDAO(settings);
-            itemTypeDAO.getFolderItems(port);
+
+                        // SET IMPERSONATION
+            ExchangeImpersonationType impersonation = new ExchangeImpersonationType();
+            ConnectingSIDType cid = new ConnectingSIDType();
+            cid.setPrincipalName("raddatz@w2k8becom.dimm.home");
+            //cid.setSID("S-1-5-21-647177006-1055827929-3996742586-1129");
+            //cid.setSID("S-1-5-21-647177006-1055827929-3996742586-1135");
+
+            impersonation.setConnectingSID(cid);
+
+
+            //itemTypeDAO.setImpersonation(impersonation);
+            
+             DistinguishedFolderIdType dft_inbox = new DistinguishedFolderIdType();
+             dft_inbox.setId(DistinguishedFolderIdNameType.INBOX);
+             
+
+            List<ItemType> lf = itemTypeDAO.getFolderItems( port, dft_inbox );
+
+            itemTypeDAO.setImpersonation(impersonation);
+
+            for (int i = 0; i < 500; i++)
+            {
+                try
+                {
+
+                    itemTypeDAO.GetFolders(port);
+//                    lf = itemTypeDAO.getFolderItems(port, dft_inbox);
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    System.out.println(".");
+                }
+            }
+
+
+            List<BaseFolderType> all_folder_list = new ArrayList<BaseFolderType>();
+
+//            all_folder_list = itemTypeDAO.GetFolders(port);
+
+  //          itemTypeDAO.getFolderItems(port);
+
 
             List<BaseFolderType>folders =  itemTypeDAO.GetFolders( port );
 
@@ -69,7 +118,7 @@ public class ExchangeDevelopmentTest
             // Catch any errors that may occur.
             Logger.getLogger(ExchangeDevelopmentTest.class.getName()).log(Level.SEVERE, null, ex);
         }
-        catch (InaccessibleWSDLException ex)
+/*        catch (InaccessibleWSDLException ex)
         {
             // Catch any errors that may occur.
             List<Throwable> list = ex.getErrors();
@@ -78,7 +127,7 @@ public class ExchangeDevelopmentTest
                 Throwable throwable = it.next();
                 throwable.printStackTrace();
             }
-        }
+        }*/
         catch (Exception ex)
         {
             // Catch any errors that may occur.
@@ -127,7 +176,7 @@ public class ExchangeDevelopmentTest
 
         if (baseFolderType.getChildFolderCount() > 0)
         {
-            List<BaseFolderType>folders =  itemTypeDAO.GetFolders(port, baseFolderType.getFolderId() );
+            List<BaseFolderType>folders =  itemTypeDAO.GetFoldersbyParent(port, baseFolderType.getFolderId() );
 
             for (Iterator<BaseFolderType> it = folders.iterator(); it.hasNext();)
             {

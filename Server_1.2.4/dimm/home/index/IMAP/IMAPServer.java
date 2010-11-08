@@ -208,6 +208,13 @@ public class IMAPServer extends WorkerParentChild
     {
         return port;
     }
+
+    @Override
+    public int get_mandant_id()
+    {
+        return m_ctx.getMandant().getId();
+    }
+
  
 /*
  *

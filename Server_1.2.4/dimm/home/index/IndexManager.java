@@ -574,7 +574,7 @@ public class IndexManager extends WorkerParent
             RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw,  boolean delete_after_index, boolean skip_account_filter ) throws MessagingException, IOException, IndexException
     {
         String subject = mime_msg.getMsg().getSubject();
-        if (mime_msg.getEmail_list().size() == 0)
+        if (mime_msg.getEmail_list().isEmpty())
         {
             LogManager.msg_index(LogManager.LVL_ERR, "Found bogus mail (no from / to / cc) " + unique_id + ": skipping");
             return false;
@@ -1432,7 +1432,7 @@ public class IndexManager extends WorkerParent
         catch (Exception e)
         {
             LogManager.msg_index(LogManager.LVL_ERR, "Error while cleaning up index hold buffer", e);
-            e.printStackTrace();
+            LogManager.printStackTrace(e);
         }
 
     }
@@ -1474,7 +1474,7 @@ public class IndexManager extends WorkerParent
     {
         synchronized (index_job_list)
         {
-            if (index_job_list.size() == 0)
+            if (index_job_list.isEmpty())
             {
                 return;
             }
@@ -1541,9 +1541,9 @@ public class IndexManager extends WorkerParent
 
     public String get_status_txt()
     {
-        StringBuffer stb = new StringBuffer();
+        //StringBuffer stb = new StringBuffer();
 
-        return stb.toString();
+        return "";
     }
 
     @Override
@@ -1592,27 +1592,6 @@ public class IndexManager extends WorkerParent
         return ije.handle_index(parallel_index);
     }
 
-    @Override
-    public String get_task_status()
-    {
-        StringBuffer stb = new StringBuffer();
-
-
-        synchronized (index_job_list)
-        {
-            for (int i = 0; i < index_job_list.size(); i++)
-            {
-                IndexJobEntry mbie = index_job_list.get(i);
-
-                stb.append("IJEID");
-                stb.append(i);
-                stb.append(":");
-                stb.append(mbie.unique_id);
-                stb.append("\n");
-            }
-        }
-        return stb.toString();
-    }
 
     static public boolean doc_field_exists( Document doc, String fld )
     {
@@ -1980,6 +1959,51 @@ public class IndexManager extends WorkerParent
         int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
         index_run_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexMail" , index_threads, 10 );
         
+    }
+
+
+    @Override
+    public String get_task_status()
+    {
+        StringBuilder stb = new StringBuilder();
+
+        synchronized (index_job_list)
+        {
+            for (int i = 0; i < index_job_list.size(); i++)
+            {
+                IndexJobEntry mbie = index_job_list.get(i);
+
+                stb.append("IJEID");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.unique_id);
+                stb.append("\n");
+            }
+        }
+        return stb.toString();
+    }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        StringBuilder stb = new StringBuilder();
+
+        synchronized (index_job_list)
+        {
+            for (int i = 0; i < index_job_list.size(); i++)
+            {
+                IndexJobEntry mbie = index_job_list.get(i);
+                if (mbie.get_ma_id() > 0 && mbie.get_ma_id() != ma_id)
+                    continue;
+
+                stb.append("IJEID");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.unique_id);
+                stb.append("\n");
+            }
+        }
+        return stb.toString();
     }
 }
 

@@ -340,8 +340,7 @@ private static void _msg( Exception exc )
         // ADD TO CACHE
         LogTypeEntry lte = get_lte( TYP_EXCEXPTIONS );
 
-
-        System.out.println( s );
+        exc.printStackTrace(System.err);
 
         lte.check_max_size();
 

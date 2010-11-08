@@ -156,6 +156,13 @@ public class BackupScript extends WorkerParentChild
         }
     }
 
+    @Override
+    public int get_mandant_id()
+    {
+        return backup.getMandant().getId();
+    }
+
+
     boolean test_flag( int f )
     {
         try

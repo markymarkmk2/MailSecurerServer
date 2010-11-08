@@ -257,11 +257,16 @@ public class MBoxImportServer extends WorkerParent
         return true;
     }
 
-   
     @Override
     public String get_task_status()
     {
-        StringBuffer stb = new StringBuffer();
+        return get_task_status(0);
+    }
+   
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        StringBuilder stb = new StringBuilder();
 
 
         synchronized (import_list)
@@ -269,6 +274,8 @@ public class MBoxImportServer extends WorkerParent
             for (int i = 0; i < import_list.size(); i++)
             {
                 MBoxImporterEntry mbie = import_list.get(i);
+                if (ma_id > 0 && mbie.mandant.getId() != ma_id)
+                    continue;
 
                 stb.append("MBISI");
                 stb.append(i);
@@ -278,6 +285,10 @@ public class MBoxImportServer extends WorkerParent
                 stb.append(i);
                 stb.append(":");
                 stb.append(mbie.status);
+                stb.append(" MBIAM");
+                stb.append(i);
+                stb.append(":");
+                stb.append(mbie.act_msg);
                 stb.append(" MBITM");
                 stb.append(i);
                 stb.append(":");

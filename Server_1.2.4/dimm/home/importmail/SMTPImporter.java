@@ -85,6 +85,13 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
             this.smtp_db_entry = smtp_server;
 	}
 
+    @Override
+    public int get_mandant_id()
+    {
+        return smtp_db_entry.getMandant().getId();
+    }
+
+
 	
 
 	 boolean  startup()

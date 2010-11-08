@@ -181,6 +181,12 @@ public class HotFolderImport extends WorkerParentChild
     }
 
     @Override
+    public int get_mandant_id()
+    {
+        return hfolder.getMandant().getId();
+    }
+
+    @Override
     public void run_loop()
     {
         started = true;

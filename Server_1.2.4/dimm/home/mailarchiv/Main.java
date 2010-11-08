@@ -37,7 +37,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.4.8";
+    private static final String VERSION = "1.4.9";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -241,7 +241,7 @@ public final class Main
         }
         catch (Exception exc)
         {
-            exc.printStackTrace();
+            LogManager.printStackTrace(exc);
         }
 
         if (init_db)
@@ -333,7 +333,7 @@ public final class Main
             catch (Exception exc)
             {
                 LogManager.msg_system( LogManager.LVL_ERR,  "Caught unhandled exception, restarting application:" + exc.getMessage() );
-                exc.printStackTrace( );               
+                LogManager.printStackTrace(exc );
                 LogicControl.sleep(5000);
             }
         }
@@ -404,7 +404,7 @@ public final class Main
             Thread.sleep( ms );
         } catch (InterruptedException ex)
         {
-            ex.printStackTrace();
+            LogManager.printStackTrace(ex);
         }
     }
 
@@ -615,7 +615,7 @@ System.out.println("Core POI came from " + path);
         }
         catch ( Exception exc)
         {
-            exc.printStackTrace();
+            LogManager.printStackTrace(exc);
         }
        return false; 
     }
@@ -657,7 +657,7 @@ System.out.println("Core POI came from " + path);
         }             
         catch ( Exception exc)
         {
-            exc.printStackTrace();
+            LogManager.printStackTrace(exc);
         }
         finally
         {

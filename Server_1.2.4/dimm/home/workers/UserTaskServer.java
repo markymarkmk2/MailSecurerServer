@@ -30,16 +30,17 @@ class UserTask
 
     String result_text;
     boolean result_ok;
+    int ma_id;
 
-    UserTask( int level, String description, Object o, String method, ArrayList params )
+    UserTask( int ma_id, int level, String description, Object o, String method, ArrayList params )
     {
+        this.ma_id = ma_id;
         this.level = level;
         this.description = description;
         this.obj = o;
         this.method = method;
         this.params = params;
     }
-
 }
 
 
@@ -48,11 +49,8 @@ class UserTask
  * @author Administrator
  */
 public class UserTaskServer extends WorkerParent
-{
-    
-    
+{        
     public static final String NAME = "UserTaskServer";
-
     
     Timer timer;
     final ArrayList<UserTask> task_list;
@@ -75,11 +73,11 @@ public class UserTaskServer extends WorkerParent
     }
 
    
-    public void add_usertask(int level, String description, Object o, String method, ArrayList params)
+    public void add_usertask(int ma_id, int level, String description, Object o, String method, ArrayList params)
     {
         synchronized( task_list )
         {
-            task_list.add( new UserTask( level, description, o, method, params ) );
+            task_list.add( new UserTask( ma_id, level, description, o, method, params ) );
         }
     }
 
@@ -150,23 +148,6 @@ public class UserTaskServer extends WorkerParent
         return true;
     }
 
-    @Override
-    public String get_task_status()
-    {
-        StringBuffer stb = new StringBuffer();
-
-        synchronized( task_list )
-        {
-            for (int i = 0; i < task_list.size(); i++)
-            {
-                UserTask userTask = task_list.get(i);
-                stb.append("UTD:" + userTask.description );
-            }
-        }
-
-        return stb.toString();
-
-    }
 
     private void run_usertask( UserTask userTask )
     {
@@ -228,6 +209,34 @@ public class UserTaskServer extends WorkerParent
         {
         }
    }
+    @Override
+    public String get_task_status()
+    {
+        return  get_task_status( 0 );
+    }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        StringBuilder stb = new StringBuilder();
+
+        synchronized( task_list )
+        {
+            for (int i = 0; i < task_list.size(); i++)
+            {
+                UserTask userTask = task_list.get(i);
+                if (ma_id > 0 && ma_id >= userTask.ma_id)
+                    continue;
+
+                stb.append("UTD:");
+                stb.append( userTask.description );
+                stb.append("\n");
+            }
+        }
+
+        return stb.toString();
+
+    }
 
 
 }

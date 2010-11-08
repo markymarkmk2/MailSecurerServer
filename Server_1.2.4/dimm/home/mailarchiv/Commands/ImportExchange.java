@@ -11,11 +11,14 @@ package dimm.home.mailarchiv.Commands;
 
 
 import com.microsoft.schemas.exchange.services._2006.types.BaseFolderIdType;
+import com.microsoft.schemas.exchange.services._2006.types.DistinguishedFolderIdNameType;
+import com.microsoft.schemas.exchange.services._2006.types.ExchangeVersionType;
 import dimm.home.exchange.ExchangeImportServer;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.vault.DiskVault;
+import home.shared.SQL.UserSSOEntry;
 import home.shared.Utilities.ParseToken;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
@@ -34,7 +37,7 @@ public class ImportExchange extends AbstractCommand
     /** Creates a new instance of HelloCommand */
     public ImportExchange()
     {
-        super("import_exchange_folder");
+        super("import_exchange");
         
     }
     
@@ -57,6 +60,15 @@ public class ImportExchange extends AbstractCommand
             String pwd = pt.GetString("PW:");
 
             String mode = pt.GetString("MD:");
+
+            String ex_xml = pt.GetString("EV:");
+            ExchangeVersionType ev = ExchangeVersionType.EXCHANGE_2007;
+
+            Object e = ParseToken.DeCompressObject(ex_xml);
+            if (e instanceof ExchangeVersionType)
+            {
+                ev = (ExchangeVersionType) e;
+            }
 
             if (mode.compareTo("folder") == 0)
             {
@@ -87,7 +99,10 @@ public class ImportExchange extends AbstractCommand
                     return true;
                 }
 
-                ExchangeImportServer.register_import( m_ctx, da, folder_list, user, pwd, domain, server );
+
+                UserSSOEntry sso = getSsoEntry();
+
+                ExchangeImportServer.register_import( sso, m_ctx, da, folder_list, user, pwd, domain, server, ev );
 
 
                 // YEEHAW, WE'RE DONE
@@ -98,25 +113,30 @@ public class ImportExchange extends AbstractCommand
                 long ac_id = pt.GetLongValue("AC:");
 
                 String folder_xml = pt.GetString("FD:");
-                ArrayList<BaseFolderIdType>folder_list = null;
+                ArrayList<DistinguishedFolderIdNameType>folder_list = null;
 
-                Object o = ParseToken.DeCompressObject(folder_xml);
-                if (o instanceof ArrayList)
+                if (folder_xml.length() > 0)
                 {
-                    folder_list = (ArrayList<BaseFolderIdType>) o;
+                    Object o = ParseToken.DeCompressObject(folder_xml);
+                    if (o instanceof ArrayList)
+                    {
+                        folder_list = (ArrayList<DistinguishedFolderIdNameType>)o;
+                    }
                 }
 
-                String user_xml = pt.GetString("US:");
+                String user_xml = pt.GetString("UL:");
                 ArrayList<String>user_list = null;
-
-                Object u = ParseToken.DeCompressObject(user_xml);
-                if (u instanceof ArrayList)
+                if (user_xml.length() > 0)
                 {
-                    user_list = (ArrayList<String>) o;
+
+                    Object o = ParseToken.DeCompressObject(user_xml);
+                    if (o instanceof ArrayList)
+                    {
+                        user_list = (ArrayList<String>)o;
+                    }
                 }
 
                 boolean user_folders = pt.GetBoolean("UF:");
-
 
 
                 // GET STRUCTS FROM ARGS
@@ -132,7 +152,9 @@ public class ImportExchange extends AbstractCommand
                     return true;
                 }
 
-                ExchangeImportServer.register_import( m_ctx, da, ac_id, folder_list, user_list, user_folders );
+                UserSSOEntry sso = getSsoEntry();
+                
+                ExchangeImportServer.register_import( sso, m_ctx, da, ac_id, domain, folder_list, user_list, user_folders, ev );
 
 
                 // YEEHAW, WE'RE DONE

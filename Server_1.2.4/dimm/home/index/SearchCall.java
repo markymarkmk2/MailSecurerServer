@@ -54,7 +54,6 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.MultiSearcher;
-import org.apache.lucene.search.ParallelMultiSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Searchable;
@@ -239,7 +238,7 @@ public class SearchCall
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            LogManager.printStackTrace(e);
             return "2: " + e.getMessage();
         }
         int id = 0;
@@ -542,7 +541,7 @@ public class SearchCall
     {
 
         ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
-        if (dsh_list.size() == 0)
+        if (dsh_list.isEmpty())
         {
             throw new IllegalArgumentException(Main.Txt("No_disk_spaces_for_search_found"));
         }
@@ -568,7 +567,7 @@ public class SearchCall
         if (!view_all)
         {
             ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
-            if (mail_aliases == null || mail_aliases.size() == 0)
+            if (mail_aliases == null || mail_aliases.isEmpty())
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
             }            
@@ -588,7 +587,7 @@ public class SearchCall
     {
 
         ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
-        if (dsh_list.size() == 0)
+        if (dsh_list.isEmpty())
         {
             throw new IllegalArgumentException(Main.Txt("No_disk_spaces_for_search_found"));
         }
@@ -604,7 +603,7 @@ public class SearchCall
         if (view_all)
         {
             ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
-            if (mail_aliases == null || mail_aliases.size() == 0)
+            if (mail_aliases == null || mail_aliases.isEmpty())
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
             }
@@ -702,7 +701,7 @@ public class SearchCall
     {
         String name = e.getName();
         String[] flist = null;
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         // HANDLE VIRTUAL FIELDS
         if (name.compareTo( CS_Constants.VFLD_MAIL) == 0)
@@ -827,6 +826,10 @@ public class SearchCall
         return qry;
     }
 
+    private boolean isValidMail( String m )
+    {
+        return (m.indexOf('@') > 0);
+    }
     ArrayList<String> get_mail_addresses( Document doc )
     {
             // BUILD MAILADRESSLIST
@@ -835,18 +838,30 @@ public class SearchCall
         for (int m = 0; m < mail_fields.size(); m++)
         {
             String field_name = mail_fields.get(m);
-            String mail_address = doc.get(field_name);
-
-            if (mail_address != null && mail_address.trim().length() > 0)
+            String[] mail_addresses = doc.getValues(field_name);
+            for (int a = 0; a < mail_addresses.length; a++)
             {
-                int br1 = mail_address.indexOf('<');
-                int br2 = mail_address.indexOf('>');
-                if (br1 >= 0 && br2 > br1)
-                {
-                    mail_address = mail_address.substring(br1 + 1, br2);
-                }
+                String mail_address = mail_addresses[a];
 
-                mail_addr_list.add( mail_address);
+                if (mail_address != null && mail_address.trim().length() > 0)
+                {
+                    int br1 = mail_address.indexOf('<');
+                    int br2 = mail_address.indexOf('>');
+                    if (br1 >= 0 && br2 > br1)
+                    {
+                        mail_address = mail_address.substring(br1 + 1, br2);
+                    }
+                    String[] args = mail_address.split(" |\t|\"\'");
+                    for (int i = 0; i < args.length; i++)
+                    {
+                        String token = args[i];
+                        if (token.indexOf('@') > 0)
+                        {
+                            if (!mail_addr_list.contains(token))
+                                mail_addr_list.add( token );
+                        }
+                    }
+                }
             }
         }
         return mail_addr_list;
@@ -1067,7 +1082,7 @@ public class SearchCall
 
         _4EyesCacheEntry()
         {
-            _4_eyes = new Boolean(false);
+            _4_eyes = false;
         }
     }
     HashMap<String,_4EyesCacheEntry> _4eyes_cache = new HashMap<String, _4EyesCacheEntry>();
@@ -1128,7 +1143,7 @@ public class SearchCall
                     if (m_ctx.role_has_option(role, OptCBEntry._4EYES))
                     {
                         // STOP ON FIRST 4E-Role
-                        entry._4_eyes = new Boolean( true );
+                        entry._4_eyes = true;
                         break;
                     }
 

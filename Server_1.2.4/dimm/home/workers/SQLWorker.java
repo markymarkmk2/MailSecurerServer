@@ -643,11 +643,17 @@ public class SQLWorker extends WorkerParent
     @Override
     public String get_task_status()
     {
-        StringBuffer stb = new StringBuffer();
+        StringBuilder stb = new StringBuilder();
 
         stb.append("TC:" + stmt_list.size());
 
         return stb.toString();
+    }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        return get_task_status();
     }
 
 

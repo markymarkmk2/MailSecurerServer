@@ -155,7 +155,7 @@ public class ListWorkerParent extends WorkerParent
     @Override
     public String get_task_status()
     {
-        StringBuffer stb = new StringBuffer();
+        StringBuilder stb = new StringBuilder();
 
         // CLEAN UP LIST OF FINISHED CONNECTIONS
         for (int i = 0; i < child_list.size(); i++)
@@ -163,6 +163,7 @@ public class ListWorkerParent extends WorkerParent
             WorkerParentChild ch  = child_list.get(i);
 
             stb.append(ch.get_task_status_txt() );
+            stb.append("\n");
         }
 
         return stb.toString();
@@ -172,6 +173,26 @@ public class ListWorkerParent extends WorkerParent
     public boolean check_requirements( StringBuffer sb )
     {
         return true;
+    }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        StringBuilder stb = new StringBuilder();
+
+        // CLEAN UP LIST OF FINISHED CONNECTIONS
+        for (int i = 0; i < child_list.size(); i++)
+        {
+            WorkerParentChild ch  = child_list.get(i);
+            if (ch.get_mandant_id() > 0 && ch.get_mandant_id() != ma_id)
+                continue;
+
+
+            stb.append(ch.get_task_status_txt() );
+            stb.append("\n");
+        }
+
+        return stb.toString();
     }
 
 

@@ -581,7 +581,7 @@ public class TCPCallConnect extends WorkerParent
         else
             LogManager.msg_comm( LogManager.LVL_VERBOSE, "Answer is <" + ret + ">");
 
-        StringBuffer answer = new StringBuffer();
+        StringBuilder answer = new StringBuilder();
 
         if (ok)
         {
@@ -620,7 +620,7 @@ public class TCPCallConnect extends WorkerParent
     {
         LogManager.msg_comm( LogManager.LVL_VERBOSE, "Answer is stream with len " + alen + ">");
 
-        StringBuffer answer = new StringBuffer();
+        StringBuilder answer = new StringBuilder();
 
         if (ok)
         {
@@ -787,7 +787,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 catch (Exception iOException)
                 {
-                    iOException.printStackTrace();
+                    LogManager.printStackTrace(iOException);
                     write_tcp_answer(false, iOException.getMessage(), out);
                     return;
                 }
@@ -812,7 +812,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 catch (Exception exc)
                 {
-                    exc.printStackTrace();
+                    LogManager.printStackTrace(exc);
                     write_tcp_answer(false, exc.getMessage(), out);
                 }
             }
@@ -887,7 +887,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 catch (Exception err)
                 {
-                    err.printStackTrace();
+                    LogManager.printStackTrace(err);
                     ret = -2;
                 }
                 Integer iret = new Integer(ret);
@@ -972,7 +972,7 @@ public class TCPCallConnect extends WorkerParent
 
                             if (!isShutdown())
                             {
-                                exc.printStackTrace();
+                                LogManager.printStackTrace(exc);
                                 setStatusTxt("Communication aborted: " + exc.getMessage());
                                 setGoodState(false);
                                 LogManager.msg_comm( LogManager.LVL_ERR, getStatusTxt());
@@ -1002,7 +1002,7 @@ public class TCPCallConnect extends WorkerParent
             {
                 if (!isShutdown())
                 {
-                    exc.printStackTrace();
+                    LogManager.printStackTrace(exc);
                     LogManager.msg_comm( LogManager.LVL_ERR, "Kommunikationsport geschlossen: " + exc.getMessage());
                     this.setStatusTxt("Communication is closed (2 processes?): " + exc.getMessage());
                     this.setGoodState(false);
@@ -1022,7 +1022,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 catch (IOException ex)
                 {
-                    ex.printStackTrace();
+                    LogManager.printStackTrace(ex);
                 }
             }
         }
@@ -1670,7 +1670,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception iOException)
         {
-            return new String("2: Exception: " + iOException.getMessage());
+            return "2: Exception: " + iOException.getMessage();
         }
     }
 
@@ -1691,7 +1691,7 @@ public class TCPCallConnect extends WorkerParent
         }
         catch (Exception iOException)
         {
-            return new String("2: Exception: " + iOException.getMessage());
+            return "2: Exception: " + iOException.getMessage();
         }
     }
 
@@ -1716,7 +1716,7 @@ public class TCPCallConnect extends WorkerParent
         {
             return s;
         }
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length(); i++)
         {
             char ch = s.charAt(i);
@@ -1749,7 +1749,7 @@ public class TCPCallConnect extends WorkerParent
         {
             return s;
         }
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length(); i++)
         {
             char ch = s.charAt(i);
@@ -1773,6 +1773,12 @@ public class TCPCallConnect extends WorkerParent
 
     @Override
     public String get_task_status()
+    {
+        return "";
+    }
+
+    @Override
+    public String get_task_status( int ma_id )
     {
         return "";
     }

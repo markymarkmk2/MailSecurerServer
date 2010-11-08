@@ -75,6 +75,11 @@ public abstract class WorkerParentChild  implements StatusHandler
         return EqualsBuilder.reflectionEquals( get_db_object(), db_object);
     }
 
+    public int get_mandant_id()
+    {
+        return 0;
+    }
+
 
 
 }

@@ -865,5 +865,11 @@ public class FileTransferManager extends WorkerParent
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
     
 }

@@ -1183,6 +1183,17 @@ public class MandantContext
         return null;
     }
 
+    public AccountConnector get_accountconnector( long ac_id )
+    {
+        for (Iterator<AccountConnector> it = mandant.getAccountConnectors().iterator(); it.hasNext();)
+        {
+            AccountConnector ac = it.next();
+            if (ac.getId() == ac_id)
+                return ac;
+        }
+        return null;
+    }
+
     
     /*
      * So geht rollen 4 augen

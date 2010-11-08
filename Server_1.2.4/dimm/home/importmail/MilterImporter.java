@@ -425,6 +425,13 @@ public class MilterImporter extends WorkerParentChild
         return milter;
     }
 
+    @Override
+    public int get_mandant_id()
+    {
+        return milter.getMandant().getId();
+    }
+
+
     private JilterHandler newHandler() throws InstantiationException, IllegalAccessException
     {
         return new MailImportJilterHandler( this );

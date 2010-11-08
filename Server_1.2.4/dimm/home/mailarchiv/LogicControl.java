@@ -752,7 +752,7 @@ public class LogicControl
         {
             if (ctx != null)
             {
-                LogManager.msg_system( LogManager.LVL_INFO,"Tearing down old mandant");
+                LogManager.msg_system( LogManager.LVL_INFO,"Tearing down old mandant " + ctx.getMandant().getName());
                 ctx.teardown_mandant();
             }
         }
@@ -765,9 +765,10 @@ public class LogicControl
         {
             if (!l.isEmpty() && l.get(0) instanceof Mandant)
             {
-                LogManager.msg_system( LogManager.LVL_INFO, "Loading new mandant");
-
                 Mandant new_m = (Mandant) l.get(0);
+                LogManager.msg_system( LogManager.LVL_INFO, "Loading new mandant " + new_m.getName());
+
+
                 HibernateUtil.forceLoad(new_m);
 
                 if (ctx != null)

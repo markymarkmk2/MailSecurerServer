@@ -47,6 +47,7 @@ public class IndexJobEntry
     RFCMimeMail mime_msg;
     boolean sequential_ret;
 
+
     public IndexJobEntry( IndexManager ixm, MandantContext m_ctx, String unique_id, int da_id, int ds_id, DiskSpaceHandler index_dsh, RFCGenericMail msg, boolean delete_after_index, boolean skip_account_match )
     {
         this.ixm = ixm;
@@ -62,7 +63,6 @@ public class IndexJobEntry
         writer = null;
         mime_msg = null;
         sequential_ret = false;
-
     }
     public void close()
     {
@@ -357,6 +357,11 @@ public class IndexJobEntry
         }
 
         return false;
+    }
+
+    int get_ma_id()
+    {
+        return m_ctx.getMandant().getId();
     }
 
 }

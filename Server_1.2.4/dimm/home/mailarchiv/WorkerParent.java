@@ -93,6 +93,7 @@ public abstract class WorkerParent
     }
 
     abstract public String get_task_status();
+    abstract public String get_task_status(int ma_id);
     
     
     
