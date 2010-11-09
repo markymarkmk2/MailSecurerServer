@@ -29,5 +29,6 @@
     <mapping resource="home/shared/hibernate/MailAddLink.hbm.xml"/>
     <mapping resource="home/shared/hibernate/MailViewLink.hbm.xml"/>
     <mapping resource="home/shared/hibernate/Backup.hbm.xml"/>
+    <mapping resource="home/shared/hibernate/SmtpServer.hbm.xml"/>
   </session-factory>
 </hibernate-configuration>

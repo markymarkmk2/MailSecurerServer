@@ -110,7 +110,7 @@ public class MBoxImportServer extends WorkerParent
         idle_worker.start();
         is_started = true;
 
-        this.setStatusTxt("Running");
+        this.setStatusTxt(ST_IDLE);
         this.setGoodState(true);
         return true;
     }
@@ -147,7 +147,7 @@ public class MBoxImportServer extends WorkerParent
 
             setStatusTxt(Main.Txt("Importing_mailbox"));
             run_import(mbie);
-            setStatusTxt("");
+            setStatusTxt(ST_IDLE);
         }
     }
 

@@ -472,7 +472,7 @@ public class IMAPServer extends WorkerParentChild
             for (int i = 0; i < imaps_instance_list.size(); i++)
             {
                 ImapsInstance sr = imaps_instance_list.get(i);
-                if (sr.get_konto().get_username().compareTo(user) == 0)
+                if (sr.get_konto() != null && sr.get_konto().get_username().compareTo(user) == 0)
                     r++;
             }
         }

@@ -250,7 +250,7 @@ public class Communicator extends WorkerParent
              try
              {
                  if (isGoodState())
-                     this.setStatusTxt("");
+                     this.setStatusTxt(ST_IDLE);
     
                  try
                  {
@@ -287,7 +287,7 @@ public class Communicator extends WorkerParent
                                     dispatch_udp_packet( answer_sock, packet );
                                     
                                     if (isGoodState())
-                                        setStatusTxt( "");
+                                        setStatusTxt( ST_IDLE);
                                  }
                                  catch ( Exception exc )
                                  {

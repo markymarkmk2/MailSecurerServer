@@ -11,6 +11,7 @@ import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
 import dimm.home.importmail.MilterImporter;
 import dimm.home.importmail.ProxyEntry;
+import dimm.home.importmail.SMTPImporter;
 import dimm.home.index.IMAP.IMAPServer;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
@@ -31,6 +32,7 @@ import dimm.home.workers.IMAPBrowserServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
+import dimm.home.workers.SMTPListener;
 import home.shared.CS_Constants;
 import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.AccountConnector;
@@ -41,6 +43,7 @@ import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
 import home.shared.hibernate.RoleOption;
+import home.shared.hibernate.SmtpServer;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.io.File;
@@ -371,6 +374,19 @@ public class MandantContext
         }
     }
 
+    boolean test_flag( String flag_str, int fl )
+    {
+        try
+        {
+            int flags = Integer.parseInt(flag_str);
+            return ((flags & fl) == CS_Constants.IMF_DISABLED);
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        return false;
+    }
+
     void initialize_mandant( LogicControl control )
     {
         // ATTACH COMM IF NOT ALREADY DONE
@@ -409,9 +425,15 @@ public class MandantContext
         MilterServer ms = control.get_milter_server();
         while (milter_it.hasNext())
         {
+            Milter milter = milter_it.next();
+            if (test_flag(milter.getFlags(), CS_Constants.ML_DISABLED))
+            {
+                continue;
+            }
+
             try
             {
-                ms.add_child(new MilterImporter(milter_it.next()));
+                ms.add_child(new MilterImporter(milter));
             }
             catch (IOException ex)
             {
@@ -446,8 +468,7 @@ public class MandantContext
         while (if_it.hasNext())
         {
             ImapFetcher imf = if_it.next();
-            int fl = Integer.parseInt(imf.getFlags());
-            if ((fl & CS_Constants.IMF_DISABLED) == CS_Constants.IMF_DISABLED)
+            if (test_flag(imf.getFlags(), CS_Constants.IMF_DISABLED))
             {
                 continue;
             }
@@ -463,6 +484,21 @@ public class MandantContext
         while (ba_it.hasNext())
         {
             ba_server.add_child(new BackupScript(ba_it.next()));
+        }
+
+
+        Set<SmtpServer> smtps = getMandant().getSmtpServers();
+        Iterator<SmtpServer> smtp_it = smtps.iterator();
+
+        SMTPListener smtp_server = control.get_smtp_listener();
+        while (smtp_it.hasNext())
+        {
+            SmtpServer smtp = smtp_it.next();
+            if (test_flag(smtp.getFlags(), CS_Constants.SL_DISABLED))
+            {
+                continue;
+            }
+            smtp_server.add_child(new SMTPImporter(smtp));
         }
 
         if (getMandant().getImap_port() > 0)
@@ -566,6 +602,15 @@ public class MandantContext
         while (milter_it.hasNext())
         {
             ms.remove_child(milter_it.next());
+        }
+
+        Set<SmtpServer> smtps = getMandant().getSmtpServers();
+        Iterator<SmtpServer> smtp_it = smtps.iterator();
+
+        SMTPListener smtp_server = Main.control.get_smtp_listener();
+        while (smtp_it.hasNext())
+        {
+            smtp_server.remove_child(new SMTPImporter(smtp_it.next()));
         }
 
 

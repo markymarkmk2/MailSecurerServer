@@ -473,4 +473,10 @@ public class UpdateWorker extends WorkerParent
     {
         return "Not supported yet.";
     }
+
+    @Override
+    public String get_task_status( int ma_id )
+    {
+        return "Not supported yet.";
+    }
 }

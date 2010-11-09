@@ -2,10 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package dimm.home.importmail;
-
-
 
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
@@ -13,13 +10,26 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
+import home.shared.CS_Constants;
 import home.shared.hibernate.SmtpServer;
 import home.shared.mail.RFCFileMail;
 import java.io.*;
 import java.util.*;
 import java.net.*;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.auth.LoginFailedException;
 import org.subethamail.smtp.auth.PlainAuthenticationHandlerFactory;
@@ -28,8 +38,7 @@ import org.subethamail.smtp.helper.SimpleMessageListener;
 import org.subethamail.smtp.helper.SimpleMessageListenerAdapter;
 import org.subethamail.smtp.server.SMTPServer;
 
-
-class SMTP_Import_Uservalidator  implements UsernamePasswordValidator
+class SMTP_Import_Uservalidator implements UsernamePasswordValidator
 {
 
     SMTPImporter importer;
@@ -39,51 +48,134 @@ class SMTP_Import_Uservalidator  implements UsernamePasswordValidator
         this.importer = importer;
     }
 
-
     @Override
     public void login( String username, String password ) throws LoginFailedException
     {
         if (username.compareTo(importer.get_SMTP_username()) != 0)
-            throw new LoginFailedException( Main.Txt("Wrong_username"));
+        {
+            throw new LoginFailedException(Main.Txt("Wrong_username"));
+        }
 
         if (password.compareTo(importer.get_SMTP_password()) != 0)
-            throw new LoginFailedException( Main.Txt("Wrong_password"));
+        {
+            throw new LoginFailedException(Main.Txt("Wrong_password"));
+        }
 
         return;  // OKAY!
     }
 }
 
-
-
 class SmtpImporterServer extends SMTPServer
 {
 
-    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory)
+    boolean ssl;
+
+    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory, boolean _ssl )
     {
         super(sml_adapter, pah_factory);
+        ssl = _ssl;
     }
+
     /** */
     @Override
     public String getName()
     {
-            return "SMTPServer for " + Main.APPNAME + " " + Main.get_version_str();
+        return "SMTPServer for " + Main.APPNAME + " " + Main.get_version_str();
+    }
+
+    @Override
+    protected ServerSocket createServerSocket() throws IOException
+    {
+        if (!ssl)
+        {
+            return super.createServerSocket();
+        }
+        else
+        {
+            try
+            {
+                return getServerSocket(this.getPort(), this.getBindAddress());
+            }
+            catch (Exception exception)
+            {
+                throw new IOException(exception.getLocalizedMessage());
+            }
+        }
+    }
+
+    ServerSocket getServerSocket( int serverPort, InetAddress adress ) throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, URISyntaxException
+    {
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        char[] password = "mailsecurer".toCharArray();
+
+        /*
+         * Allocate and initialize a KeyStore object.
+         */
+        KeyStore ks = KeyToolHelper.load_keystore(/*syskeystore*/false);
+
+        /*
+         * Allocate and initialize a KeyManagerFactory.
+         */
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+        /*
+         * Allocate and initialize a TrustManagerFactory.
+         */
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
+
+
+        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+        SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) sslContext.getServerSocketFactory();
+
+        if (adress != null)
+        {
+            return sslserversocketfactory.createServerSocket(serverPort, 5, adress);
+        }
+        else
+        {
+            return sslserversocketfactory.createServerSocket(serverPort, 5);
+        }
     }
 }
 
+public class SMTPImporter extends WorkerParentChild implements SimpleMessageListener
+{
 
-public class SMTPImporter  extends WorkerParentChild implements SimpleMessageListener
-{	
-	private SmtpImporterServer server;
-        String status_txt;
-  
-        public static final int MAX_SMTP_BACKLOG = 30000;
-	public static final int MAX_SMTP_CONNECTIONS = 1024*1024;
+    private SmtpImporterServer server;
+    String status_txt;
+    public static final int MAX_SMTP_BACKLOG = 3000;
+    public static final int MAX_SMTP_CONNECTIONS = 1024 * 1024;
+    SmtpServer smtp_db_entry;
 
-        SmtpServer smtp_db_entry;
-  	public SMTPImporter(SmtpServer smtp_server)
+    public SMTPImporter( SmtpServer smtp_server )
+    {
+        this.smtp_db_entry = smtp_server;
+    }
+
+    boolean has_ssl()
+    {
+        try
         {
-            this.smtp_db_entry = smtp_server;
-	}
+            return test_flag(CS_Constants.SL_SSL);
+        }
+        catch (Exception e)
+        {
+        }
+        return false;
+    }
+
+    boolean is_disabled()
+    {
+        return test_flag(CS_Constants.SL_DISABLED);
+    }
+
+    boolean test_flag( int f )
+    {
+        int fl = Integer.parseInt(smtp_db_entry.getFlags());
+        return (fl & f) == f;
+    }
 
     @Override
     public int get_mandant_id()
@@ -91,34 +183,34 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
         return smtp_db_entry.getMandant().getId();
     }
 
+    boolean startup()
+    {
+        // WE ARE LISTENER
+        try
+        {
+            ArrayList<SimpleMessageListener> listeners = new ArrayList<SimpleMessageListener>();
+            listeners.add(this);
 
-	
+            SimpleMessageListenerAdapter sml_adapter = new SimpleMessageListenerAdapter(listeners);
 
-	 boolean  startup()
-         {
-             // WE ARE LISTENER
-             ArrayList<SimpleMessageListener> listeners = new ArrayList<SimpleMessageListener>();
-             listeners.add(this);
+            // WE VALIDATE THROUGH OUR OWN USERNAME / PWD
+            SMTP_Import_Uservalidator up_validator = new SMTP_Import_Uservalidator(this);
 
-             SimpleMessageListenerAdapter sml_adapter = new SimpleMessageListenerAdapter( listeners );
+            PlainAuthenticationHandlerFactory pah_factory = new PlainAuthenticationHandlerFactory(up_validator);
 
-             // WE VALIDATE THROUGH OUR OWN USERNAME / PWD
-             SMTP_Import_Uservalidator up_validator = new SMTP_Import_Uservalidator(this);
+            server = new SmtpImporterServer(sml_adapter, pah_factory, has_ssl());
 
-             PlainAuthenticationHandlerFactory pah_factory = new PlainAuthenticationHandlerFactory( up_validator );
-
-             server = new SmtpImporterServer(sml_adapter, pah_factory);
-
-             if (smtp_db_entry.getServer() != null && smtp_db_entry.getServer().length() > 0)
-             {
-		InetAddress bindAddress;
+            if (smtp_db_entry.getServer() != null && smtp_db_entry.getServer().length() > 0)
+            {
+                InetAddress bindAddress;
                 try
                 {
-                        bindAddress = InetAddress.getByName(smtp_db_entry.getServer());
-                        server.setBindAddress(bindAddress);
-                } catch (Exception uhe)
+                    bindAddress = InetAddress.getByName(smtp_db_entry.getServer());
+                    server.setBindAddress(bindAddress);
+                }
+                catch (Exception uhe)
                 {
-                        LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,  Main.Txt("Cannot_bind_smtp_server_to_address") + " " + smtp_db_entry.getServer(), uhe);
+                    LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, Main.Txt("Cannot_bind_smtp_server_to_address") + " " + smtp_db_entry.getServer(), uhe);
                 }
             }
             server.setPort(smtp_db_entry.getPort());
@@ -126,21 +218,20 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
             server.setMaxConnections(MAX_SMTP_CONNECTIONS);
 
 
-             try
-             {
-                 server.start();
-             }
-             catch (Exception e)
-             {
-                  LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, Main.Txt("Cannot_start_smtp_server_on_port") + " " + smtp_db_entry.getPort(), e);
-                  return false;
-             }
-            
-            return true;
-	 }
+            LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, "SMTP-Listener is running on 'smtp://" + smtp_db_entry.getServer()
+                    + ":" + smtp_db_entry.getPort() + "'");
 
+            server.start();
+        }
+        catch (Exception e)
+        {
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, Main.Txt("Cannot_start_smtp_server_on_port") + " " + smtp_db_entry.getPort(), e);
+            return false;
+        }
 
-    
+        return true;
+    }
+
     public String get_SMTP_username()
     {
         return smtp_db_entry.getUsername();
@@ -151,24 +242,18 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
         return smtp_db_entry.getPassword();
     }
 
-    
-
-
-
     @Override
-    public boolean accept(String from, String recipient)
+    public boolean accept( String from, String recipient )
     {
         // TODO: FILTER MESSAGES
         return true;
     }
 
     @Override
-    public void deliver(String from, String recipient, InputStream data) throws TooMuchDataException, IOException
+    public void deliver( String from, String recipient, InputStream data ) throws TooMuchDataException, IOException
     {
-        archive_message( data );
+        archive_message(data);
     }
-	
-
 
     protected void archive_message( InputStream data )
     {
@@ -186,16 +271,16 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
         }
         catch (VaultException ex)
         {
-           LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Vault Exception in archive_message", ex);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Vault Exception in archive_message", ex);
         }
         catch (IndexException ex)
         {
-           LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Index Exception in archive_message", ex);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Index Exception in archive_message", ex);
         }
         catch (ArchiveMsgException ex)
         {
             status.set_status(StatusEntry.ERROR, "Cannot archive message from <" + smtp_db_entry.getServer() + ">");
-            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,status.get_status_txt(), ex);
+            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, status.get_status_txt(), ex);
         }
 
         // ONLY ON ERROR
@@ -207,19 +292,15 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
             }
             catch (IOException iOException)
             {
-                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT,"Cannot move mail to quarantine", iOException);
+                LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Cannot move mail to quarantine", iOException);
             }
         }
     }
-
-   
-
 
     @Override
     public void idle_check()
     {
     }
-
 
     @Override
     public void finish()
@@ -231,24 +312,22 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
     @Override
     public void run_loop()
     {
+        startup();
         started = true;
-        // WAIT A MINUTE BEFORE STARTING
-        sleep_seconds(60);
 
-        while(!do_finish)
+        while (!do_finish)
         {
             // YAWN....
             LogicControl.sleep(1000);
         }
         finished = true;
     }
+
     @Override
     public boolean is_started()
     {
         return started;
     }
-
-  
 
     @Override
     public Object get_db_object()
@@ -262,12 +341,9 @@ public class SMTPImporter  extends WorkerParentChild implements SimpleMessageLis
         return "";
     }
 
-  
-
     @Override
     public String get_name()
     {
         return "SMTPImporter";
     }
-
 }

@@ -21,7 +21,7 @@ public class ImapsInstance extends Thread
     boolean shutdown = false;
 
     
-   void add( ImapCmd cmd )
+   final void add( ImapCmd cmd )
    {
         if (cmd_map == null)
         {

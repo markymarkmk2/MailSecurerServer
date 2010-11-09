@@ -41,11 +41,11 @@ import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import javax.mail.MessagingException;
-import javax.naming.NamingException;
 import javax.swing.Timer;
 import org.apache.commons.codec.binary.Base64;
 
@@ -282,7 +282,7 @@ public class ExchangeImportServer extends WorkerParent
         idle_worker.start();
         is_started = true;
 
-        this.setStatusTxt("Running");
+        this.setStatusTxt(ST_IDLE);
         this.setGoodState(true);
         return true;
     }
@@ -334,7 +334,7 @@ public class ExchangeImportServer extends WorkerParent
                 active_entry = null;
             }
             
-            setStatusTxt("");
+            setStatusTxt(ST_IDLE);
         }
     }
 
@@ -403,7 +403,7 @@ public class ExchangeImportServer extends WorkerParent
                 user_list = realm.list_users_for_group("");
                 realm.disconnect();
             }
-            catch (NamingException ex)
+            catch (Exception ex)
             {
                 exie.set_status( 1, "Error while retrieving user list:" );
 
@@ -836,7 +836,7 @@ public class ExchangeImportServer extends WorkerParent
         stb.append(i);
         stb.append(":");
         stb.append(mbie.mandant.getId());
-        stb.append("EXISI");
+        stb.append(" EXISI");
         stb.append(i);
         stb.append(":");
         stb.append(mbie.size);
@@ -844,6 +844,14 @@ public class ExchangeImportServer extends WorkerParent
         stb.append(i);
         stb.append(":");
         stb.append(mbie.get_status());
+        stb.append(" EXISP");
+        stb.append(i);
+        stb.append(":");
+        stb.append(String.format("%.1f", mbie.mb_per_s) );
+        stb.append(" EXIAM");
+        stb.append(i);
+        stb.append(":");
+        stb.append(mbie.act_msg);
         stb.append(" EXITM");
         stb.append(i);
         stb.append(":");
@@ -851,11 +859,14 @@ public class ExchangeImportServer extends WorkerParent
         stb.append("\n");
 
     }
+
+
    
     @Override
     public String get_task_status()
     {
         StringBuilder stb = new StringBuilder();
+
 
         synchronized (import_list)
         {
@@ -869,8 +880,10 @@ public class ExchangeImportServer extends WorkerParent
             }
             synchronized(entry_lock)
             {
-                append_result( stb, active_entry, i );
-                append_result( stb, last_error_entry, i );
+                if (active_entry!= null)
+                    append_result( stb, active_entry, i++ );
+                if (last_error_entry != null)
+                    append_result( stb, last_error_entry, i++ );
             }
         }
         return stb.toString();
@@ -895,10 +908,10 @@ public class ExchangeImportServer extends WorkerParent
             }
             synchronized(entry_lock)
             {
-                if (active_entry.mandant.getId() == ma_id)
-                    append_result( stb, active_entry, i );
-                if (last_error_entry.mandant.getId() == ma_id)
-                append_result( stb, last_error_entry, i );
+                 if (active_entry!= null && active_entry.mandant.getId() == ma_id)
+                    append_result( stb, active_entry, i++ );
+                if (last_error_entry != null && last_error_entry.mandant.getId() == ma_id)
+                    append_result( stb, last_error_entry, i++ );
             }
         }
         return stb.toString();

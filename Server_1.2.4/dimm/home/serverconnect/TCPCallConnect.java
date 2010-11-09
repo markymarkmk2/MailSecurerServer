@@ -13,6 +13,7 @@ import dimm.home.mailarchiv.Commands.FileSystemViewCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
 import dimm.home.mailarchiv.Commands.GetStatus;
+import dimm.home.mailarchiv.Commands.GetWorkerStatus;
 import dimm.home.mailarchiv.Commands.HelloCommand;
 import dimm.home.mailarchiv.Commands.IPConfig;
 import dimm.home.mailarchiv.Commands.ImportMailFile;
@@ -174,6 +175,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new BackupCommand() );
         cmd_list.add( new ListVaultStatus() );
         cmd_list.add( new ImportExchange() );
+        cmd_list.add( new GetWorkerStatus() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {
@@ -905,7 +907,7 @@ public class TCPCallConnect extends WorkerParent
         {
             try
             {
-                this.setStatusTxt("");
+                this.setStatusTxt(ST_IDLE);
                 this.setGoodState(true);
                 if (use_ssl)
                 {

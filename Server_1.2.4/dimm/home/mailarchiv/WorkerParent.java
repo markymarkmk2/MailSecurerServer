@@ -24,6 +24,13 @@ public abstract class WorkerParent
     String last_status = "";
     protected boolean finished = false;
     protected boolean is_started = false;
+
+    public static final String ST_STARTUP = "Startup";
+    public static final String ST_RUN = "Running";
+    public static final String ST_IDLE = "Idle";
+    public static final String ST_ERROR = "Error";
+    public static final String ST_BUSY = "Busy";
+    public static final String ST_SHUTDOWN = "Shutdown";
     
     /** Creates a new instance of WorkerParent */
     public WorkerParent(String _name)
@@ -78,7 +85,7 @@ public abstract class WorkerParent
     public void clrStatusTxt(String statusTxt)
     {
         if (statusTxt.compareTo(this.statusTxt) == 0)
-            this.statusTxt = "";
+            this.statusTxt = ST_IDLE;
         last_status = statusTxt;
     }
 

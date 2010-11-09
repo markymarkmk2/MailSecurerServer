@@ -106,7 +106,8 @@ public class Idle extends ImapCmd
             }
             catch (Exception e)
             {
-                is.get_konto().log(e);
+                if (is.get_konto() != null)
+                    is.get_konto().log(e);
                 is.response(sid, false, "IDLE failed");
                 try
                 {

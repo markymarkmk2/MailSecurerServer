@@ -1465,7 +1465,7 @@ public class IndexManager extends WorkerParent
             is_started = true;
         }
 
-        this.setStatusTxt("Running");
+        this.setStatusTxt(ST_IDLE);
         this.setGoodState(true);
         return true;
     }

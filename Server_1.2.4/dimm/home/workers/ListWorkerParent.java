@@ -147,7 +147,7 @@ public class ListWorkerParent extends WorkerParent
             idle_worker.start();
             is_started = true;
         }
-        this.setStatusTxt("Running");
+        this.setStatusTxt(ST_IDLE);
         this.setGoodState(true);
         return true;
     }

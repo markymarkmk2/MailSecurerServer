@@ -477,7 +477,7 @@ public class MailProxyServer extends ListWorkerParent
             is_started = true;
         }
         
-       this.setStatusTxt("Running");
+       this.setStatusTxt(ST_IDLE);
        this.setGoodState(true);        
        return true;
     }
@@ -512,7 +512,7 @@ public class MailProxyServer extends ListWorkerParent
                     if (connection_list.size() > 0)
                         this.setStatusTxt("Proxy is connected to " + connection_list.size() + " client(s)" );
                     else
-                        this.setStatusTxt("");
+                        this.setStatusTxt(ST_IDLE);
                 }
             }
         }

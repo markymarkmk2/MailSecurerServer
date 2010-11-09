@@ -41,6 +41,7 @@ import dimm.home.workers.MBoxImportServer;
 import dimm.home.workers.MailBoxFetcherServer;
 import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
+import dimm.home.workers.SMTPListener;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.license.LicenseTicket;
@@ -132,6 +133,8 @@ public class LogicControl
     TCPCallConnect tcc;
     UpdateWorker upd;
     BackupServer ba_server;
+    SMTPListener smtp_listener;
+
 
     ArrayList<WorkerParent> worker_list;
     ArrayList<MandantContext> mandanten_list;
@@ -280,12 +283,21 @@ public class LogicControl
             ba_server = new BackupServer();
             worker_list.add(ba_server);
 
+            smtp_listener = new SMTPListener();
+            worker_list.add(smtp_listener);
+
+
 
         }
         catch (Exception ex)
         {
             LogManager.msg_system( LogManager.LVL_ERR, "LC Constructor failed", ex);
         }
+    }
+
+    public SMTPListener get_smtp_listener()
+    {
+        return smtp_listener;
     }
 
     public MBoxImportServer get_mb_import_server()

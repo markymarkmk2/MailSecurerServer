@@ -9,10 +9,10 @@
 
 package dimm.home.mailarchiv.Commands;
 
-import dimm.home.hibernate.HParseToken;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParent;
 import home.shared.Utilities.ParseToken;
 
@@ -72,29 +72,30 @@ public class GetWorkerStatus extends AbstractCommand
 
         for (int i = 0; i < list.size(); i++)
         {
+
             ArrayList<String> result = new ArrayList<String>();
 
-            WorkerParent wp = list.get(i);
-            result.add( Main.get_control().get_ex_import_server().getName() );
+            try
+            {
+                WorkerParent wp = list.get(i);
+                result.add( wp.getName() );
+                result.add( wp.isGoodState()?"1":"0" );
+                result.add( wp.getStatusTxt() );
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("WPN:");
-            sb.append( wp.getName() );
-            sb.append( " ST:'" );
-            sb.append( wp.getStatusTxt() );
-            sb.append("' OK:");
-            sb.append( (wp.isGoodState()?"1":"0") );
-            sb.append( " " );
-            if ( m_id > 0)
-                sb.append( wp.get_task_status(m_id) );
-            else
-                sb.append( wp.get_task_status() );
+                if ( m_id > 0)
+                    result.add(  wp.get_task_status(m_id) );
+                else
+                    result.add(  wp.get_task_status() );
 
-            result.add( sb.toString() );
-            result_list.add( new ArrayList<String>());
+                result_list.add( result );
+            }
+            catch( Exception exc )
+            {
+                LogManager.msg_cmd(LogManager.LVL_WARN, "Error reading status", exc);
+            }
         }
 
-        String cxml = HParseToken.BuildCompressedString(result_list);
+        String cxml = ParseToken.BuildCompressedObjectString(result_list);
 
 
         answer = "0: " + cxml;
