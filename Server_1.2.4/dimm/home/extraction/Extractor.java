@@ -93,7 +93,7 @@ public class Extractor implements Serializable, Runnable
         {
             if (!mime_not_supported_list.containsKey(mimetype))
             {
-                LogManager.msg_extract( LogManager.LVL_WARN, "Cannot get text handler from document of this type: " + mimetype);
+                LogManager.msg_extract( LogManager.LVL_DEBUG, "Cannot get text handler from document of this type: " + mimetype);
                 mime_not_supported_list.put(mimetype, null);
             }
             return new StringReader("");

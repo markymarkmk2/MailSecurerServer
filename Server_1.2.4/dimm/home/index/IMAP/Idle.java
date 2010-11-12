@@ -106,6 +106,7 @@ public class Idle extends ImapCmd
             }
             catch (Exception e)
             {
+                LogManager.msg_imaps(LogManager.LVL_DEBUG,  "Idle failed: " + e.getLocalizedMessage() );
                 if (is.get_konto() != null)
                     is.get_konto().log(e);
                 is.response(sid, false, "IDLE failed");

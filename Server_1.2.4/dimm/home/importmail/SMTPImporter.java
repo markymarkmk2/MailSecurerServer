@@ -129,14 +129,19 @@ class SmtpImporterServer extends SMTPServer
 
         SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) sslContext.getServerSocketFactory();
 
+
+        SSLServerSocket ssl_server_socket;
         if (adress != null)
         {
-            return sslserversocketfactory.createServerSocket(serverPort, 5, adress);
+            ssl_server_socket = (SSLServerSocket) sslserversocketfactory.createServerSocket(serverPort, 5, adress);
         }
         else
         {
-            return sslserversocketfactory.createServerSocket(serverPort, 5);
+            ssl_server_socket = (SSLServerSocket) sslserversocketfactory.createServerSocket(serverPort, 5);
         }
+        ssl_server_socket.setEnabledCipherSuites(ssl_server_socket.getSupportedCipherSuites());
+
+        return ssl_server_socket;
     }
 }
 
@@ -305,8 +310,8 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
     @Override
     public void finish()
     {
-        do_finish = true;
         server.stop();
+        do_finish = true;
     }
 
     @Override

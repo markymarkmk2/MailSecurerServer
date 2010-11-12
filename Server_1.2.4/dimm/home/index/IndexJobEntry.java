@@ -79,28 +79,16 @@ public class IndexJobEntry
         {
 
             Exception ex = null;
-/*            try
-            {
-                Future<IndexJobEntry> result = ixm.execute_load(this);
-                result.get();
-            }
-            catch (ExecutionException ex1)
-            {
-                ex = ex1;
-            }
-            catch (InterruptedException ex1)
-            {
-                ex = ex1;
-            }
-
-            if (ex != null)
-                throw new VaultException( "Cannot load message", ex );
-*/
             boolean ret = handle_pre_index(mime_msg);
 
             if (ret)
             {
-                index_dsh.execute_write(this);                
+                // IF START IN BACKGROUND FAILS, WE START IN FG
+                Future<IndexJobEntry> result = index_dsh.execute_write(this);
+                if (result == null)
+                {
+                    handle_post_index();
+                }
             }
 
         }

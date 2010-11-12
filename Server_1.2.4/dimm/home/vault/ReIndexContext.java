@@ -398,7 +398,11 @@ public class ReIndexContext
 
             // THIS WILL WAIT UNTIL ALL INDEX THREADS ARE FINISHED
             set_status(Main.Txt("Waiting_for_queues_to_finish: ") );
-            idx.restart_index_thread_pool();
+            if (abort)
+                idx.abort_and_restart_index_thread_pool();
+            else
+                idx.restart_index_thread_pool();
+
             index_dsh.open_write_index_pool();
 
 /*            while (data_dsh.get_async_index_writer().get_queue_entries() > 0 )
@@ -429,10 +433,11 @@ public class ReIndexContext
             }
 
             set_status(Main.Txt("Finished_reindex"));
-            this.context.reinit_importbuffer();
-
 
             index_dsh.create_hash_checker();
+            
+            this.context.reinit_importbuffer();
+
         }
         /*catch (IndexException indexException)
         {

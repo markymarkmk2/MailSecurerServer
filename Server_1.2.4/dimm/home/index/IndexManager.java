@@ -478,11 +478,22 @@ public class IndexManager extends WorkerParent
         }
         if (!matches_domain)
         {
-            LogManager.msg_index(LogManager.LVL_WARN, "No_valid_mail_domain_found_for_mail");
+            String sub = "";
+            try
+            {
+                sub = mime_msg.getMsg().getSubject();
+            }
+            catch (MessagingException messagingException)
+            {
+            }
+            LogManager.msg_index(LogManager.LVL_WARN, Main.Txt("No_valid_mail_domain_found_for_mail") + " "+ sub);
 
             // THIW WAS ALLOWED UNTIL 1.4.4, SO WE STAY COMPATIBLE BUT WE CAN SWITCH IT OFF
             if (!Main.get_bool_prop(GeneralPreferences.ALLOW_UNKNOWN_DOMAIN_MAIL, true))
+            {
+                LogManager.msg_index(LogManager.LVL_WARN,Main.Txt("Skipping_mail") + " " + sub );
                 return true;
+            }
 
             return false;
         }
@@ -646,7 +657,7 @@ public class IndexManager extends WorkerParent
         if (d == null)
         {
             d = mail_file.getDate();
-            LogManager.msg_index(LogManager.LVL_WARN,  "Mail " + unique_id + " has no Sent- or ReceivedDate");
+            LogManager.msg_index(LogManager.LVL_WARN,  "Mail " + unique_id + " has no Sent- or ReceivedDate <" + subject + ">");
         }
 
         doc.add(new Field(CS_Constants.FLD_DATE, to_hex_field(d.getTime()), Field.Store.YES, Field.Index.NOT_ANALYZED));
@@ -1178,7 +1189,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_tgz_file " + doc.get_uuid()/*, io*/);
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in extract_tgz_file " + doc.get_uuid() + " " + io.getLocalizedMessage());
         }
     }
 
@@ -1211,7 +1222,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_tar_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in extract_tar_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1248,7 +1259,7 @@ public class IndexManager extends WorkerParent
             }
             catch (Exception io)
             {
-                LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_octet_stream: " + doc.get_uuid() + " " + io.getMessage());
+                LogManager.msg_index(LogManager.LVL_WARN,  "Error in extract_octet_stream: " + doc.get_uuid() + " " + io.getMessage());
             }
         }
     }
@@ -1287,7 +1298,7 @@ public class IndexManager extends WorkerParent
         }
         catch (Exception io)
         {
-            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_gzip_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in extract_gzip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1333,11 +1344,11 @@ public class IndexManager extends WorkerParent
         }
         catch (IllegalArgumentException wrong_zip_entry)
         {
-            LogManager.msg_index(LogManager.LVL_ERR,  "Error in zip file " + doc.get_uuid() + " " + wrong_zip_entry.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in zip file " + doc.get_uuid() + " " + wrong_zip_entry.getMessage());
         }
         catch (Exception io)
         {
-            LogManager.msg_index(LogManager.LVL_ERR,  "Error in extract_zip_file " + doc.get_uuid() + " " + io.getMessage());
+            LogManager.msg_index(LogManager.LVL_WARN,  "Error in extract_zip_file " + doc.get_uuid() + " " + io.getMessage());
         }
     }
 
@@ -1959,6 +1970,31 @@ public class IndexManager extends WorkerParent
         int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
         index_run_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexMail" , index_threads, 10 );
         
+    }
+    public void abort_and_restart_index_thread_pool()
+    {
+        LogManager.msg_index(LogManager.LVL_INFO, "Aborting index buffer");
+
+        boolean pool_finished = false;
+        while (true && index_run_thread_pool != null)
+        {
+            if (m_ctx.getThreadWatcher().abort_thread_pool(index_run_thread_pool))
+            {
+                pool_finished = true;
+                break;
+            }
+
+            if (isShutdown())
+                break;
+        }
+        if (pool_finished)
+            LogManager.msg_index(LogManager.LVL_INFO, "Index buffer was aborted");
+        else
+            LogManager.msg_index(LogManager.LVL_ERR, "Index buffer was not aborted");
+
+
+        int index_threads = (int)Main.get_long_prop(GeneralPreferences.INDEX_MAIL_THREADS, MAX_INDEX_THREADS);
+        index_run_thread_pool = m_ctx.getThreadWatcher().create_blocking_thread_pool( "IndexMail" , index_threads, 10 );
     }
 
 

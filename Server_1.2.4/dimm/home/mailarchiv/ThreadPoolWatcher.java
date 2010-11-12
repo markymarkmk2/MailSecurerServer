@@ -8,6 +8,7 @@ package dimm.home.mailarchiv;
 import dimm.home.index.OfferBlockingQueue;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.ArrayList;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +52,7 @@ class NamedThreadFactory implements  ThreadFactory
     }
 
 }
-class NamedThreadPoolExecutor extends ThreadPoolExecutor
+class NamedThreadPoolExecutor extends ThreadPoolExecutor implements RejectedExecutionHandler
 {
     String name;
 
@@ -60,7 +61,18 @@ class NamedThreadPoolExecutor extends ThreadPoolExecutor
         super( core_threads, max_threads, time, unit, new OfferBlockingQueue<Runnable>(queue_size), new NamedThreadFactory( _name ));
         NamedThreadFactory thr_fact = (NamedThreadFactory) getThreadFactory();
         thr_fact.set_pool( this );
+
+        setRejectedExecutionHandler(this);
     }
+
+    @Override
+    public void rejectedExecution( Runnable r, ThreadPoolExecutor executor )
+    {
+        LogManager.msg_index(LogManager.LVL_WARN, "Detected reject for pool " + name);
+        r.run();
+    }
+
+
 }
     /**
  *
@@ -115,6 +127,43 @@ public class ThreadPoolWatcher
 
         return pool_finished;
     }
+
+    public boolean abort_thread_pool( ThreadPoolExecutor pool)
+    {
+        String name = "";
+        if (pool instanceof NamedThreadPoolExecutor)
+        {
+            name = " " + ((NamedThreadPoolExecutor)pool).toString();
+        }
+        LogManager.msg_index(LogManager.LVL_DEBUG, "Aborting Thread Pool" + name);
+
+        pool.shutdownNow();
+
+        boolean pool_finished = true;
+        try
+        {
+            if (!pool.awaitTermination(1000, TimeUnit.MILLISECONDS))
+            {
+                pool_finished = false;
+            }
+        }
+        catch (InterruptedException interruptedException)
+        {
+            pool_finished = false;
+            LogManager.msg_system(LogManager.LVL_WARN, "awaitTermination Thread Pool aborted"  + name, interruptedException);
+        }
+
+
+        if (!pool_finished)
+            LogManager.msg_system(LogManager.LVL_DEBUG, "Aborting Thread Pool failed" + name);
+        else
+            LogManager.msg_system(LogManager.LVL_DEBUG, "Aborting Thread Pool succeeded" + name);
+
+        return pool_finished;
+    }
+
+
+
 
     public boolean shutdown_thread_pool( ThreadPoolExecutor pool, int ms)
     {

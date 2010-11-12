@@ -236,10 +236,15 @@ public class SearchCall
         {
             sc.search_lucene(user, pwd, compressed_filter, n, level);
         }
+        catch (IndexException e)
+        {
+            LogManager.msg_cmd(LogManager.LVL_WARN, e.getMessage());
+            return "5: " + e.getMessage();
+        }
         catch (Exception e)
         {
             LogManager.printStackTrace(e);
-            return "2: " + e.getMessage();
+            return "6: " + e.getMessage();
         }
         int id = 0;
         synchronized (call_list)
@@ -515,7 +520,7 @@ public class SearchCall
         return searcher.doc(doc_index);
     }
 
-    public void search_lucene( String user, String pwd, String compressed_filter, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    public void search_lucene( String user, String pwd, String compressed_filter, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException, IndexException
     {
         ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list(compressed_filter, true);
         search_lucene(user, pwd, logic_list, n, level);
@@ -537,7 +542,7 @@ public class SearchCall
         return false;
     }
 
-    public void search_lucene( String user, String pwd, ArrayList<LogicEntry> logic_list, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    public void search_lucene( String user, String pwd, ArrayList<LogicEntry> logic_list, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException, IndexException
     {
 
         ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
@@ -583,7 +588,7 @@ public class SearchCall
         run_lucene_searcher(dsh_list, qry, filter, n, level, ssoc);
     }
 
-    public void search_lucene_qry_str( String user, String pwd, String lucene_qry, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException
+    public void search_lucene_qry_str( String user, String pwd, String lucene_qry, int n, USERMODE level ) throws IOException, IllegalArgumentException, ParseException, IndexException
     {
 
         ArrayList<DiskSpaceHandler> dsh_list = create_dsh_list();
@@ -869,7 +874,7 @@ public class SearchCall
 
     static int pms_sw = 0;
 
-    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, UserSSOEntry ssoc  ) throws IOException
+    void run_lucene_searcher( ArrayList<DiskSpaceHandler> dsh_list, Query qry, Filter filter, int n, USERMODE level, UserSSOEntry ssoc  ) throws IOException, IndexException
     {
         // RESET LISTS
         result = new ArrayList<SearchResult>();
@@ -878,6 +883,7 @@ public class SearchCall
         boolean view_all = can_view_all_mails(ssoc, level);
 
         long start_time = System.currentTimeMillis();
+        boolean rebuild_is_active = false;
 
         // FIRST PASS, OPEN INDEX READERS
         for (int i = 0; i < dsh_list.size(); i++)
@@ -885,6 +891,7 @@ public class SearchCall
             DiskSpaceHandler dsh = dsh_list.get(i);
             if (dsh.islock_for_rebuild())
             {
+                rebuild_is_active = true;
                 LogManager.msg_index(LogManager.LVL_DEBUG, "Skipping index " + dsh.getDs().getPath() + " during rebuild");
                 continue;
             }
@@ -906,8 +913,20 @@ public class SearchCall
             }
         }
 
+        if (searcher_list.isEmpty())
+        {
+            if (rebuild_is_active)
+            {
+                throw new IndexException( Main.Txt("No_search_results_available,_a_rebuild_is_in_progress"));
+            }
+            else
+            {
+                throw new IndexException( Main.Txt("No_valid_indexes_could_be_found"));
+            }
+        }
+
         // BUILD SEARCHABLE ARRAY
-        Searchable[] search_arr = new Searchable[dsh_list.size()];
+        Searchable[] search_arr = new Searchable[searcher_list.size()];
         for (int i = 0; i < searcher_list.size(); i++)
         {
             search_arr[i] = searcher_list.get(i);

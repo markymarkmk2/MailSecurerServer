@@ -10,10 +10,13 @@ import home.shared.CS_Constants;
 import home.shared.Utilities.LogConfigEntry;
 import home.shared.Utilities.LogListener;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
 import org.apache.log4j.ConsoleAppender;
@@ -42,33 +45,33 @@ public class LogManager implements  LogListener
    
 
     static long dbg_level = LVL_WARN;
-    private static String LOG_L4J = "logfj.log";
+    private final static String LOG_L4J = "logfj.log";
 
     public static SimpleDateFormat message_sdf = new SimpleDateFormat ("dd.MM.yyyy HH:mm:ss");
 
 
     static LogTypeEntry[] lte_array =
     {
-        new LogTypeEntry(TYP_EXCEXPTIONS),
+        new LogTypeEntry(TYP_SYSTEM),
         new LogTypeEntry(TYP_AUTH),
+        new LogTypeEntry(TYP_VAULT),
+        new LogTypeEntry(TYP_INDEX),
         new LogTypeEntry(TYP_EXTRACT),
-        new LogTypeEntry(TYP_PROXY),
         new LogTypeEntry(TYP_HOTFOLDER),
         new LogTypeEntry(TYP_IMPORT),
         new LogTypeEntry(TYP_FETCHER),
+        new LogTypeEntry(TYP_PROXY),
         new LogTypeEntry(TYP_MILTER),
         new LogTypeEntry(TYP_IMAPS),
         new LogTypeEntry(TYP_CMD),
-        new LogTypeEntry(TYP_VAULT),
         new LogTypeEntry(TYP_NOTIFICATION),
         new LogTypeEntry(TYP_SECURITY),
-        new LogTypeEntry(TYP_SYSTEM),
         new LogTypeEntry(TYP_LICENSE),
         new LogTypeEntry(TYP_COMM),
         new LogTypeEntry(TYP_ARCHIVE),
         new LogTypeEntry(TYP_BACKUP),
-        new LogTypeEntry(TYP_INDEX),
-        new LogTypeEntry(TYP_EXCHANGE)
+        new LogTypeEntry(TYP_EXCHANGE),
+        new LogTypeEntry(TYP_EXCEXPTIONS)
     };
 
     public static String[] get_log_types()
@@ -84,25 +87,6 @@ public class LogManager implements  LogListener
 
     }
 
-    public static ArrayList<LogConfigEntry> get_log_config_arry()
-    {
-        ArrayList<LogConfigEntry> arr = new ArrayList<LogConfigEntry>();
-
-        for (int i = 0; i < lte_array.length; i++)
-        {
-            arr.add( new LogConfigEntry( lte_array[i].typ, lte_array[i].lvl));
-        }
-        return arr;
-
-    }
-    public static  void set_log_config_arry(ArrayList<LogConfigEntry> arr)
-    {
-
-        for (int i = 0; i < arr.size(); i++)
-        {
-            set_lvl(arr.get(i).typ, arr.get(i).level);
-        }
-    }
 
     public static String get_lvl_name( int lvl)
     {
@@ -323,7 +307,7 @@ public class LogManager implements  LogListener
 private static void _msg( Exception exc )
     {
         java.util.Date now = new java.util.Date();
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         sb.append( message_sdf.format( now ) );
         sb.append( ": " );
@@ -350,7 +334,7 @@ private static void _msg( Exception exc )
     private static void _msg( int lvl, String type, String msg, Exception exc )
     {
         java.util.Date now = new java.util.Date();
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         sb.append( message_sdf.format( now ) );
         sb.append( ": " );
@@ -400,6 +384,80 @@ private static void _msg( Exception exc )
         }
     }
 
+    public static ArrayList<LogConfigEntry> get_log_config_arry()
+    {
+        ArrayList<LogConfigEntry> arr = new ArrayList<LogConfigEntry>();
+
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            arr.add( new LogConfigEntry( lte_array[i].typ, lte_array[i].lvl));
+        }
+        return arr;
+
+    }
+    public static  void set_log_config_arry(ArrayList<LogConfigEntry> arr, boolean do_write_config)
+    {
+
+        for (int i = 0; i < arr.size(); i++)
+        {
+            set_lvl(arr.get(i).typ, arr.get(i).level);
+        }
+        if (do_write_config)
+        {
+            write_config();
+        }
+    }
+
+
+        static Properties log_props = new Properties();
+
+    public static void read_config()
+    {
+        log_props = new Properties();
+        File prop_file = new File( Main.PREFS_PATH + "log_prefs.dat" );
+
+        try
+        {
+            FileInputStream istr = new FileInputStream( prop_file );
+            log_props.load( istr );
+            istr.close();
+        }
+        catch (Exception exc)
+        {
+            System.out.println("Kann Log-Properties nicht lesen: " + exc.getMessage() );
+        }
+
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            LogTypeEntry logTypeEntry = lte_array[i];
+            String str = log_props.getProperty("Level" + logTypeEntry.typ, "");
+            if (str.length() > 0)
+            {
+                logTypeEntry.lvl = Integer.parseInt(str);
+            }
+        }
+    }
+
+    public static void write_config()
+    {
+        for (int i = 0; i < lte_array.length; i++)
+        {
+            LogTypeEntry logTypeEntry = lte_array[i];
+            log_props.setProperty("Level" + logTypeEntry.typ, Integer.toString( logTypeEntry.lvl ));
+        }
+
+        File prop_file = new File(Main.PREFS_PATH + "log_prefs.dat");
+        try
+        {
+            FileOutputStream ostr = new FileOutputStream( prop_file );
+            log_props.store( ostr, "MailSecurer Log-Properties, please do not edit" );
+            ostr.close();
+        }
+        catch (Exception exc)
+        {
+            System.out.println("Kann Properties nicht schreiben: " + exc.getMessage() );
+        }
+    }
    
 
     // SINGLETON
@@ -437,15 +495,16 @@ private static void _msg( Exception exc )
         return manager;
     }
 
-    static Logger main_logger;
-    static LogManager manager;
+    final static Logger main_logger;
+    final static LogManager manager;
     public static final String MONTHLY_ROLL = "'.'yyyy-MM";
     public static final String WEEKLY_ROLL = "'.'yyyy-ww";
     static
     {
         main_logger = Logger.getLogger("dimm.MailSecurerServer");
         manager = new LogManager();
-        
+
+        read_config();
 
         try
         {
@@ -536,12 +595,12 @@ private static void _msg( Exception exc )
     private static boolean parseLinesFromLast( byte[] bytearray, int lineCount, Vector<String> lastNlines )
     {
         String lastNChars = new String(bytearray);
-        StringBuffer sb = new StringBuffer(lastNChars);
+        StringBuilder sb = new StringBuilder(lastNChars);
         lastNChars = sb.reverse().toString();
         StringTokenizer tokens = new StringTokenizer(lastNChars, "\n");
         while (tokens.hasMoreTokens())
         {
-            StringBuffer sbLine = new StringBuffer((String) tokens.nextToken());
+            StringBuilder sbLine = new StringBuilder((String) tokens.nextToken());
             lastNlines.add(sbLine.reverse().toString());
             if (lastNlines.size() == lineCount)
             {

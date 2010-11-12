@@ -230,7 +230,7 @@ public class ExchangeImportServer extends WorkerParent
     {
         super(NAME);
         import_list = new ArrayList<ExchangeImporterEntry>();
-        max_chunk_size = Main.get_prefs().get_long_prop(GeneralPreferences.EXCHANGE_IMPORT_MAX_CHUNK_SIZE);
+        max_chunk_size = Main.get_prefs().get_long_prop(GeneralPreferences.EXCHANGE_IMPORT_MAX_CHUNK_SIZE, max_chunk_size);
         active_entry = null;
         last_error_entry = null;
     }
@@ -350,7 +350,7 @@ public class ExchangeImportServer extends WorkerParent
             }
             catch (Exception e)
             {
-                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Work_jobs got exception", e);
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, "Work_jobs got exception", e);
             }
          }
         finished = true;
@@ -407,7 +407,7 @@ public class ExchangeImportServer extends WorkerParent
             {
                 exie.set_status( 1, "Error while retrieving user list:" );
 
-                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), ex);
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), ex);
                 return;
             }
         }
@@ -423,7 +423,7 @@ public class ExchangeImportServer extends WorkerParent
         {
             exie.set_status( 2, "Error while opening exchange connection:" );
 
-            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), e);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), e);
             return;
         }
         itemTypeDAO = new ItemTypeDAO(settings);
@@ -448,7 +448,7 @@ public class ExchangeImportServer extends WorkerParent
                 }
                 catch (Exception e)
                 {
-                    LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), e);
+                    LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), e);
                 }
             }
         }
@@ -456,7 +456,7 @@ public class ExchangeImportServer extends WorkerParent
         {
             exie.set_status( 2, "Error while opening reteiving exchange mail data:");
 
-            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), e);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), e);
             return;
         }
 
@@ -549,7 +549,7 @@ public class ExchangeImportServer extends WorkerParent
 
             ArrayList<BaseFolderIdType> merged_folder_list = new ArrayList<BaseFolderIdType>();
 
-            exie.set_status( Txt("Retreiving_folders"));
+            exie.set_status( Txt("Retrieving_folders"));
 
             List<BaseFolderType> included_folders = itemTypeDAO.GetFoldersbyId( port, included_folder_ids );
 
@@ -640,7 +640,7 @@ public class ExchangeImportServer extends WorkerParent
         catch (Exception extractionException)
         {
             exie.set_status( 2, "Error while connecting exchange server:");
-            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), extractionException);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), extractionException);
             return;
         }
 
@@ -652,7 +652,7 @@ public class ExchangeImportServer extends WorkerParent
         {
             exie.set_status( 2, "Error while importing exchange data:");
 
-            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_IMPORT, exie.get_status(), extractionException);
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), extractionException);
             return;
         }
 
@@ -689,9 +689,6 @@ public class ExchangeImportServer extends WorkerParent
                     exie.size = total_size;
                     exie.total_msg = cnt;
 
-                    List<ItemIdType> mail_list = new ArrayList<ItemIdType>();
-                    mail_list.add(mail.getItemId());
-
                     ExchangeMailEntry entry = new ExchangeMailEntry( mail.getItemId(), size.intValue() );
                     full_mail_list.add( entry );
                 }
@@ -708,9 +705,7 @@ public class ExchangeImportServer extends WorkerParent
         }
         catch (Exception extractionException)
         {
-            exie.set_status( 3, "Error while importing exchange data: " + extractionException.getMessage());
-            
-
+            exie.set_status( 3, "Error while importing exchange data: " + extractionException.getMessage());            
             throw new ImportException( exie.get_status() );
         }
         try
@@ -720,30 +715,41 @@ public class ExchangeImportServer extends WorkerParent
             {
                 user = itemTypeDAO.getImpersonation().getConnectingSID().getPrincipalName();
             }
-            LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Starting_import") + " " + user + " N=" + exie.total_msg + " (" + Long.toString(exie.size/(1000*1000)) + "MB)" );
+            LogManager.msg_exchange( LogManager.LVL_INFO, Main.Txt("Starting_import") + " " + user + " N=" + exie.total_msg + " (" + Long.toString(exie.size/(1000*1000)) + "MB)" );
             long start_t = System.currentTimeMillis();
 
+            
             while (full_mail_list.size() > 0)
             {
                 long sum = 0;
-                int i;
-                for (i = 0; i < full_mail_list.size(); i++)
+
+                List<ItemIdType> mail_list = new ArrayList<ItemIdType>();
+
+                while( full_mail_list.size() > 0)
                 {
 
-                    ExchangeMailEntry me = full_mail_list.get(i);
+                    ExchangeMailEntry me = full_mail_list.get(0);
                     sum += me.size;
 
-                    if (i > 0 && (sum > max_chunk_size || i > max_mailcount_threshold))
+                    if (mail_list.size() > 0 && (sum > max_chunk_size || mail_list.size() > max_mailcount_threshold))
                     {
                         break;
                     }
+
+
+                    // CREATE LIST FOR EXCHANGE IMPORT
+                    full_mail_list.remove(me);
+                    mail_list.add(me.id);
                 }
 
-                handle_import_chunks( exie, port, itemTypeDAO, full_mail_list, i );
+                exie.set_status( Main.Txt("Fetching_mails_from_Exchangeserver") + "(" + mail_list.size() + "/" + full_mail_list.size() + "/" + exie.total_msg + ")");
+
+                handle_import_chunks( exie, port, itemTypeDAO, mail_list );
 
                 if (isShutdown())
                     break;
             }
+            
             int imported_msgs = exie.total_msg - full_mail_list.size();
 
             long end_t = System.currentTimeMillis();
@@ -752,7 +758,7 @@ public class ExchangeImportServer extends WorkerParent
             {
                 speed = (int)((1000*imported_msgs) / (end_t - start_t));
             }
-            LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_IMPORT, Main.Txt("Messages_imported") + ": " + imported_msgs + " (" + speed + "/s)" );
+            LogManager.msg_exchange( LogManager.LVL_INFO, Main.Txt("Messages_imported") + ": " + imported_msgs + " (" + speed + "/s)" );
         }
         catch (Exception exception)
         {
@@ -769,22 +775,9 @@ public class ExchangeImportServer extends WorkerParent
     }
 
 
-
-    void handle_import_chunks( ExchangeImporterEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO, List<ExchangeMailEntry> full_mail_list, int n ) throws ArchiveMsgException, IOException, VaultException, IndexException
+    void handle_import_chunks( ExchangeImporterEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO, List<ItemIdType> mail_list ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
-
-        // CREATE LIST FOR EXCHANGE IMPORT
-        List<ItemIdType> mail_list = new ArrayList<ItemIdType>();
-
-        for (int i = 0; i < n; i++)
-        {
-            mail_list.add(full_mail_list.get(i).id);
-        }
-
-
-        exie.set_status(  Main.Txt("Fetching_mails_from_Exchangeserver") + "(" + n + "/" + full_mail_list.size() + ")");
-
-
+ 
         // FETCH MESSAGES FROM SERVER
         ArrayOfRealItemsType rfc_mails = itemTypeDAO.getItem(port, mail_list);
 
@@ -821,8 +814,6 @@ public class ExchangeImportServer extends WorkerParent
             bis.close();
 
 
-            // REMOVE FROM GLOBAL LIST
-            full_mail_list.remove(0);
 
             if (isShutdown())
                 break;

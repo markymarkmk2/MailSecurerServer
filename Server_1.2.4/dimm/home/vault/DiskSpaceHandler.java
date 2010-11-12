@@ -214,10 +214,10 @@ public class DiskSpaceHandler
     {
         return write_index_thread_pool;
     }
-    public Future<IndexJobEntry> execute_write( final IndexJobEntry aThis ) throws InterruptedException
+    public Future<IndexJobEntry> execute_write( final IndexJobEntry aThis )
     {
 
-        Future<IndexJobEntry> result = write_index_thread_pool.submit( new Callable<IndexJobEntry>()
+        Callable<IndexJobEntry> call = new Callable<IndexJobEntry>()
         {
 
             @Override
@@ -226,9 +226,22 @@ public class DiskSpaceHandler
                 aThis.handle_post_index();
                 return aThis;
             }
-        });
+        };
 
-        return result;
+        try
+        {
+            Future<IndexJobEntry> result = write_index_thread_pool.submit(call);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            
+            LogManager.msg_archive( LogManager.LVL_ERR,  "Cannot start background write task ("
+                    + write_index_thread_pool.getActiveCount() + "/" + write_index_thread_pool.getPoolSize() + "/" + write_index_thread_pool.isTerminating() +
+                    "/" + write_index_thread_pool.isTerminated(), ex);
+        }
+        return null;
     }
 
 
@@ -912,6 +925,16 @@ public class DiskSpaceHandler
     public long build_time_from_path( String absolutePath, int enc_mode, RFCGenericMail.FILENAME_MODE fmode ) throws VaultException
     {
         String rel_path = absolutePath.substring(getMailPath().length());
+        try
+        {
+            return RFCFileMail.get_time_from_mailfile(rel_path, enc_mode, fmode);
+        }
+        catch (ParseException parseException)
+        {
+        }
+        // TRY OTHER VARIANT MAYBE WE HAVE SWITCHED?
+        if (fmode == RFCGenericMail.FILENAME_MODE.HMS_FILE)
+            fmode = RFCGenericMail.FILENAME_MODE.H_OK_DIR_MS_FILE;
         try
         {
             return RFCFileMail.get_time_from_mailfile(rel_path, enc_mode, fmode);

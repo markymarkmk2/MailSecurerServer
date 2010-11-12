@@ -321,7 +321,9 @@ public class DiskVault implements Vault, StatusHandler
         // BUILD SEARCHABLE ARRAY
         DocHashEntry dhe = null;
 
-        Searchable[] search_arr = new Searchable[dsh_list.size()];
+        ArrayList<Searchable> search_arr = new ArrayList<Searchable>();
+
+        
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
@@ -331,7 +333,8 @@ public class DiskVault implements Vault, StatusHandler
                 LogManager.msg_index(LogManager.LVL_DEBUG, "Found short term hash for msg " + msg.toString());
                 break;
             }
-            search_arr[i] = dsh.get_searcher();
+            if (dsh.get_searcher() != null)
+                search_arr.add( dsh.get_searcher() );
         }
 
         // IN SHORT TERM HASH?
@@ -354,7 +357,7 @@ public class DiskVault implements Vault, StatusHandler
         try
         {
             // PARALLEL SEARCH
-            ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr);
+            ParallelMultiSearcher pms = new ParallelMultiSearcher(search_arr.toArray( new Searchable[0] ));
 
             Term term = new Term(CS_Constants.FLD_HASH, hash);
             Query qry = new MatchAllDocsQuery();

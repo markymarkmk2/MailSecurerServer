@@ -75,7 +75,7 @@ public class GetLog extends AbstractCommand
                 answer = "2: tail gave null";
                 return ok;
             }
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
 
             Enumeration e = v.elements();
             while (e.hasMoreElements())
@@ -98,11 +98,13 @@ public class GetLog extends AbstractCommand
         else if ( command.compareTo("set_config") == 0)
         {
             String cfg = pt.GetString("CFG:");
+            boolean write_cfg = pt.GetBoolean("WC:");
+
             Object o = ParseToken.DeCompressObject(cfg);
             if (o instanceof ArrayList)
             {
                 ArrayList<LogConfigEntry> arr = (ArrayList<LogConfigEntry>)o;
-                LogManager.set_log_config_arry(arr);
+                LogManager.set_log_config_arry(arr, write_cfg);
                 answer = "0: ";
             }
             else

@@ -610,7 +610,7 @@ public class MandantContext
         SMTPListener smtp_server = Main.control.get_smtp_listener();
         while (smtp_it.hasNext())
         {
-            smtp_server.remove_child(new SMTPImporter(smtp_it.next()));
+            smtp_server.remove_child(smtp_it.next());
         }
 
 
