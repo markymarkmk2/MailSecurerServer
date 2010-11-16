@@ -163,15 +163,7 @@ public class MailFolder
 
             add_new_mail_resultlist( m_ctx, sc );
         }
-        catch (IOException ex)
-        {
-             LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
-        }
-        catch (IllegalArgumentException ex)
-        {
-             LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
-        }
-        catch (org.apache.lucene.queryParser.ParseException ex)
+        catch (Exception ex)
         {
              LogManager.msg_imaps(LogManager.LVL_ERR, "fill failed", ex);
         }
@@ -514,15 +506,7 @@ public class MailFolder
                 //konto.is.parent.set_search_results(sc, konto.get_username(), konto.get_pwd());
                 add_new_mail_resultlist( m_ctx, sc );
             }
-            catch (IOException ex)
-            {
-                LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
-            }
-            catch (IllegalArgumentException ex)
-            {
-                LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
-            }
-            catch (org.apache.lucene.queryParser.ParseException ex)
+            catch (Exception ex)
             {
                 LogManager.msg_imaps(LogManager.LVL_ERR, "search failed", ex);
             }
