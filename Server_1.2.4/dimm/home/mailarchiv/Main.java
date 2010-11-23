@@ -15,18 +15,23 @@ import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
 import java.util.zip.ZipOutputStream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -96,6 +101,8 @@ public final class Main
     {
         general_prefs = new GeneralPreferences();
     }
+
+
 
     
     /** Creates a new instance of Main */
@@ -360,7 +367,8 @@ public final class Main
         }
         return null;
     }
-    
+
+     
     /**
      * @param args the command line arguments
      */
@@ -368,11 +376,13 @@ public final class Main
     {
 
 
+
         if (args.length == 1 && args[0].compareTo("-version") == 0)
         {
             System.out.println(Main.get_version_str());
             return;
         }
+
 
         Main m = new Main(args);
 
