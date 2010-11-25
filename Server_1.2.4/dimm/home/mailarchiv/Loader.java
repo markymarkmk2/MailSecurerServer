@@ -8,6 +8,7 @@ package dimm.home.mailarchiv;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -103,11 +104,11 @@ public class Loader {
         {
             write_win_start_script(list, args);
         }
-        if (Main.is_osx())
+        else if(Main.is_osx())
         {
             write_osx_start_script(list, args);
         }
-        if (Main.is_linux())
+        else
         {
             write_linux_start_script(list, args);
         }
@@ -316,7 +317,28 @@ public class Loader {
 
     private static void write_linux_start_script( ArrayList<String> list, String[] args )
     {
-        throw new UnsupportedOperationException("Not yet implemented");
+        StringBuilder sb = new StringBuilder();
+        sb.append("MailArchiv.jar");
+        for (int i = 0; i < list.size(); i++)
+        {
+            String string = list.get(i);
+            sb.append(":");
+            sb.append(string);            
+        }
+        try
+        {
+            FileOutputStream fos = new FileOutputStream("jarlist.txt");
+
+            fos.write(sb.toString().getBytes());
+
+            fos.close();
+        }
+        catch (Exception exception)
+        {
+            System.err.println("Cannot create Startup file: ");
+            exception.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
 }

@@ -6,6 +6,7 @@ package dimm.home.index;
 
 import com.sun.mail.smtp.SMTPTransport;
 import com.thoughtworks.xstream.XStream;
+import dimm.home.auth.GenericRealmAuth;
 import dimm.home.auth.SMTPAuth;
 import dimm.home.auth.SMTPUserContext;
 import dimm.home.mailarchiv.AuditLog;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.StringTokenizer;
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.Session;
@@ -605,7 +607,7 @@ public class SearchCall
         
         boolean view_all = can_view_all_mails(ssoc, level);
 
-        if (view_all)
+        if (!view_all)
         {
             ArrayList<String> mail_aliases = m_ctx.get_mailaliases(user, pwd);
             if (mail_aliases == null || mail_aliases.isEmpty())
@@ -662,7 +664,7 @@ public class SearchCall
         filter = new TermsFilter();
         for (int i = 0; i < mail_aliases.size(); i++)
         {
-            String mail_adress = mail_aliases.get(i);
+            String mail_adress = mail_aliases.get(i).toLowerCase().trim();
             if (mail_adress.length() > 0)
             {
                 ArrayList<String> mail_headers = m_ctx.get_index_manager().get_email_headers();
@@ -850,16 +852,11 @@ public class SearchCall
 
                 if (mail_address != null && mail_address.trim().length() > 0)
                 {
-                    int br1 = mail_address.indexOf('<');
-                    int br2 = mail_address.indexOf('>');
-                    if (br1 >= 0 && br2 > br1)
+                    StringTokenizer str = new StringTokenizer( mail_address, "<>,;\r\n \t\"'");
+
+                    while (str.hasMoreElements())
                     {
-                        mail_address = mail_address.substring(br1 + 1, br2);
-                    }
-                    String[] args = mail_address.split(" |\t|\"\'");
-                    for (int i = 0; i < args.length; i++)
-                    {
-                        String token = args[i];
+                        String token = str.nextToken();
                         if (token.indexOf('@') > 0)
                         {
                             if (!mail_addr_list.contains(token))
@@ -1104,11 +1101,14 @@ public class SearchCall
             _4_eyes = false;
         }
     }
-    HashMap<String,_4EyesCacheEntry> _4eyes_cache = new HashMap<String, _4EyesCacheEntry>();
-    private static boolean  use_4e_cache = false;
+    
 
     private Role check_for_4eyes( ArrayList<String> mail_addr_list, UserSSOEntry ssoc )
     {
+        if (mail_addr_list.isEmpty())
+            return null;
+
+
         // IF WE FIND AN EMAIL FROM THE CURRENT USER IN THE MAIL, WE ARE ALLOWED TO SEE IT ALWAYS
         ArrayList<String> user_mail_addr_list = ssoc.getMail_list();
         if (user_mail_addr_list != null)
@@ -1130,106 +1130,24 @@ public class SearchCall
         }
 
         // NOW CHECK THE ROLES FOR A 4-EYES ROLE
-        for (int i = 0; i < mail_addr_list.size(); i++)
+        Role matching_role = null;
+
+        // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
+        for (Iterator<Role> it = m_ctx.getMandant().getRoles().iterator(); it.hasNext();)
         {
-            String addr = mail_addr_list.get(i);
+            Role role = it.next();
 
-            _4EyesCacheEntry entry;
-            // LOOK IN CACHE FIRST
-            if (use_4e_cache)
+            if (GenericRealmAuth.is_member_of( role, mail_addr_list ))
             {
-                entry = _4eyes_cache.get(addr);
-                if (entry != null)
+                if (m_ctx.role_has_option(role, OptCBEntry._4EYES))
                 {
-                    if (entry._4_eyes.booleanValue())
-                        return entry.role;
-
-                    return null;
+                    matching_role = role;
+                    break;
                 }
             }
-
-            entry = new _4EyesCacheEntry();
-
-
-            // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
-            for (Iterator<Role> it = m_ctx.getMandant().getRoles().iterator(); it.hasNext();)
-            {
-                Role role = it.next();
-
-                if (is_member_of( role, mail_addr_list ))
-                {
-                    entry.role = role;
-                    if (m_ctx.role_has_option(role, OptCBEntry._4EYES))
-                    {
-                        // STOP ON FIRST 4E-Role
-                        entry._4_eyes = true;
-                        break;
-                    }
-
-                }
-            }
-            if (use_4e_cache)
-            {
-                _4eyes_cache.put(addr, entry);
-            }
-            if (entry._4_eyes.booleanValue())
-                return entry.role;
         }
         
-        return null;
-    }
-
-    private boolean is_member_of( Role role, ArrayList<String> mail_list )
-    {
-        // CREATE FILTER VALUE PROVIDER
-        SCFilterProvider f_provider = new SCFilterProvider(mail_list );
-
-        // GET FILTER STR AND PARSE TO ARRAYLIST
-        String compressed_list_str = role.getAccountmatch();
-        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, true );
-        if (logic_list == null)
-        {
-            LogManager.msg_index(LogManager.LVL_ERR, Main.Txt("Invalid_role_filter"));
-            return false;
-        }
-
-        // CREATE FILTER AND EVAL FINALLY
-        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
-        boolean ret = matcher.eval();
-
-        return ret;
-    }
-
-}
-class SCFilterProvider implements FilterValProvider
-{
-    ArrayList<String> mail_list;
-
-    SCFilterProvider( ArrayList<String> mail_list )
-    {
-        this.mail_list = mail_list;
-    }
-
-    @Override
-    public ArrayList<String> get_val_vor_name( String name )
-    {
-        ArrayList<String> list = null;
-        if (name.toLowerCase().compareTo("email") == 0)
-        {
-            list = mail_list;
-        }
-        if (name.toLowerCase().compareTo("domain") == 0)
-        {
-            list = new ArrayList<String>();
-            for (int i = 0; i < mail_list.size(); i++)
-            {
-                String mail = mail_list.get(i);
-                int idx = mail.indexOf('@');
-                if (idx > 0 && idx < mail.length() - 1)
-                    list.add(mail.substring(idx + 1));
-            }
-        }
-        return list;
+        return matching_role;
     }
 
 }

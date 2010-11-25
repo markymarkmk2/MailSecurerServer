@@ -35,6 +35,38 @@ import javax.naming.NamingException;
                 new AccountConnectorTypeEntry("imap","IMAP"),
              * */
 
+class SCFilterProvider implements FilterValProvider
+{
+    ArrayList<String> mail_list;
+
+    SCFilterProvider( ArrayList<String> mail_list )
+    {
+        this.mail_list = mail_list;
+    }
+
+    @Override
+    public ArrayList<String> get_val_vor_name( String name )
+    {
+        ArrayList<String> list = null;
+        if (name.toLowerCase().compareTo("email") == 0)
+        {
+            list = mail_list;
+        }
+        if (name.toLowerCase().compareTo("domain") == 0)
+        {
+            list = new ArrayList<String>();
+            for (int i = 0; i < mail_list.size(); i++)
+            {
+                String mail = mail_list.get(i);
+                int idx = mail.indexOf('@');
+                if (idx > 0 && idx < mail.length() - 1)
+                    list.add(mail.substring(idx + 1));
+            }
+        }
+        return list;
+    }
+
+}
 
  
 public abstract class GenericRealmAuth
@@ -306,6 +338,38 @@ public abstract class GenericRealmAuth
     }
 
 
+    public static  boolean is_member_of( Role role, ArrayList<String> mail_list )
+    {
+        // CREATE FILTER VALUE PROVIDER
+        SCFilterProvider f_provider = new SCFilterProvider(mail_list );
+
+        // GET FILTER STR AND PARSE TO ARRAYLIST
+        String compressed_list_str = role.getAccountmatch();
+        int role_flags = 0;
+        try
+        {
+            role_flags = Integer.parseInt(role.getFlags());
+        }
+        catch (NumberFormatException numberFormatException)
+        {
+        }
+        if ((role_flags & CS_Constants.ROLE_DISABLED) == CS_Constants.ROLE_DISABLED)
+            return false;
+
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, true );
+        if (logic_list == null)
+        {
+            LogManager.msg_auth(LogManager.LVL_ERR, Main.Txt("Invalid_role_filter"));
+            return false;
+        }
+
+        // CREATE FILTER AND EVAL FINALLY
+        FilterMatcher matcher = new FilterMatcher( logic_list , f_provider);
+        boolean ret = matcher.eval();
+
+        return ret;
+    }
+
 
     public static boolean user_is_member_of( Role role, String user, ArrayList<String> mail_list )
     {
@@ -322,9 +386,11 @@ public abstract class GenericRealmAuth
         catch (NumberFormatException numberFormatException)
         {
         }
+        if ((role_flags & CS_Constants.ROLE_DISABLED) == CS_Constants.ROLE_DISABLED)
+            return false;
 
-        boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
-        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, compressed );
+        //boolean compressed = (role_flags & CS_Constants.ROLE_ACM_COMPRESSED) == CS_Constants.ROLE_ACM_COMPRESSED;
+        ArrayList<LogicEntry> logic_list = FilterMatcher.get_filter_list( compressed_list_str, /*compressed*/ true );
         if (logic_list == null)
         {
             LogManager.msg_auth( LogManager.LVL_ERR, Main.Txt("Invalid_role_filter"));

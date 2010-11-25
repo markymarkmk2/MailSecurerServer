@@ -438,6 +438,15 @@ public class LicenseChecker
                     }
                 }
             }
+            else
+            {
+                for (int i = 0; i < matching_email_list.size(); i++)
+                {
+                    RFCMailAddress rFCMailAddress = matching_email_list.get(i);
+                    lic_email = rFCMailAddress;
+                    break;
+                }
+            }
 
             if (lic_email == null)
             {

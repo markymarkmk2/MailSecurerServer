@@ -42,7 +42,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.5.0";
+    private static final String VERSION = "1.5.2";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";

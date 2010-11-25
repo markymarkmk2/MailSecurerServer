@@ -138,7 +138,7 @@ public class ListUsers extends AbstractCommand
                     }
                 }
             }
-            if (command.compareTo("native_users") == 0)
+            else if(command.compareTo("native_users") == 0)
             {
                 result_list.addAll(user_list);
             }
