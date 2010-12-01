@@ -86,6 +86,27 @@ public class GetLog extends AbstractCommand
 
             answer = "0: " + sb.toString();
         }
+        else if (command.compareTo("read_block") == 0)
+        {
+            StringBuilder sb = new StringBuilder();
+            String log_type = pt.GetString("LG:");
+            long offset = pt.GetLong("OF:");
+            int size = (int)pt.GetLongValue("SI:");
+            if (size > 0)
+            {
+                ok = LogManager.read_log_buffer( log_type, offset, size, sb );
+            }
+            answer = (ok? "0" : "1") + ": " + sb.toString();
+        }
+        else if (command.compareTo("read_status") == 0)
+        {
+            StringBuilder sb = new StringBuilder();
+            String log_type = pt.GetString("LG:");
+
+            ok = LogManager.read_log_status( log_type, sb );
+
+            answer = (ok? "0" : "1") + ": " + sb.toString();
+        }
         else if (command.compareTo("get_config") == 0)
         {
 

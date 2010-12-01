@@ -936,8 +936,8 @@ public class IndexManager extends WorkerParent
                     }
                 }
 
-                // SPECIAL: STORE ENVELOPE-TO AS TO
-                if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0)
+                // SPECIAL: STORE ENVELOPE-TO AND X-ENVELOPE-TO AS TO
+                if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0 || name.compareToIgnoreCase("X-" + CS_Constants.FLD_ENVELOPE_TO) == 0)
                 {
                     doc.add(new Field(CS_Constants.FLD_TO, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
                     LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");

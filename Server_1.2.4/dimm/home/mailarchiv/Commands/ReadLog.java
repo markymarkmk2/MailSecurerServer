@@ -10,6 +10,7 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.Utilities.ParseToken;
 
 /**
@@ -45,7 +46,11 @@ public class ReadLog extends AbstractCommand
         
         StringBuffer sb = new StringBuffer();
         
-        boolean ok = Main.read_log( log, lines, sb );
+        boolean ok = false;
+        if (lines > 0)
+        {
+            ok = Main.read_log( log, lines, sb );
+        }
         
         if (ok)
             answer = sb.toString();

@@ -10,28 +10,24 @@ import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
+import home.shared.Utilities.LogConfigEntry;
 import home.shared.Utilities.ZipUtilities;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.ResourceBundle;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.zip.ZipOutputStream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -42,7 +38,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.5.2";
+    private static final String VERSION = "1.5.3";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -648,8 +644,30 @@ System.out.println("Core POI came from " + path);
             File log = LogManager.get_file_by_type(LogManager.L4J);
             if (log.exists())
             {
-                zip.zipFile( log.getParent(), log.getAbsolutePath(), zos);
-            }            
+                zip.zipFile( log.getParentFile().getAbsolutePath(), log.getAbsolutePath(), zos);
+            }
+
+            ArrayList<LogConfigEntry> log_array = LogManager.get_log_config_arry();
+            for (int i = 0; i < log_array.size(); i++)
+            {
+                LogConfigEntry lce = log_array.get(i);
+
+                log = LogManager.get_file_by_type(lce.typ);
+                if (log.exists())
+                {
+                    zip.zipFile( log.getParentFile().getAbsolutePath(), log.getAbsolutePath(), zos);
+                }
+            }
+            log = new File("syncsrv.log");
+            if (log.exists())
+            {
+                zip.zipFile( log.getAbsoluteFile().getParentFile().getAbsolutePath(), log.getAbsolutePath(), zos);
+            }
+            log = new File("agent.log");
+            if (log.exists())
+            {
+                zip.zipFile( log.getAbsoluteFile().getParentFile().getAbsolutePath(), log.getAbsolutePath(), zos);
+            }
 
             if (delete_after_fetch)
             {
