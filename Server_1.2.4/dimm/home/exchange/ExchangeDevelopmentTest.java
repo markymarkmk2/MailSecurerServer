@@ -47,7 +47,7 @@ public class ExchangeDevelopmentTest
         ItemTypeDAO itemTypeDAO;
         com.sun.xml.ws.transport.http.client.HttpTransportPipe.dump=true;
         com.sun.xml.ws.transport.http.HttpAdapter.dump=true;
-        com.sun.xml.ws.transport.http.server.ServerAdapter.dump = true;
+        //com.sun.xml.ws.transport.http.server.ServerAdapter.dump = true;
 
 
         try

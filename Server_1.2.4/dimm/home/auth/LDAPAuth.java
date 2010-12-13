@@ -4,7 +4,10 @@
  */
 package dimm.home.auth;
 
+import com.sun.security.auth.LdapPrincipal;
+import com.sun.security.auth.module.LdapLoginModule;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -19,6 +22,7 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
+import javax.security.auth.Subject;
 
 
 
@@ -46,6 +50,7 @@ public class LDAPAuth extends GenericRealmAuth
 
     String search_attribute;
     String mail_field_list;
+    String ldapfilter;
 
     LDAPUserContext user_context;
 
@@ -133,13 +138,15 @@ public class LDAPAuth extends GenericRealmAuth
         return ret;
     }
 
-    LDAPAuth( String admin_name, String admin_pwd, String ldap_host, String user_search_base, int ldap_port, int  flags, String search_attribute, String mfl )
+    LDAPAuth( String admin_name, String admin_pwd, String ldap_host, String user_search_base, int ldap_port, int  flags, String search_attribute, String mfl, String ldapfilter )
     {
         super(flags, ldap_host, ldap_port);
         this.admin_name = admin_name;
         this.admin_pwd = admin_pwd;
         this.user_search_base = user_search_base;
         this.search_attribute = search_attribute;
+        this.ldapfilter = ldapfilter;
+
         if (this.search_attribute == null  || this.search_attribute.length() == 0)
             this.search_attribute = "cn";
 
@@ -344,17 +351,30 @@ public class LDAPAuth extends GenericRealmAuth
     @Override
     public ArrayList<String> list_users_for_group( String group ) throws NamingException
     {
+        String ldapfilter_term = "";
+        if (ldapfilter != null && ldapfilter.length() > 0)
+        {
+            ldapfilter_term = "(" + ldapfilter + ")";
+        }
+
+        String ldap_qry = "(" + search_attribute + "=*)";
+
         if (group != null && group.length() > 0)
         {
-            return list_dn_qry("(&(" + search_attribute + "=*)(memberOf=CN=" + group + "))");
+            ldap_qry = "(&(" + search_attribute + "=*)(memberOf=CN=" + group + ")" + ldapfilter_term + ")";
         }
-        return list_dn_qry("(" + search_attribute + "=*)");
+        else if(ldapfilter_term.length() > 0)
+        {
+            ldap_qry = "(&(" + search_attribute + "=*)" + ldapfilter_term + ")";
+        }
+
+        return list_dn_qry(ldap_qry);
     }
 
     @Override
     public boolean open_user_context( String user_principal, String pwd )
     {
-        user_context = open_user(user_principal, pwd);
+        user_context = open_user_anonymous(user_principal, pwd);
         return user_context == null ? false : true;
     }
 
@@ -400,6 +420,8 @@ public class LDAPAuth extends GenericRealmAuth
             connect_env.put(Context.SECURITY_PRINCIPAL, full_user_dn);
             connect_env.put(Context.SECURITY_CREDENTIALS, pwd);
 
+            //ctx.reconnect(connCtls);
+
             try
             {
                 LogManager.msg_auth( LogManager.LVL_DEBUG, "auth_user: " + full_user_dn);
@@ -416,6 +438,68 @@ public class LDAPAuth extends GenericRealmAuth
             }
           
             return new LDAPUserContext(user_dn, user_ctx);
+        }
+        catch (Exception namingException)
+        {
+            error_txt = namingException.getMessage();
+            namingException.printStackTrace();
+        }
+        return null;
+    }
+    LDAPUserContext open_user_anonymous( String user_name, String pwd )
+    {
+        try
+        {
+            SearchControls ctrl = new SearchControls();
+            ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
+            ctrl.setReturningAttributes(new String[]
+                    {
+                        search_attribute, "cn"
+                    });
+
+            String rootSearchBase = get_user_search_base();
+
+            String searchFilter = "(" + search_attribute + "=" + user_name + ")";
+            int cnt  = 0;
+
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
+            NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+            if (!enumeration.hasMore())
+            {
+                return null;
+            }
+
+            // NOW GET THE DN FOR THIS USER
+            SearchResult sr = enumeration.next(); //This is the enumeration object obtained on step II above
+            Attributes res_attr = sr.getAttributes();
+            Attribute adn = res_attr.get(search_attribute);
+            String user_dn = adn.get().toString();
+            Attribute cn_adn = res_attr.get("cn");
+            String cn_user_dn = cn_adn.get().toString();
+            String full_user_dn = search_attribute + "=" + user_dn + "," + rootSearchBase;
+
+         
+            
+
+            // Set up the search controls
+            SearchControls ctls = new SearchControls();
+            ctls.setReturningAttributes(new String[0]);       // Return no attrs
+            ctls.setSearchScope(SearchControls.OBJECT_SCOPE); // Search object only
+
+            // Invoke search method that will use the LDAP "compare" operation
+            NamingEnumeration answer = ctx.search( full_user_dn, "(password={0})", new Object[]{pwd}, ctls);
+            if (!answer.hasMore())
+            {
+                answer = ctx.search( cn_user_dn, "(password={0})", new Object[]{pwd}, ctls);
+            }
+            if (!answer.hasMore())
+            {
+                return null;
+            }
+
+
+
+            return new LDAPUserContext(user_dn, ctx);
         }
         catch (Exception namingException)
         {
@@ -496,7 +580,7 @@ public class LDAPAuth extends GenericRealmAuth
     {
         try
         {
-            LDAPAuth test = new LDAPAuth("Administrator", "helikon", "192.168.1.120", "", 0, /*flags*/0, "uid", "mail");
+            LDAPAuth test = new LDAPAuth("Administrator", "helikon", "192.168.1.120", "", 0, /*flags*/0, "uid", "mail", "");
             if (test.connect())
             {
                 LDAPUserContext uctx = test.open_user( "mark@localhost", "12345" );

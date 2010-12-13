@@ -33,24 +33,7 @@ import org.fuin.utils4j.Utils4J;
  */
 public class Loader {
 
-   private static String classpath = "MailArchiv.jar;lib/LibShare.jar;lib/LibEWS.jar;lib/jilter-1.2.jar;"
-            + "lib/activation.jar;lib/FastInfoset.jar;lib/gmbal-api-only.jar;lib/http.jar;"
-            + "lib/jaxb-api.jar;lib/jaxb-impl.jar;lib/jaxb-xjc.jar;lib/jaxws-api.jar;lib/jaxws-rt.jar;lib/jaxws-tools.jar;"
-            + "lib/jsr173_api.jar;lib/jsr181-api.jar;lib/jsr250-api.jar;lib/management-api.jar;lib/mimepull.jar;"
-            + "lib/policy.jar;lib/resolver.jar;lib/saaj-api.jar;lib/saaj-impl.jar;lib/servlet.jar;lib/stax-ex.jar;"
-            + "lib/streambuffer.jar;lib/woodstox.jar;"
-            + "lib/log4j-1.2.15.jar;lib/commons-codec-1.3.jar;lib/mail.jar;lib/derby.jar;lib/tar.jar;lib/jdom.jar;"
-            + "lib/poi-3.2-FINAL-20081019.jar;lib/poi-contrib-3.2-FINAL-20081019.jar;lib/poi-scratchpad-3.2-FINAL-20081019.jar;"
-            + "lib/appsrvbridge.jar;lib/jsp-parser-ext.jar;lib/jstl.jar;"
-            + "lib/servlet2.5-jsp2.1-api.jar;lib/standard.jar;lib/antlr-2.7.6.jar;lib/asm.jar;lib/asm-attrs.jar;"
-            + "lib/cglib-2.1.3.jar;lib/commons-collections-2.1.1.jar;lib/commons-logging-1.1.jar;lib/dom4j-1.6.1.jar;"
-            + "lib/ehcache-1.2.3.jar;lib/jdbc2_0-stdext.jar;lib/jta.jar;lib/hibernate3.jar;lib/hibernate-tools.jar;"
-            + "lib/hibernate-annotations.jar;lib/hibernate-commons-annotations.jar;lib/hibernate-entitymanager.jar;"
-            + "lib/javassist.jar;lib/ejb3-persistence.jar;lib/junit-3.8.2.jar;lib/junit-4.5.jar;lib/commons-codec-1.3.jar;"
-            + "lib/commons-httpclient-3.1.jar;lib/bcprov-jdk16-144.jar;lib/xpp3_min-1.1.4c.jar;lib/xstream-1.3.1.jar;"
-            + "lib/commons-lang-2.4.jar;lib/pdfbox-0.8.0-incubating.jar;lib/jempbox-0.8.0-incubating.jar;lib/fontbox-0.8.0-incubating.jar;"
-            + "lib/lucene-core-3.0.2.jar;lib/lucene-analyzers-3.0.2.jar;lib/lucene-queries-3.0.2.jar;"
-            + "lib/slf4j-api-1.5.6.jar;lib/slf4j-simple-1.5.6.jar;lib/subethasmtp.jar";
+  
 
 
 
@@ -121,6 +104,13 @@ public class Loader {
         if (args.length >= 1 && args[0].compareTo("-startscript") == 0)
         {
             write_start_script(args);
+            return;
+        }
+
+        if (args.length >= 1 && args[0].compareTo("-createbatch") == 0)
+        {
+            ArrayList<String> list = get_jar_list_from_manifest();
+            create_win_batch(list, args);
             return;
         }
 
@@ -246,6 +236,59 @@ public class Loader {
 //        Main.main(args);
         
         // TODO code application logic here
+    }
+/*
+ * @echo off
+cd /d "J:\Develop\Java\JMailArchiv\Server 1.2.4"
+"C:\Program Files\Java\jdk1.6.0_21\jre\bin\java" -Xdebug  -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005 -Xmx512m -cp "dist/lib/LibShare.jar;dist/lib/LibEWS.jar;dist/lib/jaxws-api.jar;dist/lib/jaxws-rt.jar;dist/lib/jaxws-tools.jar;dist/lib/policy.jar;dist/lib/lucene-core-3.0.2.jar;dist/lib/lucene-analyzers-3.0.2.jar;dist/lib/lucene-queries-3.0.2.jar;dist/lib/commons-codec-1.3.jar;dist/lib/commons-codec-1.3.jar;dist/lib/commons-httpclient-3.1.jar;dist/lib/commons-lang-2.4.jar;dist/lib/mail.jar;dist/lib/jdom.jar;dist/lib/appsrvbridge.jar;dist/lib/jsp-parser-ext.jar;dist/lib/jstl.jar;dist/lib/servlet2.5-jsp2.1-api.jar;dist/lib/standard.jar;dist/lib/xpp3_min-1.1.4c.jar;dist/lib/xstream-1.3.1.jar;dist/lib/pdfbox-0.8.0-incubating.jar;dist/lib/jempbox-0.8.0-incubating.jar;dist/lib/fontbox-0.8.0-incubating.jar;dist/lib/derby.jar;dist/lib/tar.jar;dist/lib/slf4j-api-1.5.6.jar;dist/lib/slf4j-simple-1.5.6.jar;dist/lib/subethasmtp.jar;dist/lib/log4j-1.2.15.jar;dist/lib/bcprov-jdk16-144.jar;dist/lib/jilter-1.2.jar;dist/lib/poi-3.2-FINAL-20081019.jar;dist/lib/poi-contrib-3.2-FINAL-20081019.jar;dist/lib/poi-scratchpad-3.2-FINAL-20081019.jar;dist/lib/antlr-2.7.6.jar;dist/lib/asm.jar;dist/lib/asm-attrs.jar;dist/lib/cglib-2.1.3.jar;dist/lib/commons-collections-2.1.1.jar;dist/lib/commons-logging-1.1.jar;dist/lib/dom4j-1.6.1.jar;dist/lib/ehcache-1.2.3.jar;dist/lib/jdbc2_0-stdext.jar;dist/lib/jta.jar;dist/lib/hibernate3.jar;dist/lib/hibernate-tools.jar;dist/lib/hibernate-annotations.jar;dist/lib/hibernate-commons-annotations.jar;dist/lib/hibernate-entitymanager.jar;dist/lib/javassist.jar;dist/lib/ejb3-persistence.jar;dist/lib/junit-3.8.2.jar;dist/lib/junit-4.5.jar;dist/lib/ant.jar;dist/lib/ant-antlr.jar;dist/lib/ant-launcher.jar;dist/MailArchiv.jar" dimm.home.mailarchiv.Main -vv
+
+ */
+
+    private static void create_win_batch(ArrayList<String> jars, String[] args)
+    {
+
+        StringBuilder cmdline = new StringBuilder( "cd /d \"J:\\Develop\\Java\\JMailArchiv\\Server 1.2.4\"\r\n" );
+        cmdline.append("\"C:\\Program Files\\Java\\jdk1.6.0_21\\jre\\bin\\java\" -Xdebug  -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005 -Xmx512m -cp ");
+
+
+        for (int i = 0; i < jars.size(); i++)
+        {
+            String string = jars.get(i);
+            if (i > 0)
+                cmdline.append(";");
+            cmdline.append("dist/" + string);
+        }
+
+        cmdline.append(";dist/MailArchiv.jar dimm.home.mailarchiv.Main -vv");
+
+        // i == 0 WAS OUR ARGUMENT -startscript
+        for (int i = 1; i < args.length; i++)
+        {
+            String string = args[i];
+            if (i > 0)
+                cmdline.append(" ");
+
+            cmdline.append( string );
+        }
+
+        cmdline.append("\n");
+        File startup_file = new File("J:\\Develop\\Java\\JMailArchiv\\Server 1.2.4\\start_act_server.bat");
+
+        try
+        {
+
+            FileOutputStream fos = new FileOutputStream(startup_file);
+
+            fos.write(cmdline.toString().getBytes());
+
+            fos.close();
+        }
+        catch (Exception exception)
+        {
+            System.err.println("Cannot create Startup file: ");
+            exception.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
     private static void write_win_start_script(ArrayList<String> jars, String[] args)

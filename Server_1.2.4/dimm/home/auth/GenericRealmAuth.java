@@ -114,7 +114,7 @@ public abstract class GenericRealmAuth
         }
         if (act.getType().compareTo("ldap") == 0)
         {
-            realm = new LDAPAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getSearchbase(), act.getPort(), act.getFlags(), act.getSearchattribute(), act.getMailattribute() );
+            realm = new LDAPAuth( act.getUsername(), act.getPwd(), act.getIp(), act.getSearchbase(), act.getPort(), act.getFlags(), act.getSearchattribute(), act.getMailattribute(), act.getLdapfilter() );
         }
         if (act.getType().compareTo("smtp") == 0)
         {

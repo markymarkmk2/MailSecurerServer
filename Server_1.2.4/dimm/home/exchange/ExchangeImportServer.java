@@ -194,11 +194,13 @@ class ExchangeMailEntry
 {
     ItemIdType id;
     int size;
+    String subject;
 
-    public ExchangeMailEntry( ItemIdType id, int size )
+    public ExchangeMailEntry( ItemIdType id, int size, String s )
     {
         this.id = id;
         this.size = size;
+        this.subject = s;
     }
 
 }
@@ -231,6 +233,7 @@ public class ExchangeImportServer extends WorkerParent
         super(NAME);
         import_list = new ArrayList<ExchangeImporterEntry>();
         max_chunk_size = Main.get_prefs().get_long_prop(GeneralPreferences.EXCHANGE_IMPORT_MAX_CHUNK_SIZE, max_chunk_size);
+        max_mailcount_threshold = (int)Main.get_prefs().get_long_prop(GeneralPreferences.EXCHANGE_IMPORT_MAX_MAILCOUNT_TRESHOLD, max_mailcount_threshold);
         active_entry = null;
         last_error_entry = null;
     }
@@ -674,13 +677,22 @@ public class ExchangeImportServer extends WorkerParent
 
                 exie.set_status( Txt("Reading_mail_data") + "_<" + baseFolderIdType.toString() + "> ...");
 
-                List<ItemType> mails = itemTypeDAO.getFolderItems( port, baseFolderIdType );
+                List<ItemType> mails = null;
+                try
+                {
+                    mails = itemTypeDAO.getFolderItems(port, baseFolderIdType);
+                }
+                catch (Exception e)
+                {
+                    exie.set_status( Txt("Fetching_folder_items_failed") + "_<" + baseFolderIdType.toString() + "> " + e.getMessage());
+                    continue;
+                }
 
                 for (Iterator<ItemType> it1 = mails.iterator(); it1.hasNext();)
                 {
                     ItemType mail = it1.next();
                     Integer size = mail.getSize();
-                    String s = mail.getSubject();
+                    String subject = mail.getSubject();
                     //System.out.println("Mail: " + s  + " Size: " + size);
 
                     total_size += size.intValue();
@@ -689,7 +701,7 @@ public class ExchangeImportServer extends WorkerParent
                     exie.size = total_size;
                     exie.total_msg = cnt;
 
-                    ExchangeMailEntry entry = new ExchangeMailEntry( mail.getItemId(), size.intValue() );
+                    ExchangeMailEntry entry = new ExchangeMailEntry( mail.getItemId(), size.intValue(), subject );
                     full_mail_list.add( entry );
                 }
             }
@@ -724,6 +736,7 @@ public class ExchangeImportServer extends WorkerParent
                 long sum = 0;
 
                 List<ItemIdType> mail_list = new ArrayList<ItemIdType>();
+                List<ExchangeMailEntry> exch_mail_list = new ArrayList<ExchangeMailEntry>();
 
                 while( full_mail_list.size() > 0)
                 {
@@ -736,15 +749,29 @@ public class ExchangeImportServer extends WorkerParent
                         break;
                     }
 
-
                     // CREATE LIST FOR EXCHANGE IMPORT
                     full_mail_list.remove(me);
                     mail_list.add(me.id);
+                    exch_mail_list.add(me);
                 }
 
                 exie.set_status( Main.Txt("Fetching_mails_from_Exchangeserver") + "(" + mail_list.size() + "/" + full_mail_list.size() + "/" + exie.total_msg + ")");
 
-                handle_import_chunks( exie, port, itemTypeDAO, mail_list );
+                if (!handle_import_chunks( exie, port, itemTypeDAO, mail_list ) && mail_list.size() > 1)
+                {
+                    LogManager.msg_exchange(LogManager.LVL_ERR, Main.Txt("Fetching_mails_failed,_trying_again"));
+                    for (int i = 0; i < mail_list.size(); i++)
+                    {
+                         ItemIdType itemIdType = mail_list.get(i);
+                         List<ItemIdType> single_mail_list = new ArrayList<ItemIdType>();
+                         single_mail_list.add(itemIdType);
+
+                         if (handle_import_chunks( exie, port, itemTypeDAO, single_mail_list ))
+                         {
+                            LogManager.msg_exchange(LogManager.LVL_ERR, Main.Txt("Fetching_mail_failed") + ": " + exch_mail_list.get(i).subject);
+                         }
+                    }
+                }
 
                 if (isShutdown())
                     break;
@@ -775,12 +802,21 @@ public class ExchangeImportServer extends WorkerParent
     }
 
 
-    void handle_import_chunks( ExchangeImporterEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO, List<ItemIdType> mail_list ) throws ArchiveMsgException, IOException, VaultException, IndexException
+    boolean handle_import_chunks( ExchangeImporterEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO, List<ItemIdType> mail_list ) throws ArchiveMsgException, IOException, VaultException, IndexException
     {
  
         // FETCH MESSAGES FROM SERVER
-        ArrayOfRealItemsType rfc_mails = itemTypeDAO.getItem(port, mail_list);
-
+        ArrayOfRealItemsType rfc_mails = null;
+        try
+        {
+            rfc_mails = itemTypeDAO.getItem(port, mail_list);
+        }
+        catch (Exception e)
+        {
+            exie.set_status( 4,  Main.Txt("Error_while_fetching_mail_items_from_server") + " " + e.getMessage() );
+            LogManager.msg_exchange( LogManager.LVL_ERR, exie.get_status() );
+            return false;
+        }
         
         exie.set_status(  Main.Txt("Importing_mails_into_archive"));
 
@@ -809,7 +845,8 @@ public class ExchangeImportServer extends WorkerParent
             }
             catch (MessagingException messagingException)
             {
-                LogManager.msg_exchange( LogManager.LVL_ERR, "Cannot import exchange mail data for Mail:" + msg_type.getSubject() );
+                exie.set_status( 4,  Main.Txt("Cannot_import_exchange_mail_data_for_Mail:") + " " +  msg_type.getSubject() );
+                LogManager.msg_exchange(  LogManager.LVL_ERR, exie.get_status() );
             }
             bis.close();
 
@@ -818,7 +855,8 @@ public class ExchangeImportServer extends WorkerParent
             if (isShutdown())
                 break;
 
-        }        
+        }
+        return true;
     }
 
     void append_result( StringBuilder stb, ExchangeImporterEntry mbie, int i )
