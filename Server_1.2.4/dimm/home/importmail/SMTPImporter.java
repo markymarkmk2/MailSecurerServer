@@ -69,11 +69,13 @@ class SmtpImporterServer extends SMTPServer
 {
 
     boolean ssl;
+    boolean tls;
 
-    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory, boolean _ssl )
+    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory, boolean _ssl, boolean _tls )
     {
         super(sml_adapter, pah_factory);
         ssl = _ssl;
+        tls = _tls;
     }
 
     /** */
@@ -86,6 +88,12 @@ class SmtpImporterServer extends SMTPServer
     @Override
     protected ServerSocket createServerSocket() throws IOException
     {
+        if (!tls)
+        {
+            // NO TLS
+            setHideTLS(true);
+        }
+        
         if (!ssl)
         {
             return super.createServerSocket();
@@ -105,7 +113,14 @@ class SmtpImporterServer extends SMTPServer
 
     ServerSocket getServerSocket( int serverPort, InetAddress adress ) throws IOException, NoSuchAlgorithmException, KeyStoreException, CertificateException, UnrecoverableKeyException, KeyManagementException, URISyntaxException
     {
-        SSLContext sslContext = SSLContext.getInstance("TLS");
+        SSLContext sslContext;
+
+        // DOES THIS DIFFER?
+        if (tls)
+            sslContext = SSLContext.getInstance("TLS");
+        else
+            sslContext = SSLContext.getInstance("SSL");
+        
         char[] password = "mailsecurer".toCharArray();
 
         /*
@@ -170,6 +185,17 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
         }
         return false;
     }
+    boolean has_tls()
+    {
+        try
+        {
+            return test_flag(CS_Constants.SL_USE_TLS_FORCE) | test_flag(CS_Constants.SL_USE_TLS_IF_AVAIL);
+        }
+        catch (Exception e)
+        {
+        }
+        return false;
+    }
 
     boolean is_disabled()
     {
@@ -203,7 +229,7 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
 
             PlainAuthenticationHandlerFactory pah_factory = new PlainAuthenticationHandlerFactory(up_validator);
 
-            server = new SmtpImporterServer(sml_adapter, pah_factory, has_ssl());
+            server = new SmtpImporterServer(sml_adapter, pah_factory, has_ssl(), has_tls());
 
             if (smtp_db_entry.getServer() != null && smtp_db_entry.getServer().length() > 0)
             {
