@@ -46,6 +46,7 @@ public class SearchCommand extends AbstractCommand
         {
             String id = pt.GetString("ID:");
             int row = (int)pt.GetLongValue("ROW:");
+            int rows = (int)pt.GetLongValue("ROWS:");
             String field_list = pt.GetString("FLL:");
             String[] fields = field_list.split(",");
             ArrayList<String> field_arr = new ArrayList<String>();
@@ -56,7 +57,7 @@ public class SearchCommand extends AbstractCommand
                 field_arr.add(string);
             }
 
-            answer = SearchCall.retrieve_search_call( id, field_arr, row );
+            answer = SearchCall.retrieve_search_call( id, getSsoEntry(), field_arr, row, rows );
 
             return true;
         }
@@ -64,7 +65,7 @@ public class SearchCommand extends AbstractCommand
         {
             String id = pt.GetString("ID:");
 
-            answer = SearchCall.close_search_call(id);
+            answer = SearchCall.close_search_call(id, getSsoEntry());
 
             return true;
         }
@@ -74,7 +75,7 @@ public class SearchCommand extends AbstractCommand
             int row = (int)pt.GetLongValue("ROW:");
 
             //System.out.println("sci: " + data);
-            answer = SearchCall.retrieve_mail(id, row);
+            answer = SearchCall.retrieve_mail(id, getSsoEntry(), row);
             //System.out.println("sco: " + answer);
 
 
@@ -109,7 +110,7 @@ public class SearchCommand extends AbstractCommand
                     rowi[i] = Integer.parseInt(rows[i]);
                 }
 
-                answer = SearchCall.send_mail(id, rowi, to);
+                answer = SearchCall.send_mail(id, getSsoEntry(), rowi, to);
             }
             catch (Exception e)
             {

@@ -183,6 +183,8 @@ public class IndexManager extends WorkerParent
     private ThreadPoolExecutor index_load_thread_pool;
     private static final long MAX_INDEX_THREADS = 8l;
 
+    public static final String X_IGNORE_TO = "X-MS-IgnoreTo";
+
 
 
     
@@ -489,7 +491,7 @@ public class IndexManager extends WorkerParent
             LogManager.msg_index(LogManager.LVL_WARN, Main.Txt("No_valid_mail_domain_found_for_mail") + " "+ sub);
 
             // THIW WAS ALLOWED UNTIL 1.4.4, SO WE STAY COMPATIBLE BUT WE CAN SWITCH IT OFF
-            if (!Main.get_bool_prop(GeneralPreferences.ALLOW_UNKNOWN_DOMAIN_MAIL, true))
+            if (!Main.get_bool_prop(GeneralPreferences.ALLOW_UNKNOWN_DOMAIN_MAIL, true) && !Main.get_bool_prop(GeneralPreferences.ALLOW_INKNOWN_DOMAIN_MAIL, true))
             {
                 LogManager.msg_index(LogManager.LVL_WARN,Main.Txt("Skipping_mail") + " " + sub );
                 return true;
@@ -889,6 +891,9 @@ public class IndexManager extends WorkerParent
 
     protected void index_headers( Document doc, String uid, Enumeration mail_header_list )
     {
+        boolean x_ignore_to = false;
+        ArrayList<String> x_envelope_list = new ArrayList<String>();
+
         while (mail_header_list.hasMoreElements())
         {
             Object h = mail_header_list.nextElement();
@@ -898,6 +903,11 @@ public class IndexManager extends WorkerParent
                 String name = ih.getName();
                 String value = ih.getValue();
 
+                if (name.compareToIgnoreCase(X_IGNORE_TO) == 0)
+                {
+                    if (value.trim().compareTo("1") == 0 || value.trim().compareToIgnoreCase("true") == 0)
+                        x_ignore_to = true;
+                }
 
                 boolean found_eh = false;
                 boolean found_ah = false;
@@ -939,18 +949,14 @@ public class IndexManager extends WorkerParent
                 // SPECIAL: STORE ENVELOPE-TO AND X-ENVELOPE-TO AS TO
                 if (name.compareToIgnoreCase(CS_Constants.FLD_ENVELOPE_TO) == 0 || name.compareToIgnoreCase("X-" + CS_Constants.FLD_ENVELOPE_TO) == 0)
                 {
-                    doc.add(new Field(CS_Constants.FLD_TO, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + name + "> Val <" + ih.getValue() + ">");
-
-                    // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
-                    doc.add(new Field(CS_Constants.FLD_TO + "REG", ih.getValue(), Field.Store.NO, Field.Index.ANALYZED));
+                    x_envelope_list.add(value);
                 }
                 // WE WANT TO ANALYZE , STORE OR BOTH
                 // WE NEED 2 FIELDS FOR ONE HEADER, ONE WITH EMAIL ANALYZER, ONE WITH REGULAR ANALYZER
                 // WE ADD CHARSET
                 else if (name.compareToIgnoreCase(CS_Constants.FLD_CONTENT_TYPE) == 0)
                 {
-                    String cs = get_charset_from_content_type(ih.getValue());
+                    String cs = get_charset_from_content_type(value);
                     if (cs != null)
                     {
                         LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " detected charset " + cs);
@@ -960,26 +966,52 @@ public class IndexManager extends WorkerParent
                 else if (found_ah || found_eh)
                 {
                     // STORE ALL HEADERS INTO INDEX DB, WE DO INDEX BECAUSE WE SEARCH FOR TOKENS
-                    doc.add(new Field(header_field_name, ih.getValue(), Field.Store.YES, Field.Index.ANALYZED));
-                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + header_field_name + "> Val <" + ih.getValue() + ">");
+                    doc.add(new Field(header_field_name, value, Field.Store.YES, Field.Index.ANALYZED));
+                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + header_field_name + "> Val <" + value + ">");
 
                     // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
                     if (found_eh)
                     {
-                        doc.add(new Field(header_field_name + "REG", ih.getValue(), Field.Store.NO, Field.Index.ANALYZED));
+                        doc.add(new Field(header_field_name + "REG", value, Field.Store.NO, Field.Index.ANALYZED));
                     }
                 }
                 else
                 {
-                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " skipping header <" + ih.getName() + "> Val <" + ih.getValue() + ">");
+                    LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " skipping header <" + name + "> Val <" + value + ">");
                 }
             }
+        }
+
+        // IF WE DETECTED SPECIAL BCC IGNORE HEADER WE REMOVE ALL DIRECT ADRESSES
+        if (x_ignore_to)
+        {
+            if  (x_envelope_list.isEmpty())
+            {
+                LogManager.msg_index(LogManager.LVL_WARN, "Detected mail " + uid + " with " + X_IGNORE_TO + " but without Envelope-To, not deleting To");
+            }
+            else
+            {
+                doc.removeFields(CS_Constants.FLD_TO);
+                doc.removeFields(CS_Constants.FLD_TO + "REG");
+                doc.removeFields(CS_Constants.FLD_CC);
+                doc.removeFields(CS_Constants.FLD_CC + "REG");
+            }
+        }
+
+        // ADD THE COLLECTED ENVELOPES
+        for (int i = 0; i < x_envelope_list.size(); i++)
+        {
+            String mailadr = x_envelope_list.get(i);
+            doc.add(new Field(CS_Constants.FLD_TO, mailadr, Field.Store.YES, Field.Index.ANALYZED));
+            LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header Envelope Val <" + mailadr + ">");
+
+            // THE EMAILFIELDS ARE INDEXED WITH THE STANDARDANALYZER TOO
+            doc.add(new Field(CS_Constants.FLD_TO + "REG", mailadr, Field.Store.NO, Field.Index.ANALYZED));
         }
     }
 
     public void index_mp_content( DocumentWrapper doc, String uid, Multipart mp ) throws MessagingException, IOException
     {
-
         try
         {
             for (int i = 0; i < mp.getCount(); i++)
@@ -999,7 +1031,6 @@ public class IndexManager extends WorkerParent
         {
             LogManager.msg_index(LogManager.LVL_WARN,  "Error in index_mp_content for " + uid + ": " + messagingException.getMessage());
         }
-
     }
 
     public void index_part_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException, IOException

@@ -163,7 +163,7 @@ public class LogTypeEntry
             System.err.println(s);
         }
     }
-    synchronized void file_log( String s, Exception e )
+    synchronized void file_log( String s, Throwable e )
     {
         File log = get_log_file();
         try

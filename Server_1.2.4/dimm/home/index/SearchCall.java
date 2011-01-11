@@ -14,6 +14,7 @@ import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.mail.RFCGenericMail;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.SQL.UserSSOEntry;
@@ -26,18 +27,18 @@ import home.shared.CS_Constants.USERMODE;
 import home.shared.SQL.OptCBEntry;
 import home.shared.filter.ExprEntry;
 import home.shared.filter.FilterMatcher;
-import home.shared.filter.FilterValProvider;
 import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
 import home.shared.hibernate.Role;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.mail.Address;
+import javax.mail.Header;
 import javax.mail.Message;
 import javax.mail.Session;
 import javax.mail.internet.AddressException;
@@ -168,13 +169,13 @@ public class SearchCall
     }
     static final ArrayList<SearchCallEntry> call_list = new ArrayList<SearchCallEntry>();
 
-    static SearchCallEntry get_sce( String sce_id )
+    public static SearchCallEntry get_sce( String sce_id, String sso_id )
     {
         int id = Integer.parseInt(sce_id.substring(2));  // scN
         for (int i = 0; i < call_list.size(); i++)
         {
             SearchCallEntry sce = call_list.get(i);
-            if (sce.id == id)
+            if (sce.id == id && sce.getSsoc().get_sso_str_id().equals(sso_id))
             {
                 return sce;
             }
@@ -261,9 +262,9 @@ public class SearchCall
                 id = 1000 + ssoc.getUser_sso_id();
 
                 String sce_id = "sc" + id;
-                if (SearchCall.get_sce(sce_id) != null)
+                if (SearchCall.get_sce(sce_id, ssoc.get_sso_str_id()) != null)
                 {
-                    SearchCall.close_search_call(sce_id);
+                    SearchCall.close_search_call(sce_id, ssoc);
                 }
             }
             SearchCallEntry sce = new SearchCallEntry(ssoc, sc, id);
@@ -277,9 +278,9 @@ public class SearchCall
         return "0: sc" + id + " N:" + sc.result.size();
     }
 
-    public static String close_search_call( String id )
+    public static String close_search_call( String id,  UserSSOEntry ssoc )
     {
-        SearchCallEntry sce = get_sce(id);
+        SearchCallEntry sce = get_sce(id, ssoc.get_sso_str_id());
         if (sce == null)
         {
             return "1: invalid sce";
@@ -333,9 +334,14 @@ public class SearchCall
         return null;
     }
 
-    public static String retrieve_search_call( String id, ArrayList<String> field_list, int row )
+    public static String retrieve_search_call( String id, UserSSOEntry ssoc, ArrayList<String> field_list, int row )
     {
-        SearchCallEntry sce = get_sce(id);
+        return retrieve_search_call( id, ssoc, field_list, row, 1 );
+    }
+
+    public static String retrieve_search_call( String id, UserSSOEntry ssoc, ArrayList<String> field_list, int row, int rows )
+    {
+        SearchCallEntry sce = get_sce(id, ssoc.get_sso_str_id());
         if (sce == null)
         {
             return "1: invalid sce";
@@ -357,10 +363,16 @@ public class SearchCall
         }
         else
         {
-            ArrayList<String> row_list = retrieve_row(sce, field_list, row);
-            if (row_list != null)
+            for (int i = 0; i < rows; i++)
             {
-                result_list.add(row_list);
+                if (row + i >=  sce.call.result.size())
+                    break;
+                
+                ArrayList<String> row_list = retrieve_row(sce, field_list, row + i);
+                if (row_list != null)
+                {
+                    result_list.add(row_list);
+                }
             }
         }
 
@@ -371,11 +383,11 @@ public class SearchCall
     }
 
 
-    public static String retrieve_mail(  String id, int row )
+    public static String retrieve_mail(  String id,  UserSSOEntry ssoc, int row )
     {
         String ret = null;
 
-        SearchCallEntry sce = get_sce(id);
+        SearchCallEntry sce = get_sce(id, ssoc.get_sso_str_id());
         if (sce == null)
         {
             return "1: invalid sce";
@@ -408,9 +420,9 @@ public class SearchCall
     }
 
 
-    public static String send_mail( String id, int[] rowi, String send_to )
+    public static String send_mail( String id,  UserSSOEntry ssoc, int[] rowi, String send_to )
     {
-        SearchCallEntry sce = get_sce(id);
+        SearchCallEntry sce = get_sce(id, ssoc.get_sso_str_id());
         if (sce == null)
         {
             return "1: invalid sce";
@@ -468,7 +480,19 @@ public class SearchCall
                     Properties props = new Properties();
                     props.put("mail.smtp.host", host);
                     Session session = Session.getDefaultInstance(props);
-                    Message msg = new MimeMessage(session, is);
+                    MimeMessage msg = new MimeMessage(session, is);
+
+
+                    // TOUCH MESSAGE-ID TO PREVENT GETTING INVISIBLE IF MSG WAS DELETED BY IMAPSERVER
+                    if (Main.get_bool_prop(GeneralPreferences.TOUCH_MESSAGEID_ON_RESTORE, true))
+                    {
+                        String[] msg_id = msg.getHeader("Message-ID");
+                        if (msg_id != null && msg_id.length == 1)
+                        {
+                            msg.setHeader("Message-ID", "MS" + System.currentTimeMillis()/1000 + "_" +msg_id[0]);
+                        }
+                    }
+
 
                     transport.sendMessage(msg, addresses);
 
@@ -735,10 +759,15 @@ public class SearchCall
 
                 String field = flist[i];
                 String val_txt = get_op_val_txt(e);
+                boolean has_space = val_txt.indexOf(' ') >= 0;
 
                  sb.append( field );
                  sb.append(":");
+                 if (has_space)
+                     sb.append("\"");
                  sb.append(val_txt);
+                 if (has_space)
+                     sb.append("\"");
             }
             sb.append(")");
         }
@@ -746,11 +775,18 @@ public class SearchCall
         {
             String val_txt = get_op_val_txt(e);
 
+            boolean has_space = val_txt.indexOf(' ') >= 0;
+
             if (e.isNeg())
                 sb.append("NOT ");
             sb.append( name );
             sb.append(":");
+
+            if (has_space)
+                     sb.append("\"");
             sb.append(val_txt);
+            if (has_space)
+                     sb.append("\"");
         }
         return sb.toString();
     }
@@ -801,6 +837,17 @@ public class SearchCall
     {
         StringBuffer sb = new StringBuffer();
 
+        if (logic_list.size() > 0 && logic_list.get(0).isNeg())
+        {
+            LogicEntry logicEntry = logic_list.get(0);
+            if (logicEntry instanceof ExprEntry)
+            {
+                ExprEntry expe = (ExprEntry) logicEntry;
+                ExprEntry exp2 = new ExprEntry(logic_list, expe.getName(), "*", ExprEntry.OPERATION.REGEXP, ExprEntry.TYPE.STRING, false, false);
+                logic_list.add(0, exp2);
+            }
+        }
+
         gather_lucene_qry_text( m_ctx, sb, logic_list, 0);
 
         LogManager.msg_index(LogManager.LVL_DEBUG,  "QueryParser: " + sb.toString());
@@ -808,14 +855,18 @@ public class SearchCall
         QueryParser parser = new QueryParser(Version.LUCENE_24, "FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
 
+        Query qry;
+
         String qry_str = sb.toString();
-        if (qry_str.length() == 0)
+        if (qry_str.length() > 0)
+        {
+            qry = parser.parse(qry_str);
+        }
+        else
         {
             return new MatchAllDocsQuery();
         }
         
-        Query qry = parser.parse(qry_str);
-
         return qry;
     }
     Query build_lucene_qry( String qry_str, Analyzer ana ) throws ParseException
@@ -1004,6 +1055,7 @@ public class SearchCall
                 break;
             }
         }
+        LogManager.msg_index(LogManager.LVL_DEBUG, "Finished resultlist");
     }
 
     void close()

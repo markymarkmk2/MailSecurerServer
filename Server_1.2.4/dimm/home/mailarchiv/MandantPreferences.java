@@ -44,6 +44,7 @@ public class MandantPreferences extends Preferences
     public static final long   DFTL_SSO_TIMEOUT_S = 7200;  // 20 MINUTES
 
     public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
+    public static final String HTTPD_PORT = "HttpdPort";
     
     MandantContext context;
 
@@ -74,6 +75,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( INDEX_THREADS );
         prop_names.add( DSH_HOUR_DIRS );
         prop_names.add( LANG );
+        prop_names.add( HTTPD_PORT );
     }
     
     public void setContext( MandantContext _context )

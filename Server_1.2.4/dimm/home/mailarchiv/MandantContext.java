@@ -18,7 +18,9 @@ import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.AuthException;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.vault.BackupScript;
 import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.DiskArchive;
@@ -76,6 +78,8 @@ public class MandantContext
     private boolean shutdown;
     ThreadPoolWatcher thread_watcher;
 
+    GWTServer httpd_server;
+
     public MandantContext( MandantPreferences _prefs, Mandant _m )
     {
         prefs = _prefs;
@@ -123,6 +127,27 @@ public class MandantContext
     {
         int iflags = get_int_flags();
         return  ( (iflags & f) == f);
+    }
+    public int get_port()
+    {
+        return Main.ws_port + 1 + mandant.getId();
+    }
+    
+    public int get_httpd_port()
+    {
+        int port = 0;
+        if (test_flag(CS_Constants.MA_HTTPS_ENABLE))
+        {
+            if (test_flag(CS_Constants.MA_HTTPS_OWN))
+            {
+                port = prefs.get_int_prop(MandantPreferences.HTTPD_PORT, Main.httpd_port + 1 + mandant.getId());
+            }
+            else
+            {
+                port = Main.httpd_port;
+            }
+        }
+        return port;
     }
 
 
@@ -519,6 +544,38 @@ public class MandantContext
                 LogManager.msg_imaps(LogManager.LVL_ERR,Main.Txt("Cannot_start_IMAP_server_for") + " " + getMandant().getName() + ": " + ex.getMessage());
             }
         }
+        if (test_flag(CS_Constants.MA_HTTPS_ENABLE))
+        {
+            if ( test_flag(CS_Constants.MA_HTTPS_OWN))
+            {
+                GWTServer gwt = new GWTServer();
+                try
+                {
+                    int httpd_port = get_httpd_port();
+                    File war = new File("war", "MSWebApp.war");
+                    if (war.exists())
+                    {
+                        LogManager.msg_system( LogManager.LVL_INFO, "Starting WebClient");
+                        gwt.start(httpd_port, "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
+                    }
+                    else
+                    {
+                        LogManager.msg_system( LogManager.LVL_INFO, "No WebClient found at " + war.getAbsolutePath());
+                    }
+                }
+                catch (Throwable throwable)
+                {
+                    System.out.println(throwable.getLocalizedMessage());
+                    LogManager.printStackTrace(throwable);
+                }
+            }
+            else
+            {
+                // CHECK IF WE NEED TO START A FORMERLY UNSTARTED HTTPDS
+                control.fireup_httpds();
+            }
+        }
+
     }
 
     void setShutdown( boolean b )
@@ -564,7 +621,11 @@ public class MandantContext
     void teardown_mandant()
     {
         clear_sso_cache();
-        
+
+        if (httpd_server != null)
+            httpd_server.stop();
+
+
         for (int i = 0; i < worker_list.size(); i++)
         {
             WorkerParent wp = worker_list.get(i);
@@ -804,6 +865,10 @@ public class MandantContext
             {
                 return false;
             }
+            sso.setLast_auth( System.currentTimeMillis() );
+        }
+        return true;
+        /* NO AUTOMATIC LOGOUT, DOESNT WORK CLEAN ON CLIENT
             long now = System.currentTimeMillis();
 
             // TOO OLD
@@ -815,7 +880,7 @@ public class MandantContext
             }
             user_sso_list.remove(sso);
         }
-        return false;
+        return false;*/
     }
 
     public int create_admin_sso_id( String name, String pwd )
@@ -1238,6 +1303,7 @@ public class MandantContext
         }
         return null;
     }
+
 
     
     /*

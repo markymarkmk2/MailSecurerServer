@@ -29,8 +29,10 @@ import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
@@ -148,6 +150,13 @@ public class LogicControl
     private boolean shutdown;
 
     ThreadPoolWatcher thread_watcher;
+
+    GWTServer gwt;
+
+    public ArrayList<MandantContext> get_mandanten_list()
+    {
+        return mandanten_list;
+    }
 
     
     
@@ -343,7 +352,7 @@ public class LogicControl
         }
         catch (Exception ex )
         {
-            ex.printStackTrace();
+            LogManager.printStackTrace(ex);
             LogManager.msg_system( LogManager.LVL_ERR, "Cannot read preferences for Mandant " +  m.getName(), ex);
         }
     }
@@ -909,7 +918,7 @@ public class LogicControl
         }
         catch (InterruptedException ex)
         {
-            ex.printStackTrace();
+            
         }
     }
 
@@ -1072,6 +1081,54 @@ public class LogicControl
         set_shutdown(true);
     }
 
+    void startup_httpd_base_server()
+    {
+        boolean need_base_server = false;
+
+        for (int i = 0; i < mandanten_list.size(); i++)
+        {
+            final MandantContext ctx = mandanten_list.get(i);
+
+            if (ctx.test_flag(CS_Constants.MA_HTTPS_ENABLE) && !ctx.test_flag(CS_Constants.MA_HTTPS_OWN) )
+            {
+                need_base_server = true;
+                break;
+            }
+        }
+
+        if (need_base_server)
+        {
+            fireup_httpds();
+        }
+    }
+
+    public void fireup_httpds()
+    {
+        // ONLY START ONCE, WE COULD SHUTDOWN ON M_CTX INIT BUT WHY?
+        if (gwt == null)
+        {
+            gwt = new GWTServer();
+            try
+            {
+                File war = new File("war", "MSWebApp.war");
+                if (war.exists())
+                {
+                    LogManager.msg_system( LogManager.LVL_INFO, "Starting WebClient");
+                    gwt.start(Main.httpd_port, "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
+                }
+                else
+                {
+                    LogManager.msg_system( LogManager.LVL_INFO, "No WebClient found at " + war.getAbsolutePath());
+                }
+            }
+            catch (Throwable e)
+            {
+                LogManager.printStackTrace(e);
+            }
+        }
+    }
+
+
     // MAIN WORK LOOP
     private static final int LIC_UMAP_UPDATE_CYCLE = 5*60*1000;
     private static final int CHECK_SPACE_CYCLE = 10*60*1000;
@@ -1115,6 +1172,8 @@ public class LogicControl
                 ctx.start_run_loop();
                               
             }
+
+            startup_httpd_base_server();
 
             // 1 SECOND HARTBEAT LOOP, NOT ACCURATE!!!
             while (!shutdown)
@@ -1200,7 +1259,7 @@ public class LogicControl
         }
         catch (Exception ex)
         {
-            ex.printStackTrace();
+            LogManager.printStackTrace(ex);
 
         }
         
@@ -1314,7 +1373,7 @@ public class LogicControl
 
         for (int i = 0; i < worker_list.size(); i++)
         {
-            sb.append(worker_list.get(i).getName() + " check: ");
+            sb.append(worker_list.get(i).getName()).append(" check: ");
             if (!worker_list.get(i).check_requirements(sb))
             {
                 ok = false;
@@ -1426,7 +1485,7 @@ public class LogicControl
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            LogManager.printStackTrace(e);
         }
         finally
         {
@@ -1723,5 +1782,6 @@ public class LogicControl
         }
         return null;
     }
+
 
 }

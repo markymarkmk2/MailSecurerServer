@@ -128,7 +128,7 @@ public class TCPCallConnect extends WorkerParent
             }*/
             if (server_port == 0)
             {
-                server_port = Main.ws_port + 1 + m_ctx.getMandant().getId();
+                server_port = m_ctx.get_port();
                 LogManager.msg_comm( LogManager.LVL_INFO,"Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
             }            
         }
@@ -928,14 +928,18 @@ public class TCPCallConnect extends WorkerParent
                     kmf.init(ks, passphrase);
                     ctx.init(kmf.getKeyManagers(), null, null);
 
+
+
                     SSLServerSocketFactory factory = ctx.getServerSocketFactory();
 
 
                     tcp_s = factory.createServerSocket(server_port, backlog);
 
+
                     if (tcp_s instanceof SSLServerSocket)
                     {
                         SSLServerSocket ssl = (SSLServerSocket)tcp_s;
+
                         ssl.setEnabledCipherSuites(enabledCipherSuites);                        
                     }
                 }
@@ -948,6 +952,7 @@ public class TCPCallConnect extends WorkerParent
 
                 final Socket s = tcp_s.accept();
                 s.setTcpNoDelay(true);
+                s.setSoTimeout(600000);
 
                 BackgroundWorker work = new BackgroundWorker(getName() + ".TcpIpDispatcher")
                 {
@@ -1647,6 +1652,13 @@ public class TCPCallConnect extends WorkerParent
 
                 return "0: ";
             }
+            LogManager.msg_comm(LogManager.LVL_WARN, "Cannot get i-Stream " + stream_id + ", available streams:");
+            for (int i = 0; i < istream_list.size(); i++)
+            {
+                ise = istream_list.get(i);
+
+                LogManager.msg_comm(LogManager.LVL_WARN, "Stream " + ise.id + " IS:" + ise.is + " FI:" + ise.file);
+            }
             return "1: not found: " + stream_id;
         }
         catch (Exception iOException)
@@ -1664,6 +1676,18 @@ public class TCPCallConnect extends WorkerParent
         try
         {
             InputStream is = get_istream(get_id(stream_id)).is;
+            if (is == null)
+            {
+                LogManager.msg_comm(LogManager.LVL_WARN, "Cannot get i-Stream " + stream_id + ", available streams:");
+                for (int i = 0; i < istream_list.size(); i++)
+                {
+                    InputStreamEntry ise = istream_list.get(i);
+
+                    LogManager.msg_comm(LogManager.LVL_WARN, "Stream " + ise.id + " IS:" + ise.is + " FI:" + ise.file);
+                }
+                return "1: not found: " + stream_id;
+            }
+
 
             long len = slen.longValue();            
 

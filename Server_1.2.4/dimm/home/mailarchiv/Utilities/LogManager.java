@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
-import java.util.logging.Level;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
@@ -272,7 +271,7 @@ public class LogManager implements LogListener
         msg_exchange(lvl, string, null);
     }
 
-    public static void printStackTrace( Exception e )
+    public static void printStackTrace( Throwable e )
     {
         _msg(e);
     }
@@ -337,7 +336,7 @@ public class LogManager implements LogListener
         }
     }
 
-    private static void _msg( Exception exc )
+    private static void _msg( Throwable exc )
     {
         java.util.Date now = new java.util.Date();
         StringBuilder sb = new StringBuilder();
@@ -711,6 +710,7 @@ public class LogManager implements LogListener
      * @param lastNlines
      * @return
      */
+    
     private static boolean parseLinesFromLast( byte[] bytearray, int lineCount, Vector<String> lastNlines )
     {
         String lastNChars = new String(bytearray);
@@ -762,6 +762,7 @@ public class LogManager implements LogListener
      * @param chunkSize
      * @return
      */
+    
     public static Vector<String> tail( String log_type, long offset, int lineCount )
     {
         Vector<String> lastNlines = new Vector<String>();
@@ -837,4 +838,6 @@ public class LogManager implements LogListener
             }
         }
     }
+     
+
 }

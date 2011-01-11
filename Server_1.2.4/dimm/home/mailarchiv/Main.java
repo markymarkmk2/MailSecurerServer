@@ -7,7 +7,10 @@ package dimm.home.mailarchiv;
 
 import dimm.home.Updater.Updater;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.serverconnect.HttpdServer;
+import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.Utilities.LogConfigEntry;
@@ -38,7 +41,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.5.4";
+    private static final String VERSION = "1.6.0";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -81,6 +84,7 @@ public final class Main
     static LogicControl control;    
     public static String ws_ip = "127.0.0.1";
     public static int ws_port = 8050;
+    public static int httpd_port = 8000;
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
     
     
@@ -225,6 +229,7 @@ public final class Main
                 SQLWorker.set_to_derby_db();
             }
 
+
             
             // CREATE INSTALLER --sb lnx / mac / win
             if (args[i].compareTo("--sb") == 0 && (i + 1) < args.length)
@@ -262,6 +267,11 @@ public final class Main
 
 
         LogManager.msg_system( LogManager.LVL_INFO, "Using DB connect " + SQLWorker.get_db_connect_string());
+
+
+
+        
+
 
        
         

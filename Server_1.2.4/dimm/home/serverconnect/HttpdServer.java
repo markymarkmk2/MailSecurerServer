@@ -12,6 +12,7 @@ import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 import com.sun.net.httpserver.spi.HttpServerProvider;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -31,7 +32,6 @@ import java.security.cert.CertificateException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import javax.net.ServerSocketFactory;
 import javax.xml.ws.soap.SOAPBinding;
 import javax.net.ssl.KeyManagerFactory;
@@ -97,6 +97,13 @@ import javax.xml.ws.Endpoint;
  */
 class MyHandler implements HttpHandler
 {
+    String start_path;
+
+    public MyHandler( String start_path )
+    {
+        this.start_path = start_path;
+    }
+
 
     public static final String CMD_QUERY = "/query";
 
@@ -106,8 +113,28 @@ class MyHandler implements HttpHandler
         String path = t.getRequestURI().getPath();
         InputStream is = t.getRequestBody();
         StringBuffer sb = new StringBuffer();
+        System.out.println("P: " + path);
 
-        if (is != null && is.available() > 0)
+        File f = new File(start_path + path );
+        if (f.exists())
+        {
+            byte[] data = new byte[(int)f.length()];
+            
+            FileInputStream fis = new FileInputStream(f);
+            
+            fis.read(data);
+            
+            fis.close();
+            
+           
+            
+            t.sendResponseHeaders(200, data.length);
+            OutputStream os = t.getResponseBody();
+            os.write(data);
+            os.close();
+            return;
+        }
+        if (is != null)
         {
             BufferedInputStream bsi = new BufferedInputStream(is);
             byte[] buff = new byte[4096];
@@ -122,8 +149,9 @@ class MyHandler implements HttpHandler
                 sb.append(new String(buff, 0, rlen));
             }
         }
+        System.out.println("IN: " + sb.toString());
 
-        String response = "This is the response";
+        String response = path;
         if (path.startsWith(CMD_QUERY))
         {
             response = "Query was " + path;
@@ -166,7 +194,14 @@ public class HttpdServer
 
     public HttpdServer()
     {
-        this(8080);
+        this(8040);
+    }
+    public void stop_httpd()
+    {
+        if (server == null)
+            return;
+        server.stop(1);
+        server = null;
     }
 
     public void start_httpd()
@@ -174,23 +209,34 @@ public class HttpdServer
         try
         {
             server = HttpsServer.create(new InetSocketAddress(port), 0);
-            server.createContext("/", new MyHandler());
+            server.createContext("/", new MyHandler(path));
+//            server.createContext("/");
             server.setExecutor(null); // creates a default executor
 
-            char[] passphrase = "passphrase".toCharArray();
-            KeyStore ks = KeyStore.getInstance("JKS");
-            ks.load(new FileInputStream("testkeys"), passphrase);
 
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, passphrase);
+    SSLContext      sslContext = SSLContext.getInstance("TLS");
+        char[] password = "mailsecurer".toCharArray();
 
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-            tmf.init(ks);
+        /*
+         * Allocate and initialize a KeyStore object.
+         */
+        KeyStore ks = KeyToolHelper.load_keystore(/*syskeystore*/ false);
 
-            SSLContext ssl = SSLContext.getInstance("TLS");
-            ssl.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        /*
+         * Allocate and initialize a KeyManagerFactory.
+         */
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+        /*
+         * Allocate and initialize a TrustManagerFactory.
+         */
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
 
-            server.setHttpsConfigurator(new HttpsConfigurator(ssl)
+
+        sslContext.init(kmf.getKeyManagers(),tmf.getTrustManagers(), null);
+
+            server.setHttpsConfigurator(new HttpsConfigurator(sslContext)
             {
 
                 @Override
@@ -239,27 +285,30 @@ public class HttpdServer
         MWWebService calculator = new MWWebService();
         Endpoint endpoint = Endpoint.create(/*"http://localhost:8050/1234",*/ calculator);
         HttpsServer s1 =  HttpsServer.create(new InetSocketAddress(8050), 0);
-		SSLContext      sslContext = SSLContext.getInstance("TLS");
+
+
+	SSLContext      sslContext = SSLContext.getInstance("TLS");
+        char[] password = "mailsecurer".toCharArray();
+
         /*
          * Allocate and initialize a KeyStore object.
          */
-        char[] password = "123456".toCharArray();
+        KeyStore ks = KeyToolHelper.load_keystore(/*syskeystore*/ false);
 
-			KeyStore ks = KeyStore.getInstance("JKS");
-			FileInputStream fis = new FileInputStream("jaxws.keystore");
-			ks.load(fis, password);
-			/*
-			 * Allocate and initialize a KeyManagerFactory.
-			 */
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-			kmf.init(ks, password);
-			/*
-			 * Allocate and initialize a TrustManagerFactory.
-			 */
-			TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-			tmf.init(ks);
+        /*
+         * Allocate and initialize a KeyManagerFactory.
+         */
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
+        /*
+         * Allocate and initialize a TrustManagerFactory.
+         */
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
 
-			sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+
+        sslContext.init(kmf.getKeyManagers(),tmf.getTrustManagers(), null);
+
 
 
         final SSLEngine m_engine = sslContext.createSSLEngine();

@@ -34,5 +34,9 @@ public class SearchCallEntry
     {
         return ssoc;
     }
+    public SearchCall get_call()
+    {
+        return call;
+    }
     
 }
