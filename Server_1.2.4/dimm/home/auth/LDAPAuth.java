@@ -217,13 +217,15 @@ public class LDAPAuth extends GenericRealmAuth
     @Override
     public boolean connect()
     {
+        Hashtable<String,String> connect_env = create_sec_env();
+        String admin_dn = "";
         try
         {            
 
-            Hashtable<String,String> connect_env = create_sec_env();
+            
             String rootSearchBase = get_user_search_base();
 
-            String admin_dn = null;
+            
             
             // ABSOLUTE DN?  (cn=manager,dc=test,dc=de)
             if (admin_name.toLowerCase().indexOf("dc=") >= 0)
@@ -246,8 +248,19 @@ public class LDAPAuth extends GenericRealmAuth
         }
         catch (Exception exc)
         {
+
+            LogManager.msg_auth( LogManager.LVL_DEBUG, "connect: " + admin_name);
+            connect_env.put(Context.SECURITY_PRINCIPAL, admin_name);
+            try
+            {
+                ctx = new InitialLdapContext(connect_env, null);
+                return true;
+            }
+            catch (Exception exception)
+            {
+            }
             error_txt = exc.getMessage();
-            exc.printStackTrace();
+            LogManager.msg_auth( LogManager.LVL_ERR, "Connect failed: " + admin_dn + ": " + exc.getMessage() );
         }
         return false;
     }
