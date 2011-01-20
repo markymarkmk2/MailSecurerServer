@@ -11,12 +11,12 @@ package dimm.home.mailarchiv.Commands;
 
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.Preferences;
-import home.shared.Utilities.LogConfigEntry;
+import home.shared.Utilities.CryptTools;
 import home.shared.Utilities.ParseToken;
-import java.util.ArrayList;
 
 /**
  *
@@ -80,6 +80,30 @@ public class GetSetOption extends AbstractCommand
         }
                  
         boolean ok = true;
+
+        if ( command.compareTo("GETTCP") == 0)
+        {
+            MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
+            if (m_ctx != null)
+                answer = "0: PO:" + m_ctx.get_port() + " IP:" + m_ctx.get_ip();
+            else
+                answer = "1: unknown";
+            return true;
+        }
+        if ( command.compareTo("CHECKENC") == 0)
+        {
+            String user_pwd = pt.GetString("PWD:");
+            MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
+
+            String dec_passwd = m_ctx.getPrefs().get_password();
+
+            if (dec_passwd != null && dec_passwd.compareTo(user_pwd) == 0)
+            if (m_ctx != null)
+                answer = "0: ok";
+            else
+                answer = "1: nok";
+            return true;
+        }
         
         try
         {
@@ -201,6 +225,7 @@ public class GetSetOption extends AbstractCommand
             return true;
 
         }
+
 
         
         return false;

@@ -81,6 +81,7 @@ public class GeneralPreferences extends Preferences
     public static final String AUTO_SET_IP = "AutoSetIP";
     public static final String EXCHANGE_IMPORT_MAX_MAILCOUNT_TRESHOLD = "ExchangeImportMaxMailCountTreshold";
     public static final String TOUCH_MESSAGEID_ON_RESTORE = "TouchMessageIDOnRestore";
+    public static final String HTTPD_PORT = "HttpdPort";
 
     
     /** Creates a new instance of Preferences */
@@ -147,6 +148,7 @@ public class GeneralPreferences extends Preferences
         prop_names.add( AUTO_SET_IP );
         prop_names.add( EXCHANGE_IMPORT_MAX_MAILCOUNT_TRESHOLD );
         prop_names.add( TOUCH_MESSAGEID_ON_RESTORE );
+        prop_names.add( HTTPD_PORT );
 
         String[] log_types = LogManager.get_log_types();
         for (int i = 0; i < log_types.length; i++)

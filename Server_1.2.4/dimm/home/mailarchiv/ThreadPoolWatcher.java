@@ -99,24 +99,33 @@ public class ThreadPoolWatcher
             ThreadPoolExecutor pool = pool_list.get(i);
             pool.shutdown();
         }
-        LogicControl.sleep(ms);
 
-        boolean pool_finished = false;
-        for (int i = 0; i < pool_list.size(); i++)
+        boolean pool_finished = true;
+
+        int cycle = 1000;
+        while(ms > 0)
         {
-            NamedThreadPoolExecutor pool = pool_list.get(i);
-            try
+            pool_finished = true;
+            for (int i = 0; i < pool_list.size(); i++)
             {
-                if (!pool.awaitTermination(1, TimeUnit.MILLISECONDS))
+                NamedThreadPoolExecutor pool = pool_list.get(i);
+                try
+                {
+                    if (!pool.awaitTermination(10, TimeUnit.MILLISECONDS))
+                    {
+                        pool_finished = false;
+                    }
+                }
+                catch (InterruptedException interruptedException)
                 {
                     pool_finished = false;
+                    LogManager.msg_system(LogManager.LVL_WARN, "awaitTermination Thread Pool " + pool.toString() + " aborted", interruptedException);
                 }
             }
-            catch (InterruptedException interruptedException)
-            {
-                pool_finished = false;
-                LogManager.msg_system(LogManager.LVL_WARN, "awaitTermination Thread Pool " + pool.toString() + " aborted", interruptedException);
-            }
+            if (pool_finished == true)
+                break;
+            LogicControl.sleep(cycle);
+            ms -= cycle;
         }
 
 

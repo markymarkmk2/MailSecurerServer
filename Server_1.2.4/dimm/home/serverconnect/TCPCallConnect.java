@@ -41,7 +41,6 @@ import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import dimm.home.mailarchiv.MandantPreferences;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.BackgroundWorker;
@@ -60,6 +59,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
@@ -112,29 +112,16 @@ public class TCPCallConnect extends WorkerParent
 
         if (m_ctx != null)
         {
-            server_ip = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.ws_ip );
-            server_port = 0;
-
-            // THIS IS NOT VISIBLE FOR CLIENT, WE HAVE TO PUT PORT INTO MANADANT TO MAKE THIS WORK
-         /*   String port_text = m_ctx.getPrefs().get_prop(MandantPreferences.SERVER_PORT);
-            try
-            {
-                server_port = Integer.parseInt(port_text);
-                LogManager.info_msg("Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
-            }
-            catch (NumberFormatException numberFormatException)
-            {
-                LogManager.err_log_fatal("Invalid Port for TCP-Server");
-            }*/
-            if (server_port == 0)
-            {
-                server_port = m_ctx.get_port();
-                LogManager.msg_comm( LogManager.LVL_INFO,"Setting TCP-Port for mandant " + m_ctx.getMandant().getName() + " to " + server_port);
-            }            
+            server_ip = m_ctx.get_ip();                        
+            server_port = m_ctx.get_port();
+            
+            LogManager.msg_comm( LogManager.LVL_INFO,"Setting TCP-Comm for mandant " + m_ctx.getMandant().getName() + " to " + server_ip + ":" + server_port);
+                        
         }
         else
         {
-            server_port = Main.ws_port;
+            server_ip = Main.get_base_ip();
+            server_port = Main.get_base_port();
         }
         if (!use_ssl)
         {
@@ -909,6 +896,12 @@ public class TCPCallConnect extends WorkerParent
             {
                 this.setStatusTxt(ST_IDLE);
                 this.setGoodState(true);
+
+                // CHECK IF WE WANT TO LOCK IN IP
+                InetAddress adr = InetAddress.getByName(server_ip);
+                if (adr.isLoopbackAddress())
+                    adr = null;
+                
                 if (use_ssl)
                 {
                  //   System.setProperty("javax.net.debug","ssl");
@@ -933,7 +926,7 @@ public class TCPCallConnect extends WorkerParent
                     SSLServerSocketFactory factory = ctx.getServerSocketFactory();
 
 
-                    tcp_s = factory.createServerSocket(server_port, backlog);
+                    tcp_s = factory.createServerSocket(server_port, backlog, adr);
 
 
                     if (tcp_s instanceof SSLServerSocket)
@@ -945,7 +938,7 @@ public class TCPCallConnect extends WorkerParent
                 }
                 else
                 {
-                    tcp_s = new ServerSocket(server_port, backlog);
+                    tcp_s = new ServerSocket(server_port, backlog, adr);
                 }
                 tcp_s.setReuseAddress(true);
                 tcp_s.setReceiveBufferSize(CS_Constants.STREAM_BUFFER_LEN * 2);

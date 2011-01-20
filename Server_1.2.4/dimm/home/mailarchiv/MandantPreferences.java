@@ -31,7 +31,6 @@ public class MandantPreferences extends Preferences
     public static final String TEMPFILEDIR ="TempFileDir";
     public static final String LANG = "Language";
     public static final String INDEX_TASK = "IndexTask";
-    public static final String SERVER_PORT = "ServerPort";
     public static final String SERVER_IP = "ServerIP";
     
     
@@ -45,6 +44,7 @@ public class MandantPreferences extends Preferences
 
     public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
     public static final String HTTPD_PORT = "HttpdPort";
+    public static final String PORT = "Port";
     
     MandantContext context;
 
@@ -69,13 +69,14 @@ public class MandantPreferences extends Preferences
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
         prop_names.add( INDEX_TASK );
-        prop_names.add( SERVER_PORT );
+     
         prop_names.add( SERVER_IP );
         prop_names.add( SSO_TIMEOUT_S );
         prop_names.add( INDEX_THREADS );
         prop_names.add( DSH_HOUR_DIRS );
         prop_names.add( LANG );
         prop_names.add( HTTPD_PORT );
+        prop_names.add( PORT );
     }
     
     public void setContext( MandantContext _context )

@@ -46,6 +46,7 @@ import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
 import home.shared.hibernate.RoleOption;
 import home.shared.hibernate.SmtpServer;
+import home.shared.mail.CryptAESOutputStream;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.io.File;
@@ -130,7 +131,13 @@ public class MandantContext
     }
     public int get_port()
     {
-        return Main.ws_port + 1 + mandant.getId();
+        int port = prefs.get_int_prop(MandantPreferences.PORT, Main.get_base_port() + 1 + mandant.getId());
+        return port;
+    }
+    public String get_ip()
+    {
+        String ip = getPrefs().get_prop(MandantPreferences.SERVER_IP, Main.get_base_ip() );
+        return ip;
     }
     
     public int get_httpd_port()
@@ -140,11 +147,11 @@ public class MandantContext
         {
             if (test_flag(CS_Constants.MA_HTTPS_OWN))
             {
-                port = prefs.get_int_prop(MandantPreferences.HTTPD_PORT, Main.httpd_port + 1 + mandant.getId());
+                port = prefs.get_int_prop(MandantPreferences.HTTPD_PORT, Main.get_httpd_port() + 1 + mandant.getId());
             }
             else
             {
-                port = Main.httpd_port;
+                port = Main.get_httpd_port();
             }
         }
         return port;
@@ -574,6 +581,19 @@ public class MandantContext
                 // CHECK IF WE NEED TO START A FORMERLY UNSTARTED HTTPDS
                 control.fireup_httpds();
             }
+        }
+
+        String key = "1234567890123456789012345";
+        try
+        {
+            CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
+            String s = cos.toString();
+            cos.close();
+        }
+        catch (Exception exc)
+        {
+            Notification.throw_notification(mandant, Notification.NF_FATAL_ERROR, Main.Txt("Please_install_the_java_security_extension") );
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SYSTEM,"Testing key length " + key.length() + " NOK: " + exc.getMessage());
         }
 
     }

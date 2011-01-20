@@ -6,6 +6,7 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.Updater.Updater;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -81,10 +82,13 @@ public final class Main
     public static boolean trace_mode = false;
    
     
-    static LogicControl control;    
-    public static String ws_ip = "127.0.0.1";
-    public static int ws_port = 8050;
-    public static int httpd_port = 8000;
+    static LogicControl control;
+    
+    private static String ws_ip = "127.0.0.1";
+    private static int ws_port = 8050;
+    private static int httpd_port = 8000;
+
+    
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
     
     
@@ -102,6 +106,18 @@ public final class Main
         general_prefs = new GeneralPreferences();
     }
 
+    public static int get_httpd_port()
+    {
+        return general_prefs.get_int_prop(GeneralPreferences.HTTPD_PORT, Main.httpd_port );
+    }
+    public static int get_base_port()
+    {
+        return general_prefs.get_int_prop(GeneralPreferences.PORT, Main.ws_port );
+    }
+    public static String get_base_ip()
+    {
+        return general_prefs.get_prop(GeneralPreferences.IP, Main.ws_ip );
+    }
 
 
     
@@ -164,6 +180,8 @@ public final class Main
         {
             LogManager.msg_system( LogManager.LVL_ERR, "Cannot create local dirs: " + exc.getMessage() );
         }
+
+        init_keystore();
 
         // PREFS FOR ARGS, ARGS HABEN PRIO
         create_prefs();
@@ -268,15 +286,23 @@ public final class Main
 
         LogManager.msg_system( LogManager.LVL_INFO, "Using DB connect " + SQLWorker.get_db_connect_string());
 
-
-
-        
-
-
-       
-        
-        
     }
+
+    void init_keystore()
+    {
+        try
+        {
+            if (!new File("mskeystore.jks").exists())
+            {
+                new File("default_mskeystore.jks").renameTo(new File("mskeystore.jks"));
+            }
+        }
+        catch (Exception e)
+        {
+            LogManager.msg_system( LogManager.LVL_ERR, "Initializing keystore failed!" + e.getLocalizedMessage());
+        }
+    }
+
 
     void init_mail_settings()
     {
@@ -390,6 +416,7 @@ public final class Main
         }
 
 
+
         Main m = new Main(args);
 
         String key = "1234567890123456789012345";
@@ -398,11 +425,14 @@ public final class Main
         {
             CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
             String s = cos.toString();
+            cos.close();
             LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_SECURITY, "Testing key length " + key.length() + " OK");
         }
         catch (Exception exc)
         {
             LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SECURITY,"Testing key length " + key.length() + " NOK: " + exc.getMessage());
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_SYSTEM,"Testing key length " + key.length() + " NOK: " + exc.getMessage());
+
         }
 
         AuditLog.getInstance().start( args );

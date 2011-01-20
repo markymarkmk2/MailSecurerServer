@@ -1083,8 +1083,9 @@ public class LogicControl
 
     void startup_httpd_base_server()
     {
-        boolean need_base_server = false;
-
+        // WE STARTUP BASE SERVER ANYWAY, ONLINE HELP NEEDS IT
+        boolean need_base_server = true;
+/*
         for (int i = 0; i < mandanten_list.size(); i++)
         {
             final MandantContext ctx = mandanten_list.get(i);
@@ -1094,7 +1095,7 @@ public class LogicControl
                 need_base_server = true;
                 break;
             }
-        }
+        }*/
 
         if (need_base_server)
         {
@@ -1114,7 +1115,7 @@ public class LogicControl
                 if (war.exists())
                 {
                     LogManager.msg_system( LogManager.LVL_INFO, "Starting WebClient");
-                    gwt.start(Main.httpd_port, "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
+                    gwt.start(Main.get_httpd_port(), "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
                 }
                 else
                 {

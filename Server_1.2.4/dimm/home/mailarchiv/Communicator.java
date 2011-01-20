@@ -257,7 +257,18 @@ public class Communicator extends WorkerParent
 
                     while( !isShutdown() )
                     {
-                         udp_s = new DatagramSocket(UDP_SERVER_PORT,InetAddress.getByName("0.0.0.0"));
+                        // CHECK IF WE WANT TO LOCK IN IP
+                        InetAddress adr = InetAddress.getByName(Main.get_base_ip());
+                        if (adr.isLoopbackAddress())
+                        {
+                            udp_s = new DatagramSocket(UDP_SERVER_PORT,InetAddress.getByName("0.0.0.0"));
+                        }
+                        else
+                        {
+                            udp_s = new DatagramSocket(UDP_SERVER_PORT, adr);
+                        }
+
+                         
                          udp_s.setReuseAddress(true);
                          udp_s.setBroadcast(true);
                          udp_s.setSoTimeout(0); // NO TIMEOUT
@@ -635,7 +646,7 @@ public class Communicator extends WorkerParent
         {
             HelloCommand hello = new HelloCommand();
             if (hello.do_command(str))
-                answer = "OK:" + hello.get_answer() + " PO:" + Main.ws_port;
+                answer = "OK:" + hello.get_answer() + " PO:" + Main.get_base_port();
             else
                 answer = "NOK:" + hello.get_answer();
 
