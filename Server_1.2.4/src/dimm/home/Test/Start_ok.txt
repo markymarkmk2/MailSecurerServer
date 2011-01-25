@@ -1,0 +1,277 @@
+C:\Users\mw\Desktop>cd /d "J:\Develop\Java\JMailArchiv\Server 1.2.4"
+
+J:\Develop\Java\JMailArchiv\Server 1.2.4>"C:\Program Files\Java\jdk1.6.0_21\jre\
+bin\java" -Xdebug  -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
+ -Xmx512m -cp " J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\mysql-connector-jav
+a-3.0.17-ga-bin.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\postgresql-8.3-
+604.jdbc4.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\jilter-1.2\jil
+ter-1.2.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\apache-log4j-1.2
+.15\log4j-1.2.15.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\commons
+-codec-1.3.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\javamail-1.4.
+2\mail.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\db-derby-10.5.1.1
+-bin\db-derby-10.5.1.1-bin\lib\derby.jar;J:\Develop\Java\JMailArchiv\ServerLibs\
+ExternalLibs\javatar-2.5\javatar-2.5\jars\tar.jar;J:\Develop\Java\JMailArchiv\Se
+rverLibs\ExternalLibs\jdom-1.1\build\jdom.jar;J:\Develop\Java\JMailArchiv\Server
+ 1.2.4\lib\poi-3.2-FINAL-20081019.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\l
+ib\poi-contrib-3.2-FINAL-20081019.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\l
+ib\poi-scratchpad-3.2-FINAL-20081019.jar;J:\Develop\Java\JMailArchiv\ServerLibs\
+ExternalLibs\j-xchange_1_01.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\moo
+nrug.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\appsrvbridge.jar;J:\Develo
+p\Java\JMailArchiv\Server 1.2.4\lib\jsp-parser-ext.jar;J:\Develop\Java\JMailArch
+iv\Server 1.2.4\lib\jstl.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\servle
+t2.5-jsp2.1-api.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\standard.jar;J:
+\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\antlr-2.7.6.jar;J:\
+Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\asm.jar;J:\Develop\J
+ava\JMailArchiv\Server 1.2.4\lib\hibernate-support\asm-attrs.jar;J:\Develop\Java
+\JMailArchiv\Server 1.2.4\lib\hibernate-support\cglib-2.1.3.jar;J:\Develop\Java\
+JMailArchiv\Server 1.2.4\lib\hibernate-support\commons-collections-2.1.1.jar;J:\
+Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\commons-logging-1.1.
+jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\dom4j-1.6.1.j
+ar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\ehcache-1.2.3.
+jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\jdbc2_0-stdex
+t.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\jta.jar;J:\
+Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate3.jar;J:\De
+velop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-tools.jar;J:
+\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-annotatio
+ns.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-
+commons-annotations.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-s
+upport\hibernate-entitymanager.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\
+hibernate-support\javassist.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hib
+ernate-support\ejb3-persistence.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib
+\Junit\junit-3.8.2.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\JUnit_4\juni
+t-4.5.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-codec-1.3.jar;J:\
+Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-httpclient-3.1.jar;J:\Develop\
+Java\JMailArchiv\Server 1.2.4\lib\bcprov-jdk16-144.jar;J:\Develop\Java\JMailArch
+iv\Server 1.2.4\lib\xpp3_min-1.1.4c.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4
+\lib\xstream-1.3.1.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-lang
+-2.4.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\PDFBox_1.0.0SVN\tar
+get\pdfbox-0.8.0-incubating.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalL
+ibs\PDFBox_1.0.0SVN\external\jempbox-0.8.0-incubating.jar;J:\Develop\Java\JMailA
+rchiv\Server 1.2.4\lib\fontbox-0.8.0-incubating.jar;J:\Develop\Java\JMailArchiv\
+Server 1.2.4\lib\lucene-core-3.0.2.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\
+lib\lucene-analyzers-3.0.2.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\luce
+ne-queries-3.0.2.jar;J:\Develop\Java\JMailArchiv\LibShare 1.2.4\dist\LibShare.ja
+r;J:\Develop\Java\JMailArchiv\LibEWS\dist\LibEWS.jar;J:\Develop\Java\JMailArchiv
+\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\activation.jar;J:\Develop\Java\JMail
+Archiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\FastInfoset.jar;J:\Develop\Jav
+a\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\gmbal-api-only.jar;J:\D
+evelop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\http.jar;J:\D
+evelop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-api.jar;
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-impl
+.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb
+-xjc.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\
+jaxws-api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616
+\lib\jaxws-rt.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-2010
+0616\lib\jaxws-tools.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-
+ri-20100616\lib\jsr173_api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\
+jaxws-ri-20100616\lib\jsr181-api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS
+2.2.1\jaxws-ri-20100616\lib\jsr250-api.jar;J:\Develop\Java\JMailArchiv\Packages\
+JaxWS 2.2.1\jaxws-ri-20100616\lib\management-api.jar;J:\Develop\Java\JMailArchiv
+\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\mimepull.jar;J:\Develop\Java\JMailAr
+chiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\policy.jar;J:\Develop\Java\JMail
+Archiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\resolver.jar;J:\Develop\Java\J
+MailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\saaj-api.jar;J:\Develop\Ja
+va\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\saaj-impl.jar;J:\Devel
+op\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\servlet.jar;J:\De
+velop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\stax-ex.jar;J:
+\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\streambuffe
+r.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\woo
+dstox.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\li
+b\slf4j-api-1.5.6.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subeth
+asmtp-3.0\lib\slf4j-simple-1.5.6.jar;J:\Develop\Java\JMailArchiv\ServerLibs\Exte
+rnalLibs\subethasmtp-3.0\subethasmtp.jar;J:\Develop\Java\JMailArchiv\Server 1.2.
+4\build\classes;dist\MailArchiv.jar" dimm.home.mailarchiv.Main -vv
+Listening for transport dt_socket at address: 5005
+18.11.2010 06:40:31: Info   : system: Property java.version: 1.6.0_21
+18.11.2010 06:40:31: Info   : system: Property java.vendor: Sun Microsystems Inc
+.
+18.11.2010 06:40:31: Info   : system: Property java.home: C:\Program Files\Java\
+jdk1.6.0_21\jre
+18.11.2010 06:40:31: Info   : system: Property java.class.path:  J:\Develop\Java
+\JMailArchiv\Server 1.2.4\lib\mysql-connector-java-3.0.17-ga-bin.jar;J:\Develop\
+Java\JMailArchiv\Server 1.2.4\lib\postgresql-8.3-604.jdbc4.jar;J:\Develop\Java\J
+MailArchiv\ServerLibs\ExternalLibs\jilter-1.2\jilter-1.2.jar;J:\Develop\Java\JMa
+ilArchiv\ServerLibs\ExternalLibs\apache-log4j-1.2.15\log4j-1.2.15.jar;J:\Develop
+\Java\JMailArchiv\ServerLibs\ExternalLibs\commons-codec-1.3.jar;J:\Develop\Java\
+JMailArchiv\ServerLibs\ExternalLibs\javamail-1.4.2\mail.jar;J:\Develop\Java\JMai
+lArchiv\ServerLibs\ExternalLibs\db-derby-10.5.1.1-bin\db-derby-10.5.1.1-bin\lib\
+derby.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\javatar-2.5\javata
+r-2.5\jars\tar.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\jdom-1.1\
+build\jdom.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-3.2-FINAL-200810
+19.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-contrib-3.2-FINAL-200810
+19.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-scratchpad-3.2-FINAL-200
+81019.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\j-xchange_1_01.jar
+;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\moonrug.jar;J:\Develop\Java\JMailA
+rchiv\Server 1.2.4\lib\appsrvbridge.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4
+\lib\jsp-parser-ext.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\jstl.jar;J:
+\Develop\Java\JMailArchiv\Server 1.2.4\lib\servlet2.5-jsp2.1-api.jar;J:\Develop\
+Java\JMailArchiv\Server 1.2.4\lib\standard.jar;J:\Develop\Java\JMailArchiv\Serve
+r 1.2.4\lib\hibernate-support\antlr-2.7.6.jar;J:\Develop\Java\JMailArchiv\Server
+ 1.2.4\lib\hibernate-support\asm.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\li
+b\hibernate-support\asm-attrs.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\h
+ibernate-support\cglib-2.1.3.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hi
+bernate-support\commons-collections-2.1.1.jar;J:\Develop\Java\JMailArchiv\Server
+ 1.2.4\lib\hibernate-support\commons-logging-1.1.jar;J:\Develop\Java\JMailArchiv
+\Server 1.2.4\lib\hibernate-support\dom4j-1.6.1.jar;J:\Develop\Java\JMailArchiv\
+Server 1.2.4\lib\hibernate-support\ehcache-1.2.3.jar;J:\Develop\Java\JMailArchiv
+\Server 1.2.4\lib\hibernate-support\jdbc2_0-stdext.jar;J:\Develop\Java\JMailArch
+iv\Server 1.2.4\lib\hibernate-support\jta.jar;J:\Develop\Java\JMailArchiv\Server
+ 1.2.4\lib\hibernate-support\hibernate3.jar;J:\Develop\Java\JMailArchiv\Server 1
+.2.4\lib\hibernate-support\hibernate-tools.jar;J:\Develop\Java\JMailArchiv\Serve
+r 1.2.4\lib\hibernate-support\hibernate-annotations.jar;J:\Develop\Java\JMailArc
+hiv\Server 1.2.4\lib\hibernate-support\hibernate-commons-annotations.jar;J:\Deve
+lop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-entitymanager.
+jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\javassist.jar
+;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\ejb3-persistence
+.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\Junit\junit-3.8.2.jar;J:\Devel
+op\Java\JMailArchiv\Server 1.2.4\lib\JUnit_4\junit-4.5.jar;J:\Develop\Java\JMail
+Archiv\Server 1.2.4\lib\commons-codec-1.3.jar;J:\Develop\Java\JMailArchiv\Server
+ 1.2.4\lib\commons-httpclient-3.1.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\l
+ib\bcprov-jdk16-144.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\xpp3_min-1.
+1.4c.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\xstream-1.3.1.jar;J:\Devel
+op\Java\JMailArchiv\Server 1.2.4\lib\commons-lang-2.4.jar;J:\Develop\Java\JMailA
+rchiv\ServerLibs\ExternalLibs\PDFBox_1.0.0SVN\target\pdfbox-0.8.0-incubating.jar
+;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\PDFBox_1.0.0SVN\external\je
+mpbox-0.8.0-incubating.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\fontbox-
+0.8.0-incubating.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-core-3.
+0.2.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-analyzers-3.0.2.jar;
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-queries-3.0.2.jar;J:\Develop
+\Java\JMailArchiv\LibShare 1.2.4\dist\LibShare.jar;J:\Develop\Java\JMailArchiv\L
+ibEWS\dist\LibEWS.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-
+20100616\lib\activation.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jax
+ws-ri-20100616\lib\FastInfoset.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.
+2.1\jaxws-ri-20100616\lib\gmbal-api-only.jar;J:\Develop\Java\JMailArchiv\Package
+s\JaxWS 2.2.1\jaxws-ri-20100616\lib\http.jar;J:\Develop\Java\JMailArchiv\Package
+s\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-api.jar;J:\Develop\Java\JMailArchiv\Pac
+kages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-impl.jar;J:\Develop\Java\JMailArchi
+v\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-xjc.jar;J:\Develop\Java\JMailA
+rchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-api.jar;J:\Develop\Java\J
+MailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-rt.jar;J:\Develop\Ja
+va\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-tools.jar;J:\Dev
+elop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr173_api.jar;
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr181-ap
+i.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr
+250-api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\l
+ib\management-api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-
+20100616\lib\mimepull.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws
+-ri-20100616\lib\policy.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jax
+ws-ri-20100616\lib\resolver.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1
+\jaxws-ri-20100616\lib\saaj-api.jar;J:\Develop\Java\JMailArchiv\Packages\JaxWS 2
+.2.1\jaxws-ri-20100616\lib\saaj-impl.jar;J:\Develop\Java\JMailArchiv\Packages\Ja
+xWS 2.2.1\jaxws-ri-20100616\lib\servlet.jar;J:\Develop\Java\JMailArchiv\Packages
+\JaxWS 2.2.1\jaxws-ri-20100616\lib\stax-ex.jar;J:\Develop\Java\JMailArchiv\Packa
+ges\JaxWS 2.2.1\jaxws-ri-20100616\lib\streambuffer.jar;J:\Develop\Java\JMailArch
+iv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\woodstox.jar;J:\Develop\Java\JMail
+Archiv\ServerLibs\ExternalLibs\subethasmtp-3.0\lib\slf4j-api-1.5.6.jar;J:\Develo
+p\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\lib\slf4j-simple-1.5.
+6.jar;J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\subeth
+asmtp.jar;J:\Develop\Java\JMailArchiv\Server 1.2.4\build\classes;dist\MailArchiv
+.jar
+18.11.2010 06:40:31: Info   : system: Property os.name: Windows 7
+18.11.2010 06:40:31: Info   : system: Property os.arch: amd64
+18.11.2010 06:40:31: Info   : system: Property os.version: 6.1
+18.11.2010 06:40:31: Info   : system: Property user.dir: J:\Develop\Java\JMailAr
+chiv\Server 1.2.4
+18.11.2010 06:40:31: Info   : system: Starting MailSecurer V1.5.0
+18.11.2010 06:40:31: Info   : system: Args: -vv
+18.11.2010 06:40:31: Info   : system: Using DB connect jdbc:derby:MailArchiv
+18.11.2010 06:40:32: Info   : security: Testing key length 25 OK
+18.11.2010 06:40:33: Debug  : system: Missing translation resource: Found_valid_
+license
+18.11.2010 06:40:33: Info   : license: Found valid license: MailSecurer serial:1
+234 units:100 module:1 HWID:ABmZVDOK
+log4j:WARN No appenders could be found for logger (org.hibernate.cfg.annotations
+.Version).
+log4j:WARN Please initialize the log4j system properly.
+18.11.2010 06:40:35: Info   : comm: Setting TCP-Port for mandant Store to 8052
+18.11.2010 06:40:35: Info   : archive: Found Mandant Store on DS Z:\\MSTest2
+18.11.2010 06:40:35: Info   : archive: Found Mandant Store on DS z:\\MSDisk1
+18.11.2010 06:40:35: Info   : archive: Found Mandant Store on DS Z:\\MSDisk2
+18.11.2010 06:40:35: Debug  : system: Missing translation resource: Opening_sock
+et
+18.11.2010 06:40:35: Debug  : milter: Opening socket
+18.11.2010 06:40:35: Debug  : system: Missing translation resource: Binding_to_e
+ndpoint_
+18.11.2010 06:40:35: Debug  : milter: Binding to endpoint /192.168.1.145:8020
+18.11.2010 06:40:35: Debug  : system: Missing translation resource: Bound_to_
+18.11.2010 06:40:35: Debug  : milter: Bound to /192.168.1.145:8020
+18.11.2010 06:40:35: Debug  : milter: Opening socket
+18.11.2010 06:40:35: Debug  : milter: Binding to endpoint /1.2.3.4:1111
+18.11.2010 06:40:35: Error  : system: Cannot create milter: Cannot assign reques
+ted address: bind: Cannot assign requested address: bind
+18.11.2010 06:40:35: Info   : imaps: Starting IMAP-Server for Store on 192.168.1
+.145:143
+18.11.2010 06:40:35: Debug  : imaps: Opening socket
+18.11.2010 06:40:35: Info   : comm: Setting TCP-Port for mandant New Company5 to
+ 8056
+18.11.2010 06:40:35: Info   : comm: Setting TCP-Port for mandant New Company to
+8066
+18.11.2010 06:40:35: Debug  : system: Missing translation resource: Checking_int
+ernet
+18.11.2010 06:40:36: Info   : system: Mandant 1 is Store
+18.11.2010 06:40:36: Info   : system: Mandant 5 is New Company5
+18.11.2010 06:40:36: Info   : system: Mandant 15 is New Company
+18.11.2010 06:40:36: Debug  : system: Requirement Checks:
+LogicControl check :
+Communicator check:
+MilterServer check:
+MailProxyServer check:
+HotfolderServer check:
+MailBoxFetcherServer check:
+MBoxImportServer check:
+ExchangeImportServer check:
+SQLWorker check:
+IMAPBrowserServer check:
+TCPCallConnect check:
+UpdateWorker check:
+BackupServer check:
+SMTPListener check:
+
+18.11.2010 06:40:36: Debug  : system: Exec: ntpdate ptbtime2.ptb.de && hwclock -
+-directisa -w
+18.11.2010 06:40:36: Error  : system: Cannot execute command ntpdate ptbtime2.pt
+b.de && hwclock --directisa -w: Cannot run program "ntpdate ptbtime2.ptb.de && h
+wclock --directisa -w": CreateProcess error=2, Das System kann die angegebene Da
+tei nicht finden
+18.11.2010 06:40:36: Debug  : system: Missing translation resource: System_time_
+cannot_be_retrieved
+18.11.2010 06:40:36: Warning: system: System time cannot be retrieved:
+18.11.2010 06:40:37: Debug  : comm: Starting communicator tasks
+18.11.2010 06:40:37: Debug  : system: MilterServer has 1 task(s)
+18.11.2010 06:40:37: Debug  : proxy: MailProxyServer is starting 5 tasks
+18.11.2010 06:40:37: Debug  : system: Missing translation resource: Going_to_acc
+ept
+18.11.2010 06:40:37: Info   : proxy: MailProxy is running for the host 'smtp://a
+uth.mail.onlinehome.de:25' on local port 25
+18.11.2010 06:40:37: Info   : proxy: MailProxy is running for the host 'pop3://p
+op.onlinehome.de:110' on local port 110
+18.11.2010 06:40:37: Debug  : system: HotfolderServer has 2 task(s)
+18.11.2010 06:40:37: Info   : proxy: MailProxy is running for the host 'pop3://m
+ailng.gatworks.de:110' on local port 111
+18.11.2010 06:40:37: Debug  : system: MailBoxFetcherServer has 1 task(s)
+18.11.2010 06:40:37: Debug  : system: Missing translation resource: Not_enough_s
+pace_in_archive_to_process
+18.11.2010 06:40:37: Debug  : milter: Going to accept
+18.11.2010 06:40:37: Debug  : system: IMAPBrowserServer has 1 task(s)
+18.11.2010 06:40:37: Debug  : system: Missing translation resource: sleeping
+18.11.2010 06:40:37: Debug  : comm: Starting communicator tasks
+18.11.2010 06:40:37: Debug  : system: Missing translation resource: Accepting_ne
+w_connection
+18.11.2010 06:40:37: Debug  : imaps: Accepting new connection
+18.11.2010 06:40:37: Debug  : system: BackupServer has 1 task(s)
+18.11.2010 06:40:37: Debug  : system: SMTPListener has 1 task(s)
+18.11.2010 06:40:37: Debug  : comm: Starting communicator tasks
+18.11.2010 06:40:37: Debug  : index: Starting Indexmanager
+18.11.2010 06:40:37: Debug  : comm: Starting communicator tasks
+18.11.2010 06:40:37: Debug  : index: Starting Indexmanager
+18.11.2010 06:40:37: Debug  : comm: Starting communicator tasks
+18.11.2010 06:40:37: Debug  : index: Starting Indexmanager
+18.11.2010 06:40:37: Info   : import: SMTP-Listener is running on 'smtp://:26'
+77 [BackgroundWorker] INFO org.subethamail.smtp.server.SMTPServer - SMTP server
+starting
+18.11.2010 06:40:37: Info   : proxy: MailProxy is running for the host 'pop3s://
+pop.gmx.net:995' on local port 997
+18.11.2010 06:40:37: Info   : proxy: MailProxy is running for the host 'smtps://
+auth.mail.onlinehome.de:465' on local port 465
+S: trusting RSA
+Batchvorgang abbrechen (J/N)?
