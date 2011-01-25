@@ -1,0 +1,80 @@
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\mysql-connector-java-3.0.17-ga-bin.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\postgresql-8.3-604.jdbc4.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\jilter-1.2\jilter-1.2.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\apache-log4j-1.2.15\log4j-1.2.15.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\commons-codec-1.3.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\javamail-1.4.2\mail.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\db-derby-10.5.1.1-bin\db-derby-10.5.1.1-bin\lib\derby.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\javatar-2.5\javatar-2.5\jars\tar.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\jdom-1.1\build\jdom.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-3.2-FINAL-20081019.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-contrib-3.2-FINAL-20081019.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\poi-scratchpad-3.2-FINAL-20081019.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\j-xchange_1_01.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\moonrug.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\appsrvbridge.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\jsp-parser-ext.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\jstl.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\servlet2.5-jsp2.1-api.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\standard.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\antlr-2.7.6.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\asm.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\asm-attrs.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\cglib-2.1.3.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\commons-collections-2.1.1.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\commons-logging-1.1.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\dom4j-1.6.1.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\ehcache-1.2.3.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\jdbc2_0-stdext.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\jta.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate3.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-tools.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-annotations.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-commons-annotations.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\hibernate-entitymanager.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\javassist.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\hibernate-support\ejb3-persistence.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\Junit\junit-3.8.2.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\JUnit_4\junit-4.5.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-codec-1.3.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-httpclient-3.1.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\bcprov-jdk16-144.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\xpp3_min-1.1.4c.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\xstream-1.3.1.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\commons-lang-2.4.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\PDFBox_1.0.0SVN\target\pdfbox-0.8.0-incubating.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\PDFBox_1.0.0SVN\external\jempbox-0.8.0-incubating.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\fontbox-0.8.0-incubating.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-core-3.0.2.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-analyzers-3.0.2.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\lib\lucene-queries-3.0.2.jar
+J:\Develop\Java\JMailArchiv\LibShare 1.2.4\dist\LibShare.jar
+J:\Develop\Java\JMailArchiv\LibEWS\dist\LibEWS.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\activation.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\FastInfoset.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\gmbal-api-only.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\http.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-impl.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxb-xjc.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-rt.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jaxws-tools.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr173_api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr181-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\jsr250-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\management-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\mimepull.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\policy.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\resolver.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\saaj-api.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\saaj-impl.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\servlet.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\stax-ex.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\streambuffer.jar
+J:\Develop\Java\JMailArchiv\Packages\JaxWS 2.2.1\jaxws-ri-20100616\lib\woodstox.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\lib\slf4j-api-1.5.6.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\lib\slf4j-simple-1.5.6.jar
+J:\Develop\Java\JMailArchiv\ServerLibs\ExternalLibs\subethasmtp-3.0\subethasmtp.jar
+J:\Develop\Java\JMailArchiv\Server 1.2.4\build\classes
+dist\MailArchiv.jar
