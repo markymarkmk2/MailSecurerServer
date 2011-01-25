@@ -256,10 +256,31 @@ public class DiskSpaceHandler
     }
     public int get_enc_mode()
     {
+        if (dsi == null)
+        {
+            try
+            {
+                read_info();
+            }
+            catch (VaultException vaultException)
+            {
+            }
+        }
+
         return dsi.getEncMode();
     }
     public RFCGenericMail.FILENAME_MODE get_fmode()
     {
+        if (dsi == null)
+        {
+            try
+            {
+                read_info();
+            }
+            catch (VaultException vaultException)
+            {
+            }
+        }
         return dsi.getFmode();
     }
 

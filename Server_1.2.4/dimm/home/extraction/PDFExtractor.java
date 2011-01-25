@@ -32,15 +32,16 @@ public class PDFExtractor implements TextExtractor, Serializable
         Writer output = null;
         PDFTextStripper stripper = null;
         PDFParser parser = null;
-/*        File pdf_file = null;
-        FileInputStream fis = null;*/
+
         try
         {
-           /* pdf_file = m_ctx.getTempFileHandler().writeTemp("PDFExtract", "extract", "txt", is);
-            fis = new FileInputStream( pdf_file );*/
 
             parser = new PDFParser(is);
+            // SET WRK DIRECTORY
+            parser.setTempDirectory( m_ctx.getTempFileHandler().get_work_path());
+            
             parser.parse();
+
             document = parser.getPDDocument();
             if (document.isEncrypted())
             {

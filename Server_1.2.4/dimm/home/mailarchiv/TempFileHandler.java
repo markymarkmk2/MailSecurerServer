@@ -28,6 +28,7 @@ public class TempFileHandler
     public static final String IMPMAIL_PREFIX = "mailimp";
     public static final String QUARANTINE_PREFIX = "quarantine";
     public static final String HOLD_PREFIX = "hold";
+    public static final String WORK_PREFIX = "work";
     public static final String INDEX_BUFFER_PREFIX = "indexbuffer";
 
     MandantContext ctx;
@@ -38,6 +39,9 @@ public class TempFileHandler
     {
         this.ctx = ctx;
         delete_list = new ArrayList<File>();
+
+        delete_work_files();
+
 
         Thread thr = new Thread()
         {
@@ -185,6 +189,7 @@ public class TempFileHandler
                 e.printStackTrace();
             }
         }
+        delete_work_files();
     }
     public File create_temp_file(String subdir, String prefix, String suffix) throws IOException
     {
@@ -341,6 +346,32 @@ public class TempFileHandler
             }
         }
         tmp_file.delete();
+    }
+
+    public File get_work_path()
+    {
+        File d = new File( ctx.get_tmp_path() , WORK_PREFIX );
+        if (!d.exists())
+            d.mkdirs();
+
+        return d;
+    }
+
+    private void delete_work_files()
+    {
+        try
+        {
+            File wrk_dir = get_work_path();
+            File[] wrf_files = wrk_dir.listFiles();
+            for (int i = 0; i < wrf_files.length; i++)
+            {
+                File file = wrf_files[i];
+                file.delete();
+            }
+        }
+        catch (Exception e)
+        {
+        }
     }
 
 
