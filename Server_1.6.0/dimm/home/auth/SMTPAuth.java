@@ -7,6 +7,7 @@ package dimm.home.auth;
 import com.sun.mail.smtp.SMTPTransport;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.SmtpMailFromTransport;
 import java.net.Socket;
 
 import java.util.Properties;
@@ -147,7 +148,7 @@ public class SMTPAuth extends GenericRealmAuth
         {
             Session mailConnection = Session.getInstance(props, null);
             URLName params = new URLName(protocol, host, port, null, user_principal, pwd);
-            SMTPTransport transport = new SMTPTransport(mailConnection, params);
+            SMTPTransport transport = new SmtpMailFromTransport(mailConnection, params);
 
             transport.connect(smtp_sock);
 

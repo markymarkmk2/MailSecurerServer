@@ -19,6 +19,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import home.shared.SQL.UserSSOEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.SmtpMailFromTransport;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
@@ -420,7 +421,7 @@ public class SearchCall
     }
 
 
-    public static String send_mail( String id,  UserSSOEntry ssoc, int[] rowi, String send_to )
+    public static String send_mail( String id,  UserSSOEntry ssoc, int[] rowi, String send_from, String send_to )
     {
         SearchCallEntry sce = get_sce(id, ssoc.get_sso_str_id());
         if (sce == null)
@@ -428,6 +429,17 @@ public class SearchCall
             return "1: invalid sce";
         }
         MandantContext m_ctx = sce.call.get_ctx();
+
+
+        // DETECT SENDER FOR SMTP-ENVELOPE
+        if (send_from.equals("company"))
+        {
+            send_from = m_ctx.getMandant().getMailfrom();
+        }
+        else if (send_from.equals("unchanged"))
+        {
+            send_from = "";
+        }
 
         String host = m_ctx.getMandant().getSmtp_host();
         int port = m_ctx.getMandant().getSmtp_port();
@@ -482,6 +494,14 @@ public class SearchCall
                     Session session = Session.getDefaultInstance(props);
                     MimeMessage msg = new MimeMessage(session, is);
 
+                    if (send_from != null && send_from.length() > 0)
+                    {
+                        if (transport instanceof SmtpMailFromTransport)
+                        {
+                            SmtpMailFromTransport tr = (SmtpMailFromTransport) transport;
+                            tr.set_mail_from(send_from);
+                        }
+                    }
 
                     // TOUCH MESSAGE-ID TO PREVENT GETTING INVISIBLE IF MSG WAS DELETED BY IMAPSERVER
                     if (Main.get_bool_prop(GeneralPreferences.TOUCH_MESSAGEID_ON_RESTORE, true))
@@ -581,6 +601,10 @@ public class SearchCall
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
+            // SKIP DATA ONLY DS
+            if (!dsh.is_index())
+                continue;
+
             ana = dsh.create_read_analyzer();
             if (ana != null)
                 break;
@@ -937,12 +961,18 @@ public class SearchCall
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
+
+             // NO DATA ONLY DS
+            if (!dsh.is_index())
+                continue;
+            
             if (dsh.islock_for_rebuild())
             {
                 rebuild_is_active = true;
                 LogManager.msg_index(LogManager.LVL_DEBUG, "Skipping index " + dsh.getDs().getPath() + " during rebuild");
                 continue;
             }
+            
             IndexReader reader = null;
             try
             {
