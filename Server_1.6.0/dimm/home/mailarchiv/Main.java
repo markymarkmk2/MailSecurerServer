@@ -6,12 +6,8 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.Updater.Updater;
-import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
-import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import dimm.home.serverconnect.HttpdServer;
-import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.Utilities.LogConfigEntry;
@@ -19,6 +15,7 @@ import home.shared.Utilities.ZipUtilities;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -42,7 +39,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.6.0";
+    private static final String VERSION = "1.6.1";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -423,7 +420,8 @@ public final class Main
 
         try
         {
-            CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
+            ByteArrayOutputStream byos = new ByteArrayOutputStream();
+            CryptAESOutputStream cos = new CryptAESOutputStream(byos, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
             String s = cos.toString();
             cos.close();
             LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_SECURITY, "Testing key length " + key.length() + " OK");
