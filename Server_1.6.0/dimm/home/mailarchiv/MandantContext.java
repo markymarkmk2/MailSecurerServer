@@ -49,6 +49,7 @@ import home.shared.hibernate.SmtpServer;
 import home.shared.mail.CryptAESOutputStream;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -586,7 +587,8 @@ public class MandantContext
         String key = "1234567890123456789012345";
         try
         {
-            CryptAESOutputStream cos = new CryptAESOutputStream(System.out, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
+            ByteArrayOutputStream byos = new ByteArrayOutputStream();
+            CryptAESOutputStream cos = new CryptAESOutputStream(byos, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
             String s = cos.toString();
             cos.close();
         }
