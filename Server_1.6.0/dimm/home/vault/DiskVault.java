@@ -327,6 +327,11 @@ public class DiskVault implements Vault, StatusHandler
         for (int i = 0; i < dsh_list.size(); i++)
         {
             DiskSpaceHandler dsh = dsh_list.get(i);
+
+            // SKIP DATA ONLY DS
+            if (!dsh.is_index())
+                continue;
+
             dhe = dsh.has_hash_entry(hash);
             if (dhe != null)
             {
@@ -335,6 +340,9 @@ public class DiskVault implements Vault, StatusHandler
             }
             if (dsh.get_searcher() != null)
                 search_arr.add( dsh.get_searcher() );
+            else
+                LogManager.msg_index(LogManager.LVL_ERR, "Found missing hash checker " + dsh.ds.getPath());
+
         }
 
         // IN SHORT TERM HASH?
