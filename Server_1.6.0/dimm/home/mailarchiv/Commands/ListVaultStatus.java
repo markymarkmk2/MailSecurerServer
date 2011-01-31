@@ -50,7 +50,7 @@ public class ListVaultStatus extends AbstractCommand
 
 
 
-            // PRUEFE FÜR ALLE ROLLEN DIESES MANDANTEN
+            // PRUEFE FÜR ALLE ARCHIVE DIESES MANDANTEN
             for (Iterator<DiskArchive> it = mandant.getDiskArchives().iterator(); it.hasNext();)
             {
                 DiskArchive da = it.next();
@@ -62,6 +62,10 @@ public class ListVaultStatus extends AbstractCommand
                 {
                     DiskSpace ds = it1.next();
                     DiskSpaceHandler dsh = m_ctx.get_dsh(ds.getId());
+
+                    // NO DATA ONLY DS
+                    if (!dsh.is_index())
+                        continue;
 
                     IndexWriter wr = dsh.get_write_index();
                     int docs = 0;
