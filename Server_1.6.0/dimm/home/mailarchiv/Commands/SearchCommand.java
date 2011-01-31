@@ -6,6 +6,9 @@
 package dimm.home.mailarchiv.Commands;
 
 import dimm.home.index.SearchCall;
+import dimm.home.mailarchiv.GeneralPreferences;
+import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
 import home.shared.CS_Constants.USERMODE;
 import home.shared.Utilities.ParseToken;
 import java.util.ArrayList;
@@ -99,6 +102,12 @@ public class SearchCommand extends AbstractCommand
         else if (command.compareTo("send_mail") == 0)
         {
             String id = pt.GetString("ID:");
+            String from = pt.GetString("FR:");
+            if (from.length() == 0)
+            {
+                from = Main.get_prop(GeneralPreferences.RESTORE_ENVELOPE_FROM, "company");
+            }
+            
             String to = pt.GetString("TO:");
             String rowlist = pt.GetString("ROWLIST:");
             String[] rows = rowlist.split(",");
@@ -110,7 +119,7 @@ public class SearchCommand extends AbstractCommand
                     rowi[i] = Integer.parseInt(rows[i]);
                 }
 
-                answer = SearchCall.send_mail(id, getSsoEntry(), rowi, to);
+                answer = SearchCall.send_mail(id, getSsoEntry(), rowi, from, to);
             }
             catch (Exception e)
             {
