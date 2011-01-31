@@ -384,7 +384,8 @@ public class DiskSpaceHandler
                 }
             }
             else
-                throw new VaultException( ds, "Cannot create write index on non-index ds: " + ds.getPath());
+                return null;
+                //throw new VaultException( ds, "Cannot create write index on non-index ds: " + ds.getPath());
         }
         catch (IOException iex)
         {
@@ -423,7 +424,9 @@ public class DiskSpaceHandler
                 return write_index;
             }
             else
-                throw new VaultException( ds, "Cannot open write index on non-index ds: " + ds.getPath());
+                return null;
+//            else
+//                throw new VaultException( ds, "Cannot open write index on non-index ds: " + ds.getPath());
         }
         catch (IOException iex)
         {
