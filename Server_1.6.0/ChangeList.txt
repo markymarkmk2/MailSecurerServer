@@ -1,0 +1,15 @@
+1.6.1:
+SMTP-Envelope Absendeadresse
+    Mit Parameter "RestoreEnvelopeFrom" in den General-Preferences (preferences/preferences.dat) können folgende Szenarien für die
+    Vorgabe der Envelope-Absendeadresse beim Versand von Mails festgelegt werden:
+    Wert = "company"  -> From ist die MailFrom-Adresse aus dem Mandanten-Dialog
+    Wert = "unchanged"  -> From ist die MailFrom-Adresse aus dem zu versendenden EMail
+    Wert = <Email-Adresse> -> From ist die angegebene EMailadresse
+
+    Default ist "company"
+
+Diskspace "nur Index / nur Daten"
+    Bugfix bei Trennung von Index und Daten in Diskspaces
+
+
+
