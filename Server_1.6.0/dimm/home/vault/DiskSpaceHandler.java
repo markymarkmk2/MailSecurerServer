@@ -1612,6 +1612,9 @@ public class DiskSpaceHandler
         if (IndexManager.no_single_instance())
             return;
 
+        if (!is_index())
+            return;
+
         if (hash_checker != null)
         {
             hash_checker.close();
