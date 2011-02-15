@@ -7,7 +7,9 @@ package dimm.home.auth;
 import com.sun.mail.smtp.SMTPTransport;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.MSSSLSocketFactory;
 import dimm.home.mailarchiv.Utilities.SmtpMailFromTransport;
+import home.shared.Utilities.DefaultSSLSocketFactory;
 import java.net.Socket;
 
 import java.util.Properties;
@@ -15,6 +17,7 @@ import javax.mail.AuthenticationFailedException;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.URLName;
+import javax.net.SocketFactory;
 
 
 
@@ -64,7 +67,20 @@ public class SMTPAuth extends GenericRealmAuth
         boolean ret = false;
         try
         {
-            smtp_sock = new Socket(host, port);
+
+ // CREATE SERVERSOCKET
+            if (is_ssl())
+            {
+                SocketFactory sf = new MSSSLSocketFactory();
+                smtp_sock = sf.createSocket(host, port);
+            }
+            else
+            {
+                smtp_sock = new Socket(host, port);
+            }
+
+
+            //smtp_sock = new Socket(host, port);
             if (smtp_sock.isConnected())
             {                
                 ret = true;
@@ -129,13 +145,19 @@ public class SMTPAuth extends GenericRealmAuth
         return false;
     }
 
+    public SMTPUserContext open_user()
+    {
+        return open_user( null, null, null );
+    }
     
     public SMTPUserContext open_user( String user_principal, String pwd, String mailadr )
     {
         Properties props = new Properties();
         props.put("mail.host", host);
         props.put("mail.port", port);
-        props.put("mail.smtp.auth", true );
+        boolean needs_auth = (user_principal != null && user_principal.length() > 0 && pwd != null && pwd.length() > 0);
+        props.put("mail.smtp.auth", needs_auth );
+
         String protocol = "smtp";
         if ( is_ssl())
         {

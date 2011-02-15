@@ -14,10 +14,10 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import home.shared.CS_Constants;
 import home.shared.hibernate.Mandant;
 import home.shared.mail.RFCMimeMail;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
 import javax.mail.Address;
-import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
@@ -82,17 +82,15 @@ public class Notification
             default: return "Unknown level";
         }
     }
-    private static String build_subject( Mandant m, int lvl )
+    private static String build_subject(String name, int lvl )
     {
-        String sj = get_text_for_level( lvl) + " " + Main.Txt("mail from") + " " + "MailSecurer <" + m.getName() + ">";
+        String sj = get_text_for_level( lvl) + " " + Main.Txt("mail from") + " " + "MailSecurer <" +name + ">";
         return sj;
     }
-    
-    private static void run_handle_notification( Mandant m, int lvl, String t )
-    {
 
+    private static void run_handle_notification( Mandant m, int lvl, String text )
+    {
         MandantContext m_ctx = Main.get_control().get_m_context(m);
-        
         String host = m_ctx.getMandant().getSmtp_host();
         int port = m_ctx.getMandant().getSmtp_port();
         String send_to = m_ctx.getMandant().getNotificationlist();
@@ -101,31 +99,49 @@ public class Notification
             LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_find_to_adress_in_notification"));
             return;
         }
+        String user = m_ctx.getMandant().getSmtp_user();
+        String pwd = m_ctx.getMandant().getSmtp_pwd();
+        String from_mail = m_ctx.getMandant().getMailfrom();
 
+        boolean needs_auth = m_ctx.needs_smtp_auth();
+
+
+
+        try
+        {
+            run_handle_notification(lvl, text, host, port, send_to, m_ctx.getMandant().getSmtp_flags(), user, pwd, from_mail, needs_auth, m_ctx.getMandant().getName());
+        }
+        catch (IOException iOException)
+        {
+            LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, iOException.getMessage() );
+        }
+    }
+
+    public static void run_handle_notification( int lvl, String text, String host, int port, String send_to, int smtp_flags, String user, String pwd, String from_mail, boolean needs_auth, String mandant_name ) throws IOException
+    {
 
         SMTPAuth smtp = null;
         SMTPUserContext smtp_ctx = null;
 
         try
         {
-            smtp = new SMTPAuth(host, port, m_ctx.getMandant().getSmtp_flags());
+            smtp = new SMTPAuth(host, port, smtp_flags);
 
             if (!smtp.connect())
             {
-                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_connect_to_SMTP_host") + " " + host + ":" + port );
-                return;
+                throw new IOException( Main.Txt("Cannot_connect_to_SMTP_host") + " " + host + ":" + port );
             }
-            String user = m_ctx.getMandant().getSmtp_user();
-            String pwd = m_ctx.getMandant().getSmtp_pwd();
-            String from_mail = m_ctx.getMandant().getMailfrom();
 
-            smtp_ctx = smtp.open_user(user, pwd, null);
+            if ( needs_auth)
+            {
+                smtp_ctx = smtp.open_user(user, pwd, null);
+            }
+            else
+                smtp_ctx = smtp.open_user();
 
             if (smtp_ctx == null)
             {
-                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_authenticate_at_SMTP_host") + " " + host + ":" + port + " user " + user + " to " + send_to );
-                smtp.disconnect();
-                return;
+                throw new IOException(  Main.Txt("Cannot_authenticate_at_SMTP_host") + " " + host + ":" + port + " user " + user + " to " + send_to );
             }
             SMTPTransport transport = smtp_ctx.get_transport();
 
@@ -144,9 +160,9 @@ public class Notification
             Properties props = new Properties();
             props.put("mail.smtp.host", host);
             RFCMimeMail mail = new RFCMimeMail(props);
-            String subject = build_subject(m, lvl);
+            String subject = build_subject(mandant_name, lvl);
             
-            mail.create(from_mail, to, cc, subject, t, null);
+            mail.create(from_mail, to, cc, subject, text, null);
 
             Address[] addresses = new Address[adr_list.length];
             for (int i = 0; i < adr_list.length; i++)
@@ -169,13 +185,15 @@ public class Notification
         }
         catch (Exception exc )
         {
-             LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_NOTIFICATION, Main.Txt("Cannot_send_notification_mail") + " " + host + ":" + port + " to " + send_to + ": ", exc );
+//            exc.printStackTrace();
+             throw new IOException(  Main.Txt("Cannot_send_notification_mail") + " " + host + ":" + port + " to " + send_to + ": ", exc );
         }
         finally
         {
-            smtp.close_user_context();
+            if (smtp_ctx != null)
+                smtp.close_user_context();
             smtp.disconnect();
-        }
+        }        
     }
 
     public static void throw_notification( Mandant m, int lvl, String t )

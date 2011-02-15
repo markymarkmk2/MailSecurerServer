@@ -157,6 +157,10 @@ public class MandantContext
         }
         return port;
     }
+    public boolean needs_smtp_auth()
+    {
+        return !test_flag(CS_Constants.MA_NO_SMTP_AUTH);
+    }
 
 
     public TempFileHandler getTempFileHandler()

@@ -12,13 +12,7 @@ package dimm.home.mailarchiv;
 import dimm.home.mailarchiv.Utilities.Preferences;
 
 
-/****
- 
- Bestehedne Config:
-Playlists=/var/www/localhost/htdocs/websense/login/pls
-Songs=/var/www/localhost/htdocs/websense/dev/music_v3
 
- ****/
 
 /**
  *
@@ -27,7 +21,6 @@ Songs=/var/www/localhost/htdocs/websense/dev/music_v3
 public class MandantPreferences extends Preferences
 {
     
-    public static final String DEBUG = "Debug";
     public static final String TEMPFILEDIR ="TempFileDir";
     public static final String LANG = "Language";
     public static final String INDEX_TASK = "IndexTask";
@@ -64,7 +57,6 @@ public class MandantPreferences extends Preferences
 
         context = null;
         
-        prop_names.add( DEBUG );
         prop_names.add( TEMPFILEDIR );
         
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );

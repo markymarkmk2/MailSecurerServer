@@ -14,6 +14,8 @@ import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParentChild;
 import home.shared.CS_Constants;
+import home.shared.Utilities.DefaultSSLServerSocketFactory;
+import home.shared.Utilities.DefaultSSLSocketFactory;
 import home.shared.hibernate.SmtpServer;
 import home.shared.mail.RFCFileMail;
 import java.io.*;
@@ -34,6 +36,7 @@ import org.subethamail.smtp.TooMuchDataException;
 import org.subethamail.smtp.auth.LoginFailedException;
 import org.subethamail.smtp.auth.PlainAuthenticationHandlerFactory;
 import org.subethamail.smtp.auth.UsernamePasswordValidator;
+import org.subethamail.smtp.command.StartTLSCommand;
 import org.subethamail.smtp.helper.SimpleMessageListener;
 import org.subethamail.smtp.helper.SimpleMessageListenerAdapter;
 import org.subethamail.smtp.server.SMTPServer;
@@ -70,8 +73,9 @@ class SmtpImporterServer extends SMTPServer
 
     boolean ssl;
     boolean tls;
+    
 
-    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory, boolean _ssl, boolean _tls )
+    public SmtpImporterServer( SimpleMessageListenerAdapter sml_adapter, PlainAuthenticationHandlerFactory pah_factory, boolean _ssl, boolean _tls)
     {
         super(sml_adapter, pah_factory);
         ssl = _ssl;
@@ -116,9 +120,9 @@ class SmtpImporterServer extends SMTPServer
         SSLContext sslContext;
 
         // DOES THIS DIFFER?
-        if (tls)
+      /*  if (tls)
             sslContext = SSLContext.getInstance("TLS");
-        else
+        else*/
             sslContext = SSLContext.getInstance("SSL");
         
         char[] password = "mailsecurer".toCharArray();
@@ -201,10 +205,16 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
     {
         return test_flag(CS_Constants.SL_DISABLED);
     }
+    boolean needs_auth()
+    {
+        return !test_flag(CS_Constants.SL_NO_SMTP_AUTH);
+    }
 
     boolean test_flag( int f )
     {
-        int fl = Integer.parseInt(smtp_db_entry.getFlags());
+        int fl = 0;
+        if (smtp_db_entry.getFlags() != null && smtp_db_entry.getFlags().length() > 0)
+            fl = Integer.parseInt(smtp_db_entry.getFlags());
         return (fl & f) == f;
     }
 
@@ -224,10 +234,16 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
 
             SimpleMessageListenerAdapter sml_adapter = new SimpleMessageListenerAdapter(listeners);
 
-            // WE VALIDATE THROUGH OUR OWN USERNAME / PWD
-            SMTP_Import_Uservalidator up_validator = new SMTP_Import_Uservalidator(this);
+            
 
-            PlainAuthenticationHandlerFactory pah_factory = new PlainAuthenticationHandlerFactory(up_validator);
+            PlainAuthenticationHandlerFactory pah_factory = null;
+            
+            if (needs_auth())
+            {
+                // WE VALIDATE THROUGH OUR OWN USERNAME / PWD
+                SMTP_Import_Uservalidator up_validator = new SMTP_Import_Uservalidator(this);
+                pah_factory = new PlainAuthenticationHandlerFactory(up_validator);
+            }
 
             server = new SmtpImporterServer(sml_adapter, pah_factory, has_ssl(), has_tls());
 
@@ -252,7 +268,7 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
             LogManager.msg(LogManager.LVL_INFO, LogManager.TYP_IMPORT, "SMTP-Listener is running on 'smtp://" + smtp_db_entry.getServer()
                     + ":" + smtp_db_entry.getPort() + "'");
 
-            server.start();
+            server.start();        
         }
         catch (Exception e)
         {

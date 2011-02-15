@@ -8,8 +8,10 @@ package dimm.home.mailarchiv.Commands;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.Notification.Notification;
 import home.shared.Utilities.ParseToken;
 import home.shared.hibernate.AccountConnector;
+import java.io.IOException;
 
 /**
  *
@@ -30,6 +32,38 @@ public class TestLogin extends AbstractCommand
         ParseToken pt = new ParseToken(opt);
 
         String command = pt.GetString("CMD:");
+
+        if (command.compareTo("test_notification") == 0)
+        {
+            String m_name = pt.GetString("MN:");
+            String admin_name = pt.GetString("NM:");
+            String admin_pwd = pt.GetString("PW:");
+            String auth_host = pt.GetString("HO:");
+            String send_to = pt.GetString("ST:");
+            String from_mail = pt.GetString("FM:");
+            int auth_port = (int)pt.GetLongValue("PO:");
+            int acct_flags = (int)pt.GetLongValue("FL:");
+            boolean needs_auth = pt.GetBoolean("NA:");
+            int lvl = (int)pt.GetLongValue("LV:");
+            String text = pt.GetString("TX:");
+            if (text.length() == 0)
+                text = "Testmail MailSecurer Parameterdialog";
+
+            // int lvl, String text, String host, int port, String send_to, int smtp_flags, String user, String pwd, String from_mail, boolean needs_auth, String mandant_name )
+            try
+            {
+                Notification.run_handle_notification(lvl, text, auth_host, auth_port, send_to, acct_flags, admin_name, admin_pwd, from_mail, needs_auth, m_name);
+
+                 answer = "0: ok";
+            }
+            catch (IOException iOException)
+            {
+                answer = "1: " + iOException.getMessage();
+            }
+            return true;
+        }
+
+
         if (command.compareTo("test") == 0)
         {
             int m_id = (int)pt.GetLongValue("MA:");

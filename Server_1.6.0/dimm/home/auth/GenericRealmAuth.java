@@ -231,20 +231,21 @@ public abstract class GenericRealmAuth
 
         if (test_flag( CS_Constants.ACCT_USE_TLS_IF_AVAIL))
         {
-//            props.put("mail." + protocol + ".starttls.enable", "true");
+            props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "true");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(with_cert));
         }
         else if (test_flag( CS_Constants.ACCT_USE_TLS_FORCE))
         {
-//            props.put("mail." + protocol + ".starttls.enable", "true");
+            props.put("mail." + protocol + ".starttls.enable", "true");
             props.put("mail." + protocol + ".socketFactory.fallback", "false");
             props.put("mail." + protocol + ".startTLS.socketFactory.class", get_ssl_socket_classname(with_cert));
         }
         else if (test_flag( CS_Constants.ACCT_USE_SSL))
         {
-            protocol = protocol + "s";
+            //protocol = protocol + "s";
             props.put("mail." + protocol + ".socketFactory.port", port);
+            props.put("mail." + protocol + ".socketFactory.class","dimm.home.mailarchiv.Utilities.MSSSLSocketFactory");
         }
         
         if (test_flag( CS_Constants.ACCT_HAS_TLS_CERT))

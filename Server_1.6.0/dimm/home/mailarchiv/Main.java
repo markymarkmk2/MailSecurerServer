@@ -39,7 +39,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.6.2";
+    private static final String VERSION = "1.6.3";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -314,7 +314,7 @@ public final class Main
     void init_mail_security()
     {
 
-        Security.setProperty( "ssl.SocketFactory.provider", "home.shared.Utilities.DefaultSSLSocketFactory");
+        Security.setProperty( "ssl.SocketFactory.provider", "dimm.home.mailarchiv.Utilities.MSSSLSocketFactory");
         Security.addProvider( new com.sun.net.ssl.internal.ssl.Provider());
 
         // NOW WE USE JAVAS DEFAULT SSL FACTORY, THIS IS OVERRIDDEN WITH OUR
@@ -786,6 +786,8 @@ System.out.println("Core POI came from " + path);
 
     public static String Txt(String string )
     {
+        if (string == null)
+            return "";
 
         try
         {

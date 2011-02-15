@@ -45,15 +45,11 @@ public class GeneralPreferences extends Preferences
     public static final String PXSERVER = "ProxyServer";
     public static final String PXPORT = "ProxyPort";
     public static final String PXSOCKSPORT = "ProxySocksPort";
-    public static final String SERVER_SW_PATH = "SoftwareUpdateDir";
     public static final String RDATE_COMMAND = "RDateCommand";
     public static final String TEMPFILEDIR ="TempFileDir";
     public static final String SQL_CONN_TIMEOUT = "SQLConnTimeout";
     
     public static final String ALLOW_CONTINUE_ON_ERROR = "AllowContinueOnError";
-    /*public static final String MAIL_ARCHIVA_URL = "MailArchivaURL";
-    public static final String MAIL_ARCHIVA_AGENT_OPTS = "MailArchivaAgentOpts";*/
-    public static final String DB_CLASSNAME = "DBClassName";
     public static final String DB_USER  = "DBUser";
     public static final String DB_PWD = "DBPWD";
     public static final String SQL_CYCLETIME = "SQLCycleTime";
@@ -112,19 +108,13 @@ public class GeneralPreferences extends Preferences
         prop_names.add( PXSOCKSPORT );
         prop_names.add( VPN_SERVER );
         prop_names.add( VPN_PORT );
-        prop_names.add( SERVER_SW_PATH );
         prop_names.add( RDATE_COMMAND );
-//        prop_names.add( MAIL_ARCHIVA_URL );
         prop_names.add( TEMPFILEDIR );
         prop_names.add( SQL_CONN_TIMEOUT );
-        prop_names.add( DB_CLASSNAME );
         prop_names.add( DB_USER );
         prop_names.add( DB_PWD );
-        prop_names.add( SQL_CYCLETIME );
-        
+        prop_names.add( SQL_CYCLETIME );        
         prop_names.add( ALLOW_CONTINUE_ON_ERROR );
-//        prop_names.add( MAIL_ARCHIVA_AGENT_OPTS );
-
         prop_names.add( WRITE_MAIL_IN_BG );
         prop_names.add( INDEX_MAIL_IN_BG );
         prop_names.add( SERVER_SSL );
