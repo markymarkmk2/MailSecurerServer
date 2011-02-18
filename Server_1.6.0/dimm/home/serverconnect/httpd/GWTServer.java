@@ -4,6 +4,7 @@
  */
 package dimm.home.serverconnect.httpd;
 
+import java.io.File;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.SslSocketConnector;
@@ -11,6 +12,7 @@ import org.mortbay.jetty.webapp.WebAppContext;
 
 public class GWTServer
 {
+    
 
     Server server;
 
@@ -38,9 +40,14 @@ public class GWTServer
         handler.setContextPath("/");
         
         handler.setWar(war_path);
+        File t = new File ("wartemp");
+        if (!t.exists())
+            t.mkdir();
+        handler.setTempDirectory( t );
 
         // Add it to the server
         server.setHandler(handler);
+
 
 
         // Other misc. options

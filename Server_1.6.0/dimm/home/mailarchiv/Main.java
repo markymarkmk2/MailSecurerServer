@@ -39,7 +39,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.6.3";
+    private static final String VERSION = "1.6.5";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -246,10 +246,10 @@ public final class Main
 
 
             
-            // CREATE INSTALLER --sb lnx / mac / win
-            if (args[i].compareTo("--sb") == 0 && (i + 1) < args.length)
+            // CREATE INSTALLER --mss lnx / mac / win
+            if (args[i].compareTo("--mss") == 0 && (i + 1) < args.length)
             {
-                Updater.build_sb_installer( args[i + 1], "mailsecurerserver", "MSSI");
+                Updater.build_mss_installer( args[i + 1], "mailsecurerserver", "MSSI");
                 System.exit(0);
             }
         }            
@@ -792,27 +792,30 @@ System.out.println("Core POI came from " + path);
         try
         {
             if (bundle != null)
+            {
                 return bundle.getString(string);
+            }
         }
         catch (Exception exc)
         {
         }
 
 
-        if (!missing_transl_tokens.contains(string))
+        try
         {
-            LogManager.msg_system(LogManager.LVL_DEBUG, "Missing translation resource: " + string);
-
-            missing_transl_tokens.add(string);
-            try
+            if (!missing_transl_tokens.contains(string))
             {
+                LogManager.msg_system(LogManager.LVL_DEBUG, "Missing translation resource: " + string);
+
+                missing_transl_tokens.add(string);
                 FileWriter fw = new FileWriter("MissingTransl.txt", true);
                 fw.append(string + "\n");
                 fw.close();
+
             }
-            catch (IOException iOException)
-            {
-            }
+        }
+        catch (Exception iOException)
+        {
         }
 
         // REMOVE UNDERSCORES FROM KEY

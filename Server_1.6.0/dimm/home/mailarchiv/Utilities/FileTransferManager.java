@@ -95,14 +95,6 @@ public class FileTransferManager extends WorkerParent
     int px_port;
     
     
-    /** Creates a new instance of DataGatherer */
-    public FileTransferManager()
-    {
-        super(NAME);
-        server_list = new ArrayList<ServerEntry>();
-        
-        initialize();
-    }
     public FileTransferManager(String server, String user, String pwd)
     {
         this( server, 80, user, pwd );
@@ -122,9 +114,9 @@ public class FileTransferManager extends WorkerParent
     {
         super(NAME);
         server_list = new ArrayList<ServerEntry>();
-        server_list.add( new ServerEntry( server, port, user, pwd ) );
-        
+        server_list.add( new ServerEntry( server, port, user, pwd ) );        
     }
+    
     public void set_proxy_data( String _px_server, int _px_port )
     {
         px_server = _px_server;
@@ -161,10 +153,6 @@ public class FileTransferManager extends WorkerParent
     @Override
     public boolean initialize()
     {
-        // DEFAULT
-        server_list.clear();
-        server_list.add( new ServerEntry( Main.DEFAULTSERVER, 80, "mailsecurer", "12345" ) );
-                        
         return true;
     }
     

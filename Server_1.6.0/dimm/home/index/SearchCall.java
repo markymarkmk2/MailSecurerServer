@@ -419,7 +419,11 @@ public class SearchCall
 
         return ret;
     }
-
+    public static String send_mail( String id,  UserSSOEntry ssoc, int[] rowi, String send_to )
+    {
+        String from =  Main.get_prop(GeneralPreferences.RESTORE_ENVELOPE_FROM, "company");
+        return send_mail(id, ssoc, rowi,from, send_to);
+    }
 
     public static String send_mail( String id,  UserSSOEntry ssoc, int[] rowi, String send_from, String send_to )
     {

@@ -1,0 +1,3 @@
+Authentifizierer (SMTP/POP/IMAP) ohne Credentials?
+Zertifikate an Webserver binden -> Zertifikatsverwaltung mit Auswahl des Z an IMAPS / HTTPS
+WebClient Mandant-Combo ausblenden wenn Mandantauswahl.length == 1

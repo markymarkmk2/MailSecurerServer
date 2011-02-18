@@ -67,6 +67,7 @@ public class Updater
             {
                 i++;
                 targ_path = args[i];
+                LogManager.msg_system(LogManager.LVL_INFO, "Udating from path " + targ_path);
             }
         }
         // LAST ARG IS ZIP FILE
@@ -634,12 +635,12 @@ public class Updater
         return true;        
     }
     
-    public static void build_sr_installer(String os_name, String app_name, String install_dir)
+    public static void build_msc_installer(String os_name, String app_name, String install_dir)
     {
         System.out.println("Invalid Installer Call");
        
     }
-    public static void build_sb_installer(String os_name, String app_name, String install_dir)
+    public static void build_mss_installer(String os_name, String app_name, String install_dir)
     {
         FileWriter fw = null;
         try
@@ -678,9 +679,9 @@ public class Updater
             String[] exclude_list = {install_dir};
 
             ZipUtilities zu = new ZipUtilities();
-            zu.zip(install_dir, app_name + "_" + os_name + ".zip", exclude_list);
+            zu.zip(install_dir, "updates/" + app_name + "_" + os_name + ".zip", exclude_list);
 
-            fw = new FileWriter(app_name + "_" + os_name + "_ver.txt");
+            fw = new FileWriter("updates/" + app_name + "_" + os_name + "_ver.txt");
             bw = new BufferedWriter( fw );
             bw.write(Main.get_version_str());
             bw.close();
@@ -810,14 +811,14 @@ public class Updater
             return;
 
         }
-        if (args.length > 1 && args[0].compareTo("--sr") == 0)
+        if (args.length > 1 && args[0].compareTo("--msc") == 0)
         {
-            Updater.build_sr_installer(args[1], "mailsecurerclient", "MSCI");
+            Updater.build_msc_installer(args[1], "mailsecurerclient", "MSCI");
             return;
         }
-        if (args.length > 1 && args[0].compareTo("--sb") == 0)
+        if (args.length > 1 && args[0].compareTo("--mss") == 0)
         {
-            Updater.build_sb_installer(args[1], "mailsecurerserver", "MSSI");
+            Updater.build_mss_installer(args[1], "mailsecurerserver", "MSSI");
             return;
         }
         

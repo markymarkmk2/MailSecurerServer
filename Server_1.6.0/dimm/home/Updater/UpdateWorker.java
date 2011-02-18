@@ -78,7 +78,7 @@ public class UpdateWorker extends WorkerParent
         app_name = "mailsecurerserver";
         server_path = Main.SERVER_UPDATEWORKER_PATH + "MSS";
 
-        automatic = Main.get_bool_prop(GeneralPreferences.AUTO_UPDATE, true);
+        automatic = Main.get_bool_prop(GeneralPreferences.AUTO_UPDATE, false);
         cycle_duration = SHORT_DELAY;
         
         os_name = "win";
@@ -156,9 +156,14 @@ public class UpdateWorker extends WorkerParent
             return true;
         
         return false;
-    }            
+    }
+
+    public String get_local_ver()
+    {
+        return Main.get_version_str();
+    }
         
-    String get_remote_ver()
+    public String get_remote_ver()
     {
         String remote_ver = null; 
         
@@ -189,7 +194,7 @@ public class UpdateWorker extends WorkerParent
         return remote_ver;
     }
     
-    boolean check_changed()
+    public boolean check_changed()
     {
         String local_ver = Main.get_version_str();
         
@@ -260,7 +265,6 @@ public class UpdateWorker extends WorkerParent
             {
             }
         }
-
     }
 
     public void check_updates()
@@ -294,7 +298,6 @@ public class UpdateWorker extends WorkerParent
                 return null;
             }
         };
-
         
         update_worker.start();                 
     }
@@ -320,75 +323,97 @@ public class UpdateWorker extends WorkerParent
             
     }
 
-    private void handle_update()
+    private CmdExecutor handle_update()
     {
         FileWriter fw = null;
         try
         {
-            File here = new File(".");
+            File act_parent_dir = new File(".").getAbsoluteFile().getParentFile();
             String[] exclude_list = {"update", "logs", "database", "db", "temp" };
             ZipUtilities zu = new ZipUtilities();
             LogManager.msg_system( LogManager.LVL_INFO,  "Saving actual installation...");
             
-            zu.zip(here.getAbsolutePath(), Main.UPDATE_PATH + "last_valid_version.zip", exclude_list);
+            zu.zip(act_parent_dir.getAbsolutePath(), Main.UPDATE_PATH + "last_valid_version.zip", exclude_list);
+
+            String java_home = System.getProperty("java.home");
             
-            CmdExecutor exec;
+            CmdExecutor exec = null;
             
             if (System.getProperty("os.name").startsWith("Win"))
             {
-                File bootstrap = new File("bootstrap.bat");
+                File bootstrap = new File(act_parent_dir, "bootstrap.bat");
                 fw = new FileWriter(bootstrap);
                 BufferedWriter bw = new BufferedWriter(fw);
-                bw.write("start javaw -cp dist\\MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "\\MSS " + get_local_upd_path() );
+                bw.write( "cd /d \"" + act_parent_dir.getAbsolutePath() + "\"");
+                bw.newLine();
+                bw.write("copy MailArchiv.jar update"  );  // COPY IF UPDATE FAILS
+                bw.newLine();
+                bw.write("start \"MS\" \"" + java_home + "\\bin\\javaw\" -cp MailArchiv.jar dimm.home.Updater.Updater --path \"" + act_parent_dir.getAbsolutePath() + "\\MSS\" " + get_local_upd_path() );
                 bw.close();
                 
-                String[] update_cmd = {"bootstrap.bat"};
+                String[] update_cmd = { new File(act_parent_dir,"bootstrap.bat").getAbsolutePath() };
+                LogManager.msg_system( LogManager.LVL_INFO, "Calling bootstrap " + update_cmd[0] + "..." );
+
                 exec = new CmdExecutor(update_cmd);                
             }
             else if (System.getProperty("os.name").startsWith("Mac"))
             {
-                File bootstrap = new File("bootstrap.sh");
+                File bootstrap = new File(act_parent_dir, "bootstrap.sh");
                 fw = new FileWriter(bootstrap);
                 BufferedWriter bw = new BufferedWriter(fw);
                 bw.write("#!/bin/sh");
                 bw.newLine();
-                bw.write("cp MailArchiv.jar update");  // COPY IF UPDATE FAILS
+                bw.write( "cd \"" + act_parent_dir.getAbsolutePath() + "\"");
+                bw.newLine();
+                bw.write("cp MailArchiv.jar " + Main.UPDATE_PATH );  // COPY IF UPDATE FAILS
                 bw.newLine();
 
-                bw.write("/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Commands/java -cp MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "/MSS " + get_local_upd_path() + " &" );
+                bw.write("\"" + java_home + "/bin/java\" -cp MailArchiv.jar dimm.home.Updater.Updater --path \"" + act_parent_dir.getAbsolutePath() + "/MSS\" " + get_local_upd_path() + " &" );
                 bw.close();
 
 
-                String[] update_cmd = {"sh", "./bootstrap.sh"};
+                String[] update_cmd = {"sh", new File(act_parent_dir,"bootstrap.sh").getAbsolutePath() };
+
+                LogManager.msg_system( LogManager.LVL_INFO, "Calling bootstrap " + update_cmd[0] + " " +  update_cmd[0] + "..." );
+
                 exec = new CmdExecutor(update_cmd);
                 exec.set_use_no_shell(true);
 
             }
             else
             {
-                File bootstrap = new File("bootstrap.sh");
+                File bootstrap = new File(act_parent_dir, "bootstrap.sh");
                 fw = new FileWriter(bootstrap);
                 BufferedWriter bw = new BufferedWriter(fw);
                 bw.write("#!/bin/sh");
                 bw.newLine();
-                bw.write("cp MailArchiv.jar update");  // COPY IF UPDATE FAILS
+                bw.write( "cd  \"" + act_parent_dir.getAbsolutePath() + "\"");
+                bw.newLine();
+
+                bw.write("cp MailArchiv.jar " + Main.UPDATE_PATH);  // COPY IF UPDATE FAILS
                 bw.newLine();
                 
-                bw.write("java -cp MailArchiv.jar dimm.home.Updater.Updater --path " + here.getAbsolutePath() + "/MSS " + get_local_upd_path() + " &" );
+                bw.write("\"" + java_home + "/bin/java\" -cp MailArchiv.jar dimm.home.Updater.Updater --path \"" + act_parent_dir.getAbsolutePath() + "/MSS\" " + get_local_upd_path() + " &" );
                 bw.close();
                 
                 
-                String[] update_cmd = {"sh", "./bootstrap.sh"};
+                String[] update_cmd = {"sh", new File(act_parent_dir,"bootstrap.sh").getAbsolutePath()};
+                LogManager.msg_system( LogManager.LVL_INFO, "Calling bootstrap " + update_cmd[0] + " " +  update_cmd[0] + "..." );
+                
                 exec = new CmdExecutor(update_cmd); 
                 exec.set_use_no_shell(true);
             }
-            
+
+
             exec.start();
+
+            return exec;
         }
         catch (IOException ex)
         {
             ex.printStackTrace();
             LogManager.msg_system( LogManager.LVL_ERR, "Error while calling updater: " +  ex.getMessage());
+            return null;
         }
         finally
         {
@@ -416,21 +441,34 @@ public class UpdateWorker extends WorkerParent
                 cycle_duration = LONG_DELAY;
                 
                 if (automatic && check_changed())
-                {                    
+                {
+                    CmdExecutor exec = null;
                     try
                     {
                         download_update();                    
-                        handle_update();
+                        exec = handle_update();
                     }
                     catch (Exception exc)
                     {
                         LogManager.msg_system( LogManager.LVL_ERR, exc.getMessage());
                     }
-                    
-                    LogicControl.sleep(20000);
+
+                    int n = 20;
+                    while (n-- > 0)
+                    {
+                        LogicControl.sleep(1000);
+                        if (isShutdown())
+                        {
+                            finished = true;
+                            return;
+                        }
+                    }
                     
                     // IWE GET HERE, WE ARE LOST, BECAUSE UPDATE SHOULD OF KICKES US AWAY
+                    LogManager.msg_system( LogManager.LVL_ERR, "Exec gave: " + exec.get_out_text() + "/" + exec.get_err_text() );
+                    
                     LogManager.msg_system( LogManager.LVL_ERR, "Update failed, we did not restart");
+
                     cycle_duration = VERYLONG_DELAY;
                 }                                
             }                        

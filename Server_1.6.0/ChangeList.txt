@@ -12,4 +12,12 @@ Diskspace "nur Index / nur Daten"
     Bugfix bei Trennung von Index und Daten in Diskspaces
 
 
+1.6.2
+Support für Multiple IPs der Webserver / Parametrierungsserver
+Diskspace "nur Index / nur Daten"
+    Weitere Bugfixes bei Trennung von Index und Daten in Diskspaces
 
+1.6.3
+Bugfix SMTP-Listener TLS
+SMTP-Listener und Notification ohne Authentifizierung zulassen (default ist on)
+Mnadant-SMTP und SMTP-Auth auch mit SSL / TLS (falls Zertifikat vorhanden)
