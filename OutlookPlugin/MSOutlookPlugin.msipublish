@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<publishConfiguration version="1.0">
+  <application version="1.0.0" language="1031" publishingLocation=".\MSIPublish\" installationUrl="">
+    <signingOptions>
+      <certificatePath>J:\Develop\Java\JMailArchiv\ADE\MSOutlookPlugin\MSOutlookPlugin\test.pfx</certificatePath>
+    </signingOptions>
+    <prerequisites createSetupProgram="true" installFromVendor="false" />
+    <ftp userName="" passive="0" anonimous="0" />
+  </application>
+</publishConfiguration>

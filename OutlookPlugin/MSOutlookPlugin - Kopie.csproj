@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B8BEC6C9-6B21-4CB1-A675-55238C05D323}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>MSOutlookPlugin</RootNamespace>
+    <AssemblyName>MSOutlookPlugin</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <StartupObject>
+    </StartupObject>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>MSOutlookPlugin.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RegisterForComInterop>true</RegisterForComInterop>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Extensibility, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="AddinExpress.MSO.2005.dll">
+      <HintPath>C:\Programme\Add-in Express\Add-in Express for .NET\Bin\AddinExpress.MSO.2005.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Interop.VBIDE.dll">
+      <HintPath>Interops\Interop.VBIDE.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Interop.Office.dll">
+      <HintPath>Interops\Interop.Office.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Interop.Outlook.dll">
+      <HintPath>Interops\Interop.Outlook.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Loader\adxloader.dll.manifest" />
+    <!--<None Include="MSOutlookPlugin.snk" /> -->
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Loader\adxloader.dll" />
+    <Content Include="Loader\adxloader64.dll" />
+    <None Include="Resources\icon_mask.bmp" />
+    <None Include="Resources\icon.png" />
+    <None Include="Resources\icon.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddinModule.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyPage1.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AddinModule.resx">
+      <DependentUpon>AddinModule.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

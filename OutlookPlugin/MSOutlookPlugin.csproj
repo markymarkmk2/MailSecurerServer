@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B8BEC6C9-6B21-4CB1-A675-55238C05D323}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>MSOutlookPlugin</RootNamespace>
+    <AssemblyName>MSOutlookPlugin</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <StartupObject>
+    </StartupObject>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>MSOutlookPlugin.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RegisterForComInterop>true</RegisterForComInterop>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Reference Include="AddinExpress.OL.2005, Version=6.2.3051.2005, Culture=neutral, PublicKeyToken=e69a7e0f3592d2b8, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="jni4net.n-0.8.1.0">
+      <HintPath>..\..\jni4net-0.8.1.0-bin\lib\jni4net.n-0.8.1.0.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Outlook, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Microsoft.Office.Tools.Outlook.v9.0, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Extensibility, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="AddinExpress.MSO.2005.dll">
+      <HintPath>C:\Program Files (x86)\Add-in Express\Add-in Express for .NET\Bin\AddinExpress.MSO.2005.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Interop.VBIDE.dll">
+      <HintPath>Interops\Interop.VBIDE.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Interop.Office.dll">
+      <HintPath>Interops\Interop.Office.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Loader\adxloader.dll.manifest" />
+    <None Include="__AssemblyInfo__.ini" />
+    <!--<None Include="MSOutlookPlugin.snk" /> -->
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\jni4net-0.8.1.0-bin\lib\jni4net.j-0.8.1.0.jar">
+      <Link>jni4net.j-0.8.1.0.jar</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Loader\adxloader.dll" />
+    <Content Include="Loader\adxloader64.dll" />
+    <None Include="Resources\icon_mask.bmp" />
+    <None Include="Resources\icon.png" />
+    <None Include="Resources\icon.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AddinModule.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="JNIEntry.cs" />
+    <Compile Include="OutlookItemsEventsClass1.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyPage1.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="RedemptionLoader.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AddinModule.resx">
+      <DependentUpon>AddinModule.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="Redemption">
+      <Guid>{2D5E2D34-BED5-4B9F-9793-A31E26E6806E}</Guid>
+      <VersionMajor>5</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="stdole">
+      <Guid>{00020430-0000-0000-C000-000000000046}</Guid>
+      <VersionMajor>2</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>primary</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+</Project>
