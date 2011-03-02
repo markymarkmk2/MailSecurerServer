@@ -9,6 +9,7 @@ import home.shared.CS_Constants;
 import home.shared.Utilities.LogConfigEntry;
 import home.shared.Utilities.LogListener;
 import home.shared.Utilities.ParseToken;
+import home.shared.Utilities.SizeStr;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -295,7 +296,7 @@ public class LogManager implements LogListener
         LogTypeEntry logTypeEntry = get_lte(type);
         if (logTypeEntry != null)
         {
-            return logTypeEntry.lvl;
+            return logTypeEntry.get_lvl();
         }
 
         return LVL_ERR;
@@ -413,7 +414,7 @@ public class LogManager implements LogListener
         for (int i = 0; i < lte_array.length; i++)
         {
             LogTypeEntry logTypeEntry = lte_array[i];
-            logTypeEntry.lvl = lvl;
+            logTypeEntry.set_lvl( lvl );
         }
     }
 
@@ -423,7 +424,7 @@ public class LogManager implements LogListener
 
         for (int i = 0; i < lte_array.length; i++)
         {
-            arr.add(new LogConfigEntry(lte_array[i].typ, lte_array[i].lvl));
+            arr.add(new LogConfigEntry(lte_array[i].typ, lte_array[i].get_lvl()));
         }
         return arr;
 
@@ -465,7 +466,7 @@ public class LogManager implements LogListener
             String str = log_props.getProperty("Level" + logTypeEntry.typ, "");
             if (str.length() > 0)
             {
-                logTypeEntry.lvl = Integer.parseInt(str);
+                logTypeEntry.set_lvl( Integer.parseInt(str) );
             }
         }
     }
@@ -475,7 +476,7 @@ public class LogManager implements LogListener
         for (int i = 0; i < lte_array.length; i++)
         {
             LogTypeEntry logTypeEntry = lte_array[i];
-            log_props.setProperty("Level" + logTypeEntry.typ, Integer.toString(logTypeEntry.lvl));
+            log_props.setProperty("Level" + logTypeEntry.typ, Integer.toString(logTypeEntry.get_lvl()));
         }
 
         File prop_file = new File(Main.PREFS_PATH + "log_prefs.dat");
@@ -499,7 +500,7 @@ public class LogManager implements LogListener
     public static void set_lvl( String typ, int lvl )
     {
         LogTypeEntry logTypeEntry = get_lte(typ);
-        logTypeEntry.lvl = lvl;
+        logTypeEntry.set_lvl( lvl );
     }
 
     public static void set_debug_lvl( long l )

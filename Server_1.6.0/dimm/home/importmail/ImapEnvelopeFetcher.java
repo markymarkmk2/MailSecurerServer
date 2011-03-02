@@ -10,7 +10,11 @@ import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import home.shared.CS_Constants;
+import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -76,38 +80,48 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
         super( _imfetcher );
     }
 
-    Address[] get_envelope_recepients( String text, Address[] existing_rcpients ) throws MessagingException
+    ArrayList<Address> mk_adr_list( Address[] arr )
     {
-        ArrayList<Address> a_list = new ArrayList<Address>();
+        ArrayList<Address> list = new ArrayList<Address>();
 
-        /* Ex 2007/2010
-        Recipient: mw@w2k8becom.dimm.home
-        Recipient: mark1@dimm.de, Forward: mark@dimm.de
-        Recipient: mark2@dimm.de, Expanded: sales@de.de
-         * http://technet.microsoft.com/en-us/library/bb738122%28EXCHG.80%29.aspx
-         * */
+        if (arr == null)
+            return list;
 
+        for (int i = 0; i < arr.length; i++)
+        {
+            Address address;
+            try
+            {
+                address = new InternetAddress(arr[i].toString());
+                list.add(address);
+            }
+            catch (AddressException ex)
+            {
+                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Skipping invalid recipient address: " + arr[i].toString(), ex );
+            }
+        }
+        return list;
+    }
+    ArrayList<Address> mk_envelope_adr_list( String token, String text )
+    {
 
+        ArrayList<Address> ret_list = new ArrayList<Address>();
 
         String[] rcp_array = text.split("[\n\r]");
         if (rcp_array.length > 0)
         {
             for (int i = 0; i < rcp_array.length; i++)
             {
-                String[] valid_r = {"Recipient:", "Bcc:", "Cc:", "To:"};
+
                 String line = rcp_array[i];
                 String recipient = null;
 
-                // DETECT A VALID LINE
-                for (int j = 0; j < valid_r.length; j++)
+
+                if (line.startsWith(token))
                 {
-                    String r = valid_r[j];
-                    if (line.startsWith(r))
-                    {
-                        recipient = r;
-                        break;
-                    }
+                    recipient = token;                    
                 }
+
 
                 if (recipient == null)
                     continue;
@@ -125,28 +139,109 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                     if(str.hasMoreTokens())
                     {
                         Address adr = new InternetAddress(str.nextToken().trim());
-
-                        // CHECK IF ADR IS ALREADY IN RCPLIST
-                        for (int j = 0; j < existing_rcpients.length; j++)
-                        {
-                            Address address = existing_rcpients[j];
-                            if (address.equals( adr ))
-                            {
-                                // INVALIDATE
-                                adr = null;
-                                break;
-                            }
-                        }
-                        if (adr != null)
-                            a_list.add(  adr);
+                        ret_list.add(adr);
                     }
                 }
-                catch (AddressException addressException)
+                catch (Exception addressException)
                 {
-                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Invalid recipient address in enevlope header line: " + mail, addressException );
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Skipping invalid recipient address in envelope header line: " + mail, addressException );
                 }
             }
         }
+        return ret_list;
+    }
+    boolean is_in_adr_list( ArrayList<Address> a_list, Address adr )
+    {
+        for (int i = 0; i < a_list.size(); i++)
+        {
+            Address address = a_list.get(i);
+            if (adr.equals(address))
+                return true;
+
+        }
+        return false;
+    }
+
+    void merge_adr_lists(  ArrayList<Address> a_list, ArrayList<Address> b_list )
+    {
+        ArrayList<Address> ret_list = a_list;
+
+        for (int i = 0; i < b_list.size(); i++)
+        {
+            Address address = b_list.get(i);
+            if (!is_in_adr_list(ret_list, address))
+            {
+                b_list.remove(address);
+                ret_list.add(address);
+            }
+        }       
+    }
+    ArrayList<Address> remove_existing_entries(  ArrayList<Address> a_list, ArrayList<Address> b_list )
+    {
+        for (int i = 0; i < b_list.size(); i++)
+        {
+            Address address = b_list.get(i);
+            if (is_in_adr_list(a_list, address))
+            {
+                b_list.remove(address);
+            }
+        }
+        return b_list;
+    }
+
+
+    void get_envelope_recepients( MimeMessage cm, RFCFileMail mail, String text  ) throws MessagingException
+    {       
+
+        ArrayList<Address> existing_all = mk_adr_list( cm.getAllRecipients() );
+/*        ArrayList<Address> existing_to = mk_adr_list( cm.getRecipients(Message.RecipientType.TO) );
+        ArrayList<Address> existing_cc = mk_adr_list( cm.getRecipients(Message.RecipientType.CC) );
+        ArrayList<Address> existing_bcc = mk_adr_list( cm.getRecipients(Message.RecipientType.BCC) );
+        */
+
+        /* Ex 2007/2010
+        Recipient: mw@w2k8becom.dimm.home
+        Recipient: mark1@dimm.de, Forward: mark@dimm.de
+        Recipient: mark2@dimm.de, Expanded: sales@de.de
+         * http://technet.microsoft.com/en-us/library/bb738122%28EXCHG.80%29.aspx
+         * */
+
+        // FETCH ENEVELOPE PARAMS
+        ArrayList<Address> envelope_to = mk_envelope_adr_list( "To:", text );
+        ArrayList<Address> envelope_cc = mk_envelope_adr_list( "Cc:", text );
+        ArrayList<Address> envelope_bcc = mk_envelope_adr_list( "Bcc:", text );
+        ArrayList<Address> envelope_recepient = mk_envelope_adr_list( "Recipient:", text );
+
+
+        // REMOVE EXISTING ENTRIES
+        remove_existing_entries( existing_all, envelope_to );
+        remove_existing_entries( existing_all, envelope_cc );
+        remove_existing_entries( existing_all, envelope_bcc );
+        remove_existing_entries( existing_all, envelope_recepient );
+        
+
+        // ADD REMAINING ENTRIES TO ATTRIBUTE-LIST
+        for (int i = 0; i < envelope_to.size(); i++)
+        {
+            mail.add_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_TO, envelope_to.get(i).toString() );
+        }
+        for (int i = 0; i < envelope_cc.size(); i++)
+        {
+            mail.add_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_CC, envelope_cc.get(i).toString() );
+        }
+        for (int i = 0; i < envelope_bcc.size(); i++)
+        {
+            mail.add_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_BCC, envelope_bcc.get(i).toString() );
+        }
+
+        // ADD RECIPIENTS TO ENVELOPE ENTRY, THIS WILL BE MERGED LATER AT INDEX TIME, WOULS BE EQUAL TO ADD IT AS BCC, BUT SO WE CAN TEST BOTH WAYS
+        for (int i = 0; i < envelope_recepient.size(); i++)
+        {
+            mail.add_attribute(RFCGenericMail.MATTR_ENVELOPE, CS_Constants.FLD_ENVELOPE_TO, envelope_recepient.get(i).toString() );
+        }
+
+
+        
 
           /* Ex 2003
         Recipients:"smtp:info@dimm.de" <smtp:info@dimm.de>\n\r"smtp:info1@dimm.de" <smtp:info1@dimm.de>
@@ -155,6 +250,8 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
         int idx = text.indexOf(RCPIENTS);
         if (idx >= 0)
         {
+            Address[] existing_rcpients = cm.getAllRecipients();
+            
             text = text.substring(idx + RCPIENTS.length());
 
             StringTokenizer str = new StringTokenizer(text, "\n\r");
@@ -169,52 +266,51 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                 int mail_e = line.indexOf(">");
                 if (mail_s == -1 || mail_e == -1)
                 {
-                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Cannot find mail recipient in enevlope header line: " + line  );
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Cannot find mail recipient in envelope header line: " + line  );
                     continue;
                 }
-                String mail = line.substring(mail_s + 1, mail_e);
-                int prefix_idx = mail.indexOf(':');
+                String mail_addr = line.substring(mail_s + 1, mail_e);
+                int prefix_idx = mail_addr.indexOf(':');
                 if (prefix_idx >= -1)
                 {
-                    mail = mail.substring(prefix_idx + 1);
+                    mail_addr = mail_addr.substring(prefix_idx + 1);
                 }
                 Address adr = null;
                 try
                 {
-                    adr = new InternetAddress(mail);
+                    adr = new InternetAddress(mail_addr);
 
                     // CHECK IF ADR IS ALREADY IN RCPLIST
-                    for (int i = 0; i < existing_rcpients.length; i++)
+                    if (existing_rcpients != null)
                     {
-                        Address address = existing_rcpients[i];
-                        if (address.equals( adr ))
+                        for (int i = 0; i < existing_rcpients.length; i++)
                         {
-                            // INVALIDATE
-                            adr = null;
-                            break;
+                            Address address = existing_rcpients[i];
+                            if (address.equals( adr ))
+                            {
+                                // INVALIDATE
+                                adr = null;
+                                break;
+                            }
                         }
                     }
                 }
                 catch (AddressException addressException)
                 {
-                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Invalid recipient address in enevlope header line: " + line, addressException );
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Invalid recipient address in envelope header line: " + line, addressException );
                 }
 
 
                 // ADD NEW ADR (BCC)
                 if (adr != null)
-                    a_list.add(  adr);
+                {
+                    mail.add_attribute(RFCGenericMail.MATTR_ENVELOPE, CS_Constants.FLD_ENVELOPE_TO, adr.toString() );
+                }                   
             }
         }
-
-        Address[] ret = new Address[a_list.size()];
-        for (int i = 0; i < a_list.size(); i++)
-        {
-            ret[i] = a_list.get(i);
-        }
-        return ret;
     }
-    public static boolean contains_tnef(Session session, Part part) throws MessagingException, IOException
+    
+    public static boolean contains_tnef( Part part) throws MessagingException, IOException
     {
         if (part.isMimeType("multipart/*"))
         {
@@ -223,7 +319,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
             for (int i = 0; i < count; i++)
             {
                 Part mpPart = mp.getBodyPart(i);
-                if ( contains_tnef(session, mpPart))
+                if ( contains_tnef( mpPart))
                 {
                     return true;
                 }
@@ -277,7 +373,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
 
                 try
                 {
-                    if (contains_tnef(s, m))
+                    if (contains_tnef(m))
                     {
                         m = TNEFMime.convert(s, m, /*embed*/ true);
                     }
@@ -295,24 +391,16 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                         BodyPart bp = mp.getBodyPart(i);
                         if (bp.getContentType().toLowerCase().compareTo("message/rfc822") == 0)
                         {
-                            Message cm = null;                            
+                            MimeMessage cm = null;
                             InputStream is = bp.getInputStream();
 
                             cm = new MimeMessage( s, is );
                             is.close();
 
-                            Address[] existing_rcpients = cm.getAllRecipients();
+                           
+                          
 
-                            // EXTRACT ALL ADDRESSES FROM ENV-MAIL THAR ARE NOT IN THIS MESSAGE
-                            Address[] recp_list = get_envelope_recepients( envelope_text, existing_rcpients );
-
-                            // ADD BCC
-                            if (recp_list != null)
-                            {
-                                cm.addRecipients(Message.RecipientType.BCC, recp_list);
-                            }
-
-                            super.archive_message(cm);
+                            super_archive_message(cm, envelope_text);
                             archived = true;                        
                         }
                     }
@@ -333,18 +421,60 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
 
             catch (IOException ex)
             {
+                LogManager.printStackTrace(ex);
                 LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_FETCHER, "archive_message failed", ex);
             }
             catch (MessagingException ex)
             {
+                LogManager.printStackTrace(ex);
                 LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_FETCHER, "archive_message failed", ex);
             }
-
         }
         else
         {
             super.archive_message(message);
             set_msg_deleted(message);
+        }
+    }
+
+    protected void super_archive_message( MimeMessage message, String envelope_text ) throws ArchiveMsgException, VaultException, IndexException
+    {
+
+        RFCFileMail mail = null;
+        try
+        {
+            status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
+
+            mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf", imfetcher.getDiskArchive());
+
+            try
+            {
+                get_envelope_recepients(message, mail, envelope_text);
+            }
+            catch (MessagingException messagingException)
+            {
+                LogManager.msg_fetcher(LogManager.LVL_ERR, "Cannot eval enevelope parameters", messagingException);
+            }
+
+            Main.get_control().add_rfc_file_mail(mail, imfetcher.getMandant(), imfetcher.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
+
+            set_msg_deleted(message);
+        }
+        catch (ArchiveMsgException ex)
+        {
+            status.set_status(StatusEntry.ERROR, "Cannot archive message from <" + imfetcher.getServer() + ">");
+            LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), ex);
+            if (mail != null)
+            {
+                try
+                {
+                    Main.get_control().move_to_quarantine(mail, imfetcher.getMandant());
+                }
+                catch (IOException iOException)
+                {
+                    LogManager.msg_fetcher(LogManager.LVL_ERR, "Cannot move mail to quarantine", iOException);
+                }
+            }
         }
     }
 }

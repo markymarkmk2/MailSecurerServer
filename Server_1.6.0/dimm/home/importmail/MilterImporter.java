@@ -147,7 +147,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
 
         initialize();
     }
-    void initialize()
+    final void initialize()
     {
         esmtp_from_args = new ArrayList<String>();
         esmtp_rcpt_args = new ArrayList<String>();
@@ -299,7 +299,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
             RFCMimeMail mime_mail = new RFCMimeMail();
             mime_mail.parse(file_mail);
 
-            add_bcc_recpients( mime_mail.getMsg() );
+            add_bcc_attributes( mime_mail.getMsg() );
 
             // CHECK FOR SPACE AND ARCHIVE
             Milter milter = handler.get_milter();                        
@@ -371,7 +371,7 @@ class MailImportJilterHandler extends JilterHandlerAdapter
         return JilterStatus.SMFIS_CONTINUE;
     }
 
-    void add_bcc_recpients(MimeMessage m)
+    void add_bcc_attributes(MimeMessage m)
     {
         ArrayList<Address> bcc_list = new ArrayList<Address>();
 
@@ -399,15 +399,15 @@ class MailImportJilterHandler extends JilterHandlerAdapter
                 if (!found)
                 {
                     bcc_list.add(a);
-
                 }
             }
         }
-        catch (MessagingException messagingException)
+        catch (Exception messagingException)
         {
             LogManager.msg_milter(LogManager.LVL_WARN,  "Error while detecting bcc addresses", messagingException);
         }
         file_mail.set_bcc(bcc_list);
+
     }
 }
 

@@ -34,7 +34,7 @@ class MsgCacheEntry
 public class LogTypeEntry
 {
     String typ;
-    int lvl;
+    private int lvl;
     ArrayList<MsgCacheEntry> msg_cache;
     long last_size_check;
     SimpleDateFormat log_sdf;
@@ -49,6 +49,11 @@ public class LogTypeEntry
         this.lvl = LogManager.LVL_ERR;
         msg_cache = new ArrayList<MsgCacheEntry>();
         log_sdf = new SimpleDateFormat("yyyy.MM.dd_hh.mm.ss");
+    }
+
+    int get_lvl()
+    {
+        return lvl;
     }
 
     void add_msg( int lvl, String s, Date date )
@@ -180,6 +185,11 @@ public class LogTypeEntry
             System.err.println(s);
             e.printStackTrace(System.err );
         }
+    }
+
+    void set_lvl( int parseInt )
+    {
+        lvl = parseInt;
     }
 
 

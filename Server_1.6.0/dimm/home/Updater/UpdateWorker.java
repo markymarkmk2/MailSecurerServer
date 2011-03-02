@@ -271,18 +271,14 @@ public class UpdateWorker extends WorkerParent
     {
         if (update_worker != null && !update_worker.finished())
             return;
-        
-        
+                
         update_worker = new BackgroundWorker(NAME + ".CheckUpdates")
         {
-
-
             @Override
             public Object construct()
             {
-                if (automatic && check_changed())
-                {
-                    
+                if (check_changed())
+                {                    
                     try
                     {
                         download_update();
@@ -516,5 +512,16 @@ public class UpdateWorker extends WorkerParent
     public String get_task_status( int ma_id )
     {
         return "Not supported yet.";
+    }
+
+    public boolean update_in_progress()
+    {
+        if (update_worker == null)
+            return false;
+
+        if (update_worker.finished())
+            return false;
+
+        return true;
     }
 }

@@ -36,6 +36,7 @@ import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
 import dimm.home.mailarchiv.Commands.LicenseConfig;
 import dimm.home.mailarchiv.Commands.ListVaultStatus;
+import dimm.home.mailarchiv.Commands.Update;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
 import home.shared.SQL.SQLArrayResult;
@@ -163,6 +164,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new ListVaultStatus() );
         cmd_list.add( new ImportExchange() );
         cmd_list.add( new GetWorkerStatus() );
+        cmd_list.add( new Update() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

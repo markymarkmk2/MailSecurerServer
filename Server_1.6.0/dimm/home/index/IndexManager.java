@@ -53,6 +53,7 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
+import java.util.Properties;
 import java.util.SortedMap;
 import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
@@ -65,7 +66,10 @@ import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Part;
+import javax.mail.Session;
 import javax.mail.internet.MimePart;
+import net.freeutils.tnef.TNEFUtils;
+import net.freeutils.tnef.mime.TNEFMime;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.PerFieldAnalyzerWrapper;
@@ -582,6 +586,55 @@ public class IndexManager extends WorkerParent
         return false;
     }
 
+
+    private void map_add_attributes_to_doc( RFCGenericMail mail_file, Document doc)
+    {
+            ArrayList<String[]> attribute_list = mail_file.get_attribute_arr(RFCGenericMail.MATTR_LUCENE);
+
+            if (attribute_list == null)
+                return;
+
+
+            if (attribute_list.size() > 0)
+            {
+
+                for (int i = 0; i < attribute_list.size(); i++)
+                {
+                    String[] attr = attribute_list.get(i);
+                    String field_name = attr[0];
+                    String field_value = attr[1];
+
+                    Field[] field_list = doc.getFields(field_name);
+                    boolean is_already_in_doc = false;
+                    for (int j = 0; j < field_list.length; j++)
+                    {
+                        Field field = field_list[j];
+                        if (field.toString().contains(field_value))
+                        {
+                            is_already_in_doc = true;
+                            break;
+                        }
+                    }
+                    if (!is_already_in_doc)
+                    {
+                        doc.add(new Field(field_name, field_value, Field.Store.YES, Field.Index.ANALYZED));
+                    }
+                }
+            }
+
+    }
+
+    boolean is_in_field( String envelope, Field[] f_arr )
+    {
+        for (int i = 0; i < f_arr.length; i++)
+        {
+            Field field = f_arr[i];
+            if (field.stringValue() != null && field.stringValue().indexOf(envelope) >= 0)
+                return true;
+        }
+        return false;
+    }
+
     // RETURN FALSE IF MAIL SHOULD BE DELETED
     public boolean index_mail_file( MandantContext m_ctx, String unique_id, int da_id, int ds_id, 
             RFCGenericMail mail_file, RFCMimeMail mime_msg, DocumentWrapper docw,  boolean delete_after_index, boolean skip_account_filter ) throws MessagingException, IOException, IndexException
@@ -765,31 +818,30 @@ public class IndexManager extends WorkerParent
             {
                 doc.add(new Field(CS_Constants.FLD_HAS_ATTACHMENT, "1", Field.Store.YES, Field.Index.NOT_ANALYZED));
             }
-            // ADD BCC TO MAIL IF NOT ALREADY DONE SO
-            if (mail_file.get_bcc_list().size() > 0)
-            {
-                Field[] bcc_in_mail = doc.getFields(CS_Constants.FLD_BCC);
 
-                for (int i = 0; i < mail_file.get_bcc_list().size(); i++)
+            // NOW ADD THE LUCENE ATTRIBUTES  TO THE FIELDS
+            map_add_attributes_to_doc( mail_file, doc );
+
+            // ADD ENVELOPE ADRESSES TO BCC IF NOT ALREADY IN MAIL
+            ArrayList<String> envelope_list = mail_file.get_attribute(RFCGenericMail.MATTR_ENVELOPE, CS_Constants.FLD_ENVELOPE_TO);
+
+            if (envelope_list != null)
+            {
+                for (int i = 0; i < envelope_list.size(); i++)
                 {
-                    String bcc = mail_file.get_bcc_list().get(i).toString();
-                    boolean is_already_in_doc = false;
-                    for (int j = 0; j < bcc_in_mail.length; j++)
+                    String envelope = envelope_list.get(i);
+                    if (!is_in_field( envelope, doc.getFields(CS_Constants.FLD_TO)) &&
+                        !is_in_field( envelope, doc.getFields(CS_Constants.FLD_CC)) &&
+                        !is_in_field( envelope, doc.getFields(CS_Constants.FLD_BCC)) &&
+                        !is_in_field( envelope, doc.getFields(CS_Constants.FLD_FROM)))
                     {
-                        Field field = bcc_in_mail[j];
-                        if (field.toString().contains(bcc))
-                        {
-                            is_already_in_doc = true;
-                            break;
-                        }
-                    }
-                    if (!is_already_in_doc)
-                    {
-                        doc.add(new Field(CS_Constants.FLD_BCC, bcc.toString(), Field.Store.YES, Field.Index.ANALYZED));
+                        doc.add(new Field(CS_Constants.FLD_BCC, envelope, Field.Store.YES, Field.Index.ANALYZED));
+                        doc.add(new Field(CS_Constants.FLD_BCC + "REG", envelope, Field.Store.YES, Field.Index.ANALYZED));
                     }
                 }
             }
         }
+        
         catch (FileNotFoundException fileNotFoundException)
         {
             LogManager.msg_index(LogManager.LVL_ERR,  unique_id, fileNotFoundException);
@@ -965,6 +1017,7 @@ public class IndexManager extends WorkerParent
                 }
                 else if (found_ah || found_eh)
                 {
+
                     // STORE ALL HEADERS INTO INDEX DB, WE DO INDEX BECAUSE WE SEARCH FOR TOKENS
                     doc.add(new Field(header_field_name, value, Field.Store.YES, Field.Index.ANALYZED));
                     LogManager.msg_index(LogManager.LVL_VERBOSE,  "Mail " + uid + " adding header <" + header_field_name + "> Val <" + value + ">");
@@ -1069,6 +1122,19 @@ public class IndexManager extends WorkerParent
                     index_part_content(doc, uid, mp.getBodyPart(i));
                 }
             }
+            else if (TNEFUtils.isTNEFMimeType(p.getContentType()))
+            {
+                // DECODE TNEF-ATTACHMENTS
+                Session s = Session.getDefaultInstance( new Properties());
+                Part resolved_tnef = TNEFMime.convert(s, p, /*embed*/ true);
+
+                // WAS A NEW PART CREATED
+                if (resolved_tnef != p)
+                {
+                    // THEN HANDLE THIS S A REGULAR MULTIPART MESSAGE
+                    index_part_content(doc, uid, (Part) resolved_tnef.getContent());
+                }
+            }
             else
             {
                 index_content(doc, uid, p);
@@ -1078,7 +1144,6 @@ public class IndexManager extends WorkerParent
         {
             LogManager.msg_index(LogManager.LVL_WARN,  "Error in index_part_content for " + uid + ": " + messagingException.getMessage());
         }
-
     }
 
     protected void index_content( DocumentWrapper doc, String uid, Part p ) throws MessagingException
@@ -1457,6 +1522,15 @@ public class IndexManager extends WorkerParent
                     if (index_dsh != null)
                     {
                         RFCFileMail msg = new RFCFileMail(file, new Date(time), encoded);
+                        try
+                        {
+                            msg.read_attributes();
+                        }
+                        catch (IOException iOException)
+                        {
+                            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Cannot_read_attributes" + " " + iOException.getMessage());
+                        }
+
 
                         // TRY INDEX IN FOREGROUND
                         if (!handle_IndexJobEntry(m_ctx, uuid, da_id, ds_id, index_dsh, msg,
@@ -1743,20 +1817,21 @@ public class IndexManager extends WorkerParent
         boolean needs_updated_index = false;
         // TODO: DO WE REALLY NEED THE SECOND ENTRY? THE HASH SAYS THE MESSAGE IS IDENTICAL, SO WHY BOTHER?
         // NOW WE CHECK IF ALL BCC ARE IN MESSAGE, IF NOT WE NEED A NEW INDEX
-        if (msg.get_bcc_list().size() > 0)
+        ArrayList<String> envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_ENVELOPE_TO);
+        if (envelope_recipients.size() > 0)
         {
             Field[] bcc_fields = doc.getFields(CS_Constants.FLD_BCC);
-            for (int i = 0; i < msg.get_bcc_list().size(); i++)
+            for (int i = 0; i < envelope_recipients.size(); i++)
             {
-                Address mail_bcc = msg.get_bcc_list().get(i);
+                String mail_bcc = envelope_recipients.get(i);
 
                 for (int f = 0; f < bcc_fields.length; f++)
                 {
                     String doc_bcc = bcc_fields[f].stringValue();
-                    if (!doc_bcc.contains(mail_bcc.toString()))
+                    if (!doc_bcc.contains(mail_bcc))
                     {
                         needs_updated_index = true;
-                        doc.add(new Field(CS_Constants.FLD_BCC, mail_bcc.toString(), Field.Store.YES, Field.Index.ANALYZED));
+                        doc.add(new Field(CS_Constants.FLD_BCC, mail_bcc, Field.Store.YES, Field.Index.ANALYZED));
                     }
                 }
             }
@@ -1780,7 +1855,7 @@ public class IndexManager extends WorkerParent
             {
                 LogManager.msg_index(LogManager.LVL_ERR,  "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
                 // CONTINUE ANYWAY INDEX COULD BE READ ONLY
-                }
+            }
         }
         else
         {

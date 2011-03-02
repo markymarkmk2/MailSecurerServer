@@ -322,6 +322,10 @@ public class LogicControl
     {
         return thread_watcher;
     }
+    public UpdateWorker get_update_worker()
+    {
+        return upd;
+    }
 
 
 
@@ -401,30 +405,6 @@ public class LogicControl
         return licensed;
     }
 
-    public void add_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background, boolean delete_afterwards, boolean encoded ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        if (mail == null)
-        {
-            throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_null"));
-        }
-        if (!mail.exists())
-        {
-            throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_missing"));
-        }
-        RFCFileMail mf = new RFCFileMail( mail, encoded );
-
-        add_rfc_file_mail(mf, mandant, da, background, delete_afterwards);
-    }
-
-    public void add_unencoded_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background, boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
-    {
-        add_mail_file(mail, mandant, da, background, delete_afterwards, false );
-    }
-
-    public void add_encoded_mail_file( File mail, Mandant mandant, DiskArchive da, boolean background, boolean delete_afterwards ) throws ArchiveMsgException, VaultException, IndexException
-    {        
-        add_mail_file(mail, mandant, da, background, delete_afterwards, true );
-    }
 
     // THIS IS THE ON AND ONLY GATEWAY FOR INCOMING MAIL DATA
     void master_add_mail_file( RFCFileMail mf, Mandant mandant, DiskArchive da, boolean background_index)  throws ArchiveMsgException, VaultException, IndexException
@@ -650,7 +630,7 @@ public class LogicControl
         }
         catch (IOException ex)
         {
-            LogManager.msg_archive( LogManager.LVL_ERR, "Cannot create duplicate temp file", ex);
+            LogManager.msg_archive( LogManager.LVL_ERR, "Cannot create duplicate temp file", ex);            
             throw new ArchiveMsgException("Cannot create duplicate temp file: " + ex.getMessage());
         }
         finally
@@ -924,6 +904,9 @@ public class LogicControl
 
     boolean set_system_time()
     {
+        if (!Main.is_linux())
+            return false;
+
         try
         {
             // USE  --directisa WG: SHUTTLE, SHOULD NOT BOTHER OTHER BOX

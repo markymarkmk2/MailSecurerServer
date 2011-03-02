@@ -58,37 +58,7 @@ public class MailMessage implements MailInfo
     private MailMessage()
     {
     }
-/*
-    public MWMailMessage( MailFolder mailfile, MailKonto parent, String messageid, int uid )
-    {
-        this.parent = parent;
-        this.mailfile = mailfile;
-       // this.messageid = messageid;
-        this.uuid = messageid;
-        //this.uid = uid;
 
-        //21-Apr-2009 16:50:44 +0100
-        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
-
-        rfc = new RFCFileMail(new File( messageid ), false);
-       
-    }*/
-    /*
-    public MWMailMessage( MailFolder mailfile, MailKonto parent, RFCMimeMail mm, SearchResult sc )
-    {
-        this.parent = parent;
-        this.mailfile = mailfile;
-
-        this.uuid = sc.getUuid();
-        //this.uid = uid;
-        sc_result = sc;
-
-        //21-Apr-2009 16:50:44 +0100
-        internaldate_sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z");
-
-        mmail = mm;
-
-    }*/
     void unload_rfc_mail()
     {
         mmail = null;

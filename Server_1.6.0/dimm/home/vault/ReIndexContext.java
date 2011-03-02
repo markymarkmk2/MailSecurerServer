@@ -350,6 +350,10 @@ public class ReIndexContext
 
                 File mailfile = it.next();
 
+                // SKIP ATTRIBUTE ENTRIES
+                if (mailfile.getName().endsWith(RFCFileMail.ATTR_SUFFIX))
+                    continue;
+
                 try
                 {
                     // RETRIEVE MAILFILE
@@ -357,6 +361,14 @@ public class ReIndexContext
                     long time = data_dsh.build_time_from_path(norm_path, data_dsh.get_enc_mode(), data_dsh.get_fmode());
                     RFCFileMail rfc = (RFCFileMail) data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode(), data_dsh.get_fmode());
 
+                    try
+                    {
+                        rfc.read_attributes();
+                    }
+                    catch (IOException iOException)
+                    {
+                        LogManager.msg_index( LogManager.LVL_ERR, "Cannot read attributes for " + mailfile.getAbsolutePath() + " " + iOException.getMessage());
+                    }
 
                     String uuid = data_dsh.get_message_uuid(rfc);
 

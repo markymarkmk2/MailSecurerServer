@@ -57,6 +57,8 @@ public class EmailFilter extends TokenFilter implements Serializable
 
         emailAddress = emailAddress.replaceAll("<", "");
         emailAddress = emailAddress.replaceAll(">", "");
+        emailAddress = emailAddress.replaceAll("\\]", "");
+        emailAddress = emailAddress.replaceAll("\\[", "");
         emailAddress = emailAddress.replaceAll("\"", "");
 
         String[] parts = extractEmailParts(emailAddress);

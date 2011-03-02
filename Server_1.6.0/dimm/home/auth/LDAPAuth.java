@@ -4,10 +4,7 @@
  */
 package dimm.home.auth;
 
-import com.sun.security.auth.LdapPrincipal;
-import com.sun.security.auth.module.LdapLoginModule;
 import dimm.home.mailarchiv.Utilities.LogManager;
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
@@ -22,7 +19,6 @@ import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.InitialLdapContext;
 import javax.naming.ldap.LdapContext;
-import javax.security.auth.Subject;
 
 
 
@@ -220,12 +216,8 @@ public class LDAPAuth extends GenericRealmAuth
         Hashtable<String,String> connect_env = create_sec_env();
         String admin_dn = "";
         try
-        {            
-
-            
+        {                        
             String rootSearchBase = get_user_search_base();
-
-            
             
             // ABSOLUTE DN?  (cn=manager,dc=test,dc=de)
             if (admin_name.toLowerCase().indexOf("dc=") >= 0)
@@ -264,6 +256,8 @@ public class LDAPAuth extends GenericRealmAuth
         }
         return false;
     }
+
+    
     @Override
     public boolean disconnect()
     {
@@ -307,7 +301,7 @@ public class LDAPAuth extends GenericRealmAuth
     public ArrayList<String> list_mailaliases_for_userlist( ArrayList<String> users ) throws NamingException
     {
         ArrayList<String> mail_list = new ArrayList<String>();
-        if (users.size() == 0)
+        if (users.isEmpty())
             return mail_list;
         // RETURN VALS
 
@@ -402,17 +396,46 @@ public class LDAPAuth extends GenericRealmAuth
                     {
                         search_attribute, "cn"
                     });
-
+            
+            
+            // TRY TO FETCH SEARCH ATTRIBUTE AND CN IF AVAILABLE
+            boolean has_cn = true;
             String rootSearchBase = get_user_search_base();
-
             String searchFilter = "(" + search_attribute + "=" + user_name + ")";
-            int cnt  = 0;
-
+            
             LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
-            NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
-            if (!enumeration.hasMore())
+            
+            NamingEnumeration<SearchResult> enumeration = null;
+            try
             {
-                return null;
+                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+                if (!enumeration.hasMore())
+                {
+                    enumeration = null;
+                }
+            }
+            catch (Exception exc)
+            {
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user with cn failed trying w/o cn: " + rootSearchBase + " " + searchFilter);
+                enumeration = null;
+            }
+
+            if (enumeration == null)
+            {
+                // TRY AGAIN W/O CN ATTRIBUTE
+                 ctrl.setReturningAttributes(new String[]
+                    {
+                        search_attribute
+                    });
+
+                has_cn = false;
+                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+
+                if (!enumeration.hasMore())
+                {
+                    LogManager.msg_auth( LogManager.LVL_ERR, "open_user_failed: " + rootSearchBase + " " + searchFilter);
+                    return null;
+                }
             }
 
             // NOW GET THE DN FOR THIS USER
@@ -420,13 +443,12 @@ public class LDAPAuth extends GenericRealmAuth
             Attributes res_attr = sr.getAttributes();
             Attribute adn = res_attr.get(search_attribute);
             String user_dn = adn.get().toString();
-            Attribute cn_adn = res_attr.get("cn");
-            String cn_user_dn = cn_adn.get().toString();
+            
             String full_user_dn = search_attribute + "=" + user_dn + "," + rootSearchBase;
             
 
             // NOW GO FOR LOGIN USER WITH DN
-            LdapContext user_ctx;
+            LdapContext user_ctx = null;
             Hashtable<String,String> connect_env = create_sec_env();
 
 
@@ -442,12 +464,23 @@ public class LDAPAuth extends GenericRealmAuth
             }
             catch (NamingException namingException)
             {
-                // RETRY WITH cn ATTRIBUTE
-                full_user_dn = "cn=" + cn_user_dn + "," + rootSearchBase;
-                connect_env.put(Context.SECURITY_PRINCIPAL, full_user_dn);
-                
-                LogManager.msg_auth( LogManager.LVL_DEBUG, "auth_user: " + full_user_dn);
-                user_ctx = new InitialLdapContext(connect_env, null);
+                // RETRY WITH cn ATTRIBUTE IF AVAILABLE
+                if (has_cn)
+                {
+                    Attribute cn_adn = res_attr.get("cn");
+                    String cn_user_dn = cn_adn.get().toString();
+                    full_user_dn = "cn=" + cn_user_dn + "," + rootSearchBase;
+                    connect_env.put(Context.SECURITY_PRINCIPAL, full_user_dn);
+
+                    LogManager.msg_auth( LogManager.LVL_DEBUG, "auth_user: " + full_user_dn);
+                    user_ctx = new InitialLdapContext(connect_env, null);
+                }
+                else
+                {
+                    LogManager.msg_auth( LogManager.LVL_ERR, "auth_failed: " + rootSearchBase + " " +
+                                        searchFilter + ": " + namingException.getMessage());
+                    return null;
+                }
             }
           
             return new LDAPUserContext(user_dn, user_ctx);
@@ -455,10 +488,13 @@ public class LDAPAuth extends GenericRealmAuth
         catch (Exception namingException)
         {
             error_txt = namingException.getMessage();
-            namingException.printStackTrace();
+            LogManager.msg_auth( LogManager.LVL_ERR, "auth_failed: " + namingException.getMessage());
+            LogManager.printStackTrace(namingException);
         }
         return null;
     }
+
+
     LDAPUserContext open_user_anonymous( String user_name, String pwd )
     {
         try
@@ -470,16 +506,51 @@ public class LDAPAuth extends GenericRealmAuth
                         search_attribute, "cn"
                     });
 
+            // TRY TO FETCH SEARCH ATTRIBUTE AND CN IF AVAILABLE
+            boolean has_cn = true;
             String rootSearchBase = get_user_search_base();
 
             String searchFilter = "(" + search_attribute + "=" + user_name + ")";
             int cnt  = 0;
 
             LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user: " + rootSearchBase + " " + searchFilter);
-            NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+            /*NamingEnumeration<SearchResult> enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
             if (!enumeration.hasMore())
             {
                 return null;
+            }*/
+
+            NamingEnumeration<SearchResult> enumeration = null;
+            try
+            {
+                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+                if (!enumeration.hasMore())
+                {
+                    enumeration = null;
+                }
+            }
+            catch (Exception exc)
+            {
+                LogManager.msg_auth( LogManager.LVL_DEBUG, "open_user with cn failed trying w/o cn: " + rootSearchBase + " " + searchFilter);
+                enumeration = null;
+            }
+
+            if (enumeration == null)
+            {
+                // TRY AGAIN W/O CN ATTRIBUTE
+                 ctrl.setReturningAttributes(new String[]
+                    {
+                        search_attribute
+                    });
+
+                has_cn = false;
+                enumeration = ctx.search(rootSearchBase, searchFilter, ctrl);
+
+                if (!enumeration.hasMore())
+                {
+                    LogManager.msg_auth( LogManager.LVL_ERR, "open_user_failed: " + rootSearchBase + " " + searchFilter);
+                    return null;
+                }
             }
 
             // NOW GET THE DN FOR THIS USER
@@ -487,13 +558,9 @@ public class LDAPAuth extends GenericRealmAuth
             Attributes res_attr = sr.getAttributes();
             Attribute adn = res_attr.get(search_attribute);
             String user_dn = adn.get().toString();
-            Attribute cn_adn = res_attr.get("cn");
-            String cn_user_dn = cn_adn.get().toString();
-            String full_user_dn = search_attribute + "=" + user_dn + "," + rootSearchBase;
-
-         
             
-
+            String full_user_dn = search_attribute + "=" + user_dn + "," + rootSearchBase;
+                   
             // Set up the search controls
             SearchControls ctls = new SearchControls();
             ctls.setReturningAttributes(new String[0]);       // Return no attrs
@@ -503,21 +570,27 @@ public class LDAPAuth extends GenericRealmAuth
             NamingEnumeration answer = ctx.search( full_user_dn, "(password={0})", new Object[]{pwd}, ctls);
             if (!answer.hasMore())
             {
-                answer = ctx.search( cn_user_dn, "(password={0})", new Object[]{pwd}, ctls);
+                if (has_cn)
+                {
+                    Attribute cn_adn = res_attr.get("cn");
+                    String cn_user_dn = cn_adn.get().toString();
+                    answer = ctx.search( cn_user_dn, "(password={0})", new Object[]{pwd}, ctls);
+                }
             }
+            
             if (!answer.hasMore())
             {
+                LogManager.msg_auth( LogManager.LVL_ERR, "auth_user_failed: " + rootSearchBase + " " + searchFilter);
                 return null;
             }
-
-
 
             return new LDAPUserContext(user_dn, ctx);
         }
         catch (Exception namingException)
         {
             error_txt = namingException.getMessage();
-            namingException.printStackTrace();
+             LogManager.msg_auth( LogManager.LVL_ERR, "open_user_anonymous failed: " + user_name + ": " + namingException.getMessage());
+            LogManager.printStackTrace(namingException);
         }
         return null;
     }
@@ -543,7 +616,8 @@ public class LDAPAuth extends GenericRealmAuth
         }
         catch (NamingException namingException)
         {
-            namingException.printStackTrace();
+            LogManager.msg_auth( LogManager.LVL_ERR, "get_user_attribute failed: " + attr_name + " " + namingException.getMessage());
+            LogManager.printStackTrace(namingException);
         }
         return null;
     }

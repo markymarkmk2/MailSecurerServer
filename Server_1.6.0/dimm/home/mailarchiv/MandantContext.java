@@ -944,6 +944,7 @@ public class MandantContext
         return false;
 
     }
+
     public boolean authenticate_user( String user, String pwd ) throws AuthException
     {
         boolean auth_ok = false;
@@ -1109,6 +1110,14 @@ public class MandantContext
                     boolean encoded = hold_uuid.endsWith(RFCGenericMail.get_suffix_for_encoded());
 
                     RFCFileMail mf = new RFCFileMail(file, new Date(time), encoded);
+                    try
+                    {
+                        mf.read_attributes();
+                    }
+                    catch (IOException iOException)
+                    {
+                        LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Cannot_read_attributes" + " " + iOException.getMessage());
+                    }
 
                     // HANDLE A NOT IN BG
                     // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
@@ -1169,7 +1178,14 @@ public class MandantContext
                     continue;
                 }
                 RFCFileMail mf = new RFCFileMail(file, new Date(), encoded);
-
+                try
+                {
+                    mf.read_attributes();
+                }
+                catch (IOException iOException)
+                {
+                    LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_IMPORT, "Cannot_read_attributes" + " " + iOException.getMessage());
+                }
                 // HANDLE ADD NOT IN BG
                 // DO NOT CATCH EXCEPTIONS, THIS WILL ABORT THIS LOOP AND BE CAUGHT DOWN THERE
                 Main.get_control().add_rfc_file_mail(mf, getMandant(), dv.get_da(), false, true);

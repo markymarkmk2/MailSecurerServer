@@ -21,8 +21,10 @@ import com.microsoft.schemas.exchange.services._2006.types.FolderIdType;
 import com.microsoft.schemas.exchange.services._2006.types.ItemIdType;
 import com.microsoft.schemas.exchange.services._2006.types.ItemType;
 import dimm.home.auth.GenericRealmAuth;
+import dimm.home.importmail.ImapEnvelopeFetcher;
 import dimm.home.mailarchiv.*;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.AuthException;
 import dimm.home.mailarchiv.Exceptions.ImportException;
 import dimm.home.mailarchiv.Exceptions.IndexException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
@@ -30,7 +32,9 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.Vault;
+import home.shared.CS_Constants;
 import home.shared.SQL.UserSSOEntry;
+import home.shared.Utilities.SizeStr;
 import home.shared.exchange.ExchangeAuthenticator;
 import home.shared.exchange.dao.ItemTypeDAO;
 import home.shared.exchange.util.ExchangeEnvironmentSettings;
@@ -38,15 +42,16 @@ import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
 import javax.swing.Timer;
+import net.freeutils.tnef.mime.TNEFMime;
 import org.apache.commons.codec.binary.Base64;
 
 /*
@@ -69,6 +74,7 @@ Get-MailboxDatabase | Add-ADPermission -User "Administrator" -ExtendedRights ms-
  *
  */
 
+
 abstract class ExchangeImporterEntry
 {
     UserSSOEntry sso;
@@ -82,6 +88,10 @@ abstract class ExchangeImporterEntry
     float mb_per_s;
     private String status;
     private int err;
+
+    // HELPERS FOR KEEPING ARGLIST SMALL
+    ArrayList<String> act_user_mail;
+    String act_user;
 
     public ExchangeImporterEntry( UserSSOEntry sso, Mandant mandant, DiskArchive da, ExchangeVersionType ev )
     {
@@ -396,6 +406,9 @@ public class ExchangeImportServer extends WorkerParent
 
         AccountConnector ac = m_ctx.get_accountconnector( exie.ac_id );
 
+        ArrayList<ArrayList<String>> users_mail_list = new ArrayList<ArrayList<String>>();
+
+
         // USERLIST CONTAINS LIST OF USERPRINCIPALNAMES
         if (user_list == null || user_list.isEmpty())
         {
@@ -404,6 +417,18 @@ public class ExchangeImportServer extends WorkerParent
                 GenericRealmAuth realm = GenericRealmAuth.factory_create_realm(ac);
                 realm.connect();
                 user_list = realm.list_users_for_group("");
+
+                // NOW ADD THE EMAIL-LIST FOR EACH USER TO EMAIL-LIST-LIST
+                for (int i = 0; i < user_list.size(); i++)
+                {
+                    String user = user_list.get(i);
+                    ArrayList<String> _list = new ArrayList<String>();
+                    _list.add(user);
+
+                    ArrayList<String> user_mail = realm.list_mailaliases_for_userlist( _list );
+                    users_mail_list.add(user_mail);
+                }
+
                 realm.disconnect();
             }
             catch (Exception ex)
@@ -447,6 +472,10 @@ public class ExchangeImportServer extends WorkerParent
 
                 try
                 {
+                    // SET WORKING VARS
+                    exie.act_user_mail = users_mail_list.get(i);
+                    exie.act_user = user;
+
                     run_user_import( exie, port, itemTypeDAO );
                 }
                 catch (Exception e)
@@ -532,46 +561,183 @@ public class ExchangeImportServer extends WorkerParent
         return ret;
     }
 
-    private void run_user_import( ExchangeImporterUserEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO ) throws IOException, ImportException
+    private void get_subfolders( ExchangeServicePortType port, ItemTypeDAO itemTypeDAO, BaseFolderType baseFolderType, List<BaseFolderType> subfolders_folder_list )
+    {
+        if (baseFolderType.getChildFolderCount() > 0)
+        {
+            List<BaseFolderType> folders = null;
+            try
+            {
+                folders = itemTypeDAO.GetFoldersbyParent(port, baseFolderType.getFolderId());
+            }
+            catch (IOException iOException)
+            {
+                iOException.printStackTrace(System.err);
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, Main.Txt("Abrufen_der_Unterordner_schlug_fehl:") + " " + baseFolderType.getDisplayName(), iOException);
+                return;
+            }
+
+            for (Iterator<BaseFolderType> it = folders.iterator(); it.hasNext();)
+            {
+                BaseFolderType sub_folder = it.next();
+                subfolders_folder_list.add(sub_folder);
+
+                get_subfolders( port, itemTypeDAO, sub_folder, subfolders_folder_list );
+            }
+        }
+    }
+
+    private List<BaseFolderType>  get_user_folder_list(List<BaseFolderType> all_folder_list, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO) throws IOException
+    {
+
+         ArrayList<BaseFolderType>user_folders = new ArrayList<BaseFolderType>();
+
+
+         FolderIdType root_folder_id = null;
+
+        //THESE ARE THE SETTINGS FROM CLIENT
+        ArrayList<DistinguishedFolderIdNameType>folders = new ArrayList<DistinguishedFolderIdNameType>();
+        folders.add(DistinguishedFolderIdNameType.INBOX );
+        folders.add(DistinguishedFolderIdNameType.SENTITEMS );
+        folders.add(DistinguishedFolderIdNameType.DRAFTS );
+        folders.add(DistinguishedFolderIdNameType.OUTBOX );
+        folders.add(DistinguishedFolderIdNameType.VOICEMAIL );
+        folders.add(DistinguishedFolderIdNameType.DELETEDITEMS );
+        folders.add(DistinguishedFolderIdNameType.PUBLICFOLDERSROOT );
+
+        ArrayList<BaseFolderIdType> included_folder_ids = create_folder_id_list( folders );
+
+        List<BaseFolderType> included_folders = itemTypeDAO.GetFoldersbyId( port, included_folder_ids );
+
+        if ( included_folders.size() > 0)
+        {
+            root_folder_id = included_folders.get(0).getParentFolderId();
+        }
+
+
+
+        for (int i = 0; i < all_folder_list.size(); i++)
+        {
+            BaseFolderType bf = all_folder_list.get(i);
+
+            if (bf.getFolderId() == null)
+                    continue;
+            
+            // SKIP NON-ROOT FOLDERS
+            if (!bf.getParentFolderId().getId().equals( root_folder_id.getId()))
+                continue;
+
+            // SKIP KNOWN FOLDERS
+            boolean skip = false;
+            for (int j = 0; j < included_folders.size(); j++)
+            {
+                BaseFolderType ibf = included_folders.get(j);
+                if (ibf.getFolderId() == null)
+                {
+                    skip = true;
+                    break;
+                }
+
+                if (ibf.getFolderId().getId().equals(bf.getFolderId().getId()))
+                {
+                    skip = true;
+                    break;
+                }
+            }
+
+            // THIS MUST BE A USER-ROOT-FOLDER!!
+            if (!skip)
+                user_folders.add(bf);
+
+        }
+        
+
+        return user_folders;
+    }
+
+
+    private void run_user_import(  ExchangeImporterUserEntry exie, ExchangeServicePortType port, ItemTypeDAO itemTypeDAO ) throws IOException, ImportException
     {
         ArrayList<BaseFolderIdType> folder_list = new ArrayList<BaseFolderIdType>();
 
         List<BaseFolderType> all_folder_list = new ArrayList<BaseFolderType>();
+
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(exie.mandant.getId());
 
         exie.set_status( Txt("Fetching_folder_struct_for_user") + " " + itemTypeDAO.getImpersonation().getConnectingSID().getPrincipalName() + "...");
 
+        // GET ALL FOLDERS ON ROOT LEVEL
         all_folder_list = itemTypeDAO.GetFolders(port);
 
-        // IF USER HAS SELECTED FOLDERS, WE HAVE TO MERGE SUBFOLDERS INT HIS LIST
-        if (exie.folder_list != null && !exie.folder_list.isEmpty())
+        List<BaseFolderType> subfolders_folder_list = new ArrayList<BaseFolderType>();
+
+
+        // GET ALL SUBFOLDERS FOR TESE ROOTFOLDERSD RECURSIVELY
+        for (int i = 0; i < all_folder_list.size(); i++)
         {
+            BaseFolderType baseFolderType = all_folder_list.get(i);
+
+            get_subfolders( port, itemTypeDAO, baseFolderType, subfolders_folder_list );
+        }
+        all_folder_list.addAll(subfolders_folder_list);
+        
 
 
-            ArrayList<BaseFolderIdType> included_folder_ids = create_folder_id_list( exie.folder_list );
+        // IF USER HAS SELECTED FOLDERS, WE HAVE TO MERGE SUBFOLDERS INT HIS LIST
+        if ((exie.folder_list != null && !exie.folder_list.isEmpty()) || exie.user_folders)
+        {
 
             ArrayList<BaseFolderIdType> merged_folder_list = new ArrayList<BaseFolderIdType>();
 
             exie.set_status( Txt("Retrieving_folders"));
 
-            List<BaseFolderType> included_folders = itemTypeDAO.GetFoldersbyId( port, included_folder_ids );
-
-            for (int i = 0; i < included_folders.size(); i++)
+            if (exie.folder_list != null && !exie.folder_list.isEmpty())
             {
-                BaseFolderType folder = included_folders.get(i);
+                ArrayList<BaseFolderIdType> included_folder_ids = create_folder_id_list( exie.folder_list );
+                List<BaseFolderType> included_folders = itemTypeDAO.GetFoldersbyId( port, included_folder_ids );
 
-                // DOES NOT EXIST ON SERVER?
-                if (folder.getFolderId() == null)
-                    continue;
+                for (int i = 0; i < included_folders.size(); i++)
+                {
+                    BaseFolderType folder = included_folders.get(i);
 
-                exie.set_status( Txt("Analyzing_folder") + " " + folder.getDisplayName());
+                    // DOES NOT EXIST ON SERVER?
+                    if (folder.getFolderId() == null)
+                        continue;
 
-                // ADD THIS
-                merged_folder_list.add(folder.getFolderId());
+                    exie.set_status( Txt("Analyzing_folder") + " " + folder.getDisplayName());
 
-                // AND ALL SUBFOLDERS
-                add_to_merged_list( exie, all_folder_list, merged_folder_list, folder.getFolderId() );
+                    // ADD THIS
+                    merged_folder_list.add(folder.getFolderId());
+
+                    // AND ALL SUBFOLDERS
+                    add_to_merged_list( exie, all_folder_list, merged_folder_list, folder.getFolderId() );
+                }
             }
+
+
+            if (exie.user_folders)
+            {
+                try
+                {
+                    List<BaseFolderType> user_folder_list = get_user_folder_list(all_folder_list, port, itemTypeDAO);
+                    for (int i = 0; i < user_folder_list.size(); i++)
+                    {
+                        BaseFolderType bf = user_folder_list.get(i);
+                        merged_folder_list.add(bf.getFolderId());
+
+                        // AND ALL SUBFOLDERS
+                        add_to_merged_list( exie, all_folder_list, merged_folder_list, bf.getFolderId() );
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    exie.set_status( 2, "Error while reading user folders:");
+                    e.printStackTrace();
+                    LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), e);
+                }
+            }
+
             folder_list = merged_folder_list;
         }
         // ELSE WE TAKE ALL FOLDERS AND EXCLUDE TRASH JUNK OUTBOX
@@ -584,6 +750,8 @@ public class ExchangeImportServer extends WorkerParent
             List<BaseFolderType> excluded_folders = itemTypeDAO.GetFoldersbyId( port, exclude_folder_ids );
 
             folder_list = new ArrayList<BaseFolderIdType>();
+            //ArrayList<BaseFolderIdType> merged_folder_list = new ArrayList<BaseFolderIdType>();
+
             for (int i = 0; i < all_folder_list.size(); i++)
             {
                 BaseFolderType baseFolderType = all_folder_list.get(i);
@@ -606,15 +774,23 @@ public class ExchangeImportServer extends WorkerParent
                 if (!found_excl_match)
                 {
                     folder_list.add(baseFolderType.getFolderId());
+
+                    /*merged_folder_list.add(baseFolderType.getFolderId());
+                    // AND ALL SUBFOLDERS
+                    add_to_merged_list( exie, all_folder_list, merged_folder_list, baseFolderType.getFolderId() );*/
                 }
             }
+
+           //folder_list = merged_folder_list;
         }
 
         exie.set_status( Txt("Folders_to_fetch:") + " " + folder_list.size());
 
-
-        // SO WEVE GOT ALL FOLDERS TO IMPORT NOW
-        run_folder_import(m_ctx, exie, folder_list, port, itemTypeDAO);
+        if (folder_list.size() > 0)
+        {
+            // SO WEVE GOT ALL FOLDERS TO IMPORT NOW
+            run_folder_import(m_ctx, exie, folder_list, port, itemTypeDAO);
+        }
 
     }
     String Txt( String kex )
@@ -622,12 +798,64 @@ public class ExchangeImportServer extends WorkerParent
         return Main.Txt(kex);
     }
 
+    ArrayList<String> get_mail_list( MandantContext m_ctx, ExchangeImporterFolderEntry exie )
+    {
+        ArrayList<String> user_mail_list = new ArrayList<String>();
+
+        UserSSOEntry ssoc = m_ctx.get_from_sso_cache( exie.user, exie.pwd );
+        if (ssoc == null)
+        {
+            try
+            {
+                if (!m_ctx.authenticate_user(exie.user, exie.pwd))
+                {
+                    LogManager.msg( LogManager.LVL_WARN, LogManager.TYP_EXCHANGE, "Importing unknown user: " + exie.user);
+                }
+            }
+            catch (AuthException authException)
+            {
+                LogManager.msg( LogManager.LVL_WARN, LogManager.TYP_EXCHANGE, "Importing invalid user: " + exie.user);
+            }
+        }
+        ssoc = m_ctx.get_from_sso_cache(exie.user, exie.pwd);
+
+
+        // USERLIST CONTAINS LIST OF USERPRINCIPALNAMES
+        if (ssoc != null)
+        {
+
+            try
+            {
+                GenericRealmAuth realm = GenericRealmAuth.factory_create_realm(ssoc.getAcct());
+                realm.connect();
+                
+                ArrayList<String> _list = new ArrayList<String>();
+                _list.add(exie.user);
+
+                user_mail_list = realm.list_mailaliases_for_userlist( _list );
+
+                realm.disconnect();
+            }
+            catch (Exception ex)
+            {
+                exie.set_status( 1, "Error while retrieving user list:" );
+
+                LogManager.msg( LogManager.LVL_ERR, LogManager.TYP_EXCHANGE, exie.get_status(), ex);
+                
+            }
+        }
+        return user_mail_list;
+    }
+
     void run_folder_import( ExchangeImporterFolderEntry exie )
     {
         ItemTypeDAO itemTypeDAO = null;
         ExchangeServicePortType port = null;
-        
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(exie.mandant.getId());
+
+        // FETCH EMAILS FOR THIS USER
+        ArrayList<String> user_mail_list = get_mail_list( m_ctx, exie );
+       
         ExchangeAuthenticator.reduce_ssl_security();
         ArrayList<BaseFolderIdType> folder_list = exie.folder_list;
 
@@ -668,14 +896,23 @@ public class ExchangeImportServer extends WorkerParent
         int cnt = 0;
         List<ExchangeMailEntry> full_mail_list = new ArrayList<ExchangeMailEntry>();
 
+        List<BaseFolderType> nice_folder_list = null;
+
         try
         {
+            nice_folder_list = itemTypeDAO.GetFoldersbyId( port, folder_list );
+
             // CREATE A LIST OF MAILS OVER ALL SELECTED FOLDERS
             for (int i = 0; i < folder_list.size(); i++)
             {
                 BaseFolderIdType baseFolderIdType = folder_list.get(i);
 
-                exie.set_status( Txt("Reading_mail_data") + "_<" + baseFolderIdType.toString() + "> ...");
+                String folder_name =  baseFolderIdType.toString();
+                if (nice_folder_list != null && nice_folder_list.size() == folder_list.size())
+                   folder_name = nice_folder_list.get(i).getDisplayName();
+
+
+                exie.set_status( Txt("Reading_mail_data_for_folder") + " <" + folder_name + "> ...");
 
                 List<ItemType> mails = null;
                 try
@@ -684,9 +921,12 @@ public class ExchangeImportServer extends WorkerParent
                 }
                 catch (Exception e)
                 {
-                    exie.set_status( Txt("Fetching_folder_items_failed") + "_<" + baseFolderIdType.toString() + "> " + e.getMessage());
+                    exie.set_status( Txt("Fetching_folder_items_failed") + " <" + folder_name + "> " + e.getMessage());
                     continue;
                 }
+
+                int local_cnt = 0;
+                long local_size = 0;
 
                 for (Iterator<ItemType> it1 = mails.iterator(); it1.hasNext();)
                 {
@@ -696,7 +936,9 @@ public class ExchangeImportServer extends WorkerParent
                     //System.out.println("Mail: " + s  + " Size: " + size);
 
                     total_size += size.intValue();
+                    local_size += size.intValue();
                     cnt++;
+                    local_cnt++;
 
                     exie.size = total_size;
                     exie.total_msg = cnt;
@@ -704,6 +946,7 @@ public class ExchangeImportServer extends WorkerParent
                     ExchangeMailEntry entry = new ExchangeMailEntry( mail.getItemId(), size.intValue(), subject );
                     full_mail_list.add( entry );
                 }
+                exie.set_status( "<" + folder_name + ">: N=" + local_cnt + " (" + SizeStr.format(local_size) + ")");
             }
 
             // CHEKC FOR SPACE
@@ -716,7 +959,8 @@ public class ExchangeImportServer extends WorkerParent
             }
         }
         catch (Exception extractionException)
-        {
+        {            
+            LogManager.printStackTrace(extractionException);
             exie.set_status( 3, "Error while importing exchange data: " + extractionException.getMessage());            
             throw new ImportException( exie.get_status() );
         }
@@ -727,7 +971,7 @@ public class ExchangeImportServer extends WorkerParent
             {
                 user = itemTypeDAO.getImpersonation().getConnectingSID().getPrincipalName();
             }
-            LogManager.msg_exchange( LogManager.LVL_INFO, Main.Txt("Starting_import") + " " + user + " N=" + exie.total_msg + " (" + Long.toString(exie.size/(1000*1000)) + "MB)" );
+            LogManager.msg_exchange( LogManager.LVL_INFO, Main.Txt("Starting_import") + " " + user + " N=" + exie.total_msg + " (" +  SizeStr.format(exie.size) + ")" );
             long start_t = System.currentTimeMillis();
 
             
@@ -832,20 +1076,41 @@ public class ExchangeImportServer extends WorkerParent
             ByteArrayInputStream bis = new ByteArrayInputStream(data);
 
             RFCMimeMail mime_mail = new RFCMimeMail();
+            
             try
             {
                 // PARSE MAIL
                 mime_mail.parse(bis);
+                MimeMessage m = mime_mail.getMsg();
+
+                try
+                {
+                    if (ImapEnvelopeFetcher.contains_tnef( m))
+                    {
+                        m = TNEFMime.convert(mime_mail.getSession(), m, /*embed*/ true);
+                    }
+                }
+                catch (Exception iOException)
+                {
+                    LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_EXCHANGE, "Cannot decode TNEF content, using Mime", iOException);
+                }
 
                 // CREATE FILE
-                RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(exie.mandant, mime_mail.getMsg(), "exch", exie.da);
+                RFCFileMail mail = Main.get_control().create_import_filemail_from_eml(exie.mandant, m, "exch", exie.da);
+
+                // HANDLE ENVELOPE
+                if (exie.act_user_mail.size() > 0)
+                {
+                    check_for_bcc_attribute( exie, mime_mail, mail );
+                }
 
                 // ADD TO IMPORT QUEUE
                 Main.get_control().add_rfc_file_mail(mail, exie.mandant, exie.da, /*bg*/ true, /*del_after*/ true);
             }
-            catch (MessagingException messagingException)
+            catch (Exception messagingException)
             {
-                exie.set_status( 4,  Main.Txt("Cannot_import_exchange_mail_data_for_Mail:") + " " +  msg_type.getSubject() );
+                LogManager.printStackTrace(messagingException);
+                exie.set_status( 4,  Main.Txt("Cannot_import_exchange_mail_data_for_Mail:") + " " +  msg_type.getSubject() + ": " + messagingException.getMessage() );
                 LogManager.msg_exchange(  LogManager.LVL_ERR, exie.get_status() );
             }
             bis.close();
@@ -944,5 +1209,29 @@ public class ExchangeImportServer extends WorkerParent
             }
         }
         return stb.toString();
+    }
+
+    private void check_for_bcc_attribute( ExchangeImporterEntry exie, RFCMimeMail msg, RFCFileMail mail  )
+    {
+        ArrayList<String> user_mails = exie.act_user_mail;
+        boolean found_mail = false;
+
+        for (int i = 0; i < user_mails.size(); i++)
+        {
+            String string = user_mails.get(i);
+            if (msg.contains_email( string ))
+            {
+                found_mail = true;
+                break;
+            }
+        }
+        if (!found_mail)
+        {
+            // ADD FIRST MAIL FROM USER AS ENVELOPE ATTRIBUTE
+            LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_EXCHANGE, "Adding Envelope address " + user_mails.get(0) + " to mail");
+            mail.add_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_BCC, user_mails.get(0));
+       }
+
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 }

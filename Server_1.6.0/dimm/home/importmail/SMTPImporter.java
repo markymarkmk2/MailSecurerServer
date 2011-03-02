@@ -18,6 +18,7 @@ import home.shared.Utilities.DefaultSSLServerSocketFactory;
 import home.shared.Utilities.DefaultSSLSocketFactory;
 import home.shared.hibernate.SmtpServer;
 import home.shared.mail.RFCFileMail;
+import home.shared.mail.RFCGenericMail;
 import java.io.*;
 import java.util.*;
 import java.net.*;
@@ -299,10 +300,10 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
     @Override
     public void deliver( String from, String recipient, InputStream data ) throws TooMuchDataException, IOException
     {
-        archive_message(data);
+        archive_message(recipient, data );
     }
 
-    protected void archive_message( InputStream data )
+    protected void archive_message( String recipient,  InputStream data )
     {
         RFCFileMail mail = null;
         try
@@ -310,6 +311,9 @@ public class SMTPImporter extends WorkerParentChild implements SimpleMessageList
             status.set_status(StatusEntry.BUSY, "Archiving message from Mail server <" + smtp_db_entry.getServer() + ">");
 
             mail = Main.get_control().create_import_filemail_from_eml_stream(smtp_db_entry.getMandant(), data, "smtpimp", smtp_db_entry.getDiskArchive());
+
+            // ADD RECIPIENT
+            mail.add_attribute(RFCGenericMail.MATTR_ENVELOPE, CS_Constants.FLD_ENVELOPE_TO, recipient);
 
             Main.get_control().add_rfc_file_mail(mail, smtp_db_entry.getMandant(), smtp_db_entry.getDiskArchive(), /*bg*/ true, /*del_after*/ true);
 

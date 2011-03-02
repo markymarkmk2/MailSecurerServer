@@ -1,9 +1,11 @@
 package dimm.home.importmail;
 
 import dimm.home.mailarchiv.*;
+import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.MailProxyServer;
 import home.shared.Utilities.DefaultSSLSocketFactory;
+import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -305,8 +307,17 @@ public class POP3Connection extends ProxyConnection
 
             if (ret == 0)
             {
-               Main.get_control().add_mail_file( rfc_dump, pe.get_proxy().getMandant(), pe.get_proxy().getDiskArchive(), 
-                       /*bg*/ true, /*del_after*/ true, encoded );
+                if (rfc_dump == null)
+                {
+                    throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_null"));
+                }
+                if (!rfc_dump.exists())
+                {
+                    throw new ArchiveMsgException(Main.Txt("Mail_input_file_is_missing"));
+                }
+                RFCFileMail mf = new RFCFileMail( rfc_dump, encoded );
+                Main.get_control().add_rfc_file_mail( mf, pe.get_proxy().getMandant(), pe.get_proxy().getDiskArchive(),
+                       /*bg*/ true, /*del_after*/ true );
             }  
             else
             {                

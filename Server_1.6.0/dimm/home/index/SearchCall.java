@@ -1114,8 +1114,6 @@ public class SearchCall
 
     private String open_RMX_mail_stream( UserSSOEntry ssoc, SearchResult result )
     {
-
-
         try
         {
             DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());

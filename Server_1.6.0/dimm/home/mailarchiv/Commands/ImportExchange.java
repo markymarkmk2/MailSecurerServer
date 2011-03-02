@@ -74,8 +74,6 @@ public class ImportExchange extends AbstractCommand
             {
                 String folder_xml = pt.GetString("FD:");
 
-
-
                 ArrayList<BaseFolderIdType>folder_list = null;
 
                 Object o = ParseToken.DeCompressObject(folder_xml);
@@ -83,7 +81,6 @@ public class ImportExchange extends AbstractCommand
                 {
                     folder_list = (ArrayList<BaseFolderIdType>) o;
                 }
-
 
 
                 // GET STRUCTS FROM ARGS
