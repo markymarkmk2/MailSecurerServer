@@ -822,7 +822,7 @@ public class MandantContext
             user_sso_list.clear();
         }
     }
-    void remove_from_sso_cache( String user )
+    public void remove_from_sso_cache( String user )
     {
         synchronized (user_sso_list)
         {
@@ -955,7 +955,15 @@ public class MandantContext
             UserSSOEntry usc = get_from_sso_cache(user, pwd);
             if (usc != null)
             {
-                // USER STILL VALID
+                // USER STAYS VALID UNLIMITED (PLUGINS)
+                if (!usc.is_admin())
+                {
+                    // REWIND CLOCK
+                    usc.setLast_auth( System.currentTimeMillis() );
+                    return true;
+                }
+
+                // ADMINUSER STILL VALID
                 long diff_s = (now - usc.getLast_auth()) / 1000;
                 if (diff_s < prefs.get_long_prop(MandantPreferences.SSO_TIMEOUT_S, MandantPreferences.DFTL_SSO_TIMEOUT_S))
                 {

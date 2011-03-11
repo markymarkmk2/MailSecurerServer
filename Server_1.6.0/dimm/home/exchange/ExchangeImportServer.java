@@ -855,6 +855,9 @@ public class ExchangeImportServer extends WorkerParent
 
         // FETCH EMAILS FOR THIS USER
         ArrayList<String> user_mail_list = get_mail_list( m_ctx, exie );
+
+        exie.act_user_mail = user_mail_list;
+        exie.act_user = exie.user;
        
         ExchangeAuthenticator.reduce_ssl_security();
         ArrayList<BaseFolderIdType> folder_list = exie.folder_list;
@@ -1213,6 +1216,7 @@ public class ExchangeImportServer extends WorkerParent
 
     private void check_for_bcc_attribute( ExchangeImporterEntry exie, RFCMimeMail msg, RFCFileMail mail  )
     {
+        // CHECK IF ACTUAL USER HAS ENTRIES IN THIS MAIL
         ArrayList<String> user_mails = exie.act_user_mail;
         boolean found_mail = false;
 
@@ -1225,13 +1229,12 @@ public class ExchangeImportServer extends WorkerParent
                 break;
             }
         }
+        // NO, THEN ADD FIRST VALID ADRESS AS BCC ATTRIBUTE TO THIS MAIL
         if (!found_mail)
         {
             // ADD FIRST MAIL FROM USER AS ENVELOPE ATTRIBUTE
             LogManager.msg(LogManager.LVL_DEBUG, LogManager.TYP_EXCHANGE, "Adding Envelope address " + user_mails.get(0) + " to mail");
             mail.add_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_BCC, user_mails.get(0));
-       }
-
-        throw new UnsupportedOperationException("Not yet implemented");
+       }       
     }
 }

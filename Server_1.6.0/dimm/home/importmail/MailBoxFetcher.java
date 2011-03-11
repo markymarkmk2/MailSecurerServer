@@ -15,13 +15,16 @@ import java.util.*;
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.mailarchiv.Utilities.TimingIntervall;
 import dimm.home.mailarchiv.WorkerParentChild;
 import dimm.home.vault.Vault;
 import home.shared.CS_Constants;
 import home.shared.mail.RFCFileMail;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import javax.mail.AuthenticationFailedException;
 import javax.mail.Flags;
 import javax.mail.Folder;
@@ -42,10 +45,11 @@ public class MailBoxFetcher extends WorkerParentChild
 {
 
     public static final int WAIT_PERIOD_S = 60;
-    public static final int IMAP_IDLE_PERIOD = 10;
+    public static int IMAP_IDLE_TIME_S = 10;
     public static final int MSG_BULK_SIZE = 1000;  // FETCH 1000 MSG IN A ROW, TO SPEED UP DELETION 
 
-    
+
+    ArrayList<TimingIntervall> timing_list;
 
     private final String DEFAULT_SSL_FACTORY = "home.shared.Utilities.DefaultSSLSocketFactory";
     private final String SSL_FACTORY = "javax.net.ssl.SSLSocketFactory";
@@ -103,6 +107,38 @@ public class MailBoxFetcher extends WorkerParentChild
     {
         imfetcher = _imfetcher;
         flags = Integer.parseInt( imfetcher.getFlags() );
+    }
+
+    void eval_imap_timing()
+    {
+        MandantContext m_ctx = Main.get_control().get_mandant_by_id(imfetcher.getMandant().getId());
+        String timing_string = m_ctx.getPrefs().get_prop(MandantPreferences.IMAP_TIMING);
+        
+        timing_list = TimingIntervall.eval_timing(timing_string, LogManager.TYP_FETCHER);
+    }
+
+  
+
+    int get_idle_timing()
+    {
+        if (timing_list == null || timing_list.isEmpty())
+            return IMAP_IDLE_TIME_S;
+
+        int found_idle_time = TimingIntervall.get_idle_time( timing_list, IMAP_IDLE_TIME_S);
+
+
+        return found_idle_time;
+    }
+
+
+    boolean is_imap_allowed()
+    {
+
+        if (timing_list == null ||  timing_list.isEmpty())
+            return true;
+
+        return TimingIntervall.is_allowed_now( timing_list);
+
     }
 
     boolean test_flag( int test_flag )
@@ -284,21 +320,34 @@ public class MailBoxFetcher extends WorkerParentChild
         long da_id = imfetcher.getDiskArchive().getId();
         Vault vault = m_ctx.get_vault_by_da_id(da_id);
 
+        // READ PREFERENCES
+        eval_imap_timing();
+
 
         while (!do_finish)
         {
+            
+
+            if (!is_imap_allowed())
+            {
+                continue;
+            }
+
+            int imap_idle_time_s = get_idle_timing();
+
+
             if (!vault.has_sufficient_space() || m_ctx.no_tmp_space_left())
             {
                 status.set_status(StatusEntry.ERROR, Main.Txt("Not_enough_space_in_archive_to_process") );
 
-                sleep_seconds(IMAP_IDLE_PERIOD);
+                sleep_seconds(imap_idle_time_s);
                 continue;
             }
             if (vault.is_in_rebuild())
             {
                 status.set_status(StatusEntry.SLEEPING, Main.Txt("Rebuild_is_pending") );
 
-                sleep_seconds(IMAP_IDLE_PERIOD);
+                sleep_seconds(imap_idle_time_s);
                 continue;
             }
 
@@ -318,12 +367,6 @@ public class MailBoxFetcher extends WorkerParentChild
                 }
                 else
                 {
-                    /*                    String errormessage = "";
-                    if (e.getCause() != null && e.getCause().getMessage() != null)
-                    {
-                    errormessage = e.getCause().getMessage();
-                    }
-                     * */
                     status.set_status(StatusEntry.ERROR, "Connecting mail server <" + imfetcher.getServer() + "> failed: " + e.getMessage());
                     LogManager.msg_fetcher(LogManager.LVL_WARN, status.get_status_txt());
                 }
@@ -363,7 +406,7 @@ public class MailBoxFetcher extends WorkerParentChild
             }
 
             // PAUSE TODO: PUT INTO PARAMETER
-            sleep_seconds(IMAP_IDLE_PERIOD);
+            sleep_seconds(imap_idle_time_s);
             
         }
         finished = true;
@@ -406,6 +449,14 @@ public class MailBoxFetcher extends WorkerParentChild
             public void messagesAdded( MessageCountEvent ev )
             {
                 Message[] messages = null;
+
+                if (!is_imap_allowed())
+                {
+                    status.set_status(StatusEntry.SLEEPING, "Skipping message, fetch not allowed now");
+                    LogManager.msg_fetcher(LogManager.LVL_DEBUG, status.get_status_txt());
+                    return;
+                }
+
                 try
                 {
                     if (store.isConnected())
@@ -416,7 +467,6 @@ public class MailBoxFetcher extends WorkerParentChild
                     {
                         return;
                     }
-
                 }
                 catch (IllegalStateException ise)
                 {
@@ -438,11 +488,7 @@ public class MailBoxFetcher extends WorkerParentChild
                 if (messages.length > MSG_BULK_SIZE)
                 {
                     Message[] tmp = new Message[MSG_BULK_SIZE];
-
-                    for (int i = 0; i < tmp.length; i++)
-                    {
-                        tmp[i] = messages[i];
-                    }
+                    System.arraycopy(messages, 0, tmp, 0, tmp.length);
                     messages = tmp;
                 }
 
@@ -482,6 +528,10 @@ public class MailBoxFetcher extends WorkerParentChild
                 LogManager.msg_fetcher(LogManager.LVL_ERR, status.get_status_txt(), e);
                 break;
             }
+
+
+            if (!is_imap_allowed())
+                break;
         }
     }
     
@@ -658,11 +708,7 @@ public class MailBoxFetcher extends WorkerParentChild
             if (messages.length > MSG_BULK_SIZE)
             {
                 Message[] tmp = new Message[MSG_BULK_SIZE];
-
-                for (int i = 0; i < tmp.length; i++)
-                {
-                    tmp[i] = messages[i];
-                }
+                System.arraycopy(messages, 0, tmp, 0, tmp.length);
                 messages = tmp;
             }
 
@@ -689,6 +735,24 @@ public class MailBoxFetcher extends WorkerParentChild
     public String get_task_status_txt()
     {
         return "";
+    }
+
+
+    public static void main( String[] argv )
+    {
+
+        String a = "80(12-13) 120(16-17) whgqjhwe()()(";
+        ArrayList<TimingIntervall> list = TimingIntervall.eval_timing(a, LogManager.TYP_FETCHER);
+
+        for (int i = 0; i < list.size(); i++)
+        {
+            TimingIntervall timingIntervall = list.get(i);
+            System.out.println("TI: " + timingIntervall.toString() + " CY: " + TimingIntervall.get_idle_time(list, 99) + " VL: " + (TimingIntervall.is_allowed_now(list)?"1":"0"));
+
+
+        }
+
+
     }
 
 

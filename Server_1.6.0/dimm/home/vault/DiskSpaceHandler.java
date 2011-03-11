@@ -1427,14 +1427,16 @@ public class DiskSpaceHandler
             }
 
 
-            target_file = new RFCFileMail( out_file, msg.getDate(), msg.isEncoded() );
+            
             if (enc_mode != RFCGenericMail.ENC_NONE)
             {
+                target_file = new RFCFileMail( out_file, msg.getDate(), true );
                 target_file.set_encryption(password, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt());
             }
             else
             {
-              LogManager.msg_archive(LogManager.LVL_ERR, "No encryption!");
+                target_file = new RFCFileMail( out_file, msg.getDate(), false );
+                LogManager.msg_archive(LogManager.LVL_ERR, "No encryption!");
             }
 
             bis = msg.open_inputstream();

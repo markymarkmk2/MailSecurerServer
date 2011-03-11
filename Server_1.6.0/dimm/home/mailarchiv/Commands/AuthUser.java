@@ -78,6 +78,11 @@ public class AuthUser extends AbstractCommand
                     answer = "1: " + Main.Txt("Username_or_password_are_incorrect");
                 }
             }
+            else if(cmd.compareTo("logout") == 0)
+            {
+                m_ctx.remove_from_sso_cache(this.sso_entry.getUser());
+                answer = "0: ";
+            }
             else if (cmd.compareTo("admin") == 0)
             {
                 String db_passwd = m_ctx.getMandant().getPassword();
@@ -154,7 +159,6 @@ public class AuthUser extends AbstractCommand
                 String cxml = HParseToken.BuildCompressedString(entry);
                 answer = "0: CSSO:" + cxml;
             }
-
             else
             {
                 answer = "3: unknown subcommand: " + cmd;

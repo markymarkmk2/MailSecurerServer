@@ -737,4 +737,9 @@ public class ReIndexContext
         }
         return stat_sb.toString();
     }
+
+    public static void main( String[] args)
+    {
+
+    }
 }

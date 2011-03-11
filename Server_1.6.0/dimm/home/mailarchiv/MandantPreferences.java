@@ -38,6 +38,7 @@ public class MandantPreferences extends Preferences
     public static final String DSH_HOUR_DIRS = "DiskSpaceHourDirectories";
     public static final String HTTPD_PORT = "HttpdPort";
     public static final String PORT = "Port";
+    public static final String IMAP_TIMING = "IMAPFetcherTiming";
     
     MandantContext context;
 
@@ -69,6 +70,7 @@ public class MandantPreferences extends Preferences
         prop_names.add( LANG );
         prop_names.add( HTTPD_PORT );
         prop_names.add( PORT );
+        prop_names.add( IMAP_TIMING );
     }
     
     public void setContext( MandantContext _context )
