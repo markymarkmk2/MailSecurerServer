@@ -1516,12 +1516,12 @@ public class DiskSpaceHandler
         return len;
     }
 
-    void flush() throws IndexException, VaultException
+    public void flush() throws IndexException, VaultException
     {
         flush(false);
     }
 
-    void flush( boolean and_optimize ) throws IndexException, VaultException
+    public void flush( boolean and_optimize ) throws IndexException, VaultException
     {
         if (!is_open())
         {

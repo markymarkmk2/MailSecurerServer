@@ -30,6 +30,7 @@ import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.MailHeaderVariable;
+import home.shared.mail.MailAttribute;
 import home.shared.mail.RFCMailAddress;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -166,6 +167,7 @@ public class IndexManager extends WorkerParent
         return false;
     }
     public static boolean index_buffer_test = false;
+
 
     protected Charset utf8_charset = Charset.forName("UTF-8");
     ArrayList<MailHeaderVariable> header_list;
@@ -1794,65 +1796,169 @@ public class IndexManager extends WorkerParent
         return ret;
     }
 
-
-    static void update_document( Document doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException, VaultException, IndexException
+    private static void update_msg_attributes( Document doc, RFCGenericMail msg, DiskSpaceHandler data_dsh ) throws VaultException, IOException
     {
-        IndexWriter writer = index_dsh.get_write_index();
+        String uuid = doc.get(CS_Constants.FLD_UID_NAME);
+        long time = DiskSpaceHandler.get_time_from_uuid(uuid);
+
+        RFCGenericMail mail = data_dsh.get_mail_from_time(time, data_dsh.get_enc_mode(), data_dsh.get_fmode());
+        mail.read_attributes();
+
+        if (msg.getAttributes().size() > 0)
+        {
+            for (int i = 0; i <  msg.getAttributes().size(); i++)
+            {
+                MailAttribute attr =  msg.getAttributes().get(i);
+
+                mail.add_attribute(attr);
+            }
+            mail.write_attributes();
+        }
+
+        
+    }
+
+    static void update_document( Document doc, Document update_doc, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException, VaultException, IndexException
+    {
+        IndexWriter writer = null;
+
+        if (index_dsh.is_index())
+        {
+            writer = index_dsh.get_write_index();
+            if (writer == null)
+            {
+                writer = index_dsh.open_write_index();
+            }
+        }
+       
+
         if (writer == null)
         {
-            writer = index_dsh.open_write_index();
+            throw new IndexException("No writeable index found");
         }
+
 
         Term term = new Term(CS_Constants.FLD_UID_NAME, doc.get(CS_Constants.FLD_UID_NAME));
         
         // SHOVE IT RIGHT OUT!!!
         synchronized (index_dsh.idx_lock)
         {
+            // UPDATE INDEX
             writer.updateDocument(term, doc);
         }
     }
-
-    public static boolean handle_bcc_and_update( DiskSpaceHandler index_dsh, Document doc, RFCGenericMail msg )
+    private static boolean contains_mail( Field[] fields,  String mail  )
     {
-        boolean needs_updated_index = false;
-        // TODO: DO WE REALLY NEED THE SECOND ENTRY? THE HASH SAYS THE MESSAGE IS IDENTICAL, SO WHY BOTHER?
-        // NOW WE CHECK IF ALL BCC ARE IN MESSAGE, IF NOT WE NEED A NEW INDEX
-        ArrayList<String> envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_ENVELOPE_TO);
-        if (envelope_recipients.size() > 0)
-        {
-            Field[] bcc_fields = doc.getFields(CS_Constants.FLD_BCC);
-            for (int i = 0; i < envelope_recipients.size(); i++)
-            {
-                String mail_bcc = envelope_recipients.get(i);
+         boolean found = false;
 
-                for (int f = 0; f < bcc_fields.length; f++)
-                {
-                    String doc_bcc = bcc_fields[f].stringValue();
-                    if (!doc_bcc.contains(mail_bcc))
-                    {
-                        needs_updated_index = true;
-                        doc.add(new Field(CS_Constants.FLD_BCC, mail_bcc, Field.Store.YES, Field.Index.ANALYZED));
-                    }
-                }
+        for (int f = 0; f < fields.length; f++)
+        {
+            String doc_bcc = fields[f].stringValue();
+            if (doc_bcc.contains(mail))
+            {
+                // OK FOUND IT
+                found = true;
+                break;
             }
         }
+
+        return found;
+    }
+
+    // Doc is the entry from the existing doc in Database
+    // msg is our new Document
+    public static boolean handle_bcc_and_update( DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh, Document doc, RFCGenericMail msg )
+    {
+        boolean needs_updated_index = false;
+        
+        // NOW WE CHECK IF ALL EXTERNAL ATTRIBUTES ARE IN MESSAGE, IF NOT WE NEED A NEW INDEX
+
+        // CHECK IF WE HAVE ENVELOPE ENTRIES WHICH ARE NOT ALREADY IN MAIL
+        ArrayList<String> envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_ENVELOPE, CS_Constants.FLD_ENVELOPE_TO);
+
+        Document update_doc = new Document();
+
+        // CHECK FOR ENVELOPE ENTRY IN ALL RECIEPINT TYPES
+        for (int i = 0; i < envelope_recipients.size(); i++)
+        {
+            String addr = envelope_recipients.get(i);
+            
+            if ( !contains_mail( doc.getFields(CS_Constants.FLD_BCC), addr ) && 
+                    !contains_mail( doc.getFields(CS_Constants.FLD_CC), addr ) &&
+                    !contains_mail( doc.getFields(CS_Constants.FLD_TO), addr ) )
+            {
+                // NOT FOUND ANYWHERE?
+                needs_updated_index = true;
+                update_doc.add(new Field(CS_Constants.FLD_BCC, addr, Field.Store.YES, Field.Index.ANALYZED));
+                update_doc.add(new Field(CS_Constants.FLD_BCC + "REG", addr, Field.Store.YES, Field.Index.ANALYZED));
+
+            }                    
+        }
+        // CHECK IF WE HAVE RECIPIENT ENTRIES WHICH ARE NOT ALREADY IN MAIL
+        // NEW DATA FOR TO ?
+        envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_TO);
+        for (int i = 0; i < envelope_recipients.size(); i++)
+        {
+            String addr = envelope_recipients.get(i);
+
+            if ( !contains_mail( doc.getFields(CS_Constants.FLD_TO), addr ))
+            {
+                needs_updated_index = true;
+                update_doc.add(new Field(CS_Constants.FLD_TO, addr, Field.Store.YES, Field.Index.ANALYZED));
+                update_doc.add(new Field(CS_Constants.FLD_TO + "REG", addr, Field.Store.YES, Field.Index.ANALYZED));
+            }
+        }
+        // NEW DATA FOR CC ?
+        envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_CC);
+        for (int i = 0; i < envelope_recipients.size(); i++)
+        {
+            String addr = envelope_recipients.get(i);
+
+            if ( !contains_mail( doc.getFields(CS_Constants.FLD_CC), addr ))
+            {
+                needs_updated_index = true;
+                update_doc.add(new Field(CS_Constants.FLD_CC, addr, Field.Store.YES, Field.Index.ANALYZED));
+                update_doc.add(new Field(CS_Constants.FLD_CC + "REG", addr, Field.Store.YES, Field.Index.ANALYZED));
+            }
+        }
+        // NEW DATA FOR BCC ?
+        envelope_recipients = msg.get_attribute(RFCGenericMail.MATTR_LUCENE, CS_Constants.FLD_BCC);
+        for (int i = 0; i < envelope_recipients.size(); i++)
+        {
+            String addr = envelope_recipients.get(i);
+
+            if ( !contains_mail( doc.getFields(CS_Constants.FLD_BCC), addr ))
+            {
+                needs_updated_index = true;
+                update_doc.add(new Field(CS_Constants.FLD_BCC, addr, Field.Store.YES, Field.Index.ANALYZED));
+                update_doc.add(new Field(CS_Constants.FLD_BCC + "REG", addr, Field.Store.YES, Field.Index.ANALYZED));
+            }
+        }
+
 
         int da_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DA);
         int ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
 
+        // WEE NEED TO UPDATE?
         if (needs_updated_index)
         {
             try
             {
                 // IF WE CAN UPDATE, EVERY THING IS FINE, DEl MESSAGE
                 LogManager.msg_index(LogManager.LVL_INFO,  "Updating index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME));
-                update_document(doc, index_dsh);
+
+                // UPDATE INDEX
+                update_document(doc, update_doc, index_dsh);
+                
+                // UPDATE ATTRIBUTES ON DISK
+                update_msg_attributes(doc, msg, data_dsh);
 
                 // AND MARK AS "BEEN OFFICIALLY PIMPED"
                 return true;
             }
             catch (Exception ex)
             {
+                //ex.printStackTrace();
                 LogManager.msg_index(LogManager.LVL_ERR,  "Cannot update index for existing mail " + doc.get(CS_Constants.FLD_UID_NAME), ex);
                 // CONTINUE ANYWAY INDEX COULD BE READ ONLY
             }

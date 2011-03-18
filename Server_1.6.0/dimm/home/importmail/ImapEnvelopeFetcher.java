@@ -9,6 +9,7 @@ import dimm.home.mailarchiv.Exceptions.IndexException;
 import home.shared.hibernate.ImapFetcher;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
@@ -194,16 +195,20 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
     {       
 
         ArrayList<Address> existing_all = mk_adr_list( cm.getAllRecipients() );
-/*        ArrayList<Address> existing_to = mk_adr_list( cm.getRecipients(Message.RecipientType.TO) );
-        ArrayList<Address> existing_cc = mk_adr_list( cm.getRecipients(Message.RecipientType.CC) );
-        ArrayList<Address> existing_bcc = mk_adr_list( cm.getRecipients(Message.RecipientType.BCC) );
-        */
 
         /* Ex 2007/2010
         Recipient: mw@w2k8becom.dimm.home
         Recipient: mark1@dimm.de, Forward: mark@dimm.de
         Recipient: mark2@dimm.de, Expanded: sales@de.de
          * http://technet.microsoft.com/en-us/library/bb738122%28EXCHG.80%29.aspx
+         *
+         * Beispiel Ex 2010: Gruppe1 hat sbs_user und fritz raddatz, To der Mail war nur Gruppe1
+         Sender: mw@w2k8becom.dimm.home
+         Subject: To Gruppe
+         Message-Id: <6F7939E3E42E794492D980F20820B06485B001EC@W2K8-BECOM.w2k8becom.dimm.home>
+         To: sbs_user@w2k8becom.dimm.home, Expanded: Gruppe1@w2k8becom.dimm.home
+         To: fritz.raddatz@w2k8becom.dimm.home, Expanded: Gruppe1@w2k8becom.dimm.home
+
          * */
 
         // FETCH ENEVELOPE PARAMS
@@ -366,11 +371,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                     content_object = m.getContent();
                 }
 
-                // NOW WE SHOULD BE ABLE TO READ CONTENTS
-                RFCMimeMail mail = new RFCMimeMail( m );
-                String envelope_text = mail.get_text_content();
-                String subject = m.getSubject();
-
+                // TRY TO DECODE EMBEDDED TNEF IF NECESSARY
                 try
                 {
                     if (contains_tnef(m))
@@ -382,6 +383,12 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                 {
                     LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Cannot decode TNEF content using Mime", iOException);
                 }
+
+                // NOW WE SHOULD BE ABLE TO READ CONTENTS INTO MIMEMAIL
+                RFCMimeMail mail = new RFCMimeMail( m );
+                String envelope_text = mail.get_text_content();
+                String subject = m.getSubject();
+
 
                 if (content_object instanceof Multipart)
                 {
@@ -401,6 +408,17 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                           
 
                             super_archive_message(cm, envelope_text);
+
+/*                            LogManager.msg(LogManager.LVL_ERR, LogManager.TYP_FETCHER, "Testmode double import");
+                            LogicControl.sleep(2000);
+                            {
+                                is = bp.getInputStream();
+
+                                cm = new MimeMessage( s, is );
+                                is.close();
+                                super_archive_message(cm, envelope_text + "\nBcc: sbs_user@w2k8becom.dimm.home\nTo: mw@w2k8becom.dimm.home\n");
+                            }*/
+                            
                             archived = true;                        
                         }
                     }

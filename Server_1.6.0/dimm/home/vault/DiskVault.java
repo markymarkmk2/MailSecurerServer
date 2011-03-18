@@ -307,7 +307,7 @@ public class DiskVault implements Vault, StatusHandler
         return true;
     }
 
-    public boolean handle_existing_mail_in_vault( IndexManager idx, RFCGenericMail msg ) throws CorruptIndexException, IOException
+    private boolean handle_existing_mail_in_vault( IndexManager idx, RFCGenericMail msg, DiskSpaceHandler data_dsh, DiskSpaceHandler index_dsh ) throws CorruptIndexException, IOException
     {
 
         if (IndexManager.no_single_instance())
@@ -332,33 +332,46 @@ public class DiskVault implements Vault, StatusHandler
             if (!dsh.is_index())
                 continue;
 
-            dhe = dsh.has_hash_entry(hash);
-            if (dhe != null)
-            {
-                LogManager.msg_index(LogManager.LVL_DEBUG, "Found short term hash for msg " + msg.toString());
-                break;
-            }
             if (dsh.get_searcher() != null)
                 search_arr.add( dsh.get_searcher() );
             else
                 LogManager.msg_index(LogManager.LVL_ERR, "Found missing hash checker " + dsh.ds.getPath());
+            
+            dhe = dsh.has_hash_entry(hash);
+            
+            if (dhe != null)
+            {
+                index_dsh = dsh;
+                LogManager.msg_index(LogManager.LVL_DEBUG, "Found short term hash for msg " + msg.toString());
+                break;
+            }
 
         }
 
         // IN SHORT TERM HASH?
         if (dhe != null)
         {
-                Document doc = dhe.getDoc();
-                int doc_ds_id = dhe.get_ds_id();
+            Document doc = dhe.getDoc();
+            int doc_ds_id = dhe.get_ds_id();
 
-                DiskSpaceHandler dsh = get_dsh(doc_ds_id);
+            data_dsh = get_dsh(doc_ds_id);
 
-                if (dsh.getDs().getId() == doc_ds_id)
+            if (data_dsh.getDs().getId() == doc_ds_id)
+            {
+                // WE HAVE TO FLUSH TO DISK FIRST BECAUSE OF OPEN STREAM READERS
+                try
                 {
-                    // UPDATE IF NECESSARY WITH  NEW BCC
-                    ret = IndexManager.handle_bcc_and_update(dsh, doc, msg);
+                    index_dsh.flush();
+                    search_arr.clear();
+                    search_arr.add(index_dsh.get_searcher());
                 }
-                return ret;
+                catch (IndexException indexException)
+                {
+                }
+                catch (VaultException vaultException)
+                {
+                }
+            }
         }
 
         // SEARCH IN LONGTERM HASH
@@ -375,20 +388,39 @@ public class DiskVault implements Vault, StatusHandler
             // SSSSEEEEAAAARRRRCHHHHHHH AND GIVE FIRST RESULT
             TopDocs tdocs = pms.search(qry, filter, 1/*, null*/);
 
-            if (tdocs.totalHits > 0)
+            if (tdocs.totalHits == 1)
             {
                 // FOUND SAME MAIL
                 Document doc = pms.doc(tdocs.scoreDocs[0].doc);
-                int doc_ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);
-                
-                DiskSpaceHandler dsh = get_dsh(doc_ds_id);
 
-                if (dsh.getDs().getId() == doc_ds_id)
+                // NOW RESOLVE INDEX FOR THIS DOCUMENT
+                int s_idx = pms.subSearcher(tdocs.scoreDocs[0].doc);
+                Searchable s_hit  = search_arr.get(s_idx);
+                for (int i = 0; i < dsh_list.size(); i++)
+                {
+                    DiskSpaceHandler dsh = dsh_list.get(i);
+
+                    // SKIP DATA ONLY DS
+                    if (!dsh.is_index())
+                        continue;
+
+                    if (s_hit == dsh.get_searcher())
+                    {
+                        index_dsh = dsh;
+                        break;
+                    }
+                }
+
+                // GET DATA DSH
+                int doc_ds_id = IndexManager.doc_get_int(doc, CS_Constants.FLD_DS);                
+                data_dsh = get_dsh(doc_ds_id);
+
+                if (data_dsh.getDs().getId() == doc_ds_id)
                 {
                     // UPDATE IF NECESSARY WITH NEW BCC
                     LogManager.msg_index(LogManager.LVL_DEBUG, "Found long term hash for msg " + msg.toString());
 
-                    ret = IndexManager.handle_bcc_and_update(dsh, doc, msg);
+                    ret = IndexManager.handle_bcc_and_update(data_dsh, index_dsh, doc, msg);
                 }
             }
 
@@ -417,10 +449,10 @@ public class DiskVault implements Vault, StatusHandler
 
 
         // IS MAIL ALREADY IN INDEX? THEN HANDLE UPDATE DOCUMENT
-        boolean handled = handle_existing_mail_in_vault(idx, msg);
+        boolean handled = handle_existing_mail_in_vault(idx, msg, data_dsh, index_dsh);
         if (handled)
         {
-            // WE ARE DONE, REMOVE MESSAGE
+            // WE ARE DONE, REMOVE MESSAGE, THIS FITS TO delete_after_index BELOW
             msg.delete();
             return;
         }
@@ -566,7 +598,4 @@ public class DiskVault implements Vault, StatusHandler
 
         return false;
     }
-
-
-
 }
