@@ -31,11 +31,12 @@ namespace MSOutlookPlugin
     public class AddinModule : AddinExpress.MSO.ADXAddinModule
     {
 	
-        static string prefs_folder = "";
+        //static string prefs_folder = "";
         public static Outlook.MAPIFolder newFolder = null;
         FileSystemWatcher incoming = null;
         private ImageList imageList1;
         Process java_app = null;
+        bool needs_clear_folder = false;
         
         
 
@@ -215,11 +216,14 @@ namespace MSOutlookPlugin
         private void DoClick(object sender)
         {
             init_plugin();
+            needs_clear_folder = true;
 
             string path = GetPluginPath();
 
             string userFolder = get_prefs_folder();
 
+            try
+            {
             
 
             if (java_app == null || java_app.HasExited)
@@ -240,6 +244,12 @@ namespace MSOutlookPlugin
                wr.WriteLine("ToFront");
                wr.Close();
             }
+            }
+            catch (Exception exc)
+            {
+                java_app = null;
+            }
+            
 /*
             java.lang.String[] args = new java.lang.String[0];
            
@@ -248,7 +258,7 @@ namespace MSOutlookPlugin
 
         }
 
-        private string get_prefs_folder()
+        private static string get_prefs_folder()
         {
             string userFolder = System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\MSSearch";
             if (!System.IO.Directory.Exists(userFolder))
@@ -264,38 +274,40 @@ namespace MSOutlookPlugin
                 return;
             init_plugin();
 
+            needs_clear_folder = true;
+
             string qry = adxCommandBarEdit1.Text;
 
             string path = GetPluginPath();
 
-            string userFolder = get_prefs_folder();            
-            
-            if (java_app == null || java_app.HasExited)
+            string userFolder = get_prefs_folder();
+
+            try
             {
-                java_app = new Process();
-                java_app.StartInfo.FileName = get_java_exe();
-                java_app.StartInfo.Arguments = "-jar \"" + path + "\\TBSearchGui.jar\"" + " \"" + userFolder + "\"";
+                
                 if (qry.Length > 0)
                 {
-                    java_app.StartInfo.Arguments += " -qry \"" + qry + "\"";
+                    Process local_java_app = new Process();
+                    local_java_app.StartInfo.FileName = get_java_exe();
+                    local_java_app.StartInfo.Arguments = "-jar \"" + path + "\\TBSearchGui.jar\"" + " \"" + userFolder + "\"";
+                    local_java_app.StartInfo.Arguments += " -qry \"" + qry + "\"";
 
                     //java_app.StartInfo.UseShellExecute = true;
-                    java_app.StartInfo.RedirectStandardOutput = false;
+                    local_java_app.StartInfo.RedirectStandardOutput = false;
                     //java_app.StartInfo.CreateNoWindow = true;
 
-                    java_app.Start();
+                    local_java_app.Start();
 
                 }
-            }
-            else
-            {
-                StreamWriter wr = System.IO.File.CreateText(get_prefs_folder() + "\\cmd.txt");
-                wr.WriteLine("ToFront");
-                wr.Close();
-            }
-            Outlook.Explorer activeExplorer = OutlookApp.ActiveExplorer();
+               
+                Outlook.Explorer activeExplorer = OutlookApp.ActiveExplorer();
 
-            activeExplorer.CurrentFolder = newFolder;
+                activeExplorer.CurrentFolder = newFolder;
+            }
+            catch (Exception exc)
+            {
+                java_app = null;
+            }
             
 
             
@@ -346,28 +358,34 @@ namespace MSOutlookPlugin
 
         public static void log( string txt )
         {
-            
-            // Create a writer and open the file:
-            StreamWriter log;
-            string log_file = prefs_folder + "\\pluginlog.txt";
 
-            if (!File.Exists(log_file))
+            try
             {
-              log = new StreamWriter(log_file);
-            }
-            else
-            {
-              log = File.AppendText(log_file);
-            }
+                // Create a writer and open the file:
+                StreamWriter log;
+                string log_file = get_prefs_folder() + "\\pluginlog.txt";
 
-            // Write to the file:
-            log.WriteLine(DateTime.Now + ": " + txt);
-            
-            // Close the stream:
-            log.Close();
+                if (!File.Exists(log_file))
+                {
+                    log = new StreamWriter(log_file);
+                }
+                else
+                {
+                    log = File.AppendText(log_file);
+                }
+
+                // Write to the file:
+                log.WriteLine(DateTime.Now + ": " + txt);
+
+                // Close the stream:
+                log.Close();
+            }
+            catch (Exception exc)
+            {
+            }
         }
 
-        private string GetPluginPath()
+        private static string GetPluginPath()
         {
             // Opening the registry key
             RegistryKey base_key = Registry.LocalMachine;
@@ -397,8 +415,8 @@ namespace MSOutlookPlugin
                 {
                     // AAAAAAAAAAARGH, an error!
 
-                    ShowErrorMessage(e, "Reading registry path");
-                    return null;
+                    
+                    return "";
                 }
             }
         }
@@ -456,14 +474,19 @@ namespace MSOutlookPlugin
             if (incoming != null)
                 return;
 
+            string preview_path = get_prefs_folder() + "\\preview";
+
+            if (!Directory.Exists( preview_path ))
+                Directory.CreateDirectory(preview_path);
+
             incoming = new FileSystemWatcher();
             incoming.BeginInit();
-            incoming.Path = get_prefs_folder();
+            incoming.Path = preview_path;
             incoming.NotifyFilter = NotifyFilters.LastAccess |
                                     NotifyFilters.LastWrite |
                                     NotifyFilters.FileName |
                                     NotifyFilters.DirectoryName;
-            //            incoming.Filter = "req.txt";
+            //incoming.Filter = "req*.txt";
             incoming.Filter = "";
 
             incoming.Deleted += new FileSystemEventHandler(OnChanged);
@@ -476,14 +499,14 @@ namespace MSOutlookPlugin
         }
         public void OnRenamed(object source, RenamedEventArgs e)
         {
-            if (e.Name.Equals("req.txt"))
+            if (e.Name.IndexOf("req") >= 0 && e.Name.IndexOf(".txt") >= 0)
             {
                 try
                 {
-                    if (work_callback() != 0)
+                    if (work_callback(e.FullPath) != 0)
                     {
                         System.Threading.Thread.Sleep(200);
-                        if (work_callback() != 0)
+                        if (work_callback(e.FullPath) != 0)
                         {
                             log("Cannot read req.txt");
                         }
@@ -498,14 +521,14 @@ namespace MSOutlookPlugin
 
         public void OnChanged(object source, FileSystemEventArgs e)
         {
-            if (e.Name.Equals("req.txt"))
+            if (e.Name.IndexOf("req") >= 0 && e.Name.IndexOf(".txt") >= 0)
             {
                 try
                 {
-                    if (work_callback() != 0)
+                    if (work_callback(e.FullPath) != 0)
                     {
                         System.Threading.Thread.Sleep(200);
-                        if (work_callback() != 0)
+                        if (work_callback(e.FullPath) != 0)
                         {
                             log("Cannot read req.txt");
                         }
@@ -517,12 +540,12 @@ namespace MSOutlookPlugin
                 }
             }
         }
-        
-        
 
-        public int work_callback()
+
+
+        public int work_callback(string req_file)
         {
-            string req_file = get_prefs_folder() + "\\req.txt";
+            //string req_file = get_prefs_folder() + "\\req.txt";
 
             if (!System.IO.File.Exists(req_file))
                 return 0;
@@ -560,16 +583,28 @@ namespace MSOutlookPlugin
                 rd.Close();
             }
 
+            log("Got new list size " + display_list.Count);
 
-            clear_folder();
+            if (needs_clear_folder)
+            {
+                log("clearing folder");
+                clear_folder();
+                needs_clear_folder = false;
+            }
             
             for (int i = 0; i < display_list.Count; i++)
             {
                 string value = display_list[i] as string;
-                add_new_mail(value);
+                string file = value.Substring( value.LastIndexOf('\\') + 1 );
+
+                log("adding " + file);
+
+                add_new_mail(file);
             }
 
             display_list.Clear();
+            log("Done adding");
+
             return ret;
         }
 
@@ -580,14 +615,23 @@ namespace MSOutlookPlugin
             
             try
             {
+                log("Init redemption");
                 Redemption.ISafeMailItem sItem = new Redemption.SafeMailItem();
+
+                log("add mail");
                 Outlook.MailItem newMail = newFolder.Items.Add(Outlook.OlItemType.olMailItem) as Outlook.MailItem;
 
                 sItem.Item = newMail;
 
+                log("convert " + path);
                 sItem.Import(path, 1024);
+
+
+                log("move");
                 newMail.Move(newFolder);
 
+
+                log("Release");
                 Marshal.ReleaseComObject(newMail);
                 Marshal.ReleaseComObject(sItem);
             }
@@ -602,9 +646,9 @@ namespace MSOutlookPlugin
             
         }
 
-        public static void add_new_mail(string path)
+        public static void add_new_mail(string file)
         {
-            
+            string path = get_prefs_folder() + "\\preview\\" + file;
             if (System.IO.File.Exists(path))
             {
                 add_mail(path);
@@ -619,13 +663,16 @@ namespace MSOutlookPlugin
         }
 
 
+        bool inited = false;
 
         void init_plugin()
         {
-            prefs_folder = get_prefs_folder();
+            if (inited)
+                return;
+            //prefs_folder = get_prefs_folder();
 
             init_fs_watcher();
-
+            /*
             string req_file = get_prefs_folder() + "\\req.txt";
 
             try
@@ -637,9 +684,11 @@ namespace MSOutlookPlugin
             }
             catch (Exception)
             {
-            }
+            }*/
 
             add_ms_folder();
+
+            inited = true;
         }
        
 
@@ -670,7 +719,8 @@ namespace MSOutlookPlugin
                     else
                         newFolder = f;
                 }
-                clear_folder();                
+                clear_folder();      
+          
 
             }
             catch (Exception ex)
