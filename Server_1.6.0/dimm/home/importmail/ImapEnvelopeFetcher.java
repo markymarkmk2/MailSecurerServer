@@ -396,15 +396,24 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                     for (int i = 0; i < mp.getCount(); i++)
                     {
                         BodyPart bp = mp.getBodyPart(i);
-                        if (bp.getContentType().toLowerCase().compareTo("message/rfc822") == 0)
+
+                        // IF EXCHANGE CANNOT HANDLE EML, IT APPENDS EML AS OCTET STREAM, BUT IN REALITY IT IS A RFC-MAIL
+                        // WE TRY TO DO IT, ON FAILURE WE ARE COUGHT IN EXCEPTION
+                        if (bp.getContentType().toLowerCase().compareTo("message/rfc822") == 0 || 
+                            bp.getContentType().toLowerCase().compareTo( "application/octet-stream") == 0)
                         {
                             MimeMessage cm = null;
+
+                            if (bp.getContentType().toLowerCase().compareTo( "application/octet-stream") == 0)
+                            {
+                                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Importing corrupt mail <" + subject + ">");
+                            }
+
                             InputStream is = bp.getInputStream();
 
                             cm = new MimeMessage( s, is );
                             is.close();
 
-                           
                           
 
                             super_archive_message(cm, envelope_text);
