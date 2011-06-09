@@ -83,6 +83,11 @@ public class LicenseConfig extends AbstractCommand
             try
             {
                 String hwid = HWIDLicenseTicket.generate_hwid();
+                
+                if (HWIDLicenseTicket.is_virtual_license())
+                {
+                    hwid = HWIDLicenseTicket.read_virtual_license();
+                }
                 answer = "0: HWID:\"" + hwid + "\"";
                 return true;
             }
