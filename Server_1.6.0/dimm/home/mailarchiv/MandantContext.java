@@ -41,6 +41,8 @@ import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Backup;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
+import home.shared.hibernate.MailAddress;
+import home.shared.hibernate.MailUser;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
@@ -763,6 +765,37 @@ public class MandantContext
         return null;
     }
 
+    public ArrayList<String> get_aliases_per_allowed_viewer( String user, String pwd )
+    {
+        ArrayList<String> mail_adr_by_allowed_viewer = new ArrayList<String>();
+
+        // GET ALL ALIASES FOR ACT USER
+        ArrayList<String> mail_aliases = get_mailaliases( user, pwd );
+
+        // CHECK FOR EACH AF THE MAILALIASES OF THIS USER, IF IT IS CONTAINED IN AN ALLOWED VIEWER ENTRY OF ANY OTHER USER        
+        for (Iterator<MailUser> it = this.mandant.getMailusers().iterator(); it.hasNext();)
+        {
+            MailUser mu = it.next();
+
+            // LOOK IN ALLOWED VIEWERS
+            for (Iterator<MailAddress> it1 = mu.getAllowedViewers().iterator(); it1.hasNext();)
+            {
+                MailAddress allowed_viewer = it1.next();
+
+                // ALLOWED VIEWER IS OUR MAIL ADRESS?
+                if (mail_aliases.contains(allowed_viewer.getEmail()))
+                {
+                    // THEN WE MAY SEARCH FOR THIS ADRESS TOO
+                    if (mu.getEmail().length() > 0)
+                        mail_adr_by_allowed_viewer.add(mu.getEmail());
+                }
+            }
+        }
+
+        return mail_adr_by_allowed_viewer;
+    }
+
+
     /**
      * @return the rctx
      */
@@ -1353,6 +1386,7 @@ public class MandantContext
         }
         return null;
     }
+
 
 
     
