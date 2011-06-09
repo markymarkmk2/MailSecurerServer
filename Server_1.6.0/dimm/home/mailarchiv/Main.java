@@ -39,7 +39,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.6.8";
+    private static final String VERSION = "1.6.9";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -361,8 +361,10 @@ public final class Main
                 
                 control.run();
 
+                LogManager.msg_system( LogManager.LVL_INFO, "Finished Control");
                 if (control.is_shutdown())
                 {                    
+                    LogManager.msg_system( LogManager.LVL_INFO, "Finished Mainloop");
                     break;
                 }
             }
@@ -373,6 +375,7 @@ public final class Main
                 LogicControl.sleep(5000);
             }
         }
+        LogManager.msg_system( LogManager.LVL_INFO, "Finalizing");
         LogManager.msg_system( LogManager.LVL_INFO,  Main.APPNAME + " is shut down");
         try
         {
