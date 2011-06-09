@@ -629,7 +629,20 @@ public class SearchCall
             if (mail_aliases == null || mail_aliases.isEmpty())
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
-            }            
+            }
+
+            // ADD ALLOWED VIEWERS
+            ArrayList<String> aliases_per_allowed_viewer = m_ctx.get_aliases_per_allowed_viewer(user, pwd);
+            if (aliases_per_allowed_viewer.size() > 0)
+            {
+                for (int i = 0; i < aliases_per_allowed_viewer.size(); i++)
+                {
+                    String string = aliases_per_allowed_viewer.get(i);
+                    if (!mail_aliases.contains(string))
+                        mail_aliases.add(string);
+                }
+            }
+
 
             filter = build_lucene_filter(mail_aliases);
         }
@@ -666,7 +679,19 @@ public class SearchCall
             {
                 throw new IllegalArgumentException(Main.Txt("No_mail_address_for_this_user"));
             }
-            //           filter = null;
+
+            // ADD ALLOWED VIEWERS
+            ArrayList<String> aliases_per_allowed_viewer = m_ctx.get_aliases_per_allowed_viewer(user, pwd);
+            if (aliases_per_allowed_viewer.size() > 0)
+            {
+                for (int i = 0; i < aliases_per_allowed_viewer.size(); i++)
+                {
+                    String string = aliases_per_allowed_viewer.get(i);
+                    if (!mail_aliases.contains(string))
+                        mail_aliases.add(string);
+                } 
+            }
+        
 
             filter = build_lucene_filter(mail_aliases);
         }
