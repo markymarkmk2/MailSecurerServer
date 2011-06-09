@@ -1256,6 +1256,7 @@ public class LogicControl
 
 
         LogManager.msg_system( LogManager.LVL_INFO, "Closing down " + Main.APPNAME);
+        shutdown = true;
         //System.exit(0);
     }
 
