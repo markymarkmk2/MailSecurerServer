@@ -82,6 +82,7 @@ public abstract class ProxyConnection implements Runnable
     abstract void dec_thread_count();
     abstract void runConnection();
     abstract String[] get_single_line_commands();
+    abstract String[] get_single_line_with_args_commands();
     abstract String[] get_multi_line_commands();
     abstract public int get_default_port();
 
@@ -142,23 +143,31 @@ public abstract class ProxyConnection implements Runnable
     {
         String orig_data = sData;
 
+
+
         if (sData.length() > 5)
             sData = sData.substring(0, 5 );
 
         sData = sData.toUpperCase().replace('\r', ' ').replace('\n', ' ').trim();
 
+        // HANDLE SINGLE LINE WITH ARGS / MULTILINE W/O ARGS
+        if (!has_args(orig_data))
+        {
+            String[] cmds = get_single_line_with_args_commands();
+            for (int i = 0; i < cmds.length; i++)
+            {
+                if (cmds[i].compareTo(sData) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+
         String[] cmds = get_multi_line_commands();
         for (int i = 0; i < cmds.length; i++)
         {
             if (cmds[i].compareTo(sData) == 0)
-            {
-                if (sData.compareTo("UIDL") == 0)
-                {
-                    if (has_args(orig_data))
-                    {
-                        return false;
-                    }
-                }
+            {               
                 return true;
             }
         }
@@ -175,12 +184,25 @@ public abstract class ProxyConnection implements Runnable
 
         sData = sData.toUpperCase().replace('\r', ' ').replace('\n', ' ').trim();
 
+        // HANDLE SINGLE LINE WITH ARGS / MULTILINE W/O ARGS
+        if (has_args(orig_data))
+        {
+            String[] cmds = get_single_line_with_args_commands();
+            for (int i = 0; i < cmds.length; i++)
+            {
+                if (cmds[i].compareTo(sData) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+
         String[] cmds = get_single_line_commands();
         for (int i = 0; i < cmds.length; i++)
         {
             if (cmds[i].compareTo(sData) == 0)
             {
-                if (sData.compareTo("UIDL") == 0)
+                if (sData.compareTo("UIDL") == 0 || sData.compareTo("LIST") == 0)
                 {
                     if (!has_args(orig_data))
                     {

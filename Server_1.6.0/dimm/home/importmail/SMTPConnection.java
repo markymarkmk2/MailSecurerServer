@@ -29,11 +29,17 @@ public class SMTPConnection extends ProxyConnection
     // constants
     String multi_line_commands[] = {"EHLO"};
     String single_line_commands[] = {"AUTH", "QUIT", "HELP", "MAIL", "RCPT", "RSET", "SEND", "SOML", "VRFY", "EXPN", "NOOP", "TURN"};
+    String single_line_with_args_commands[] = {};
     
     @Override
     String[] get_single_line_commands()
     {
         return single_line_commands;
+    }
+    @Override
+    String[] get_single_line_with_args_commands()
+    {
+        return single_line_with_args_commands;
     }
     @Override
     String[] get_multi_line_commands()

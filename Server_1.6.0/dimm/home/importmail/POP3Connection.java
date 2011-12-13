@@ -20,9 +20,10 @@ public class POP3Connection extends ProxyConnection
 
     private static final String NAME = "POP3-Proxy";
 
-    // UIDL IS BOTH SINGLE AND MULTILINE (WITHOUT ARGS ->MULTI)
-    String multi_line_commands[] = {"LIST", "RETR", "UIDL", "TOP", "CAPA"};
-    String single_line_commands[] = {"QUIT", "USER", "UIDL", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
+    //LIST AND  UIDL ARE BOTH SINGLE AND MULTILINE (WITHOUT ARGS ->MULTI)
+    String single_line_with_args_commands[] = {"LIST", "UIDL"};
+    String multi_line_commands[] = { "RETR", "TOP", "CAPA"};
+    String single_line_commands[] = { "QUIT", "USER", "PASS", "DELE", "STAT", "NOOP", "RSET", "APOP", "STLS", "AUTH"};
 
     static int thread_count = 0;
 
@@ -35,6 +36,11 @@ public class POP3Connection extends ProxyConnection
     String[] get_single_line_commands()
     {
         return single_line_commands;
+    }
+    @Override
+    String[] get_single_line_with_args_commands()
+    {
+        return single_line_with_args_commands;
     }
     @Override
     String[] get_multi_line_commands()
@@ -166,6 +172,29 @@ public class POP3Connection extends ProxyConnection
 
                 if (is_verbose)
                     log( "C: " + sData);
+
+                String token = sData.toUpperCase();
+                // WE BLOCK STARTTLS
+                if (token.startsWith("STARTTLS"))
+                {
+                    clientWriter.write("454 TLS not available\r\n".getBytes());
+                    clientWriter.flush();
+
+                    reset_timeout();
+                    // MAYBE CIENT DROPS BACK TO STANDATD
+
+                    int avail = wait_for_avail( clientReader, clientSocket, 10 );
+                    if (avail == 0)
+                    {
+                        serverWriter.write("QUIT\r\n".getBytes());
+                        serverWriter.flush();
+                        break;
+                    }
+
+                    sData = getDataFromInputStream(clientReader, clientSocket,  SMTP_CLIENTREQUEST, /*wait*/false).toString();
+                    last_command = sData.toUpperCase().trim();
+                }
+
                 
                 while (sData.toUpperCase().startsWith("RETR "))
                 {

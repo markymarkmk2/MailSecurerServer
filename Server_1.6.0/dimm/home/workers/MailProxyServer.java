@@ -495,16 +495,24 @@ public class MailProxyServer extends ListWorkerParent
                 for (int i = 0; i < connection_list.size(); i++)
                 {
                     ProxyConnection m = connection_list.get(i);
-                    if (m.is_timeout())
+                    try
                     {
-                        LogManager.msg_proxy( LogManager.LVL_WARN, "Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());
-                        m.closeConnections();
-                    }
+                        if (m.is_timeout())
+                        {
+                            LogManager.msg_proxy(LogManager.LVL_WARN, "Removing dead connection to " + m.get_proxy().get_proxy().getRemoteServer());
+                            m.closeConnections();
+                        }
 
-                    if (!m.is_connected())
-                    {                        
-                        connection_list.remove(m);
-                        i--;
+                        if (!m.is_connected())
+                        {
+                            connection_list.remove(m);
+                            i--;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        LogManager.msg_proxy(LogManager.LVL_WARN, "Exception while checking timeout ", e);
+                        e.printStackTrace(System.err);
                     }
                 }
                 if (this.isGoodState())
