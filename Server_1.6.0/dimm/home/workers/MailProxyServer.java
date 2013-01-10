@@ -22,6 +22,7 @@ import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.BackgroundWorker;
 import home.shared.license.LicenseTicket;
 import home.shared.mail.EncodedMailOutputStream;
+import home.shared.mail.RemoveStuffedDotsMailOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -527,7 +528,7 @@ public class MailProxyServer extends ListWorkerParent
         finished = true;
     }
     
-    public static BufferedOutputStream get_rfc_stream( File rfc_dump, boolean encoded)
+    public static BufferedOutputStream get_rfc_stream( File rfc_dump, boolean encoded, boolean removeStuffedDots)
     {
 
         BufferedOutputStream bos = null;
@@ -542,6 +543,8 @@ public class MailProxyServer extends ListWorkerParent
             OutputStream os = new FileOutputStream(rfc_dump);
             if (encoded)
                 os = new EncodedMailOutputStream(os);
+            if (removeStuffedDots)
+                os = new RemoveStuffedDotsMailOutputStream(os);
             bos = new BufferedOutputStream(os);
 
             rfc_dump.getFreeSpace();

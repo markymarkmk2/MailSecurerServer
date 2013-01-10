@@ -343,7 +343,7 @@ public class SMTPConnection extends ProxyConnection
 //        File rfc_dump = new File(Main.RFC_PATH + "smtp_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump, encoded);
+        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump, encoded, /*stuff 2 dots*/ true);
 
         if (bos == null)
         {        

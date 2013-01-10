@@ -313,7 +313,7 @@ public class POP3Connection extends ProxyConnection
         //File rfc_dump = new File(Main.RFC_PATH + "pop3_" + this_thread_id + "_" + System.currentTimeMillis() + ".txt");
         
         
-        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump, encoded);
+        BufferedOutputStream bos = MailProxyServer.get_rfc_stream(rfc_dump, encoded, /*stuff 2 dots*/ true);
 
         if (bos == null)
         {        
