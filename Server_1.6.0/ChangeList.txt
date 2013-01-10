@@ -36,3 +36,17 @@ Better handling of SingleInstance with MailAttributes
 POP-Proxy handles SingleLine LIST (with arg) correct
 POP-Proxy gives error on STARTTLS
 
+1.7.1
+User aus DB mit Schalter (User ist Email)
+
+1.7.2
+TLS Sperren wenn abgewählt
+
+1.7.3
+Range Search
+DatumSuche
+
+1.7.4
+Fix: DotStuffing bei Proxies
+
+
