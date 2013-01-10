@@ -31,3 +31,8 @@ Bugfix import of EML
 
 1.6.8
 Better handling of SingleInstance with MailAttributes
+
+1.7.0
+POP-Proxy handles SingleLine LIST (with arg) correct
+POP-Proxy gives error on STARTTLS
+
