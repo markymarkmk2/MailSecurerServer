@@ -6,6 +6,7 @@
 package dimm.home.mailarchiv.Utilities;
 
 import home.shared.Utilities.DefaultSSLSocketFactory;
+import home.shared.Utilities.DefaultTrustManager;
 import java.io.IOException;
 import java.net.Socket;
 import java.security.KeyManagementException;
@@ -17,6 +18,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
 /**
@@ -51,11 +53,13 @@ public class MSSSLSocketFactory extends DefaultSSLSocketFactory
             /*
              * Allocate and initialize a TrustManagerFactory.
              */
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-            tmf.init(ks);
+            TrustManager[] trustmanagers = new TrustManager[]
+                    {
+                        new DefaultTrustManager()
+                    };
 
 
-            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+            sslContext.init(kmf.getKeyManagers(), trustmanagers, null);
 
             SSLSocketFactory sslserversocketfactory = (SSLSocketFactory) sslContext.getSocketFactory();
 
