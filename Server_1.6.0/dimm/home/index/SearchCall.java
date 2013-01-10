@@ -27,6 +27,7 @@ import home.shared.CS_Constants;
 import home.shared.CS_Constants.USERMODE;
 import home.shared.SQL.OptCBEntry;
 import home.shared.filter.ExprEntry;
+import home.shared.filter.ExprEntry.TYPE;
 import home.shared.filter.FilterMatcher;
 import home.shared.filter.GroupEntry;
 import home.shared.filter.LogicEntry;
@@ -34,13 +35,10 @@ import home.shared.hibernate.Role;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.mail.Address;
-import javax.mail.Header;
-import javax.mail.Message;
 import javax.mail.Session;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
@@ -69,6 +67,23 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.util.Version;
 
 
+class RangeQueryParser extends QueryParser
+{
+
+    public RangeQueryParser( Version v, String field, Analyzer ana)
+    {
+        super(v, field, ana);
+    }
+
+    @Override
+    protected Query getRangeQuery( String field, String part1, String part2, boolean inclusive ) throws ParseException
+    {
+        return super.getRangeQuery(field, part1, part2, inclusive);
+    }
+
+
+
+}
 
 
 /*
@@ -176,7 +191,7 @@ public class SearchCall
         for (int i = 0; i < call_list.size(); i++)
         {
             SearchCallEntry sce = call_list.get(i);
-            if (sce.id == id && sce.getSsoc().get_sso_str_id().equals(sso_id))
+            if (sce.getId() == id && sce.getSsoc().get_sso_str_id().equals(sso_id))
             {
                 return sce;
             }
@@ -205,9 +220,29 @@ public class SearchCall
         return "0: sc" + id + " N:" + sc.result.size();
     }
 */
+    static void check_expired()
+    {
+        for (int i = 0; i < call_list.size(); i++)
+        {
+            SearchCallEntry searchCallEntry = call_list.get(i);
+            if (searchCallEntry.isExpired())
+            {
+                String ret = close_search_call( searchCallEntry.get_SceId(), searchCallEntry.getSsoc() );
+                
+                // IF OK, THEN MOVE ON ELEM BACH
+                if (ret != null && ret.length() > 0 && ret.charAt(0) == '0')
+                {
+                    i--;
+                }
+            }
+        }
+    }
+    static int globalScId = 10000;
+
     public static String open_filtersearch_call( int ma_id, String compressed_filter, int n, String user, String pwd, USERMODE level, boolean volatile_storage )
     {
 
+        check_expired();
 
         MandantContext m_ctx = Main.get_control().get_mandant_by_id(ma_id);
         if (m_ctx == null)
@@ -250,17 +285,18 @@ public class SearchCall
             LogManager.printStackTrace(e);
             return "6: " + e.getMessage();
         }
-        int id = 0;
+
+        int id;
         synchronized (call_list)
         {
             if (!volatile_storage)
             {
-                id = call_list.size();
+                id = globalScId++;
             }
             else
             {
-                // REAL HACK, ALL SEARCHCALL-IDS ABOVE 1000 ARE VOLATILE, ONE PER USER
-                id = 1000 + ssoc.getUser_sso_id();
+                // REAL HACK, ALL SEARCHCALL-IDS below 10000 ARE VOLATILE, ONE PER USER
+                id = ssoc.getUser_sso_id();
 
                 String sce_id = "sc" + id;
                 if (SearchCall.get_sce(sce_id, ssoc.get_sso_str_id()) != null)
@@ -276,6 +312,8 @@ public class SearchCall
             m_ctx.get_imap_server().set_search_results( sc, user, pwd );
         }
 
+        LogManager.msg_index(LogManager.LVL_INFO, "Opened search sc" + id  + " user " + ssoc.getUser() + " ListLen:" + call_list.size());
+
         return "0: sc" + id + " N:" + sc.result.size();
     }
 
@@ -288,7 +326,10 @@ public class SearchCall
         }
         call_list.remove(sce);
 
-        sce.call.close();
+        sce.getCall().close();
+
+
+        LogManager.msg_index(LogManager.LVL_INFO, "Closed search " + id + " user " + ssoc.getUser() + " ListLen:" + call_list.size());
 
 
         return "0: ok";
@@ -296,11 +337,11 @@ public class SearchCall
 
     static ArrayList<String> retrieve_row( SearchCallEntry sce, ArrayList<String> field_list, int row )
     {
-        SearchResult result = sce.call.result.get(row);
+        SearchResult result = sce.getCall().result.get(row);
         try
         {
             ArrayList<String> row_list = new ArrayList<String>();
-            Document doc = sce.call.get_doc(result.getSearcher(), result.getDoc_index());
+            Document doc = sce.getCall().get_doc(result.getSearcher(), result.getDoc_index());
 
             for (int j = 0; j < field_list.size(); j++)
             {
@@ -309,7 +350,7 @@ public class SearchCall
                 // HANDLE SPECIAL CASE 4EYES-COL: WE SET Role-ID IF WE HAVE A 4-EYES ROLE MATCHING THIS MAIL
                 if (field.compareTo( CS_Constants.VFLD_4EYES) == 0)
                 {
-                    SearchResult sr = sce.call.result.get(row);
+                    SearchResult sr = sce.getCall().result.get(row);
                     Role r = sr.get_role_4eyes();
                     if (r != null)
                     {
@@ -352,7 +393,7 @@ public class SearchCall
 
         if (row == -1)
         {
-            for (int i = 0; i < sce.call.result.size(); i++)
+            for (int i = 0; i < sce.getCall().result.size(); i++)
             {
 
                 ArrayList<String> row_list = retrieve_row(sce, field_list, i);
@@ -366,7 +407,7 @@ public class SearchCall
         {
             for (int i = 0; i < rows; i++)
             {
-                if (row + i >=  sce.call.result.size())
+                if (row + i >=  sce.getCall().result.size())
                     break;
                 
                 ArrayList<String> row_list = retrieve_row(sce, field_list, row + i);
@@ -393,13 +434,13 @@ public class SearchCall
         {
             return "1: invalid sce";
         }
-        SearchResult result = sce.call.result.get(row);
+        SearchResult result = sce.getCall().result.get(row);
         if (result == null)
         {
             return "2: invalid result";
         }
 
-        ret = sce.call.open_RMX_mail_stream(sce.getSsoc(), result);
+        ret = sce.getCall().open_RMX_mail_stream(sce.getSsoc(), result);
 
         if (ret == null)
         {
@@ -432,7 +473,7 @@ public class SearchCall
         {
             return "1: invalid sce";
         }
-        MandantContext m_ctx = sce.call.get_ctx();
+        MandantContext m_ctx = sce.getCall().get_ctx();
 
 
         // DETECT SENDER FOR SMTP-ENVELOPE
@@ -484,7 +525,7 @@ public class SearchCall
             {
                 int j = rowi[i];
 
-                SearchResult result = sce.call.result.get(rowi[i]);
+                SearchResult result = sce.getCall().result.get(rowi[i]);
                 DiskSpaceHandler dsh = m_ctx.get_dsh(result.getDs_id());
                 Vault vault = m_ctx.get_vault_for_ds_idx(result.getDs_id());
                 try
@@ -774,9 +815,18 @@ public class SearchCall
             case CONTAINS_SUBSTR:
                 return "*" + entry.getValue() + "*";
             case CONTAINS:
-                return entry.getValue();
+            case EXACT:
             case REGEXP:
                 return entry.getValue();
+            case NUM_LT:
+                return "[0 TO " + entry.getValue() + "]";
+            case NUM_GT:
+            {
+                if (entry.getType() == TYPE.TIMESTAMP)
+                {
+                    return "[" + entry.getValue() + " TO " + Long.toString(System.currentTimeMillis(),16) + "]";
+                }
+            }
         }
         return "???";
     }
@@ -812,7 +862,7 @@ public class SearchCall
 
                 String field = flist[i];
                 String val_txt = get_op_val_txt(e);
-                boolean has_space = val_txt.indexOf(' ') >= 0;
+                boolean has_space = val_txt.indexOf(' ') >= 0 && val_txt.indexOf(" TO ") < 0;
 
                  sb.append( field );
                  sb.append(":");
@@ -828,7 +878,7 @@ public class SearchCall
         {
             String val_txt = get_op_val_txt(e);
 
-            boolean has_space = val_txt.indexOf(' ') >= 0;
+            boolean has_space = val_txt.indexOf(' ') >= 0 && val_txt.indexOf(" TO ") < 0;
 
             if (e.isNeg())
                 sb.append("NOT ");
@@ -905,7 +955,7 @@ public class SearchCall
 
         LogManager.msg_index(LogManager.LVL_DEBUG,  "QueryParser: " + sb.toString());
 
-        QueryParser parser = new QueryParser(Version.LUCENE_24, "FLDN_BODY", ana);
+        QueryParser parser = new RangeQueryParser(Version.LUCENE_24, "FLDN_BODY", ana);
         parser.setAllowLeadingWildcard(true);
 
         Query qry;
