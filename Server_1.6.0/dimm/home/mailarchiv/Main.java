@@ -16,6 +16,7 @@ import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -39,7 +40,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.7.0";
+    private static final String VERSION = "1.7.4";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -138,7 +139,6 @@ public final class Main
         print_system_property( "os.arch");
         print_system_property( "os.version");
         print_system_property( "user.dir");
-
 
 
         try
