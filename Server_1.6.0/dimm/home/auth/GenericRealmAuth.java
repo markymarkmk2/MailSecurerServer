@@ -313,7 +313,7 @@ public abstract class GenericRealmAuth
         // IF NOT IN DB WE CHECK IF FLAG (USER IS MAIL) IS SET
         if (ret == null && (act.getFlags() & CS_Constants.ACCT_USER_IS_MAIL) == CS_Constants.ACCT_USER_IS_MAIL)
         {
-            ret = get_mail_from_user( ret );
+            ret = get_mail_from_user( user );
         }
         return ret;
     }
