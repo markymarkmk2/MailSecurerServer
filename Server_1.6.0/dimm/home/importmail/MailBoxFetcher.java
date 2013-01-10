@@ -186,6 +186,12 @@ public class MailBoxFetcher extends WorkerParentChild
             protocol = protocol + "s";
             props.put("mail." + protocol + ".socketFactory.port", port);
         }
+        else
+        {
+            // DO NOT ALLOW TLS 
+            props.put("mail." + protocol + ".starttls.enable", "false");
+        }
+
         if (test_flag(CS_Constants.IMF_HAS_TLS_CERT))
         {
             props.put("mail." + protocol + ".socketFactory.class", get_ssl_socket_classname(flags));
