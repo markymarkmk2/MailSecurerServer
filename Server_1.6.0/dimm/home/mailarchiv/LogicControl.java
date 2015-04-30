@@ -51,11 +51,17 @@ import home.shared.mail.RFCGenericMail;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.mail.BodyPart;
+import javax.mail.Header;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
 import org.hibernate.HibernateException;
 import org.hibernate.SQLQuery;
 
@@ -329,7 +335,7 @@ public class LogicControl
 
 
 
-    private void add_mandant( MandantPreferences prefs, Mandant m )
+    public void add_mandant( MandantPreferences prefs, Mandant m )
     {
         mandanten_list.add(new MandantContext(prefs, m));
     }
@@ -616,9 +622,10 @@ public class LogicControl
 
 
 
+        File tmp_file =null;
         try
         {
-            File tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
+            tmp_file = context.getTempFileHandler().create_temp_file(subdir, prefix, suffix, delete_on_exit);
             fm = new RFCFileMail(tmp_file, encoded );
             bos = fm.open_outputstream();
             msg.writeTo(bos);
@@ -626,6 +633,11 @@ public class LogicControl
         catch (MessagingException ex)
         {
             LogManager.msg_archive( LogManager.LVL_ERR, "Cannot extract message file", ex);
+            if (tmp_file != null) {
+                LogManager.msg_archive( LogManager.LVL_ERR, "TMP-File was " + tmp_file.getAbsolutePath() + " Size:" + tmp_file.length());
+            }
+            dumpMessage( LogManager.LVL_ERR, msg);
+            
             throw new ArchiveMsgException("Cannot extract message file: " + ex.getMessage());
         }
         catch (IOException ex)
@@ -637,7 +649,8 @@ public class LogicControl
         {
             try
             {
-                bos.close();
+                if (bos != null)
+                    bos.close();
             }
             catch (IOException ex)
             {
@@ -1223,6 +1236,7 @@ public class LogicControl
                             FileWriter fw = new FileWriter(f);
                             fw.write("OK");
                             fw.close();
+                            last_start_written = true;
                         }
                         catch (Exception exc)
                         {
@@ -1766,6 +1780,48 @@ public class LogicControl
             LogManager.msg_system( LogManager.LVL_ERR, "Invalid SSO token " + sso_token , e);
         }
         return null;
+    }
+
+    public void dumpMessage( int level, Message msg ) 
+    {
+        try {
+            LogManager.msg_archive(level, "Subject  was " + msg.getSubject() + "CT: " + msg.getContentType());
+            Enumeration e = msg.getAllHeaders();
+            dumpHeaders( level, e );
+            Object content_object = msg.getContent();
+            if (content_object instanceof Multipart) {
+                dumpMultiParts( level, (Multipart)content_object);
+                
+            }
+        }
+        catch (Exception messagingException) {
+        }            
+    }
+    void dumpHeaders(int level, Enumeration e  )
+    {
+        while (e.hasMoreElements()) {
+                Object o = e.nextElement();
+                Header hdr = (Header)o;
+                LogManager.msg_archive(level, "Header " + hdr.getName() + " Val:" + hdr.getValue());                    
+            }
+    }
+
+    private void dumpMultiParts( int level, Multipart mp ) throws MessagingException, IOException {
+        
+        for (int i = 0; i < mp.getCount(); i++)
+        {
+            BodyPart bp = mp.getBodyPart(i);
+            LogManager.msg_archive(level, "Part " + i + "CT:" + bp.getContentType() ); 
+            if (bp.getContent() instanceof Multipart) {
+                dumpMultiParts( level,(Multipart)bp.getContent() );
+            }
+            else
+            {
+                LogManager.msg_archive(level, "Part " + i + "DS:" + bp.getDescription() ); 
+                LogManager.msg_archive(level, "Part " + i + "DP:" + bp.getDisposition()); 
+                dumpHeaders( level, bp.getAllHeaders());
+            }
+        }    
     }
 
 

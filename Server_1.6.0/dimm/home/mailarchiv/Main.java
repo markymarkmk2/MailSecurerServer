@@ -80,7 +80,7 @@ public final class Main
     public static boolean trace_mode = false;
    
     
-    static LogicControl control;
+    public static LogicControl control;
     
     private static String ws_ip = "127.0.0.1";
     private static int ws_port = 8050;
