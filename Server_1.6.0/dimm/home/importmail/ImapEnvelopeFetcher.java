@@ -11,16 +11,28 @@ import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
 import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.LogicControl;
 import dimm.home.mailarchiv.Main;
+import dimm.home.mailarchiv.MandantContext;
+import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.StatusEntry;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.vault.DiskVault;
 import home.shared.CS_Constants;
+import home.shared.hibernate.Backup;
+import home.shared.hibernate.DiskArchive;
+import home.shared.hibernate.Hotfolder;
+import home.shared.hibernate.Mandant;
+import home.shared.hibernate.Milter;
+import home.shared.hibernate.Proxy;
 import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import home.shared.mail.RFCMimeMail;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import javax.mail.Address;
@@ -341,10 +353,18 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
     @Override
     protected void archive_message( Message message ) throws ArchiveMsgException, VaultException, IndexException
     {
+        if (LogManager.has_lvl(LogManager.TYP_FETCHER, LogManager.LVL_DEBUG))
+        {
+            Main.get_control().dumpMessage(LogManager.LVL_DEBUG, message);
+        }
+        
         if ( message instanceof MimeMessage)
         {
             try
             {
+                String txt = "Archiving mime message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">";
+                LogManager.msg_fetcher(LogManager.LVL_DEBUG, txt);
+            
                 boolean archived = false;
                 MimeMessage m = (MimeMessage) message;
                 Session s = Session.getDefaultInstance( new Properties());
@@ -400,6 +420,7 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                         // IF EXCHANGE CANNOT HANDLE EML, IT APPENDS EML AS OCTET STREAM, BUT IN REALITY IT IS A RFC-MAIL
                         // WE TRY TO DO IT, ON FAILURE WE ARE COUGHT IN EXCEPTION
                         if (bp.getContentType().toLowerCase().compareTo("message/rfc822") == 0 || 
+//                            bp.getContentType().toLowerCase().compareTo("text/plain") == 0 ||     
                             bp.getContentType().toLowerCase().compareTo( "application/octet-stream") == 0)
                         {
                             MimeMessage cm = null;
@@ -503,5 +524,99 @@ public class ImapEnvelopeFetcher extends MailBoxFetcher
                 }
             }
         }
+    }
+     public static void main( String[] argv )
+    {
+        File dir = new File("J:\\Service\\Kunden\\MCS\\MailSecurer-Probs");
+        Main m = new Main(argv);
+        m.control = new LogicControl();
+       
+        
+        File[] emls = dir.listFiles( new FilenameFilter() {
+
+            @Override
+            public boolean accept( File dir, String name ) {
+                return name.equals("mail2 - Kopie.eml");
+            }
+        });
+        
+        Mandant ma = new Mandant(1, "Test", "lic", "12345", "mw", "0", 1, "ihost", 2, "shost", "suser", "spwd", 0);
+        ImapFetcher fetcher = new ImapFetcher();
+        DiskArchive da = new DiskArchive(1, ma, "da1", "0", new HashSet(), new HashSet<ImapFetcher>(), new HashSet<Milter>(), new HashSet<Proxy>(), new HashSet<Hotfolder>(), new HashSet<Backup>());
+        MandantContext ctv = new MandantContext(new MandantPreferences("preferences/1"), ma);
+        ctv.getPrefs().read_props();
+        DiskVault dv = new DiskVault(ctv, da);
+        fetcher.setMandant(ma);
+        fetcher.setDiskArchive(da);
+        fetcher.setFlags("0");
+        m.control.add_mandant(ctv.getPrefs(), ctv.getMandant());
+                 
+        ImapEnvelopeFetcher ifetcher = new ImapEnvelopeFetcher(fetcher);
+        
+                Session s = Session.getDefaultInstance( new Properties());
+
+                // GET ATTACHMENT
+                Object content_object = null;
+        try {
+            for (File file : emls) {
+                RFCFileMail fmail = new RFCFileMail(file, false);
+                RFCMimeMail mmail = new RFCMimeMail();
+                mmail.parse(fmail);
+                m.control.dumpMessage(LogManager.LVL_ERR, mmail.getMsg());
+                ifetcher.archive_message(mmail.getMsg());
+                
+/*                content_object = mmail.getMsg().getContent();
+                
+                
+                // NOW WE SHOULD BE ABLE TO READ CONTENTS INTO MIMEMAIL
+                RFCMimeMail mail = new RFCMimeMail( mmail.getMsg() );
+                String envelope_text = mail.get_text_content();
+                String subject = mmail.getMsg().getSubject();
+
+
+                if (content_object instanceof Multipart)
+                {
+                    Multipart mp = (Multipart) content_object;
+                    for (int i = 0; i < mp.getCount(); i++)
+                    {
+                        BodyPart bp = mp.getBodyPart(i);
+
+                        // IF EXCHANGE CANNOT HANDLE EML, IT APPENDS EML AS OCTET STREAM, BUT IN REALITY IT IS A RFC-MAIL
+                        // WE TRY TO DO IT, ON FAILURE WE ARE COUGHT IN EXCEPTION
+                        if (bp.getContentType().toLowerCase().compareTo("message/rfc822") == 0 || 
+//                            bp.getContentType().toLowerCase().compareTo("text/plain") == 0 ||     
+                            bp.getContentType().toLowerCase().compareTo( "application/octet-stream") == 0)
+                        {
+                            MimeMessage cm = null;
+
+                            if (bp.getContentType().toLowerCase().compareTo( "application/octet-stream") == 0)
+                            {
+                                LogManager.msg(LogManager.LVL_WARN, LogManager.TYP_FETCHER, "Importing corrupt mail <" + subject + ">");
+                            }
+
+                            InputStream is = bp.getInputStream();
+
+                            cm = new MimeMessage( s, is );
+                            is.close();
+
+                            ifetcher.archive_message(cm);
+                          
+
+                            
+
+                        }
+                    }
+                }*/
+            }
+        }
+        catch (MessagingException messagingException) {
+            messagingException.printStackTrace();
+        }
+        catch (Exception exc) {
+            exc.printStackTrace();
+        }
+        
+
+
     }
 }
