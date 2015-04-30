@@ -17,6 +17,7 @@ import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
 import dimm.home.mailarchiv.MandantPreferences;
 import dimm.home.mailarchiv.StatusEntry;
+import static dimm.home.mailarchiv.StatusHandler.status;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.TimingIntervall;
 import dimm.home.mailarchiv.WorkerParentChild;
@@ -559,7 +560,11 @@ public class MailBoxFetcher extends WorkerParentChild
         RFCFileMail mail = null;
         try
         {
-            status.set_status(StatusEntry.BUSY, "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">");
+           
+            String txt = "Archiving message <" + get_subject(message) + "> from Mail server <" + imfetcher.getServer() + ">";
+            LogManager.msg_fetcher(LogManager.LVL_DEBUG, txt);
+                    
+            status.set_status(StatusEntry.BUSY, txt);
             
             mail = Main.get_control().create_import_filemail_from_eml(imfetcher.getMandant(), message, "imf", imfetcher.getDiskArchive());
 
