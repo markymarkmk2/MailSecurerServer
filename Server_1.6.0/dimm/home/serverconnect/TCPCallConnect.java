@@ -9,6 +9,7 @@ import dimm.home.mailarchiv.Commands.AbstractCommand;
 import dimm.home.mailarchiv.Commands.AuthUser;
 import dimm.home.mailarchiv.Commands.BackupCommand;
 import dimm.home.mailarchiv.Commands.DumpLog;
+import dimm.home.mailarchiv.Commands.Export;
 import dimm.home.mailarchiv.Commands.FileSystemViewCommand;
 import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
@@ -165,6 +166,7 @@ public class TCPCallConnect extends WorkerParent
         cmd_list.add( new ImportExchange() );
         cmd_list.add( new GetWorkerStatus() );
         cmd_list.add( new Update() );
+        cmd_list.add( new Export() );
     }
     public void add_command_list( ArrayList<AbstractCommand> list )
     {

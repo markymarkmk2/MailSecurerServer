@@ -26,6 +26,7 @@ import dimm.home.vault.DiskSpaceHandler;
 import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
+import dimm.home.vault.ExportContext;
 import dimm.home.vault.ReIndexContext;
 import dimm.home.vault.Vault;
 import dimm.home.workers.BackupServer;
@@ -78,6 +79,7 @@ public class MandantContext
     private IMAPServer imap_browser;
     ArrayList<WorkerParent> worker_list;
     private ReIndexContext rctx;
+    private ExportContext ectx;
     long next_reinit_importbuffer;
     private boolean shutdown;
     ThreadPoolWatcher thread_watcher;
@@ -810,6 +812,22 @@ public class MandantContext
     public void setRctx( ReIndexContext rctx )
     {
         this.rctx = rctx;
+    }
+
+    /**
+     * @return the ectx
+     */
+    public ExportContext getEctx()
+    {
+        return ectx;
+    }
+
+    /**
+     * @param ectx the ectx to set
+     */
+    public void setEctx( ExportContext ectx )
+    {
+        this.ectx = ectx;
     }
 
     public IMAPServer get_imap_server()

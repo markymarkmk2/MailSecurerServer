@@ -16,7 +16,6 @@ import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -40,7 +39,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.7.4";
+    private static final String VERSION = "1.7.5";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -88,6 +87,7 @@ public final class Main
 
     
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
+    public static final String OSNAME = "os.name";
     
     
     static void print_system_property( String key )
@@ -135,7 +135,7 @@ public final class Main
         print_system_property( "java.vendor" );
         print_system_property( "java.home");
         print_system_property( "java.class.path");
-        print_system_property( "os.name");
+        print_system_property( OSNAME);
         print_system_property( "os.arch");
         print_system_property( "os.version");
         print_system_property( "user.dir");
@@ -382,8 +382,9 @@ public final class Main
             File f = new File("shutdown_ok.txt");
             f.createNewFile();
         }
-        catch (IOException iOException)
+        catch (IOException exc)
         {
+            LogManager.msg_system( LogManager.LVL_ERR,  "Shutdownfilewrite failed:" + exc.getMessage() );
         }
 
         AuditLog.getInstance().stop();
@@ -425,7 +426,7 @@ public final class Main
         {
             ByteArrayOutputStream byos = new ByteArrayOutputStream();
             CryptAESOutputStream cos = new CryptAESOutputStream(byos, CS_Constants.get_KeyPBEIteration(), CS_Constants.get_KeyPBESalt(), key);
-            String s = cos.toString();
+            cos.toString();
             cos.close();
             LogManager.msg( LogManager.LVL_INFO, LogManager.TYP_SECURITY, "Testing key length " + key.length() + " OK");
         }
@@ -636,7 +637,7 @@ System.out.println("Core POI came from " + path);
 
     public static boolean read_log(String file, long lines, StringBuffer sb)
     {
-        File log = null;
+        File log;
         
         if (file.compareTo("messages") == 0)
         {
@@ -736,8 +737,9 @@ System.out.println("Core POI came from " + path);
                 {
                     zos.close();
                 }
-                catch (IOException iOException)
+                catch (IOException exc)
                 {
+                    LogManager.printStackTrace(exc);
                 }
             }
         }
@@ -801,6 +803,8 @@ System.out.println("Core POI came from " + path);
         }
         catch (Exception exc)
         {
+            // Do nothing
+            System.out.println(exc.getMessage());
         }
 
 
@@ -819,6 +823,8 @@ System.out.println("Core POI came from " + path);
         }
         catch (Exception iOException)
         {
+            // Do nothing
+            System.out.println(iOException.getMessage());
         }
 
         // REMOVE UNDERSCORES FROM KEY
@@ -860,23 +866,26 @@ System.out.println("Core POI came from " + path);
                 bundle = ResourceBundle.getBundle("dimm/home/mainrsrc",Locale.getDefault());
             }
             catch (Exception _exc)
-            {}
+            {
+                // Do Nothing
+                bundle = null;
+            }
         }
     }
 
     public static boolean is_win()
     {
-        return (System.getProperty("os.name").startsWith("Win"));
+        return (System.getProperty(OSNAME).startsWith("Win"));
     }
 
     public static boolean is_linux()
     {
-        return (System.getProperty("os.name").startsWith("Linux"));
+        return (System.getProperty(OSNAME).startsWith("Linux"));
     }
 
     public static boolean is_osx()
     {
-        return (System.getProperty("os.name").startsWith("Mac"));
+        return (System.getProperty(OSNAME).startsWith("Mac"));
     }
 
   
@@ -916,6 +925,7 @@ System.out.println("Core POI came from " + path);
         }
         catch (SocketException socketException)
         {
+            System.out.println(socketException.getMessage());
         }
         return fqdn;
 
