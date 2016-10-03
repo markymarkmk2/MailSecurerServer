@@ -15,11 +15,15 @@ import dimm.home.mailarchiv.Commands.GetLog;
 import dimm.home.mailarchiv.Commands.GetSetOption;
 import dimm.home.mailarchiv.Commands.GetStatus;
 import dimm.home.mailarchiv.Commands.GetWorkerStatus;
+import dimm.home.mailarchiv.Commands.HandleCertificate;
 import dimm.home.mailarchiv.Commands.HelloCommand;
 import dimm.home.mailarchiv.Commands.IPConfig;
+import dimm.home.mailarchiv.Commands.ImportExchange;
 import dimm.home.mailarchiv.Commands.ImportMailFile;
+import dimm.home.mailarchiv.Commands.LicenseConfig;
 import dimm.home.mailarchiv.Commands.ListOptions;
 import dimm.home.mailarchiv.Commands.ListUsers;
+import dimm.home.mailarchiv.Commands.ListVaultStatus;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Commands.ReIndex;
 import dimm.home.mailarchiv.Commands.ReadLog;
@@ -31,24 +35,21 @@ import dimm.home.mailarchiv.Commands.SetStation;
 import dimm.home.mailarchiv.Commands.ShellCmd;
 import dimm.home.mailarchiv.Commands.StartVPN;
 import dimm.home.mailarchiv.Commands.TestLogin;
-import dimm.home.mailarchiv.Commands.HandleCertificate;
-import dimm.home.mailarchiv.Commands.ImportExchange;
+import dimm.home.mailarchiv.Commands.Update;
 import dimm.home.mailarchiv.Commands.UploadMailFile;
 import dimm.home.mailarchiv.Commands.WriteFile;
-import dimm.home.mailarchiv.Commands.LicenseConfig;
-import dimm.home.mailarchiv.Commands.ListVaultStatus;
-import dimm.home.mailarchiv.Commands.Update;
 import dimm.home.mailarchiv.GeneralPreferences;
 import dimm.home.mailarchiv.LogicControl;
-import home.shared.SQL.SQLArrayResult;
 import dimm.home.mailarchiv.Main;
 import dimm.home.mailarchiv.MandantContext;
-import home.shared.SQL.UserSSOEntry;
-import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.Utilities.BackgroundWorker;
+import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.mailarchiv.WorkerParent;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
+import home.shared.SQL.SQLArrayResult;
+import home.shared.SQL.UserSSOEntry;
+import home.shared.Utilities.DefaultTrustManager;
 import home.shared.Utilities.ParseToken;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -76,6 +77,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManager;
 import org.apache.commons.codec.binary.Base64;
 import org.hibernate.Session;
 
@@ -908,24 +910,27 @@ public class TCPCallConnect extends WorkerParent
                 
                 if (use_ssl)
                 {
-                 //   System.setProperty("javax.net.debug","ssl");
-
-                    final String[] enabledCipherSuites = { "SSL_DH_anon_WITH_RC4_128_MD5" };
+                    final String[] enabledCipherSuites = {"TLS_DHE_RSA_WITH_AES_256_CBC_SHA"};
 
                     SSLContext ctx;
                     KeyManagerFactory kmf;
+
                     KeyStore ks;
                     char[] passphrase = "123456".toCharArray();
 
                     ctx = SSLContext.getInstance("TLS");
                     kmf = KeyManagerFactory.getInstance("SunX509");
+
+                    TrustManager[] trustmanagers = new TrustManager[]{
+                        new DefaultTrustManager()
+                    };
+
                     ks = KeyStore.getInstance("JKS");
 
-                    ks.load(CS_Constants.class.getResourceAsStream("/Utilities/ms.keystore"), passphrase);
+                    ks.load(CS_Constants.class.getResourceAsStream("Utilities/ms.keystore"), passphrase);
                     kmf.init(ks, passphrase);
-                    ctx.init(kmf.getKeyManagers(), null, null);
 
-
+                    ctx.init(kmf.getKeyManagers(), trustmanagers, null);
 
                     SSLServerSocketFactory factory = ctx.getServerSocketFactory();
 
@@ -937,7 +942,7 @@ public class TCPCallConnect extends WorkerParent
                     {
                         SSLServerSocket ssl = (SSLServerSocket)tcp_s;
 
-                        ssl.setEnabledCipherSuites(enabledCipherSuites);                        
+                        ssl.setEnabledCipherSuites(enabledCipherSuites);
                     }
                 }
                 else

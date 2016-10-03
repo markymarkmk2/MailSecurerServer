@@ -15,8 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 
 
-class NamedThreadFactory implements  ThreadFactory
-{
+class NamedThreadFactory implements ThreadFactory {
 
     String name;
     ThreadPoolExecutor pool;
