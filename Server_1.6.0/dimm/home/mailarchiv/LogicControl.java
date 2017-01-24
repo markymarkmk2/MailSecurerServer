@@ -8,30 +8,21 @@
  */
 package dimm.home.mailarchiv;
 
-import home.shared.SQL.UserSSOEntry;
 import dimm.home.Updater.UpdateWorker;
 import dimm.home.exchange.ExchangeImportServer;
 import dimm.home.hibernate.HibernateUtil;
 import dimm.home.importmail.DBXImporter;
 import dimm.home.importmail.MBoxImporter;
-import dimm.home.mailarchiv.Exceptions.IndexException;
-import dimm.home.serverconnect.TCPCallConnect;
-import home.shared.mail.RFCFileMail;
-import home.shared.hibernate.DiskArchive;
-import home.shared.hibernate.Hotfolder;
-import home.shared.hibernate.Mandant;
-import dimm.home.mailarchiv.Exceptions.VaultException;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
 import dimm.home.mailarchiv.Commands.Ping;
 import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
 import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LicenseChecker;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.vault.DiskSpaceHandler;
 import dimm.home.vault.DiskVault;
@@ -46,12 +37,20 @@ import dimm.home.workers.MilterServer;
 import dimm.home.workers.SMTPListener;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
-import home.shared.hibernate.DiskSpace;
+import home.shared.SQL.UserSSOEntry;
+import home.shared.hibernate.DiskArchive;
+import home.shared.hibernate.Hotfolder;
+import home.shared.hibernate.Mandant;
 import home.shared.license.LicenseTicket;
+import home.shared.mail.RFCFileMail;
 import home.shared.mail.RFCGenericMail;
 import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
@@ -1110,7 +1109,7 @@ public class LogicControl
                 if (war.exists())
                 {
                     LogManager.msg_system( LogManager.LVL_INFO, "Starting WebClient");
-                    gwt.start(Main.get_httpd_port(), "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
+                    gwt.start(Main.get_httpd_port(), "war/MSWebApp.war", KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass(), true);
                 }
                 else
                 {

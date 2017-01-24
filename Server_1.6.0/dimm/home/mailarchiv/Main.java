@@ -6,14 +6,21 @@
 package dimm.home.mailarchiv;
 
 import dimm.home.Updater.Updater;
+import dimm.home.mailarchiv.Exceptions.ArchiveMsgException;
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
 import dimm.home.mailarchiv.Utilities.CmdExecutor;
+import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import dimm.home.workers.SQLWorker;
 import home.shared.CS_Constants;
 import home.shared.Utilities.LogConfigEntry;
+import home.shared.Utilities.ParseToken;
 import home.shared.Utilities.ZipUtilities;
+import home.shared.hibernate.DiskArchive;
 import home.shared.mail.CryptAESInputStream;
 import home.shared.mail.CryptAESOutputStream;
+import home.shared.mail.RFCFileMail;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -24,6 +31,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.security.Security;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Locale;
@@ -39,7 +47,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 public final class Main
 {
     
-    private static final String VERSION = "1.7.5";
+    private static final String VERSION = "1.7.7";
     
     public static final String LOG_ERR = "error.log";
     public static final String LOG_INFO = "info.log";
@@ -88,6 +96,12 @@ public final class Main
     
     public static long MIN_FREE_SPACE = (1024*1024*100); // MIN 100MB DISKSPACE
     public static final String OSNAME = "os.name";
+
+    String imp_importPath = null;
+    int imp_daIdx = -1;
+    int imp_maIdx = -1;
+    boolean imp_doBackground = true;
+
     
     
     static void print_system_property( String key )
@@ -123,6 +137,7 @@ public final class Main
     @SuppressWarnings("LeakingThisInConstructor")
     public Main(String[] args)
     {
+        checkX509Serialization();
         me = this;
         work_dir = new File(".").getAbsolutePath();
         if (work_dir.endsWith("."))
@@ -204,7 +219,8 @@ public final class Main
         SQLWorker.set_to_derby_db();
 
         
-        read_args( args );
+        read_args(args);
+
         
         for (int i = 0; i < args.length; i++)
         {
@@ -244,6 +260,18 @@ public final class Main
                 SQLWorker.set_to_derby_db();
             }
 
+            if (args[i].compareTo("-importPath") == 0 && args[i + 1] != null) {
+                imp_importPath = args[i + 1];
+            }
+            if (args[i].compareTo("-da") == 0 && args[i + 1] != null) {
+                imp_daIdx = Integer.parseInt(args[i + 1]);
+            }
+            if (args[i].compareTo("-ma") == 0 && args[i + 1] != null) {
+                imp_maIdx = Integer.parseInt(args[i + 1]);
+            }
+            if (args[i].compareTo("-nB") == 0) {
+                imp_doBackground = false;
+            }
 
             
             // CREATE INSTALLER --mss lnx / mac / win
@@ -278,11 +306,48 @@ public final class Main
 
         // SETTING JAVA MAIL PARAMS
         init_mail_settings();
-             
 
+        LogManager.msg_system(LogManager.LVL_INFO, "Using DB connect " + SQLWorker.get_db_connect_string());
+    }
 
-        LogManager.msg_system( LogManager.LVL_INFO, "Using DB connect " + SQLWorker.get_db_connect_string());
+    void checkServerImport() {
+        if (imp_importPath != null && imp_daIdx >= 0 && imp_maIdx >= 0) {
+            MandantContext m_ctx = get_control().get_mandant_by_id(imp_maIdx);
+            if (m_ctx == null) {
+                LogManager.msg_system(LogManager.LVL_ERR, "Unbekannter Mandant für ma " + imp_maIdx);
+                return;
+            }
+            DiskArchive da = m_ctx.get_da_by_id(imp_daIdx);
+            if (da == null) {
+                LogManager.msg_system(LogManager.LVL_ERR, "Unbekanntes Diskarchiv für da " + imp_daIdx);
+                return;
+            }
 
+            LogManager.msg_system(LogManager.LVL_INFO, "Importiere EML von Pfad " + imp_importPath + " in DiskArchive " + imp_daIdx + " für " + m_ctx.getMandant().getName());
+            File[] files = new File(imp_importPath).listFiles();
+            LogManager.msg_system(LogManager.LVL_INFO, "Files to Import " + files.length);
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    continue;
+                }
+                RFCFileMail rfcfm = new RFCFileMail(file, false);
+                try {
+                    get_control().add_rfc_file_mail(rfcfm, m_ctx.getMandant(), da, imp_doBackground, true);
+                }
+                catch (ArchiveMsgException ex) {
+                    LogManager.msg_system(LogManager.LVL_ERR, "ArchiveAbbruch bei Datei " + file.getAbsolutePath(), ex);
+                    break;
+                }
+                catch (VaultException ex) {
+                    LogManager.msg_system(LogManager.LVL_ERR, "VaultAbbruch bei Datei " + file.getAbsolutePath(), ex);
+                    break;
+                }
+                catch (IndexException ex) {
+                    LogManager.msg_system(LogManager.LVL_ERR, "IndexAbbruch bei Datei " + file.getAbsolutePath(), ex);
+                    break;
+                }
+            }
+        }
     }
 
     void init_keystore()
@@ -357,7 +422,8 @@ public final class Main
                     LogManager.msg_system( LogManager.LVL_ERR, sb.toString() );
                 else
                     LogManager.msg_system( LogManager.LVL_DEBUG, sb.toString() );
-                
+
+                checkServerImport();
                 
                 control.run();
 
@@ -931,6 +997,18 @@ System.out.println("Core POI came from " + path);
 
     }
 
+    private void checkX509Serialization() {
+        try {
+            ArrayList<X509Certificate[]> cert_list = KeyToolHelper.list_certificates(false);
+            String xml = ParseToken.BuildCompressedX509CertArrayList(cert_list);
+
+            ArrayList<X509Certificate[]> cert_list2 = ParseToken.DeCompressX509CertArrayList(xml);
+
+        }
+        catch (Exception exc) {
+
+        }
+    }
 
 }
 

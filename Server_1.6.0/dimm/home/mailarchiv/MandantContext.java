@@ -4,8 +4,6 @@
  */
 package dimm.home.mailarchiv;
 
-import dimm.home.mailarchiv.Notification.Notification;
-import home.shared.SQL.UserSSOEntry;
 import dimm.home.auth.GenericRealmAuth;
 import dimm.home.importmail.HotFolderImport;
 import dimm.home.importmail.MailBoxFetcher;
@@ -13,18 +11,17 @@ import dimm.home.importmail.MilterImporter;
 import dimm.home.importmail.ProxyEntry;
 import dimm.home.importmail.SMTPImporter;
 import dimm.home.index.IMAP.IMAPServer;
-import dimm.home.mailarchiv.Exceptions.IndexException;
-import dimm.home.mailarchiv.Exceptions.VaultException;
-import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.index.IndexManager;
 import dimm.home.mailarchiv.Exceptions.AuthException;
+import dimm.home.mailarchiv.Exceptions.IndexException;
+import dimm.home.mailarchiv.Exceptions.VaultException;
+import dimm.home.mailarchiv.Notification.Notification;
 import dimm.home.mailarchiv.Utilities.KeyToolHelper;
 import dimm.home.mailarchiv.Utilities.LogManager;
+import dimm.home.serverconnect.TCPCallConnect;
 import dimm.home.serverconnect.httpd.GWTServer;
 import dimm.home.vault.BackupScript;
 import dimm.home.vault.DiskSpaceHandler;
-import home.shared.hibernate.DiskArchive;
-import home.shared.hibernate.Mandant;
 import dimm.home.vault.DiskVault;
 import dimm.home.vault.ExportContext;
 import dimm.home.vault.ReIndexContext;
@@ -37,13 +34,16 @@ import dimm.home.workers.MailProxyServer;
 import dimm.home.workers.MilterServer;
 import dimm.home.workers.SMTPListener;
 import home.shared.CS_Constants;
+import home.shared.SQL.UserSSOEntry;
 import home.shared.Utilities.SizeStr;
 import home.shared.hibernate.AccountConnector;
 import home.shared.hibernate.Backup;
+import home.shared.hibernate.DiskArchive;
 import home.shared.hibernate.Hotfolder;
 import home.shared.hibernate.ImapFetcher;
 import home.shared.hibernate.MailAddress;
 import home.shared.hibernate.MailUser;
+import home.shared.hibernate.Mandant;
 import home.shared.hibernate.Milter;
 import home.shared.hibernate.Proxy;
 import home.shared.hibernate.Role;
@@ -572,7 +572,7 @@ public class MandantContext
                     if (war.exists())
                     {
                         LogManager.msg_system( LogManager.LVL_INFO, "Starting WebClient");
-                        gwt.start(httpd_port, "war/MSWebApp.war",KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass());
+                        gwt.start(httpd_port, "war/MSWebApp.war", KeyToolHelper.get_ms_keystore().getAbsolutePath(), KeyToolHelper.get_ms_keystorepass(), true);
                     }
                     else
                     {

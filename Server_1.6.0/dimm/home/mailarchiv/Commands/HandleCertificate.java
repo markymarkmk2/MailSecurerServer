@@ -15,15 +15,10 @@ import home.shared.Utilities.ParseToken;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 
-/**
- *
- * @author Administrator
- */
 
 
 public class HandleCertificate extends AbstractCommand
@@ -51,7 +46,9 @@ public class HandleCertificate extends AbstractCommand
         }
 
     }
-*/
+     * c
+     */
+
     @Override
     public boolean do_command(String data)
     {
@@ -75,7 +72,7 @@ public class HandleCertificate extends AbstractCommand
         {
             boolean trust_certs = pt.GetBoolean("TC:");
 
-            ByteBuffer cert_object = pt.GetObject("CERT:", ByteBuffer.class);
+            byte[] array = (byte[]) pt.GetObject("CERT:", Object.class);
            
             // CREATE UNIQUE BUT STRUCTURED NAME -> PREFIX, IP, TIME, SUFFIX
             File cert_file = null;
@@ -86,7 +83,7 @@ public class HandleCertificate extends AbstractCommand
                 cert_file = Main.get_control().create_temp_file("cert");
 
                 FileOutputStream fw = new FileOutputStream(cert_file);
-                fw.write(cert_object.array());
+                fw.write(array);
                 fw.close();
             }
             catch (IOException iOException)
@@ -136,9 +133,9 @@ public class HandleCertificate extends AbstractCommand
         {
             try
             {                
-                ArrayList<X509Certificate[]> cert_list = KeyToolHelper.list_certificates( system_keystore);
+                ArrayList<X509Certificate[]> cert_list = KeyToolHelper.list_certificates(system_keystore);
 
-                String xml = ParseToken.BuildCompressedObjectString(cert_list);
+                String xml = ParseToken.BuildCompressedX509CertArrayList(cert_list);
                 answer = "0: CL:\"" + xml + "\"";
             }
             catch (Exception exc)

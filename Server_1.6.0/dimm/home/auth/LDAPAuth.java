@@ -7,7 +7,6 @@ package dimm.home.auth;
 import dimm.home.mailarchiv.Utilities.LogManager;
 import java.util.ArrayList;
 import java.util.Hashtable;
-
 import java.util.StringTokenizer;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -381,7 +380,9 @@ public class LDAPAuth extends GenericRealmAuth
     @Override
     public boolean open_user_context( String user_principal, String pwd )
     {
-        user_context = open_user_anonymous(user_principal, pwd);
+        user_context = open_user/*
+                 * _anonymous
+                 */(user_principal, pwd);
         return user_context == null ? false : true;
     }
 
@@ -503,7 +504,7 @@ public class LDAPAuth extends GenericRealmAuth
             ctrl.setSearchScope(SearchControls.SUBTREE_SCOPE);
             ctrl.setReturningAttributes(new String[]
                     {
-                        search_attribute, "cn"
+                search_attribute, "cn", "password"
                     });
 
             // TRY TO FETCH SEARCH ATTRIBUTE AND CN IF AVAILABLE
@@ -563,7 +564,7 @@ public class LDAPAuth extends GenericRealmAuth
                    
             // Set up the search controls
             SearchControls ctls = new SearchControls();
-            ctls.setReturningAttributes(new String[0]);       // Return no attrs
+            ctls.setReturningAttributes(new String[]{search_attribute});       // Return no attrs
             ctls.setSearchScope(SearchControls.OBJECT_SCOPE); // Search object only
 
             // Invoke search method that will use the LDAP "compare" operation
@@ -573,7 +574,7 @@ public class LDAPAuth extends GenericRealmAuth
                 if (has_cn)
                 {
                     Attribute cn_adn = res_attr.get("cn");
-                    String cn_user_dn = cn_adn.get().toString();
+                    String cn_user_dn = cn_adn.toString();
                     answer = ctx.search( cn_user_dn, "(password={0})", new Object[]{pwd}, ctls);
                 }
             }
