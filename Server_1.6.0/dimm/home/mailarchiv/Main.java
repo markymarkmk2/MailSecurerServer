@@ -101,6 +101,10 @@ public final class Main
     int imp_daIdx = -1;
     int imp_maIdx = -1;
     boolean imp_doBackground = true;
+    boolean imp_recursive = false;
+    boolean imp_noAbort = false;
+    String imp_suffix = null;
+    int imp_counter = 0;
 
     
     
@@ -263,6 +267,12 @@ public final class Main
             if (args[i].compareTo("-importPath") == 0 && args[i + 1] != null) {
                 imp_importPath = args[i + 1];
             }
+            if (args[i].compareTo("-importSuffix") == 0 && args[i + 1] != null) {
+                imp_suffix = args[i + 1].toLowerCase();
+            }
+            if (args[i].compareTo("-recursive") == 0 && args[i + 1] != null) {
+                imp_recursive = true;
+            }
             if (args[i].compareTo("-da") == 0 && args[i + 1] != null) {
                 imp_daIdx = Integer.parseInt(args[i + 1]);
             }
@@ -272,8 +282,10 @@ public final class Main
             if (args[i].compareTo("-nB") == 0) {
                 imp_doBackground = false;
             }
+            if (args[i].compareTo("-nA") == 0) {
+                imp_noAbort = true;
+            }
 
-            
             // CREATE INSTALLER --mss lnx / mac / win
             if (args[i].compareTo("--mss") == 0 && (i + 1) < args.length)
             {
@@ -324,30 +336,55 @@ public final class Main
             }
 
             LogManager.msg_system(LogManager.LVL_INFO, "Importiere EML von Pfad " + imp_importPath + " in DiskArchive " + imp_daIdx + " für " + m_ctx.getMandant().getName());
-            File[] files = new File(imp_importPath).listFiles();
-            LogManager.msg_system(LogManager.LVL_INFO, "Files to Import " + files.length);
+            importDirectory(m_ctx, da, imp_importPath, imp_recursive);
+
+        }
+    }
+
+    void importDirectory( MandantContext m_ctx, DiskArchive da, String path, boolean recursive ) {
+
+        File[] files = new File(path).listFiles();
+        LogManager.msg_system(LogManager.LVL_INFO, "Files in ImportPath " + path + ": " + files.length);
             for (File file : files) {
                 if (file.isDirectory()) {
+                    if (recursive) {
+                        importDirectory(m_ctx, da, file.getAbsolutePath(), recursive);
+                    }
                     continue;
+                }
+                if (imp_suffix != null) {
+                    if (!file.getName().toLowerCase().endsWith(imp_suffix)) {
+                        continue;
+                    }
                 }
                 RFCFileMail rfcfm = new RFCFileMail(file, false);
                 try {
                     get_control().add_rfc_file_mail(rfcfm, m_ctx.getMandant(), da, imp_doBackground, true);
+                    imp_counter++;
+                    if (imp_counter % 1000 == 0) {
+                        LogManager.msg_system(LogManager.LVL_INFO, "Imported files: " + imp_counter);
+                    }
                 }
                 catch (ArchiveMsgException ex) {
                     LogManager.msg_system(LogManager.LVL_ERR, "ArchiveAbbruch bei Datei " + file.getAbsolutePath(), ex);
-                    break;
+                    if (!imp_noAbort) {
+                        break;
+                    }
                 }
                 catch (VaultException ex) {
                     LogManager.msg_system(LogManager.LVL_ERR, "VaultAbbruch bei Datei " + file.getAbsolutePath(), ex);
-                    break;
+                    if (!imp_noAbort) {
+                        break;
+                    }
                 }
                 catch (IndexException ex) {
                     LogManager.msg_system(LogManager.LVL_ERR, "IndexAbbruch bei Datei " + file.getAbsolutePath(), ex);
-                    break;
+                    if (!imp_noAbort) {
+                        break;
+                    }
                 }
             }
-        }
+
     }
 
     void init_keystore()

@@ -28,9 +28,13 @@ import java.util.Set;
 class StatMailAddress extends RFCMailAddress
 {
 
-    long rcvCnt;
-    long sndCnt;
-    long timestamp;
+    private long rcvCnt;
+    private long sndCnt;
+    private long timestamp;
+
+    public StatMailAddress() {
+        super("", ADR_TYPE.FROM);
+    }
 
     public StatMailAddress( String adr, ADR_TYPE type, long rcv_cnt, long snd_cnt )
     {
